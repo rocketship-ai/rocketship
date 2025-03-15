@@ -1,6 +1,6 @@
 # Rocketship
 
-### 🚀 **Rocketship AI** – AI-Native End-to-End API Testing
+### 🚀 **Rocketship** – AI-Native End-to-End API Testing
 
 **Rocketship** is an open-source, AI-driven platform revolutionizing end-to-end API testing. Designed to reduce manual overhead, Rocketship AI uses intelligent automation to streamline test creation and maintenance, enabling developers to build robust software faster.
 
