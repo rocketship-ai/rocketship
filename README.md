@@ -19,13 +19,13 @@ We envision a world where software testing is automated intelligently and contin
 
 ### 📋 Table of Contents
 
-- [Quick Start](#quick-start)
-- [Installation (CLI)](#installation-cli)
-- [Architecture & Technology Stack](#architecture--technology-stack)
-- [How Rocketship Works](#how-rocketship-works)
-- [Contributing](#contributing)
-- [Roadmap](#roadmap)
-- [License](#license)
+- [Quick Start](#-quick-start)
+- [Installation (CLI)](#-installation-cli)
+- [Architecture & Technology Stack](#-architecture--technology-stack)
+- [How Rocketship Works](#-how-rocketship-works)
+- [Contributing](#-contributing)
+- [Roadmap](#-roadmap)
+- [License](#-license)
 
 ### 🚀 Quick Start
 
@@ -49,10 +49,10 @@ Install Rocketship CLI with Homebrew:
 brew install rocketship
 ```
 
-Generate tests easily from your repository:
+Generate tests easily from your directory:
 
 ```bash
-rocketship generate-tests --repo=https://github.com/your-repo
+rocketship generate-tests .
 ```
 
 ### 🔧 Architecture & Technology Stack
