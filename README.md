@@ -68,43 +68,49 @@ Rocketship uses cutting-edge, scalable technologies:
 
 ### 🔍 How Rocketship Works
 
-Rocketship employs specialized AI agents and an event-driven architecture to handle all aspects of end-to-end testing, from initial test generation to continuous updates:
+Rocketship employs specialized AI agents and a temporal-based architecture to handle all aspects of end-to-end testing, from initial test generation to test execution and continuous updates:
 
 - **Migration Agent**: Scans your codebase to automatically create end-to-end (e2e) tests, significantly reducing the time needed to bootstrap test coverage.
 - **Diff Agent**: Identifies changes in your code (via pull requests or commits) and generates updated or additional tests as needed.
+- **Worker Services**: User-owned services that execute tests in response to temporal workflows, enabling secure access to permission-gated resources and internal systems.
 
-In the default Docker Compose setup, the following containers provide a fully functional Rocketship environment:
+In the default Docker Compose setup, the following components provide a fully functional Rocketship environment:
 
 1. **rocketship_api**
 
-   - **Role**: The core backend service. It receives requests, orchestrates AI agents, handles test definitions, and exposes APIs for the UI and CLI.
-   - **Implementation**: A combination of TypeScript/Go services, leveraging frameworks like Express or NestJS for endpoint management.
+   - **Role**: The core backend service that orchestrates temporal workflows, manages test definitions, and exposes APIs for the UI and CLI.
+   - **Implementation**: A combination of TypeScript/Go services using the Temporal SDK for reliable workflow execution.
 
-2. **rocketship_frontend**
+2. **rocketship_temporal**
 
-   - **Role**: A React-based user interface where you can review AI-generated tests, trigger test runs, and configure your testing environment.
+   - **Role**: Manages workflow orchestration, ensuring reliable test execution and handling retries, timeouts, and state management.
+   - **Implementation**: Runs Temporal server components for workflow management.
+
+3. **rocketship_worker**
+
+   - **Role**: User-managed workers that execute tests within your secure environment, allowing access to internal resources like WAFs, AWS IAM, and other permission-gated systems.
+   - **Implementation**: Lightweight services that connect to Temporal and execute test workflows within your infrastructure.
+
+4. **rocketship_frontend**
+
+   - **Role**: A React-based user interface for reviewing AI-generated tests, monitoring workflow execution, and configuring your testing environment.
    - **Implementation**: Serves static React files or a Next.js application, accessible at a specific port (e.g., http://localhost:3000).
 
-3. **rocketship_nats**
-
-   - **Role**: A NATS server that handles all pub/sub messaging between services. When code changes or manual triggers occur, events are published to NATS, prompting test runs or AI-based test generation.
-   - **Implementation**: Runs a lightweight NATS instance, providing an event-driven backbone for Rocketship.
-
-4. **rocketship_db**
+5. **rocketship_db**
 
    - **Role**: A PostgreSQL database that stores test definitions, user configurations, and run results.
    - **Implementation**: Runs a standard Postgres container with data persistence.
 
-5. **rocketship_vectorstore**
+6. **rocketship_vectorstore**
 
-   - **Role**: A containerized instance of ChromaDB or another vector database, used to store and retrieve embeddings of your code and tests. This lets AI agents accurately generate or update tests by referencing relevant code snippets.
+   - **Role**: A containerized instance of ChromaDB or another vector database, used to store and retrieve embeddings of your code and tests.
    - **Implementation**: Manages vector-based embeddings, ensuring quick semantic search for AI tasks.
 
-6. **rocketship_llm (optional)**
-   - **Role**: If you choose to run a local Large Language Model (like Code Llama), you can include a container that provides an LLM API endpoint. Otherwise, Rocketship can integrate with external/proprietary models via environment variables.
+7. **rocketship_llm (optional)**
+   - **Role**: If you choose to run a local Large Language Model (like Code Llama), you can include a container that provides an LLM API endpoint.
    - **Implementation**: Runs an open-source model or interacts with a GPU-powered environment if available.
 
-This architecture ensures your AI agents have immediate access to the data they need (database and embeddings), while events flow naturally via NATS, triggering test generation or maintenance whenever relevant changes occur.
+This architecture ensures your AI agents can generate tests while execution happens securely within your infrastructure through temporal workflows. The worker-based approach allows you to run tests that require access to internal resources or specific permissions, making it suitable for complex enterprise environments.
 
 ### 🤝 Contributing
 
