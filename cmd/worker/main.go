@@ -32,10 +32,10 @@ func main() {
 
 	w.RegisterWorkflow(interpreter.TestWorkflow)
 
-	connectors.Register(w, &http.HTTPConnector{})
-	connectors.Register(w, &s3.S3Connector{})
-	connectors.Register(w, &ddb.DynamoDBConnector{})
-	connectors.Register(w, &sqs.SQSConnector{})
+	connectors.RegisterWithTemporal(w, &http.HTTPConnector{})
+	connectors.RegisterWithTemporal(w, &s3.S3Connector{})
+	connectors.RegisterWithTemporal(w, &ddb.DynamoDBConnector{})
+	connectors.RegisterWithTemporal(w, &sqs.SQSConnector{})
 
 	log.Println("Starting worker")
 	if err := w.Run(worker.InterruptCh()); err != nil {

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
-	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"go.temporal.io/sdk/client"
 )
 

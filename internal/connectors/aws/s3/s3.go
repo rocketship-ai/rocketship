@@ -57,7 +57,7 @@ func (c *S3Connector) Activity(ctx context.Context, p map[string]interface{}) (i
 	}
 	defer resp.Body.Close()
 
-	buf := make([]byte, resp.ContentLength)
+	buf := make([]byte, *resp.ContentLength)
 	_, err = resp.Body.Read(buf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read object content: %w", err)
