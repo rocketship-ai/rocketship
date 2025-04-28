@@ -87,7 +87,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: Dockerfile.agent
+      dockerfile: Dockerfile.worker
     depends_on: [temporal, engine]
     environment:
       - TEMPORAL_HOST=temporal:7233

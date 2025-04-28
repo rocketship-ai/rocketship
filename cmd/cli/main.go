@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rocketship-ai/rocketship/cmd/rocketship/cmd"
+	"github.com/rocketship-ai/rocketship/cmd/cli/cmd"
 )
 
 func main() {
