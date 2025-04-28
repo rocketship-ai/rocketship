@@ -1,0 +1,62 @@
+version: 1
+tests:
+  - name: Order Processing Workflow
+    steps:
+      - op: http.send
+        params:
+          method: POST
+          url: http://localhost:7701/ping
+          headers:
+            Content-Type: application/json
+          body: |
+            {
+              "orderId": "ORD-12345",
+              "customerId": "CUST-789",
+              "items": [
+                {"productId": "PROD-001", "quantity": 2, "price": 29.99},
+                {"productId": "PROD-002", "quantity": 1, "price": 49.99}
+              ],
+              "totalAmount": 109.97
+            }
+        expect:
+          status: 200
+        save:
+          jsonPath: "$.orderId"
+          as: orderId
+
+      - op: sleep
+        duration: 2s
+
+      - op: aws.s3.get
+        params:
+          bucket: orders
+          key: ${orderId}.json
+        expect:
+          exists: true
+
+      - op: aws.ddb.query
+        params:
+          table: orders
+          key: ${orderId}
+        expect:
+          status: "PROCESSING"
+
+      - op: aws.sqs.send
+        params:
+          queue: order-notifications
+          message: |
+            {
+              "type": "ORDER_PROCESSED",
+              "orderId": "${orderId}",
+              "timestamp": "2025-04-27T12:00:00Z"
+            }
+
+      - op: http.send
+        params:
+          method: GET
+          url: http://localhost:7701/ping
+          headers:
+            Accept: application/json
+        expect:
+          status: 200
+          bodyContains: pong
