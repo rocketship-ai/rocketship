@@ -1,0 +1,31 @@
+syntax = "proto3";
+package rocketship.v1;
+
+option go_package = "github.com/rocketship/rocketship/internal/api/generated";
+
+service Engine {
+  rpc CreateRun(CreateRunRequest) returns (CreateRunResponse);
+  rpc StreamLogs(LogStreamRequest) returns (stream LogLine);
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+}
+
+message CreateRunRequest {
+  bytes yaml_payload = 1;
+}
+
+message CreateRunResponse {
+  string run_id = 1;
+}
+
+message LogStreamRequest { string run_id = 1; }
+message LogLine         { string ts = 1; string msg = 2; }
+
+message ListRunsRequest {}
+message ListRunsResponse { repeated RunSummary runs = 1; }
+
+message RunSummary {
+  string run_id    = 1;
+  string status    = 2;  // PENDING | RUNNING | PASSED | FAILED
+  string started_at = 3;
+  string ended_at   = 4;
+}

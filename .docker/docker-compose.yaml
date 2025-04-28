@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  temporal:
+    image: temporalio/server:1.23
+    ports: ["7233:7233"]
+    environment:
+      - DB=sqlite
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.engine
+    depends_on: [temporal]
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+    ports: ["7700:7700", "7701:7701"]
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    depends_on: [temporal, engine]
+    environment:
+      - TEMPORAL_HOST=temporal:7233
+  localstack:
+    image: localstack/localstack:3
+    ports: ["4566:4566"]
