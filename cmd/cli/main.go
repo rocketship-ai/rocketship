@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/rocketship-ai/rocketship/cmd/cli/cmd"
+	"github.com/rocketship-ai/rocketship/internal/cli"
 )
 
 func main() {
-	if err := cmd.RootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	cmd := cli.NewRootCmd()
+	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
