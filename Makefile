@@ -21,4 +21,11 @@ build:
 	go build -o bin/worker      ./cmd/worker
 
 compose-up:
-	docker compose -f .docker/docker-compose.yaml up -d
+	@if ! command -v docker-compose &> /dev/null; then \
+		echo "Error: docker-compose is not installed."; \
+		exit 1; \
+	fi
+	docker-compose -f .docker/docker-compose.yaml up -d
+
+compose-down:
+	docker-compose -f .docker/docker-compose.yaml down

@@ -1,25 +1,118 @@
-version: "3.9"
 services:
-  temporal:
-    image: temporalio/server:1.23
-    ports: ["7233:7233"]
+  ### START OF TEMPORAL DEPENDENCIES COPIED FROM HASH: https://github.com/temporalio/docker-compose/blob/5326abea4cdc2590d2ff93e5e249824e873a7c2f/docker-compose.yml ###
+  elasticsearch:
+    container_name: temporal-elasticsearch
     environment:
-      - DB=sqlite
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    image: elasticsearch:${ELASTICSEARCH_VERSION}
+    networks:
+      - temporal-network
+    expose:
+      - 9200
+    volumes:
+      - /var/lib/elasticsearch/data
+  postgresql:
+    container_name: temporal-postgresql
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    image: postgres:${POSTGRESQL_VERSION}
+    networks:
+      - temporal-network
+    expose:
+      - 5432
+    volumes:
+      - /var/lib/postgresql/data
+  temporal:
+    container_name: temporal
+    depends_on:
+      - postgresql
+      - elasticsearch
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=true
+      - ES_SEEDS=elasticsearch
+      - ES_VERSION=v7
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - 7233:7233
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION}
+    networks:
+      - temporal-network
+    stdin_open: true
+    tty: true
+  temporal-ui:
+    container_name: temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - 8080:8080
+  ### END OF TEMPORAL DEPENDENCIES ###
+  # .
+  # .
+  # .
+  # .
+  # .
+  # .
+  ### START OF ROCKETSHIP CORE ###
   engine:
     build:
-      context: .
-      dockerfile: Dockerfile.engine
+      context: ..
+      dockerfile: .docker/Dockerfile.engine
     depends_on: [temporal]
     environment:
       - TEMPORAL_HOST=temporal:7233
     ports: ["7700:7700", "7701:7701"]
   worker:
     build:
-      context: .
-      dockerfile: Dockerfile.worker
+      context: ..
+      dockerfile: .docker/Dockerfile.worker
     depends_on: [temporal, engine]
     environment:
       - TEMPORAL_HOST=temporal:7233
   localstack:
     image: localstack/localstack:3
     ports: ["4566:4566"]
+  ### END OF ROCKETSHIP CORE ###
+# .
+# .
+# .
+# .
+# .
+# .
+### START OF TEMPORAL NETWORK ###
+networks:
+  temporal-network:
+    driver: bridge
+    name: temporal-network
+### END OF TEMPORAL NETWORK ###
