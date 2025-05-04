@@ -1,0 +1,58 @@
+name: "HTTP API Test Suite"
+description: "A simple test suite demonstrating HTTP testing with delays"
+version: "v1"
+tests:
+  - name: "Get and Create User"
+    steps:
+      - name: "Get user list"
+        type: "http"
+        config:
+          method: "GET"
+          url: "https://jsonplaceholder.typicode.com/users"
+          headers:
+            Accept: "application/json"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "$.length()"
+            expected: 10
+
+      - name: "Get specific user"
+        type: "http"
+        config:
+          method: "GET"
+          url: "https://jsonplaceholder.typicode.com/users/1"
+          headers:
+            Accept: "application/json"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "$.name"
+            expected: "Leanne Graham"
+
+      - name: "Delay before final step"
+        type: "delay"
+        config:
+          duration: "5s"
+
+      - name: "Create new user"
+        type: "http"
+        config:
+          method: "POST"
+          url: "https://jsonplaceholder.typicode.com/users"
+          headers:
+            Content-Type: "application/json"
+          body: |
+            {
+              "name": "John Doe",
+              "username": "johndoe",
+              "email": "john@example.com"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 201
+          - type: "json_path"
+            path: "$.id"
+            expected: 11

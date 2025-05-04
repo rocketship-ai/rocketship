@@ -20,7 +20,7 @@ func main() {
 		temporalHost = "localhost:7233"
 	}
 
-	c, err := client.NewClient(client.Options{
+	c, err := client.Dial(client.Options{
 		HostPort: temporalHost,
 	})
 	if err != nil {
@@ -53,12 +53,16 @@ func startGRPCServer(engine generated.EngineServer) {
 func startHTTPServer() {
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+			return
+		}
 	})
 
 	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "pong")
+		if _, err := fmt.Fprintf(w, "pong"); err != nil {
+			return
+		}
 	})
 
 	log.Println("HTTP server listening on :7701")

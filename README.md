@@ -1,33 +1,52 @@
 # Rocketship
 
-### 🚀 **Rocketship** – AI-Native End-to-End API Testing
+### 🚀 **Rocketship** – AI‑Native End‑to‑End Testing for Cloud‑Native Systems
 
-**Rocketship** is an open-source, AI-driven platform reimagining end-to-end API testing. Designed to reduce manual test creation overhead, Rocketship uses intelligent automation to streamline test creation and maintenance, enabling developers to build robust software faster.
+Rocketship is an **open‑source, AI‑powered platform** that verifies complex, event‑driven micro‑services the same way you reason about them: as real‑world **workflows** that span queues, APIs, databases, and file buckets.  
+It combines a declarative YAML spec, Temporal‑style durable execution, and an LLM “Test‑Copilot” that keeps your tests in sync with every code change—whether written by humans or autonomous agents.
 
-### 🎯 Vision & Manifesto
+---
 
-We envision a world where software testing is automated intelligently and continuously evolves alongside your application code. Our mission is to empower developers to focus on innovation rather than maintenance, ensuring high-quality software releases at rapid speed.
+## 🐞 What Problems Does Rocketship Solve?
 
-## Components
+| Pain                             | Traditional Reality                                                                   | Rocketship Fix                                                                                               |
+| -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **1. Async complexity**          | Existing API tools assume HTTP request‑response; Async flows are hand‑rolled scripts. | First‑class connectors for SQS, Kinesis, Dynamo, S3, HTTP, …                                                 |
+| **2. Test drift**                | Code changes faster than tests; flakiness grows. Tests become outdated.               | **LLM Diff‑Copilot** scans your PR diff → proposes YAML patch; optional auto‑merge.                          |
+| **3. CI headaches**              | Full E2E env is heavy, slow, and flaky.                                               | Temporal‑based runner spins timers & retries _without_ holding CI pods; run in your cluster or local Docker. |
+| **4. Security / data residency** | SaaS testing tools require exposing internal endpoints.                               | Tests execute in **Rocketship Agent** pods that are part of your infra—only test metadata leaves the VPC.    |
+| **5. AI agent deploy risk**      | Agents can commit code 24/7; unsafe merges land in prod.                              | Agents call Rocketship’s MCP/gRPC API → must get green tests before `git push`.                              |
 
-- **Engine**: Parse YAML → WF spec; Start/track WF
-- **Worker**: Poll task-queues, run interpreter, invoke Activities
-- **CLI**: Developer UX; talks to Engine; may launch Compose
-- **LocalStack**: Mock S3/SQS/DynamoDB
+---
 
-## Getting Started
+## ✨ Core Features
+
+- **YAML Specs (`rocketship.yaml`)** – Declarative steps: publish message ➜ sleep ➜ assert DB row ➜ assert S3 object.
+- **Plugin & Connector SDK** – Drop‑in Go package; implement one Activity function and a JSON schema to add Azure, GCP, or custom infra.
+- **Temporal‑powered Engine** – Durable workflows, back‑offs, and long timers without hogging threads.
+- **AI Diff‑Copilot** – `rocketship suggest --diff HEAD~1` emits a ready‑to‑commit patch that updates or adds tests.
+- **Local‑first / K8s‑native** – `rocketship start` spins Temporal + Engine + Agent + LocalStack via Docker Compose (or Helm in minikube).
+- **CI Plugins** – Buildkite Orb and GitHub Action sample provided.
+- **MCP Server Mode** _(opt‑in)_ – Expose Rocketship as a [Model Context Protocol](https://mcp.dev) capability so any LLM agent can invoke `runTest`, `listTests`, or `generateTests`.
+
+---
+
+## 🟢 5‑Minute Quick Start
 
 ```bash
-# Build the project
-make build
+# 1.  Install CLI
+go install github.com/rocketship/rocketship/cmd/rocketship@latest
 
-# Start the local runtime
+# 2.  Bootstrap local stack (Temporal, Agent, LocalStack)
 rocketship start
 
-# Run a test
-rocketship run --file examples/order-workflow/rocketship.yaml
+# 3.  Init sample test
+rocketship init --example order-workflow
+cat rocketship.yaml           # peek at the spec
+
+# 4.  Run end‑to‑end test
+rocketship run
+
+# 5.  Watch logs / status
+rocketship logs $(rocketship status --latest)
 ```
-
-## Documentation
-
-For detailed documentation, see the docs directory.
