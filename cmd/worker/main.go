@@ -4,11 +4,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/rocketship-ai/rocketship/internal/connectors"
-	"github.com/rocketship-ai/rocketship/internal/connectors/aws/ddb"
-	"github.com/rocketship-ai/rocketship/internal/connectors/aws/s3"
-	"github.com/rocketship-ai/rocketship/internal/connectors/aws/sqs"
-	"github.com/rocketship-ai/rocketship/internal/connectors/http"
+	"github.com/rocketship-ai/rocketship/internal/plugins"
+	"github.com/rocketship-ai/rocketship/internal/plugins/aws/ddb"
+	"github.com/rocketship-ai/rocketship/internal/plugins/aws/s3"
+	"github.com/rocketship-ai/rocketship/internal/plugins/aws/sqs"
+	"github.com/rocketship-ai/rocketship/internal/plugins/http"
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -32,10 +32,10 @@ func main() {
 
 	w.RegisterWorkflow(interpreter.TestWorkflow)
 
-	connectors.RegisterWithTemporal(w, &http.HTTPConnector{})
-	connectors.RegisterWithTemporal(w, &s3.S3Connector{})
-	connectors.RegisterWithTemporal(w, &ddb.DynamoDBConnector{})
-	connectors.RegisterWithTemporal(w, &sqs.SQSConnector{})
+	plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
+	plugins.RegisterWithTemporal(w, &s3.S3Plugin{})
+	plugins.RegisterWithTemporal(w, &ddb.DynamoDBPlugin{})
+	plugins.RegisterWithTemporal(w, &sqs.SQSPlugin{})
 
 	log.Println("Starting worker")
 	if err := w.Run(worker.InterruptCh()); err != nil {
