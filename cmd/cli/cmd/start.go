@@ -125,11 +125,11 @@ func waitForEngine() error {
 	for i := 0; i < maxRetries; i++ {
 		resp, err := http.Get(healthzURL)
 		if err == nil && resp.StatusCode == http.StatusOK {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return nil
 		}
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		time.Sleep(retryInterval)
 	}

@@ -140,7 +140,7 @@ func interpolateString(s string, vars map[string]string) string {
 }
 
 func replaceVar(s, varName, varValue string) string {
-	return fmt.Sprintf("%s", s) // Placeholder implementation
+	return s // Placeholder implementation
 }
 
 func extractJSONPath(jsonStr, path string) (string, error) {

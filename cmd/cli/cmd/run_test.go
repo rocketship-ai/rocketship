@@ -28,7 +28,9 @@ func TestRunCommand(t *testing.T) {
 	runCmd.Flags().StringVar(&testName, "test", "", "Name of test to run")
 	runCmd.Flags().StringVar(&outputFormat, "format", "", "Output format (junit)")
 	runCmd.Flags().StringVar(&outputFile, "output", "", "Output file")
-	runCmd.MarkFlagRequired("file")
+	if err := runCmd.MarkFlagRequired("file"); err != nil {
+		t.Fatal(err)
+	}
 
 	runCmd.SetArgs([]string{"--file", "test.yaml"})
 	if err := runCmd.Execute(); err != nil {
@@ -44,8 +46,7 @@ func TestRunCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tempFile.Name())
-	tempFile.Close()
+	defer func() { _ = os.Remove(tempFile.Name()) }()
 
 	err = generateJUnitOutput(tempFile.Name(), "PASSED", []string{"Test log 1", "Test log 2"}, testStartTime)
 	if err != nil {
@@ -54,6 +55,10 @@ func TestRunCommand(t *testing.T) {
 
 	if _, err := os.Stat(tempFile.Name()); os.IsNotExist(err) {
 		t.Error("JUnit output file was not created")
+	}
+
+	if err := tempFile.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 

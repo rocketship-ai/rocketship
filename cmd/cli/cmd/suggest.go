@@ -57,7 +57,9 @@ func init() {
 	suggestCmd.Flags().StringVar(&outputPath, "output", "", "Output file")
 	suggestCmd.Flags().StringVar(&openaiModel, "model", "gpt-4", "OpenAI model to use")
 
-	suggestCmd.MarkFlagRequired("diff")
+	if err := suggestCmd.MarkFlagRequired("diff"); err != nil {
+		return
+	}
 }
 
 func generateStubSuggestion(diffRev, outputPath string) error {

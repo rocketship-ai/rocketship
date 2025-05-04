@@ -18,11 +18,11 @@ var statusCmd = &cobra.Command{
 	Short: "List recent runs",
 	Long:  `List the last 10 runs and their status.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		conn, err := grpc.Dial("localhost:7700", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient("localhost:7700", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return fmt.Errorf("failed to connect to Engine: %w", err)
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		client := generated.NewEngineClient(conn)
 
@@ -33,7 +33,9 @@ var statusCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "RUN ID\tSTATUS\tSTARTED\tENDED")
+		if _, err := fmt.Fprintln(w, "RUN ID\tSTATUS\tSTARTED\tENDED"); err != nil {
+			return err
+		}
 
 		for _, run := range resp.Runs {
 			startedAt, _ := time.Parse(time.RFC3339, run.StartedAt)
@@ -45,10 +47,14 @@ var statusCmd = &cobra.Command{
 				endedStr = endedAt.Format("2006-01-02 15:04:05")
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", run.RunId, run.Status, startedStr, endedStr)
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", run.RunId, run.Status, startedStr, endedStr); err != nil {
+				return err
+			}
 		}
 
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			return err
+		}
 		return nil
 	},
 }

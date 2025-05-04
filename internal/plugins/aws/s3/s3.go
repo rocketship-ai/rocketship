@@ -55,7 +55,7 @@ func (c *S3Plugin) Activity(ctx context.Context, p map[string]interface{}) (inte
 	if err != nil {
 		return nil, fmt.Errorf("failed to get object: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	buf := make([]byte, *resp.ContentLength)
 	_, err = resp.Body.Read(buf)

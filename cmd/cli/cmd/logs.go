@@ -19,11 +19,11 @@ var logsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		runID := args[0]
 
-		conn, err := grpc.Dial("localhost:7700", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient("localhost:7700", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return fmt.Errorf("failed to connect to Engine: %w", err)
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		client := generated.NewEngineClient(conn)
 

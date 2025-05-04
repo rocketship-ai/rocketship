@@ -57,11 +57,11 @@ This will POST the YAML to the Engine, stream logs, and set the exit code.`,
 			return fmt.Errorf("failed to read YAML file: %w", err)
 		}
 
-		conn, err := grpc.Dial("localhost:7700", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient("localhost:7700", grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return fmt.Errorf("failed to connect to Engine: %w", err)
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 
 		client := generated.NewEngineClient(conn)
 
@@ -139,7 +139,9 @@ func init() {
 	runCmd.Flags().StringVar(&outputFormat, "format", "", "Output format (junit)")
 	runCmd.Flags().StringVar(&outputFile, "output", "", "Output file")
 
-	runCmd.MarkFlagRequired("file")
+	if err := runCmd.MarkFlagRequired("file"); err != nil {
+		return
+	}
 }
 
 func generateJUnitOutput(outputFile string, status string, logs []string, startTime time.Time) error {
@@ -179,9 +181,11 @@ func generateJUnitOutput(outputFile string, status string, logs []string, startT
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
-	file.WriteString(xml.Header)
+	if _, err := file.WriteString(xml.Header); err != nil {
+		return fmt.Errorf("failed to write XML header: %w", err)
+	}
 
 	encoder := xml.NewEncoder(file)
 	encoder.Indent("", "  ")

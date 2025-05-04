@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
+	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"github.com/rocketship-ai/rocketship/internal/plugins/aws/ddb"
 	"github.com/rocketship-ai/rocketship/internal/plugins/aws/s3"
 	"github.com/rocketship-ai/rocketship/internal/plugins/aws/sqs"
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
-	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -20,7 +20,7 @@ func main() {
 		temporalHost = "localhost:7233"
 	}
 
-	c, err := client.NewClient(client.Options{
+	c, err := client.Dial(client.Options{
 		HostPort: temporalHost,
 	})
 	if err != nil {
