@@ -14,11 +14,11 @@ It uses AI to generate, execute, and analyze API tests, making testing more effi
 	}
 
 	// Add subcommands
-	cmd.AddCommand(NewRunCmd())
 	cmd.AddCommand(NewStartCmd())
+	cmd.AddCommand(NewRunCmd())
 	cmd.AddCommand(NewStatusCmd())
 	cmd.AddCommand(NewLogsCmd())
 	cmd.AddCommand(NewSuggestCmd())
 
 	return cmd
-} 
+}

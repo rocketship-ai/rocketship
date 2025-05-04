@@ -27,4 +27,4 @@ The test file should be a YAML file containing the test definition.`,
 	}
 
 	return cmd
-} 
+}
