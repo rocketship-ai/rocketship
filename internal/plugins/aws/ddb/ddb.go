@@ -10,13 +10,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-type DynamoDBConnector struct{}
+type DynamoDBPlugin struct{}
 
-func (c *DynamoDBConnector) Name() string {
+func (c *DynamoDBPlugin) Name() string {
 	return "aws.ddb.query"
 }
 
-func (c *DynamoDBConnector) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
+func (c *DynamoDBPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	table, ok := p["table"].(string)
 	if !ok {
 		return nil, fmt.Errorf("table parameter is required")

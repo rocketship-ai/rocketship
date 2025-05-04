@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-type HTTPConnector struct{}
+type HTTPPlugin struct{}
 
-func (c *HTTPConnector) Name() string {
+func (c *HTTPPlugin) Name() string {
 	return "http.send"
 }
 
-func (c *HTTPConnector) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
+func (c *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	method, ok := p["method"].(string)
 	if !ok {
 		return nil, fmt.Errorf("method parameter is required")

@@ -1,4 +1,6 @@
 .PHONY: build
+test:
+	go test ./...
 build:
 	go vet ./...
 	go test ./...
@@ -13,3 +15,11 @@ compose-up:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: proto
+proto:
+	protoc \
+	  --proto_path=proto \
+	  --go_out=paths=source_relative:internal/api/generated \
+	  --go-grpc_out=paths=source_relative:internal/api/generated \
+	  proto/engine.proto

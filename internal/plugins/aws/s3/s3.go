@@ -9,13 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-type S3Connector struct{}
+type S3Plugin struct{}
 
-func (c *S3Connector) Name() string {
+func (c *S3Plugin) Name() string {
 	return "aws.s3.get"
 }
 
-func (c *S3Connector) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
+func (c *S3Plugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	bucket, ok := p["bucket"].(string)
 	if !ok {
 		return nil, fmt.Errorf("bucket parameter is required")

@@ -17,7 +17,7 @@ var RootCmd = &cobra.Command{
 defined in a declarative YAML file.
 
 It supports running tests locally via Docker Compose or Minikube,
-and provides connectors for HTTP, AWS S3, DynamoDB, and SQS.`,
+and provides plugins for HTTP, AWS S3, DynamoDB, and SQS.`,
 }
 
 func Execute() {

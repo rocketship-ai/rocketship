@@ -9,13 +9,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
-type SQSConnector struct{}
+type SQSPlugin struct{}
 
-func (c *SQSConnector) Name() string {
+func (c *SQSPlugin) Name() string {
 	return "aws.sqs.send"
 }
 
-func (c *SQSConnector) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
+func (c *SQSPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	queue, ok := p["queue"].(string)
 	if !ok {
 		return nil, fmt.Errorf("queue parameter is required")

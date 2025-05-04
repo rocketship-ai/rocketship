@@ -1,4 +1,4 @@
-package connectors
+package plugins
 
 import (
 	"context"
@@ -8,34 +8,34 @@ import (
 	"go.temporal.io/sdk/worker"
 )
 
-type Connector interface {
+type Plugin interface {
 	Execute(ctx context.Context, params map[string]interface{}) (map[string]interface{}, error)
 	Validate(params map[string]interface{}) error
 }
 
-// ConnectorRegistry manages a collection of connectors
-type ConnectorRegistry struct {
-	connectors map[string]Connector
+// PluginRegistry manages a collection of plugins
+type PluginRegistry struct {
+	plugins map[string]Plugin
 	mu         sync.RWMutex
 }
 
-func NewConnectorRegistry() *ConnectorRegistry {
-	return &ConnectorRegistry{
-		connectors: make(map[string]Connector),
+func NewPluginRegistry() *PluginRegistry {
+	return &PluginRegistry{
+		plugins: make(map[string]Plugin),
 	}
 }
 
-func (r *ConnectorRegistry) Register(name string, connector Connector) {
+func (r *PluginRegistry) Register(name string, plugin Plugin) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.connectors[name] = connector
+	r.plugins[name] = plugin
 }
 
-func (r *ConnectorRegistry) Get(name string) (Connector, bool) {
+func (r *PluginRegistry) Get(name string) (Plugin, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	connector, exists := r.connectors[name]
-	return connector, exists
+	plugin, exists := r.plugins[name]
+	return plugin, exists
 }
 
 type TemporalConnector interface {
