@@ -1,5 +1,7 @@
 # Rocketship
 
+![Under Construction](docs/misc/assets/under-construction-banner.png)
+
 ### 🚀 **Rocketship** – AI‑Native End‑to‑End Testing for Cloud‑Native Systems
 
 Rocketship is an **open‑source, AI‑powered platform** that verifies complex, event‑driven micro‑services the same way you reason about them: as real‑world **workflows** that span queues, APIs, databases, and file buckets.  
@@ -11,7 +13,7 @@ It combines a declarative YAML spec, Temporal‑style durable execution, and an 
 
 | Pain                             | Traditional Reality                                                                   | Rocketship Fix                                                                                               |
 | -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **1. Async complexity**          | Existing API tools assume HTTP request‑response; Async flows are hand‑rolled scripts. | First‑class connectors for SQS, Kinesis, Dynamo, S3, HTTP, …                                                 |
+| **1. Async complexity**          | Existing API tools assume HTTP request‑response; Async flows are hand‑rolled scripts. | First‑class plugins for SQS, Kinesis, Dynamo, S3, HTTP, …                                                    |
 | **2. Test drift**                | Code changes faster than tests; flakiness grows. Tests become outdated.               | **LLM Diff‑Copilot** scans your PR diff → proposes YAML patch; optional auto‑merge.                          |
 | **3. CI headaches**              | Full E2E env is heavy, slow, and flaky.                                               | Temporal‑based runner spins timers & retries _without_ holding CI pods; run in your cluster or local Docker. |
 | **4. Security / data residency** | SaaS testing tools require exposing internal endpoints.                               | Tests execute in **Rocketship Agent** pods that are part of your infra—only test metadata leaves the VPC.    |
