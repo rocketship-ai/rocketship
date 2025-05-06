@@ -35,7 +35,10 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 			if err != nil {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
-			workflow.Sleep(ctx, dp.Config.Duration)
+			err = workflow.Sleep(ctx, dp.Config.Duration)
+			if err != nil {
+				return fmt.Errorf("step %q: %w", step.Name, err)
+			}
 		// case "http":
 		// 	p := interpolateParams(step.Params, vars)
 		// 	var out map[string]interface{}
@@ -70,39 +73,39 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 			return fmt.Errorf("step %s: unknown plugin %s", step.Name, step.Plugin)
 		}
 
-		workflow.GetLogger(ctx).Info(fmt.Sprintf("Step %d/%d PASSED", i+1, len(test.Steps)))
+		workflow.GetLogger(ctx).Info(fmt.Sprintf("Step %q PASSED", step.Name))
 	}
 
 	return nil
 }
 
-func interpolateParams(params map[string]interface{}, vars map[string]string) map[string]interface{} {
-	result := make(map[string]interface{})
-	for k, v := range params {
-		if strVal, ok := v.(string); ok {
-			result[k] = interpolateString(strVal, vars)
-		} else {
-			result[k] = v
-		}
-	}
-	return result
-}
+// func interpolateParams(params map[string]interface{}, vars map[string]string) map[string]interface{} {
+// 	result := make(map[string]interface{})
+// 	for k, v := range params {
+// 		if strVal, ok := v.(string); ok {
+// 			result[k] = interpolateString(strVal, vars)
+// 		} else {
+// 			result[k] = v
+// 		}
+// 	}
+// 	return result
+// }
 
-func interpolateString(s string, vars map[string]string) string {
-	for k, v := range vars {
-		s = replaceVar(s, k, v)
-	}
-	return s
-}
+// func interpolateString(s string, vars map[string]string) string {
+// 	for k, v := range vars {
+// 		s = replaceVar(s, k, v)
+// 	}
+// 	return s
+// }
 
-func replaceVar(s, varName, varValue string) string {
-	return s // Placeholder implementation
-}
+// func replaceVar(s, varName, varValue string) string {
+// 	return s // Placeholder implementation
+// }
 
-func extractJSONPath(jsonStr, path string) (string, error) {
-	return "", nil
-}
+// func extractJSONPath(jsonStr, path string) (string, error) {
+// 	return "", nil
+// }
 
-func contains(s, substr string) bool {
-	return true // Placeholder implementation
-}
+// func contains(s, substr string) bool {
+// 	return true // Placeholder implementation
+// }

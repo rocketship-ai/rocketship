@@ -1,8 +1,6 @@
 # Rocketship
 
-<div style="background: #FCF4DB; border: 1px dashed #EDA900; border-radius: 2px; padding: 1rem; margin-bottom: 1rem">
- <span style="font-weight: bold; color: #EDA900; padding-right: 0.5rem;">🚧 Under Construction</span>
-Currently under active development. README might be inaccurate and is subject to change.
+![Under Construction](docs/misc/assets/under-construction-banner.png)
 
 ### 🚀 **Rocketship** – AI‑Native End‑to‑End Testing for Cloud‑Native Systems
 
