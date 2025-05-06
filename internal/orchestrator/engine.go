@@ -22,13 +22,13 @@ type Engine struct {
 }
 
 type RunInfo struct {
-	ID        string
-	Status    string
-	StartedAt time.Time
-	EndedAt   time.Time
+	ID         string
+	Status     string
+	StartedAt  time.Time
+	EndedAt    time.Time
 	WorkflowID string
-	RunID     string
-	Logs      []string
+	RunID      string
+	Logs       []string
 }
 
 func NewEngine(c client.Client) *Engine {
@@ -44,6 +44,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		return nil, fmt.Errorf("failed to generate run ID: %w", err)
 	}
 
+	// TODO: Return full slice of tests, not just the first one
 	test, err := dsl.ParseYAML(req.YamlPayload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
@@ -192,7 +193,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 	defer cancel()
 
 	workflowRun := e.temporal.GetWorkflow(ctx, workflowID, workflowRunID)
-	
+
 	var result interface{}
 	err := workflowRun.Get(ctx, &result)
 

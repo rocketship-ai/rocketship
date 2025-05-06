@@ -6,17 +6,18 @@ import (
 
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
+	"go.temporal.io/sdk/workflow"
 )
 
 type Plugin interface {
-	Execute(ctx context.Context, params map[string]interface{}) (map[string]interface{}, error)
-	Validate(params map[string]interface{}) error
+	GetType() string
+	Activity(ctx workflow.Context, p map[string]interface{}) (interface{}, error)
 }
 
-// PluginRegistry manages a collection of plugins
+// TODO: Not sure what this is for. PluginRegistry manages a collection of plugins?
 type PluginRegistry struct {
 	plugins map[string]Plugin
-	mu         sync.RWMutex
+	mu      sync.RWMutex
 }
 
 func NewPluginRegistry() *PluginRegistry {
