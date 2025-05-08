@@ -193,6 +193,7 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 
 func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 	// Create a context with timeout for monitoring
+	// TODO: Make this time limit configurable
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
