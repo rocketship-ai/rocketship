@@ -17,7 +17,7 @@ import (
 func main() {
 	temporalHost := os.Getenv("TEMPORAL_HOST")
 	if temporalHost == "" {
-		temporalHost = "localhost:7233"
+		panic("TEMPORAL_HOST is not set")
 	}
 
 	c, err := client.Dial(client.Options{

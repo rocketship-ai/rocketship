@@ -14,7 +14,7 @@ services:
     networks:
       - temporal-network
     expose:
-      - 9200
+      - 9200:9200
     volumes:
       - /var/lib/elasticsearch/data
   postgresql:
@@ -26,7 +26,7 @@ services:
     networks:
       - temporal-network
     expose:
-      - 5432
+      - 5432:5432
     volumes:
       - /var/lib/postgresql/data
   temporal:
@@ -103,6 +103,18 @@ services:
   localstack:
     image: localstack/localstack:3
     ports: ["4566:4566"]
+    environment:
+      - services=dynamodb
+  localstack-init:
+    build:
+      context: .
+      dockerfile: localstack/Dockerfile
+    depends_on:
+      - localstack
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
   ### END OF ROCKETSHIP CORE ###
 # .
 # .

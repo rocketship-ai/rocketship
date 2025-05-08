@@ -4,6 +4,11 @@ version: "v1.0.0"
 tests:
   - name: "Get and Create User"
     steps:
+      - name: "First Delay"
+        plugin: "delay"
+        config:
+          duration: "5s"
+
       - name: "Get user list"
         plugin: "http"
         config:

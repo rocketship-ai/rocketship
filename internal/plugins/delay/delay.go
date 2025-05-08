@@ -1,6 +1,7 @@
 package delay
 
 import (
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -22,5 +23,6 @@ func (p *DelayPlugin) GetType() string {
 
 func (p *DelayPlugin) Activity(ctx workflow.Context, params map[string]interface{}) (map[string]interface{}, error) {
 	// Dummy activity to satisfy the interface. Delay will just be a workflow sleep.
+	fmt.Println("Dummy activity called")
 	return nil, nil
 }

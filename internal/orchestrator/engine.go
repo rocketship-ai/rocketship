@@ -44,7 +44,6 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		return nil, fmt.Errorf("failed to generate run ID: %w", err)
 	}
 
-	// TODO: Return full slice of tests, not just the first one
 	test, err := dsl.ParseYAML(req.YamlPayload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
@@ -65,11 +64,12 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		TaskQueue: "test-workflows",
 	}
 
-	log.Printf("Starting workflow for run %s with test: %s", runID, test.Name)
+	log.Printf("[DEBUG] Attempting to start workflow for run %s with test: %s", runID, test.Name)
 	e.addLog(runID, fmt.Sprintf("Starting test: %s", test.Name))
 
 	execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test)
 	if err != nil {
+		log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
 		e.mu.Lock()
 		runInfo.Status = "FAILED"
 		runInfo.EndedAt = time.Now()
@@ -77,6 +77,8 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		e.addLog(runID, fmt.Sprintf("Failed to start workflow: %v", err))
 		return nil, fmt.Errorf("failed to start workflow: %w", err)
 	}
+
+	log.Printf("[DEBUG] Successfully started workflow for run %s with execution ID: %s", runID, execution.GetID())
 
 	e.mu.Lock()
 	runInfo.Status = "RUNNING"
@@ -86,6 +88,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 
 	e.addLog(runID, fmt.Sprintf("Workflow started with ID: %s, RunID: %s", execution.GetID(), execution.GetRunID()))
 
+	// Start monitoring in a separate goroutine
 	go e.monitorWorkflow(runID, execution.GetID(), execution.GetRunID())
 
 	return &generated.CreateRunResponse{
@@ -189,33 +192,56 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 }
 
 func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
+	// Create a context with timeout for monitoring
+	// TODO: Make this time limit configurable
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
+	log.Printf("[DEBUG] Starting to monitor workflow %s for run %s", workflowID, runID)
 	workflowRun := e.temporal.GetWorkflow(ctx, workflowID, workflowRunID)
 
-	var result interface{}
-	err := workflowRun.Get(ctx, &result)
+	// Create a channel to handle the workflow result
+	resultChan := make(chan error, 1)
 
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	// Start a goroutine to handle the blocking Get operation
+	go func() {
+		var result interface{}
+		err := workflowRun.Get(ctx, &result)
+		resultChan <- err
+	}()
 
-	runInfo, exists := e.runs[runID]
-	if !exists {
-		log.Printf("Run not found: %s", runID)
-		return
-	}
+	// Wait for either the result or context timeout
+	select {
+	case err := <-resultChan:
+		e.mu.Lock()
+		defer e.mu.Unlock()
 
-	runInfo.EndedAt = time.Now()
+		runInfo, exists := e.runs[runID]
+		if !exists {
+			log.Printf("[ERROR] Run not found during monitoring: %s", runID)
+			return
+		}
 
-	if err != nil {
-		runInfo.Status = "FAILED"
-		e.addLog(runID, fmt.Sprintf("Workflow failed: %v", err))
-		log.Printf("Workflow failed for run %s: %v", runID, err)
-	} else {
-		runInfo.Status = "PASSED"
-		e.addLog(runID, "Workflow completed successfully")
-		log.Printf("Workflow completed successfully for run %s", runID)
+		runInfo.EndedAt = time.Now()
+
+		if err != nil {
+			log.Printf("[ERROR] Workflow failed for run %s: %v", runID, err)
+			runInfo.Status = "FAILED"
+			e.addLog(runID, fmt.Sprintf("Workflow failed: %v", err))
+		} else {
+			log.Printf("[DEBUG] Workflow completed successfully for run %s", runID)
+			runInfo.Status = "PASSED"
+			e.addLog(runID, "Workflow completed successfully")
+		}
+	case <-ctx.Done():
+		log.Printf("[DEBUG] Monitoring timed out for run %s", runID)
+		e.mu.Lock()
+		if runInfo, exists := e.runs[runID]; exists {
+			runInfo.Status = "TIMEOUT"
+			runInfo.EndedAt = time.Now()
+			e.addLog(runID, "Workflow monitoring timed out")
+		}
+		e.mu.Unlock()
 	}
 }
 
