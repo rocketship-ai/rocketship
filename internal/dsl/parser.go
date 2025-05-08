@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -11,11 +12,10 @@ type Test struct {
 }
 
 type Step struct {
-	Name   string `json:"name" yaml:"name"`
-	Plugin string `json:"plugin" yaml:"plugin"`
-	// The below fields are maps because their fields vary by plugin
-	Config     map[string]interface{} `json:"config" yaml:"config"`
-	Assertions map[string]interface{} `json:"assertions" yaml:"assertions"`
+	Name       string                   `json:"name" yaml:"name"`
+	Plugin     string                   `json:"plugin" yaml:"plugin"`
+	Config     map[string]interface{}   `json:"config" yaml:"config"`
+	Assertions []map[string]interface{} `json:"assertions" yaml:"assertions"`
 }
 
 type RocketshipConfig struct {
@@ -25,6 +25,7 @@ type RocketshipConfig struct {
 	Tests       []Test `json:"tests" yaml:"tests"`
 }
 
+// TODO: Probably good to maintain a SSOT for YAML validation. For CLI client and engine server.
 func ParseYAML(yamlPayload []byte) (Test, error) {
 	var config RocketshipConfig
 	if err := yaml.Unmarshal(yamlPayload, &config); err != nil {
