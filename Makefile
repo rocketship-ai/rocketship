@@ -23,7 +23,7 @@ build:
 
 # Install the CLI to /usr/local/bin
 install: build
-	cp bin/rocketship /usr/local/bin/
+	sudo cp bin/rocketship /usr/local/bin/
 
 compose-up:
 	@if ! command -v docker-compose &> /dev/null; then \
