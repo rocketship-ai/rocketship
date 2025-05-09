@@ -49,7 +49,8 @@ func NewRunCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to create engine client: %w", err)
 			}
-			defer client.Close()
+
+			defer func() { _ = client.Close() }()
 
 			// Create run
 			runID, err := client.RunTest(context.Background(), yamlData)
