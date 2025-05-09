@@ -1,53 +1,42 @@
 package plugins
 
 import (
+	"context"
 	"testing"
 
-	"go.temporal.io/sdk/workflow"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
+// MockPlugin is a mock implementation of the Plugin interface
 type MockPlugin struct {
-	ActivityFunc func(ctx workflow.Context, params map[string]interface{}) (map[string]interface{}, error)
-	GetTypeFunc  func() string
-}
-
-func (m *MockPlugin) Activity(ctx workflow.Context, p map[string]interface{}) (interface{}, error) {
-	return m.ActivityFunc(ctx, p)
+	mock.Mock
 }
 
 func (m *MockPlugin) GetType() string {
-	return m.GetTypeFunc()
+	args := m.Called()
+	return args.String(0)
 }
 
-func TestPluginRegistry(t *testing.T) {
+func (m *MockPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
+	args := m.Called(ctx, p)
+	return args.Get(0), args.Error(1)
+}
+
+func TestRegistry(t *testing.T) {
 	registry := NewPluginRegistry()
 
-	if registry == nil {
-		t.Fatal("Expected registry to be created, got nil")
-	}
+	// Test Register and Get
+	mockPlugin := new(MockPlugin)
+	mockPlugin.On("GetType").Return("test")
 
-	mockPlugin := &MockPlugin{
-		ActivityFunc: func(ctx workflow.Context, params map[string]interface{}) (map[string]interface{}, error) {
-			return map[string]interface{}{"result": "success"}, nil
-		},
-		GetTypeFunc: func() string {
-			return "test.plugin"
-		},
-	}
+	registry.Register("test", mockPlugin)
 
-	registry.Register("test.plugin", mockPlugin)
+	plugin, exists := registry.Get("test")
+	assert.True(t, exists)
+	assert.Equal(t, mockPlugin, plugin)
 
-	plugin, exists := registry.Get("test.plugin")
-	if !exists {
-		t.Fatal("Expected plugin to exist in registry")
-	}
-
-	if plugin == nil {
-		t.Fatal("Expected plugin to be returned, got nil")
-	}
-
-	_, exists = registry.Get("non.existent")
-	if exists {
-		t.Error("Expected non-existent plugin to not exist in registry")
-	}
+	// Test Get non-existent plugin
+	_, exists = registry.Get("nonexistent")
+	assert.False(t, exists)
 }

@@ -2,10 +2,12 @@ package interpreter
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
+
 	// plugins
 	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
 )
@@ -14,6 +16,7 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 	// vars := map[string]string{}
 
 	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: time.Minute * 30, // TODO: Make this configurable
 		RetryPolicy: &temporal.RetryPolicy{
 			BackoffCoefficient: 2,
 			MaximumAttempts:    5,
@@ -30,12 +33,18 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 			if err != nil {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
-			// TODO: Dummy activity. Remove once we have tested delay working e2e.
-			_, err = dp.Activity(ctx, step.Config)
+
+			err = workflow.ExecuteActivity(ctx, dp.Activity, step.Config).Get(ctx, nil)
 			if err != nil {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
-			err = workflow.Sleep(ctx, dp.Config.Duration)
+
+			duration, err := time.ParseDuration(dp.Config.Duration)
+			if err != nil {
+				return fmt.Errorf("step %q: invalid duration format: %w", step.Name, err)
+			}
+
+			err = workflow.Sleep(ctx, duration)
 			if err != nil {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}

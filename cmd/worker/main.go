@@ -6,10 +6,7 @@ import (
 
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
-	"github.com/rocketship-ai/rocketship/internal/plugins/aws/ddb"
-	"github.com/rocketship-ai/rocketship/internal/plugins/aws/s3"
-	"github.com/rocketship-ai/rocketship/internal/plugins/aws/sqs"
-	"github.com/rocketship-ai/rocketship/internal/plugins/http"
+	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -17,7 +14,7 @@ import (
 func main() {
 	temporalHost := os.Getenv("TEMPORAL_HOST")
 	if temporalHost == "" {
-		temporalHost = "localhost:7233"
+		panic("TEMPORAL_HOST is not set")
 	}
 
 	c, err := client.Dial(client.Options{
@@ -32,10 +29,11 @@ func main() {
 
 	w.RegisterWorkflow(interpreter.TestWorkflow)
 
-	plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
-	plugins.RegisterWithTemporal(w, &s3.S3Plugin{})
-	plugins.RegisterWithTemporal(w, &ddb.DynamoDBPlugin{})
-	plugins.RegisterWithTemporal(w, &sqs.SQSPlugin{})
+	plugins.RegisterWithTemporal(w, &delay.DelayPlugin{})
+	// plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
+	// plugins.RegisterWithTemporal(w, &s3.S3Plugin{})
+	// plugins.RegisterWithTemporal(w, &ddb.DynamoDBPlugin{})
+	// plugins.RegisterWithTemporal(w, &sqs.SQSPlugin{})
 
 	log.Println("Starting worker")
 	if err := w.Run(worker.InterruptCh()); err != nil {
