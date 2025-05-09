@@ -6,12 +6,11 @@ import (
 
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/worker"
-	"go.temporal.io/sdk/workflow"
 )
 
 type Plugin interface {
 	GetType() string
-	Activity(ctx workflow.Context, p map[string]interface{}) (interface{}, error)
+	Activity(ctx context.Context, p map[string]interface{}) (interface{}, error)
 }
 
 // TODO: Not sure what this is for. PluginRegistry manages a collection of plugins?
@@ -39,14 +38,9 @@ func (r *PluginRegistry) Get(name string) (Plugin, bool) {
 	return plugin, exists
 }
 
-type TemporalConnector interface {
-	Name() string
-	Activity(ctx context.Context, p map[string]interface{}) (interface{}, error)
-}
-
-func RegisterWithTemporal(w worker.Worker, c TemporalConnector) {
+func RegisterWithTemporal(w worker.Worker, c Plugin) {
 	w.RegisterActivityWithOptions(
 		c.Activity,
-		activity.RegisterOptions{Name: c.Name()},
+		activity.RegisterOptions{Name: c.GetType()},
 	)
 }
