@@ -1,0 +1,10 @@
+name: "Simple Delay Test Suite"
+description: "A simple test suite demonstrating delay plugin"
+version: "v1.0.0"
+tests:
+  - name: "Delay Test"
+    steps:
+      - name: "First Delay"
+        plugin: "delay"
+        config:
+          duration: "5s"

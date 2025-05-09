@@ -10,17 +10,13 @@ func TestNewRunCmd(t *testing.T) {
 	cmd := NewRunCmd()
 
 	// Test command name and description
-	assert.Equal(t, "run [test-file]", cmd.Use)
-	assert.Equal(t, "Run a test file", cmd.Short)
-	assert.Contains(t, cmd.Long, "The test file should be a YAML file containing the test definition")
+	assert.Equal(t, "run", cmd.Use)
+	assert.Equal(t, "Run a rocketship test", cmd.Short)
+	assert.Contains(t, cmd.Long, "Run a rocketship test from a YAML file.")
 
-	// Test argument validation
-	err := cmd.Args(cmd, []string{})
-	assert.Error(t, err, "should require exactly one argument")
-
-	err = cmd.Args(cmd, []string{"test1", "test2"})
-	assert.Error(t, err, "should not accept more than one argument")
-
-	err = cmd.Args(cmd, []string{"test.yaml"})
-	assert.NoError(t, err, "should accept exactly one argument")
-} 
+	// Test flag
+	fileFlag := cmd.Flags().Lookup("file")
+	assert.NotNil(t, fileFlag, "file flag should exist")
+	assert.Equal(t, "file", fileFlag.Name)
+	assert.Equal(t, "Path to the test file (default: rocketship.yaml in current directory)", fileFlag.Usage)
+}
