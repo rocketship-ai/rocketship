@@ -1,4 +1,4 @@
-.PHONY: proto lint test build compose-up 
+.PHONY: proto lint test build compose-up install clean
 
 proto:
 	protoc \
@@ -13,12 +13,17 @@ lint:
 test:
 	go test ./...
 
+# Build the CLI
 build:
 	go vet ./...
 	go test ./...
-	go build -o bin/cli ./cmd/cli
+	go build -o bin/rocketship cmd/cli/main.go
 	go build -o bin/engine     ./cmd/engine
 	go build -o bin/worker      ./cmd/worker
+
+# Install the CLI to /usr/local/bin
+install: build
+	cp bin/rocketship /usr/local/bin/
 
 compose-up:
 	@if ! command -v docker-compose &> /dev/null; then \
@@ -29,3 +34,7 @@ compose-up:
 
 compose-down:
 	docker-compose -f .docker/docker-compose.yaml down
+
+# Clean build artifacts
+clean:
+	rm -rf bin/
