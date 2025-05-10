@@ -31,7 +31,7 @@ func NewRunCmd() *cobra.Command {
 			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 			go func() {
 				<-sigChan
-				fmt.Println("\nReceived interrupt signal, cleaning up...")
+				fmt.Println("\nCancelling test...")
 				cancel()
 			}()
 
@@ -40,8 +40,6 @@ func NewRunCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to load session: %w", err)
 			}
-
-			fmt.Printf("Connecting to engine at %s...\n", session.EngineAddress)
 
 			// Get test file path
 			testPath, err := cmd.Flags().GetString("file")
@@ -58,31 +56,18 @@ func NewRunCmd() *cobra.Command {
 				testPath = filepath.Join(wd, "rocketship.yaml")
 			}
 
-			fmt.Printf("Reading test file: %s\n", testPath)
-
 			// Read YAML file
 			yamlData, err := os.ReadFile(testPath)
 			if err != nil {
 				return fmt.Errorf("failed to read test file: %w", err)
 			}
 
-			fmt.Printf("YAML file size: %d bytes\n", len(yamlData))
-
 			// Create engine client
-			fmt.Println("Creating engine client...")
 			client, err := NewEngineClient(session.EngineAddress)
 			if err != nil {
 				return fmt.Errorf("failed to create engine client: %w", err)
 			}
-
-			defer func() {
-				fmt.Println("Closing engine client...")
-				if err := client.Close(); err != nil {
-					fmt.Printf("Warning: error closing client: %v\n", err)
-				}
-			}()
-
-			fmt.Println("Creating run...")
+			defer client.Close()
 
 			// Create run with timeout
 			runCtx, runCancel := context.WithTimeout(ctx, 30*time.Second)
@@ -93,10 +78,9 @@ func NewRunCmd() *cobra.Command {
 				return fmt.Errorf("failed to create run: %w", err)
 			}
 
-			fmt.Printf("Created run %s\n", runID)
+			fmt.Printf("Starting test run %s...\n", runID)
 
 			// Stream logs
-			fmt.Println("Starting log stream...")
 			logStream, err := client.StreamLogs(ctx, runID)
 			if err != nil {
 				return fmt.Errorf("failed to stream logs: %w", err)
