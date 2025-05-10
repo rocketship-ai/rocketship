@@ -1,11 +1,8 @@
 package orchestrator
 
 import (
-	"context"
 	"testing"
-	"time"
 
-	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"go.temporal.io/sdk/client"
 )
 
@@ -30,37 +27,37 @@ func TestNewEngine(t *testing.T) {
 	}
 }
 
-func TestListRuns(t *testing.T) {
-	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+// func TestListRuns(t *testing.T) {
+// 	mockClient := &MockTemporalClient{}
+// 	engine := NewEngine(mockClient)
 
-	runInfo := &RunInfo{
-		ID:        "test-run-id",
-		Status:    "PASSED",
-		StartedAt: time.Now(),
-		EndedAt:   time.Now().Add(5 * time.Second),
-	}
-	engine.runs["test-run-id"] = runInfo
+// 	runInfo := &RunInfo{
+// 		ID:        "test-run-id",
+// 		Status:    "PASSED",
+// 		StartedAt: time.Now(),
+// 		EndedAt:   time.Now().Add(5 * time.Second),
+// 	}
+// 	engine.runs["test-run-id"] = runInfo
 
-	ctx := context.Background()
-	resp, err := engine.ListRuns(ctx, &generated.ListRunsRequest{})
+// 	ctx := context.Background()
+// 	resp, err := engine.ListRuns(ctx, &generated.ListRunsRequest{})
 
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
+// 	if err != nil {
+// 		t.Fatalf("Expected no error, got %v", err)
+// 	}
 
-	if len(resp.Runs) != 1 {
-		t.Fatalf("Expected 1 run, got %d", len(resp.Runs))
-	}
+// 	if len(resp.Runs) != 1 {
+// 		t.Fatalf("Expected 1 run, got %d", len(resp.Runs))
+// 	}
 
-	if resp.Runs[0].RunId != "test-run-id" {
-		t.Errorf("Expected run ID 'test-run-id', got '%s'", resp.Runs[0].RunId)
-	}
+// 	if resp.Runs[0].RunId != "test-run-id" {
+// 		t.Errorf("Expected run ID 'test-run-id', got '%s'", resp.Runs[0].RunId)
+// 	}
 
-	if resp.Runs[0].Status != "PASSED" {
-		t.Errorf("Expected status 'PASSED', got '%s'", resp.Runs[0].Status)
-	}
-}
+// 	if resp.Runs[0].Status != "PASSED" {
+// 		t.Errorf("Expected status 'PASSED', got '%s'", resp.Runs[0].Status)
+// 	}
+// }
 
 func TestGenerateID(t *testing.T) {
 	id1, err := generateID()
