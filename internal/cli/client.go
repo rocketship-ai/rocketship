@@ -7,6 +7,7 @@ import (
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -18,7 +19,7 @@ type EngineClient struct {
 func NewEngineClient(address string) (*EngineClient, error) {
 	fmt.Printf("Connecting to engine at %s...\n", address)
 
-	conn, err := grpc.NewClient(address)
+	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			return nil, fmt.Errorf("connection timed out - is the engine running at %s?", address)
