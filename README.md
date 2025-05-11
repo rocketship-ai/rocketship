@@ -38,12 +38,12 @@ It combines a declarative YAML spec, Temporal‑style durable execution, and an 
 ```bash
 # 1. Install Prerequisites & CLI
 # macOS
-brew install go temporal && go install github.com/rocketship-ai/rocketship/cmd/cli@latest
+brew install go temporal && go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest
 
 # Linux
 curl -sSf https://temporal.download/cli.sh | sh && \
   # Install Go 1.24+ from https://go.dev/dl/
-  go install github.com/rocketship-ai/rocketship/cmd/cli@latest
+  go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest
 
 # 2. Start the Local Server (in terminal 1)
 rocketship start server --local

@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rocketship-ai/rocketship/internal/embedded"
 	"github.com/spf13/cobra"
 )
 
@@ -124,23 +124,23 @@ func setupLocalEnvironment() error {
 		return fmt.Errorf("failed to set TEMPORAL_HOST environment variable: %w", err)
 	}
 
-	// Start the worker
+	// Start the worker from embedded binary
 	log.Println("Starting Rocketship worker...")
-	workerPath := filepath.Join("cmd", "worker", "main.go")
-	workerCmd := exec.CommandContext(ctx, "go", "run", workerPath)
-	workerCmd.Stderr = os.Stderr
-	workerCmd.Stdout = os.Stdout
+	workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+	if err != nil {
+		return fmt.Errorf("failed to start worker: %w", err)
+	}
 	if err := workerCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start worker: %w", err)
 	}
 	pm.Add(workerCmd)
 
-	// Start the engine
+	// Start the engine from embedded binary
 	log.Println("Starting Rocketship engine...")
-	enginePath := filepath.Join("cmd", "engine", "main.go")
-	engineCmd := exec.CommandContext(ctx, "go", "run", enginePath)
-	engineCmd.Stderr = os.Stderr
-	engineCmd.Stdout = os.Stdout
+	engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+	if err != nil {
+		return fmt.Errorf("failed to start engine: %w", err)
+	}
 	if err := engineCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start engine: %w", err)
 	}
