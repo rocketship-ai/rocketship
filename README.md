@@ -48,7 +48,7 @@ curl -sSf https://temporal.download/cli.sh | sh && \
 # 2. Start the Local Server (in terminal 1)
 rocketship start server --local
 
-# 3. Create a Session (in terminal 2)
+# 3. [OPTIONAL] Create a Session (in terminal 2)
 rocketship start session --engine localhost:7700
 
 # 4. Create a Test File
@@ -71,8 +71,8 @@ tests:
           duration: "10s"
 EOF
 
-# 5. Run the Test
-rocketship run --file simple-test.yaml
+# 5. Run the Test (engine flag is optional if you have a session)
+rocketship run --file simple-test.yaml --engine localhost:7700
 ```
 
 You should see output like:
