@@ -8,10 +8,8 @@ import (
 	"strings"
 )
 
-type HTTPPlugin struct{}
-
-func (c *HTTPPlugin) Name() string {
-	return "http.send"
+func (c *HTTPPlugin) GetType() string {
+	return "http"
 }
 
 func (c *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {

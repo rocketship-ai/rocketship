@@ -34,11 +34,6 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
 
-			err = workflow.ExecuteActivity(ctx, dp.Activity, step.Config).Get(ctx, nil)
-			if err != nil {
-				return fmt.Errorf("step %q: %w", step.Name, err)
-			}
-
 			duration, err := time.ParseDuration(dp.Config.Duration)
 			if err != nil {
 				return fmt.Errorf("step %q: invalid duration format: %w", step.Name, err)
@@ -48,36 +43,36 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 			if err != nil {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
-		// case "http":
-		// 	p := interpolateParams(step.Params, vars)
-		// 	var out map[string]interface{}
-		// 	err := workflow.ExecuteActivity(ctx, "http.send", p).Get(ctx, &out)
-		// 	if err != nil {
-		// 		return fmt.Errorf("step %d: http.send error: %w", i, err)
-		// 	}
+		case "http":
+			// p := interpolateParams(step.Params, vars)
+			// var out map[string]interface{}
+			// err := workflow.ExecuteActivity(ctx, "http.send", p).Get(ctx, &out)
+			// if err != nil {
+			// 	return fmt.Errorf("step %d: http.send error: %w", i, err)
+			// }
 
-		// 	if exp := step.Expect; exp != nil {
-		// 		if statusExp, ok := exp["status"]; ok {
-		// 			status := int(out["status"].(float64))
-		// 			if status != int(statusExp.(float64)) {
-		// 				return fmt.Errorf("step %d: HTTP status mismatch: expected %v, got %v", i, statusExp, status)
-		// 			}
-		// 		}
-		// 		if bodyContainsExp, ok := exp["bodyContains"]; ok {
-		// 			body := out["body"].(string)
-		// 			if !contains(body, bodyContainsExp.(string)) {
-		// 				return fmt.Errorf("step %d: HTTP body does not contain expected string", i)
-		// 			}
-		// 		}
-		// 	}
+			// if exp := step.Expect; exp != nil {
+			// 	if statusExp, ok := exp["status"]; ok {
+			// 		status := int(out["status"].(float64))
+			// 		if status != int(statusExp.(float64)) {
+			// 			return fmt.Errorf("step %d: HTTP status mismatch: expected %v, got %v", i, statusExp, status)
+			// 		}
+			// 	}
+			// 	if bodyContainsExp, ok := exp["bodyContains"]; ok {
+			// 		body := out["body"].(string)
+			// 		if !contains(body, bodyContainsExp.(string)) {
+			// 			return fmt.Errorf("step %d: HTTP body does not contain expected string", i)
+			// 		}
+			// 	}
+			// }
 
-		// 	if step.Save != nil {
-		// 		value, err := extractJSONPath(out["body"].(string), step.Save.JSONPath)
-		// 		if err != nil {
-		// 			return fmt.Errorf("step %d: failed to extract JSON path: %w", i, err)
-		// 		}
-		// 		vars[step.Save.As] = value
-		// 	}
+			// if step.Save != nil {
+			// 	value, err := extractJSONPath(out["body"].(string), step.Save.JSONPath)
+			// 	if err != nil {
+			// 		return fmt.Errorf("step %d: failed to extract JSON path: %w", i, err)
+			// 	}
+			// 	vars[step.Save.As] = value
+			// }
 		default:
 			return fmt.Errorf("step %s: unknown plugin %s", step.Name, step.Plugin)
 		}
