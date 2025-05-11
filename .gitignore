@@ -1,2 +1,4 @@
 .vscode
-bin
+/bin/
+/internal/embedded/bin/*
+!/internal/embedded/bin/.gitkeep
