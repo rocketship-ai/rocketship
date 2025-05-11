@@ -20,15 +20,24 @@ type Engine struct {
 	runs     map[string]*RunInfo
 	mu       sync.RWMutex
 }
-
 type RunInfo struct {
+	Name      string
+	ID        string
+	Status    string
+	StartedAt time.Time
+	EndedAt   time.Time
+	Tests     map[string]*TestInfo
+	Logs      []string
+}
+
+type TestInfo struct {
+	Name       string
 	ID         string
 	Status     string
 	StartedAt  time.Time
 	EndedAt    time.Time
-	WorkflowID string
 	RunID      string
-	Logs       []string
+	WorkflowID string
 }
 
 func NewEngine(c client.Client) *Engine {
@@ -47,51 +56,61 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		return nil, fmt.Errorf("failed to generate run ID: %w", err)
 	}
 
-	test, err := dsl.ParseYAML(req.YamlPayload)
+	run, err := dsl.ParseYAML(req.YamlPayload)
 	if err != nil {
 		log.Printf("[ERROR] Failed to parse YAML: %v", err)
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	log.Printf("[DEBUG] Starting test: %s", test.Name)
+	log.Printf("[DEBUG] Starting run: %s", run.Name)
 
 	runInfo := &RunInfo{
+		Name:      run.Name,
 		ID:        runID,
 		Status:    "PENDING",
 		StartedAt: time.Now(),
+		Tests:     make(map[string]*TestInfo),
+		Logs:      []string{},
+	}
+
+	for _, test := range run.Tests {
+		testID, err := generateID()
+		if err != nil {
+			log.Printf("[ERROR] Failed to generate test ID: %v", err)
+			return nil, fmt.Errorf("failed to generate test ID: %w", err)
+		}
+		testInfo := &TestInfo{
+			Name:       test.Name,
+			ID:         testID,
+			Status:     "PENDING",
+			StartedAt:  time.Now(),
+			RunID:      runID,
+			WorkflowID: "",
+		}
+		e.mu.Lock()
+		runInfo.Tests[testID] = testInfo
+		e.mu.Unlock()
+
+		workflowOptions := client.StartWorkflowOptions{
+			ID:        fmt.Sprintf("run-%s-test-%s", runID, testID),
+			TaskQueue: "test-workflows",
+		}
+
+		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test)
+		if err != nil {
+			log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
+			return nil, fmt.Errorf("failed to start workflow: %w", err)
+		}
+
+		e.mu.Lock()
+		runInfo.Tests[testID].WorkflowID = execution.GetID()
+		e.mu.Unlock()
+
+		go e.monitorWorkflow(runID, execution.GetID(), execution.GetRunID())
 	}
 
 	e.mu.Lock()
 	e.runs[runID] = runInfo
 	e.mu.Unlock()
-
-	workflowOptions := client.StartWorkflowOptions{
-		ID:        fmt.Sprintf("test-%s", runID),
-		TaskQueue: "test-workflows",
-	}
-
-	execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test)
-	if err != nil {
-		log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
-		e.mu.Lock()
-		runInfo.Status = "FAILED"
-		runInfo.EndedAt = time.Now()
-		e.mu.Unlock()
-		e.addLog(runID, fmt.Sprintf("Failed to start workflow: %v", err))
-		return nil, fmt.Errorf("failed to start workflow: %w", err)
-	}
-
-	log.Printf("[DEBUG] Started workflow for run %s", runID)
-
-	e.mu.Lock()
-	runInfo.Status = "RUNNING"
-	runInfo.WorkflowID = execution.GetID()
-	runInfo.RunID = execution.GetRunID()
-	e.mu.Unlock()
-
-	e.addLog(runID, fmt.Sprintf("Starting test: %s", test.Name))
-
-	// Start monitoring in a separate goroutine
-	go e.monitorWorkflow(runID, execution.GetID(), execution.GetRunID())
 
 	return &generated.CreateRunResponse{
 		RunId: runID,
@@ -167,31 +186,6 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 		}
 	}
 }
-
-// func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
-// 	e.mu.RLock()
-// 	defer e.mu.RUnlock()
-
-// 	response := &generated.ListRunsResponse{
-// 		Runs: make([]*generated.RunSummary, 0, len(e.runs)),
-// 	}
-
-// 	for _, runInfo := range e.runs {
-// 		summary := &generated.RunSummary{
-// 			RunId:     runInfo.ID,
-// 			Status:    runInfo.Status,
-// 			StartedAt: runInfo.StartedAt.Format(time.RFC3339),
-// 		}
-
-// 		if !runInfo.EndedAt.IsZero() {
-// 			summary.EndedAt = runInfo.EndedAt.Format(time.RFC3339)
-// 		}
-
-// 		response.Runs = append(response.Runs, summary)
-// 	}
-
-// 	return response, nil
-// }
 
 func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)

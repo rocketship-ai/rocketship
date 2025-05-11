@@ -2,9 +2,23 @@ name: "Simple Delay Test Suite"
 description: "A simple test suite demonstrating delay plugin"
 version: "v1.0.0"
 tests:
-  - name: "Delay Test"
+  - name: "Test 1"
     steps:
-      - name: "First Delay"
+      - name: "Step 1"
+        plugin: "delay"
+        config:
+          duration: "5s"
+      - name: "Step 2"
+        plugin: "delay"
+        config:
+          duration: "5s"
+  - name: "Test 2"
+    steps:
+      - name: "Step 1"
+        plugin: "delay"
+        config:
+          duration: "5s"
+      - name: "Step 2"
         plugin: "delay"
         config:
           duration: "5s"

@@ -6,6 +6,13 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
+type RocketshipConfig struct {
+	Name        string `json:"name" yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	Version     string `json:"version" yaml:"version"`
+	Tests       []Test `json:"tests" yaml:"tests"`
+}
+
 type Test struct {
 	Name  string `json:"name" yaml:"name"`
 	Steps []Step `json:"steps" yaml:"steps"`
@@ -18,35 +25,28 @@ type Step struct {
 	Assertions []map[string]interface{} `json:"assertions" yaml:"assertions"`
 }
 
-type RocketshipConfig struct {
-	Name        string `json:"name" yaml:"name"`
-	Description string `json:"description" yaml:"description"`
-	Version     string `json:"version" yaml:"version"`
-	Tests       []Test `json:"tests" yaml:"tests"`
-}
-
 // TODO: Probably good to maintain a SSOT for YAML validation. For CLI client and engine server.
-func ParseYAML(yamlPayload []byte) (Test, error) {
+func ParseYAML(yamlPayload []byte) (RocketshipConfig, error) {
 	var config RocketshipConfig
 	if err := yaml.Unmarshal(yamlPayload, &config); err != nil {
-		return Test{}, fmt.Errorf("failed to unmarshal YAML: %w", err)
+		return RocketshipConfig{}, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
 	if config.Version != "v1.0.0" {
-		return Test{}, fmt.Errorf("unsupported version: %q", config.Version)
+		return RocketshipConfig{}, fmt.Errorf("unsupported version: %q", config.Version)
 	}
 
 	if len(config.Tests) == 0 {
-		return Test{}, fmt.Errorf("no tests defined")
+		return RocketshipConfig{}, fmt.Errorf("no tests defined")
 	}
 
 	// test.Name and test.Steps are required for all tests (for clear error messages)
 	for i, test := range config.Tests {
 		if test.Name == "" {
-			return Test{}, fmt.Errorf("test %d: a name is required for each test", i)
+			return RocketshipConfig{}, fmt.Errorf("test %d: a name is required for each test", i)
 		}
 		if len(test.Steps) == 0 {
-			return Test{}, fmt.Errorf("test %q: no steps defined for this test", test.Name)
+			return RocketshipConfig{}, fmt.Errorf("test %q: no steps defined for this test", test.Name)
 		}
 	}
 
@@ -54,15 +54,15 @@ func ParseYAML(yamlPayload []byte) (Test, error) {
 	for _, test := range config.Tests {
 		for j, step := range test.Steps {
 			if step.Name == "" {
-				return Test{}, fmt.Errorf("test %q: step %d: a name is required for each step", test.Name, j)
+				return RocketshipConfig{}, fmt.Errorf("test %q: step %d: a name is required for each step", test.Name, j)
 			}
 			if step.Plugin == "" {
-				return Test{}, fmt.Errorf("test %q: step %q: a plugin is required for each step", test.Name, step.Name)
+				return RocketshipConfig{}, fmt.Errorf("test %q: step %q: a plugin is required for each step", test.Name, step.Name)
 			}
 		}
 	}
 
-	return config.Tests[0], nil
+	return config, nil
 }
 
 // TODO: Do i even need this? Its not used anywhere. The function is defined in dsl/schema.go
