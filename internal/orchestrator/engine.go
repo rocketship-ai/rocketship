@@ -206,20 +206,21 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 			return
 		}
 
-		runInfo.EndedAt = time.Now()
+		testInfo := runInfo.Tests[workflowID]
+		testInfo.EndedAt = time.Now()
 
 		if err != nil {
-			log.Printf("[ERROR] Workflow failed for run %s: %v", runID, err)
-			runInfo.Status = "FAILED"
-			testName := runInfo.Tests[workflowID].Name
+			log.Printf("[ERROR] Workflow failed for test %s: %v", testInfo.Name, err)
+			testInfo.Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testName, err))
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testInfo.Name, err))
+			e.checkIfRunFinished(runID)
 		} else {
 			log.Printf("[DEBUG] Workflow completed successfully for run %s", runID)
-			runInfo.Status = "PASSED"
-			testName := runInfo.Tests[workflowID].Name
+			testInfo.Status = "PASSED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testName))
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name))
+			e.checkIfRunFinished(runID)
 		}
 	case <-ctx.Done():
 		log.Printf("[DEBUG] Monitoring timed out for test ID %s", workflowID)
@@ -229,6 +230,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 			runInfo.Tests[workflowID].EndedAt = time.Now()
 			e.mu.Unlock()
 			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", runInfo.Tests[workflowID].Name))
+			e.checkIfRunFinished(runID)
 		} else {
 			e.mu.Unlock()
 		}
@@ -255,4 +257,63 @@ func generateID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+func (e *Engine) checkIfRunFinished(runID string) {
+	if e.isRunFinished(runID) {
+		// get run name
+		e.mu.RLock()
+		runName := e.runs[runID].Name
+		e.mu.RUnlock()
+		numTests := len(e.runs[runID].Tests)
+		if numTests == e.numTestsPassed(runID) {
+			e.mu.Lock()
+			e.runs[runID].Status = "PASSED"
+			e.mu.Unlock()
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, numTests))
+		} else if numTests == (e.numTestsPassed(runID) + e.numTestsFailed(runID)) {
+			e.mu.Lock()
+			e.runs[runID].Status = "FAILED"
+			e.mu.Unlock()
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests))
+		} else {
+			// we have tests that timed out. Print # failed and # timed out
+			e.mu.Lock()
+			e.runs[runID].Status = "FAILED"
+			e.mu.Unlock()
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests, e.numTestsTimedOut(runID), numTests))
+		}
+	}
+}
+
+// helper function that checks if any tests are still in PENDING status. isRunFinished()
+func (e *Engine) isRunFinished(runID string) bool {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	for _, testInfo := range e.runs[runID].Tests {
+		if testInfo.Status == "PENDING" {
+			return false
+		}
+	}
+	return true
+}
+
+// number of tests in run which are in status PASSED
+func (e *Engine) numTestsPassed(runID string) int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return len(e.runs[runID].Tests)
+}
+
+// number of tests in run which are in status FAILED
+func (e *Engine) numTestsFailed(runID string) int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return len(e.runs[runID].Tests)
+}
+
+func (e *Engine) numTestsTimedOut(runID string) int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return len(e.runs[runID].Tests)
 }
