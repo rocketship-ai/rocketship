@@ -36,10 +36,11 @@ proto:
 	  --go-grpc_out=paths=source_relative:internal/api/generated \
 	  proto/engine.proto
 
-# Install the CLI to /usr/local/bin
+# Install the CLI to $GOPATH/bin or $HOME/go/bin
 install: build
 	@echo "Installing CLI..."
-	cp bin/rocketship /usr/local/bin/
+	@rm -f $(shell which rocketship 2>/dev/null)
+	go install ./cmd/rocketship
 
 # Set up development environment
 dev-setup: prepare-embed

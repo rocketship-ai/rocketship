@@ -45,8 +45,8 @@ This document describes the process for developing and releasing new versions of
      make install    # Builds all binaries and installs CLI to /usr/local/bin
 
      # Test the your CLI changes
-     rocketship start    # Start required services
-     rocketship run      # Execute your tests
+     rocketship start server --local    # Start required services
+     rocketship run --file <path/to/rocketship.yaml> --engine localhost:7700      # Execute your tests
      ```
 
    - Test with Docker: `make compose-up`
