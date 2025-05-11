@@ -35,9 +35,20 @@ This document describes the process for developing and releasing new versions of
      - `test:` for adding tests
 
 4. **Testing Your Changes**
+
    - Run unit tests: `make test`
    - Run linting: `make lint`
-   - Build and test locally: `make build`
+   - Test local changes:
+
+     ```bash
+     # Build and install your local changes
+     make install    # Builds all binaries and installs CLI to /usr/local/bin
+
+     # Test the your CLI changes
+     rocketship start    # Start required services
+     rocketship run      # Execute your tests
+     ```
+
    - Test with Docker: `make compose-up`
 
 ## Release Process
