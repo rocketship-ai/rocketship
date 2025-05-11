@@ -20,13 +20,20 @@ jobs:
           go-version: "1.24"
           check-latest: true
 
+      - name: Build embedded binaries
+        run: |
+          # Create necessary directories
+          mkdir -p internal/embedded/bin
+
+          # Build worker and engine binaries first
+          go build -o internal/embedded/bin/worker cmd/worker/main.go
+          go build -o internal/embedded/bin/engine cmd/engine/main.go
+
       - name: Run tests
         run: make test
 
-      - name: Build binaries
+      - name: Build release artifacts
         run: |
-          make build-binaries
-          make build
           # Create release artifacts for different platforms
           GOOS=darwin GOARCH=amd64 go build -o bin/rocketship-darwin-amd64 cmd/rocketship/main.go
           GOOS=darwin GOARCH=arm64 go build -o bin/rocketship-darwin-arm64 cmd/rocketship/main.go
