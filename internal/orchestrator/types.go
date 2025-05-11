@@ -21,7 +21,13 @@ type RunInfo struct {
 	StartedAt time.Time
 	EndedAt   time.Time
 	Tests     map[string]*TestInfo // Test's WorkflowID : TestInfo
-	Logs      []string
+	Logs      []LogLine
+}
+
+type LogLine struct {
+	Msg   string
+	Color string
+	Bold  bool
 }
 
 type TestInfo struct {

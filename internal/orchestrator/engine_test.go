@@ -86,17 +86,17 @@ func TestAddLog(t *testing.T) {
 	runInfo := &RunInfo{
 		ID:     "test-run-id",
 		Status: "RUNNING",
-		Logs:   []string{},
+		Logs:   []LogLine{},
 	}
 	engine.runs["test-run-id"] = runInfo
 
-	engine.addLog("test-run-id", "Test log message")
+	engine.addLog("test-run-id", "Test log message", "green", true)
 
 	if len(runInfo.Logs) != 1 {
 		t.Fatalf("Expected 1 log message, got %d", len(runInfo.Logs))
 	}
 
-	if runInfo.Logs[0] != "Test log message" {
-		t.Errorf("Expected log message 'Test log message', got '%s'", runInfo.Logs[0])
+	if runInfo.Logs[0].Msg != "Test log message" {
+		t.Errorf("Expected log message 'Test log message', got '%s'", runInfo.Logs[0].Msg)
 	}
 }

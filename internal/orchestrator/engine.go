@@ -42,7 +42,13 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		Status:    "PENDING",
 		StartedAt: time.Now(),
 		Tests:     make(map[string]*TestInfo),
-		Logs:      []string{},
+		Logs: []LogLine{
+			{
+				Msg:   fmt.Sprintf("🚀🚀🚀 Starting test run \"%s\"... 🚀🚀🚀", run.Name),
+				Color: "purple",
+				Bold:  true,
+			},
+		},
 	}
 
 	for _, test := range run.Tests {
@@ -98,14 +104,16 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 	}
 
 	e.mu.RLock()
-	logs := make([]string, len(runInfo.Logs))
+	logs := make([]LogLine, len(runInfo.Logs))
 	copy(logs, runInfo.Logs)
 	e.mu.RUnlock()
 
 	for _, logMsg := range logs {
 		if err := stream.Send(&generated.LogLine{
-			Ts:  time.Now().Format(time.RFC3339),
-			Msg: logMsg,
+			Ts:    time.Now().Format(time.RFC3339),
+			Msg:   logMsg.Msg,
+			Color: logMsg.Color,
+			Bold:  logMsg.Bold,
 		}); err != nil {
 			return err
 		}
@@ -133,8 +141,10 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 
 				for _, logMsg := range newLogs {
 					if err := stream.Send(&generated.LogLine{
-						Ts:  time.Now().Format(time.RFC3339),
-						Msg: logMsg,
+						Ts:    time.Now().Format(time.RFC3339),
+						Msg:   logMsg.Msg,
+						Color: logMsg.Color,
+						Bold:  logMsg.Bold,
 					}); err != nil {
 						return err
 					}
@@ -148,6 +158,7 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 			e.mu.RUnlock()
 
 			if status == "PASSED" || status == "FAILED" {
+				// Run is finished, end the stream
 				return nil
 			}
 		case <-stream.Context().Done():
@@ -187,13 +198,13 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 			log.Printf("[ERROR] Workflow failed for test %s: %v", testInfo.Name, err)
 			testInfo.Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testInfo.Name, err))
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testInfo.Name, err), "red", true)
 			e.checkIfRunFinished(runID)
 		} else {
 			log.Printf("[DEBUG] Workflow completed successfully for run %s", runID)
 			testInfo.Status = "PASSED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name))
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name), "green", true)
 			e.checkIfRunFinished(runID)
 		}
 	case <-ctx.Done():
@@ -203,7 +214,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 			runInfo.Tests[workflowID].Status = "TIMEOUT"
 			runInfo.Tests[workflowID].EndedAt = time.Now()
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", runInfo.Tests[workflowID].Name))
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", runInfo.Tests[workflowID].Name), "red", true)
 			e.checkIfRunFinished(runID)
 		} else {
 			e.mu.Unlock()
@@ -211,7 +222,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 	}
 }
 
-func (e *Engine) addLog(runID, message string) {
+func (e *Engine) addLog(runID, message, color string, bold bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -221,7 +232,11 @@ func (e *Engine) addLog(runID, message string) {
 		return
 	}
 
-	runInfo.Logs = append(runInfo.Logs, message)
+	runInfo.Logs = append(runInfo.Logs, LogLine{
+		Msg:   message,
+		Color: color,
+		Bold:  bold,
+	})
 }
 
 func generateID() (string, error) {
@@ -244,18 +259,18 @@ func (e *Engine) checkIfRunFinished(runID string) {
 			e.mu.Lock()
 			e.runs[runID].Status = "PASSED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, numTests))
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, numTests), "green", true)
 		} else if numTests == (e.numTestsPassed(runID) + e.numTestsFailed(runID)) {
 			e.mu.Lock()
 			e.runs[runID].Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests))
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests), "red", true)
 		} else {
 			// we have tests that timed out. Print # failed and # timed out
 			e.mu.Lock()
 			e.runs[runID].Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests, e.numTestsTimedOut(runID), numTests))
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests, e.numTestsTimedOut(runID), numTests), "red", true)
 		}
 	}
 }

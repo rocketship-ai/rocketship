@@ -18,7 +18,12 @@ message CreateRunResponse {
 }
 
 message LogStreamRequest { string run_id = 1; }
-message LogLine         { string ts = 1; string msg = 2; }
+message LogLine {
+  string ts = 1;
+  string msg = 2;
+  string color = 3;  // "green" | "red" | "purple" | "" (default)
+  bool bold = 4;
+}
 
 message ListRunsRequest {}
 message ListRunsResponse { repeated RunSummary runs = 1; }

@@ -157,6 +157,8 @@ type LogLine struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ts            string                 `protobuf:"bytes,1,opt,name=ts,proto3" json:"ts,omitempty"`
 	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+	Color         string                 `protobuf:"bytes,3,opt,name=color,proto3" json:"color,omitempty"` // "green" | "red" | "purple" | "" (default)
+	Bold          bool                   `protobuf:"varint,4,opt,name=bold,proto3" json:"bold,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -203,6 +205,20 @@ func (x *LogLine) GetMsg() string {
 		return x.Msg
 	}
 	return ""
+}
+
+func (x *LogLine) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *LogLine) GetBold() bool {
+	if x != nil {
+		return x.Bold
+	}
+	return false
 }
 
 type ListRunsRequest struct {
@@ -363,10 +379,12 @@ const file_engine_proto_rawDesc = "" +
 	"\x11CreateRunResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\")\n" +
 	"\x10LogStreamRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\"+\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\"U\n" +
 	"\aLogLine\x12\x0e\n" +
 	"\x02ts\x18\x01 \x01(\tR\x02ts\x12\x10\n" +
-	"\x03msg\x18\x02 \x01(\tR\x03msg\"\x11\n" +
+	"\x03msg\x18\x02 \x01(\tR\x03msg\x12\x14\n" +
+	"\x05color\x18\x03 \x01(\tR\x05color\x12\x12\n" +
+	"\x04bold\x18\x04 \x01(\bR\x04bold\"\x11\n" +
 	"\x0fListRunsRequest\"A\n" +
 	"\x10ListRunsResponse\x12-\n" +
 	"\x04runs\x18\x01 \x03(\v2\x19.rocketship.v1.RunSummaryR\x04runs\"u\n" +

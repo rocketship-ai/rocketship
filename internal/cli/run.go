@@ -20,11 +20,6 @@ import (
 
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
-	// Initialize color functions with bold
-	green := color.New(color.FgGreen, color.Bold).SprintFunc()
-	red := color.New(color.FgRed, color.Bold).SprintFunc()
-	purple := color.New(color.FgMagenta, color.Bold).SprintFunc()
-
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run a rocketship test",
@@ -70,7 +65,8 @@ func NewRunCmd() *cobra.Command {
 				return fmt.Errorf("failed to read test file: %w", err)
 			}
 
-			run, err := dsl.ParseYAML(yamlData)
+			// client-side validation of YAML
+			_, err = dsl.ParseYAML(yamlData)
 			if err != nil {
 				return fmt.Errorf("failed to parse YAML: %w", err)
 			}
@@ -90,9 +86,6 @@ func NewRunCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to create run: %w", err)
 			}
-
-			fmt.Printf("%s\n", purple(fmt.Sprintf("🚀🚀🚀 Starting test run \"%s\"... 🚀🚀🚀", run.Name)))
-
 			// Stream logs
 			logStream, err := client.StreamLogs(ctx, runID)
 			if err != nil {
@@ -115,22 +108,22 @@ func NewRunCmd() *cobra.Command {
 						}
 						return fmt.Errorf("error receiving log: %w", err)
 					}
-					// Check if the log message contains test result information
-					if msg := log.Msg; len(msg) > 7 {
-						if msg[:7] == "Test: \"" {
-							if msg[len(msg)-6:] == "passed" {
-								fmt.Printf("%s\n", green(fmt.Sprintf("[%s] %s ✅", log.Ts, msg)))
-							} else if msg[len(msg)-6:] == "failed" {
-								fmt.Printf("%s\n", red(fmt.Sprintf("[%s] %s ❌", log.Ts, msg)))
-							} else {
-								fmt.Printf("[%s] %s\n", log.Ts, msg)
-							}
-						} else {
-							fmt.Printf("[%s] %s\n", log.Ts, msg)
-						}
-					} else {
-						fmt.Printf("[%s] %s\n", log.Ts, log.Msg)
+
+					// Apply styling based on metadata
+					printer := color.New()
+					switch log.Color {
+					case "green":
+						printer.Add(color.FgGreen)
+					case "red":
+						printer.Add(color.FgRed)
+					case "purple":
+						printer.Add(color.FgMagenta)
 					}
+					if log.Bold {
+						printer.Add(color.Bold)
+					}
+
+					fmt.Printf("%s\n", printer.Sprintf("[%s] %s", log.Ts, log.Msg))
 				}
 			}
 		},
