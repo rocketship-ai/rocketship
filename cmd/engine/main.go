@@ -44,7 +44,7 @@ func startGRPCServer(engine generated.EngineServer) {
 	grpcServer := grpc.NewServer()
 	generated.RegisterEngineServer(grpcServer, engine)
 
-	log.Println("gRPC server listening on :7700")
+	log.Println("gRPC server listening on :7700 !")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve gRPC: %v", err)
 	}
@@ -65,7 +65,7 @@ func startHTTPServer() {
 		}
 	})
 
-	log.Println("HTTP server listening on :7701")
+	log.Println("HTTP server listening on :7701 !")
 	if err := http.ListenAndServe(":7701", nil); err != nil {
 		log.Fatalf("Failed to serve HTTP: %v", err)
 	}

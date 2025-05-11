@@ -27,10 +27,19 @@ func NewRunCmd() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			// Load session
-			session, err := LoadSession()
+			// Get engine address from flag
+			engineAddr, err := cmd.Flags().GetString("engine")
 			if err != nil {
-				return fmt.Errorf("no active session found - use 'rocketship start' first: %w", err)
+				return err
+			}
+
+			// If engine address not provided, try to load from session
+			if engineAddr == "" {
+				session, err := LoadSession()
+				if err != nil {
+					return fmt.Errorf("no engine address provided and no active session found - use --engine flag or 'rocketship start' first: %w", err)
+				}
+				engineAddr = session.EngineAddress
 			}
 
 			// Get test file path
@@ -60,8 +69,8 @@ func NewRunCmd() *cobra.Command {
 				return fmt.Errorf("failed to parse YAML: %w", err)
 			}
 
-			// Create engine client
-			client, err := NewEngineClient(session.EngineAddress)
+			// Create engine client using the engine address
+			client, err := NewEngineClient(engineAddr)
 			if err != nil {
 				return fmt.Errorf("failed to create engine client: %w", err)
 			}
@@ -120,5 +129,6 @@ func NewRunCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("file", "", "Path to the test file (default: rocketship.yaml in current directory)")
+	cmd.Flags().String("engine", "", "Address of the rocketship engine (e.g., localhost:7700)")
 	return cmd
 }
