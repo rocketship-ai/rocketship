@@ -39,8 +39,6 @@ func (c *EngineClient) Close() error {
 }
 
 func (c *EngineClient) RunTest(ctx context.Context, yamlData []byte) (string, error) {
-	fmt.Println("Creating run...")
-
 	runCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
