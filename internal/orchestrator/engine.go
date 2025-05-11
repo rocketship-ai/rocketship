@@ -21,23 +21,22 @@ type Engine struct {
 	mu       sync.RWMutex
 }
 type RunInfo struct {
-	Name      string
 	ID        string
+	Name      string
 	Status    string
 	StartedAt time.Time
 	EndedAt   time.Time
-	Tests     map[string]*TestInfo
+	Tests     map[string]*TestInfo // Test's WorkflowID : TestInfo
 	Logs      []string
 }
 
 type TestInfo struct {
+	WorkflowID string
 	Name       string
-	ID         string
 	Status     string
 	StartedAt  time.Time
 	EndedAt    time.Time
 	RunID      string
-	WorkflowID string
 }
 
 func NewEngine(c client.Client) *Engine {
@@ -64,8 +63,8 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	log.Printf("[DEBUG] Starting run: %s", run.Name)
 
 	runInfo := &RunInfo{
-		Name:      run.Name,
 		ID:        runID,
+		Name:      run.Name,
 		Status:    "PENDING",
 		StartedAt: time.Now(),
 		Tests:     make(map[string]*TestInfo),
@@ -79,19 +78,15 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			return nil, fmt.Errorf("failed to generate test ID: %w", err)
 		}
 		testInfo := &TestInfo{
+			WorkflowID: testID,
 			Name:       test.Name,
-			ID:         testID,
 			Status:     "PENDING",
 			StartedAt:  time.Now(),
 			RunID:      runID,
-			WorkflowID: "",
 		}
-		e.mu.Lock()
-		runInfo.Tests[testID] = testInfo
-		e.mu.Unlock()
 
 		workflowOptions := client.StartWorkflowOptions{
-			ID:        fmt.Sprintf("run-%s-test-%s", runID, testID),
+			ID:        testID,
 			TaskQueue: "test-workflows",
 		}
 
@@ -102,7 +97,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		}
 
 		e.mu.Lock()
-		runInfo.Tests[testID].WorkflowID = execution.GetID()
+		runInfo.Tests[testID] = testInfo
 		e.mu.Unlock()
 
 		go e.monitorWorkflow(runID, execution.GetID(), execution.GetRunID())
@@ -216,13 +211,15 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 		if err != nil {
 			log.Printf("[ERROR] Workflow failed for run %s: %v", runID, err)
 			runInfo.Status = "FAILED"
+			testName := runInfo.Tests[workflowID].Name
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Workflow failed: %v", err))
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testName, err))
 		} else {
 			log.Printf("[DEBUG] Workflow completed successfully for run %s", runID)
 			runInfo.Status = "PASSED"
+			testName := runInfo.Tests[workflowID].Name
 			e.mu.Unlock()
-			e.addLog(runID, "Workflow completed successfully")
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testName))
 		}
 	case <-ctx.Done():
 		log.Printf("[DEBUG] Monitoring timed out for run %s", runID)
@@ -231,7 +228,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 			runInfo.Status = "TIMEOUT"
 			runInfo.EndedAt = time.Now()
 			e.mu.Unlock()
-			e.addLog(runID, "Workflow monitoring timed out")
+			e.addLog(runID, "Test monitoring timed out")
 		} else {
 			e.mu.Unlock()
 		}
