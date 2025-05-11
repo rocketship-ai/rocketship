@@ -11,13 +11,12 @@ import (
 )
 
 const (
-	githubReleaseURL    = "https://github.com/rocketship-ai/rocketship/releases/download/v%s/%s"
-	versionTagToRelease = "0.1.2"
+	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/%s/%s"
 )
 
-// ExtractAndRun extracts a binary from GitHub releases and runs it
+// ExtractAndRun extracts a binary and runs it
 func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) {
-	// Check for local development binary first
+	// Always check for local development binary first
 	localBinaryPath := filepath.Join("internal", "embedded", "bin", name)
 	if stat, err := os.Stat(localBinaryPath); err == nil && stat.Mode()&0111 != 0 {
 		// Use local binary in development mode
@@ -28,7 +27,12 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		return cmd, nil
 	}
 
-	// Fall back to release binary if local one not found
+	// Get the tag from environment, fallback to latest
+	tag := os.Getenv("ROCKETSHIP_VERSION")
+	if tag == "" {
+		tag = "latest"
+	}
+
 	// Get the temporary directory
 	tempDir, err := os.UserCacheDir()
 	if err != nil {
@@ -61,7 +65,7 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		}
 
 		// Download the binary from GitHub releases
-		url := fmt.Sprintf(githubReleaseURL, versionTagToRelease, binaryName)
+		url := fmt.Sprintf(githubReleaseURL, tag, binaryName)
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download binary %s: %w", name, err)
