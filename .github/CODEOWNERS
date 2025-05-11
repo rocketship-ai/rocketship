@@ -1,0 +1,18 @@
+# This is a CODEOWNERS file.
+# Each line is a file pattern followed by one or more owners.
+# Order is important; the last matching pattern takes precedence.
+
+# These owners will be the default owners for everything in
+# the repo unless a later match takes precedence
+*       @magiusdarrigo
+
+# Release-related files require owner approval
+.github/workflows/*    @magiusdarrigo
+scripts/release.sh     @magiusdarrigo
+for-maintainers/*     @magiusdarrigo
+
+# Version and binary-related files
+internal/embedded/binaries.go    @magiusdarrigo
+
+# Security-sensitive configurations
+.github/CODEOWNERS    @magiusdarrigo 
