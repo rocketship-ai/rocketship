@@ -1,4 +1,25 @@
-.PHONY: proto lint test build compose-up install clean
+.PHONY: proto lint test build compose-up install clean prepare-embed
+
+prepare-embed:
+	@mkdir -p internal/embedded/bin
+	@touch internal/embedded/bin/.gitkeep
+
+# Build the binaries
+build-binaries: prepare-embed
+	go build -o internal/embedded/bin/worker cmd/worker/main.go
+	go build -o internal/embedded/bin/engine cmd/engine/main.go
+
+# Build the CLI with embedded binaries
+build: build-binaries
+	go vet ./...
+	go test ./...
+	go build -o bin/rocketship cmd/rocketship/main.go
+
+lint: prepare-embed
+	golangci-lint run
+
+test: prepare-embed
+	go test ./...
 
 proto:
 	protoc \
@@ -6,20 +27,6 @@ proto:
 	  --go_out=paths=source_relative:internal/api/generated \
 	  --go-grpc_out=paths=source_relative:internal/api/generated \
 	  proto/engine.proto
-
-lint:
-	golangci-lint run
-
-test:
-	go test ./...
-
-# Build the CLI
-build:
-	go vet ./...
-	go test ./...
-	go build -o bin/rocketship cmd/cli/main.go
-	go build -o bin/engine     ./cmd/engine
-	go build -o bin/worker      ./cmd/worker
 
 # Install the CLI to /usr/local/bin
 install: build
@@ -38,3 +45,4 @@ compose-down:
 # Clean build artifacts
 clean:
 	rm -rf bin/
+	rm -rf internal/embedded/bin/
