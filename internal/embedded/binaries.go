@@ -11,7 +11,8 @@ import (
 )
 
 const (
-	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/v%s/%s"
+	githubReleaseURL    = "https://github.com/rocketship-ai/rocketship/releases/download/v%s/%s"
+	versionTagToRelease = "0.1.2"
 )
 
 // ExtractAndRun extracts a binary from GitHub releases and runs it
@@ -48,7 +49,7 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		}
 
 		// Download the binary from GitHub releases
-		url := fmt.Sprintf(githubReleaseURL, "0.1.2", binaryName)
+		url := fmt.Sprintf(githubReleaseURL, versionTagToRelease, binaryName)
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download binary %s: %w", name, err)
