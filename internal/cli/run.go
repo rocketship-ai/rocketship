@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -29,38 +27,29 @@ func NewRunCmd() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			// Set up signal handling
-			sigChan := make(chan os.Signal, 1)
-			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-			go func() {
-				<-sigChan
-				fmt.Println("\nCancelling test...")
-				cancel()
-			}()
-
 			// Load session
 			session, err := LoadSession()
 			if err != nil {
-				return fmt.Errorf("failed to load session: %w", err)
+				return fmt.Errorf("no active session found - use 'rocketship start' first: %w", err)
 			}
 
 			// Get test file path
-			testPath, err := cmd.Flags().GetString("file")
+			testFile, err := cmd.Flags().GetString("file")
 			if err != nil {
 				return err
 			}
 
-			if testPath == "" {
+			if testFile == "" {
 				// Look for rocketship.yaml in current directory
 				wd, err := os.Getwd()
 				if err != nil {
 					return fmt.Errorf("failed to get working directory: %w", err)
 				}
-				testPath = filepath.Join(wd, "rocketship.yaml")
+				testFile = filepath.Join(wd, "rocketship.yaml")
 			}
 
 			// Read YAML file
-			yamlData, err := os.ReadFile(testPath)
+			yamlData, err := os.ReadFile(testFile)
 			if err != nil {
 				return fmt.Errorf("failed to read test file: %w", err)
 			}
@@ -86,6 +75,7 @@ func NewRunCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to create run: %w", err)
 			}
+
 			// Stream logs
 			logStream, err := client.StreamLogs(ctx, runID)
 			if err != nil {
