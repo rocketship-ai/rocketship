@@ -91,7 +91,7 @@ func NewRunCmd() *cobra.Command {
 				return fmt.Errorf("failed to create run: %w", err)
 			}
 
-			fmt.Printf("%s\n", purple(fmt.Sprintf("Starting test run \"%s\"...", run.Name)))
+			fmt.Printf("%s\n", purple(fmt.Sprintf("🚀🚀🚀 Starting test run \"%s\"... 🚀🚀🚀", run.Name)))
 
 			// Stream logs
 			logStream, err := client.StreamLogs(ctx, runID)
@@ -102,18 +102,15 @@ func NewRunCmd() *cobra.Command {
 			for {
 				select {
 				case <-ctx.Done():
-					fmt.Printf("\n%s\n", purple(fmt.Sprintf("Test run \"%s\" has finished", run.Name)))
 					return nil
 				default:
 					log, err := logStream.Recv()
 					if err == io.EOF {
-						fmt.Printf("\n%s\n", purple(fmt.Sprintf("Test run \"%s\" has finished", run.Name)))
 						return nil
 					}
 					if err != nil {
 						// Check if the error is due to context cancellation
 						if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
-							fmt.Printf("\n%s\n", purple(fmt.Sprintf("Test run \"%s\" has finished", run.Name)))
 							return nil
 						}
 						return fmt.Errorf("error receiving log: %w", err)
@@ -122,9 +119,9 @@ func NewRunCmd() *cobra.Command {
 					if msg := log.Msg; len(msg) > 7 {
 						if msg[:7] == "Test: \"" {
 							if msg[len(msg)-6:] == "passed" {
-								fmt.Printf("%s\n", green(fmt.Sprintf("[%s] %s", log.Ts, msg)))
+								fmt.Printf("%s\n", green(fmt.Sprintf("[%s] %s ✅", log.Ts, msg)))
 							} else if msg[len(msg)-6:] == "failed" {
-								fmt.Printf("%s\n", red(fmt.Sprintf("[%s] %s", log.Ts, msg)))
+								fmt.Printf("%s\n", red(fmt.Sprintf("[%s] %s ❌", log.Ts, msg)))
 							} else {
 								fmt.Printf("[%s] %s\n", log.Ts, msg)
 							}

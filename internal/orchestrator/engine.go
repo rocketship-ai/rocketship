@@ -222,13 +222,13 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testName))
 		}
 	case <-ctx.Done():
-		log.Printf("[DEBUG] Monitoring timed out for run %s", runID)
+		log.Printf("[DEBUG] Monitoring timed out for test ID %s", workflowID)
 		e.mu.Lock()
 		if runInfo, exists := e.runs[runID]; exists {
-			runInfo.Status = "TIMEOUT"
-			runInfo.EndedAt = time.Now()
+			runInfo.Tests[workflowID].Status = "TIMEOUT"
+			runInfo.Tests[workflowID].EndedAt = time.Now()
 			e.mu.Unlock()
-			e.addLog(runID, "Test monitoring timed out")
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", runInfo.Tests[workflowID].Name))
 		} else {
 			e.mu.Unlock()
 		}
