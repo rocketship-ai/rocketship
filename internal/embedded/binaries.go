@@ -17,6 +17,18 @@ const (
 
 // ExtractAndRun extracts a binary from GitHub releases and runs it
 func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) {
+	// Check for local development binary first
+	localBinaryPath := filepath.Join("internal", "embedded", "bin", name)
+	if stat, err := os.Stat(localBinaryPath); err == nil && stat.Mode()&0111 != 0 {
+		// Use local binary in development mode
+		cmd := exec.Command(localBinaryPath, args...)
+		cmd.Env = env
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd, nil
+	}
+
+	// Fall back to release binary if local one not found
 	// Get the temporary directory
 	tempDir, err := os.UserCacheDir()
 	if err != nil {
