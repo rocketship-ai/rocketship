@@ -44,7 +44,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		Tests:     make(map[string]*TestInfo),
 		Logs: []LogLine{
 			{
-				Msg:   fmt.Sprintf("🚀🚀🚀 Starting test run \"%s\"... 🚀🚀🚀", run.Name),
+				Msg:   fmt.Sprintf("Starting test run \"%s\"... 🚀", run.Name),
 				Color: "purple",
 				Bold:  true,
 			},
@@ -78,6 +78,12 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 
 		e.mu.Lock()
 		runInfo.Tests[testID] = testInfo
+		// add a log line for the start of the test
+		runInfo.Logs = append(runInfo.Logs, LogLine{
+			Msg:   fmt.Sprintf("Running test: \"%s\"...", test.Name),
+			Color: "n/a",
+			Bold:  false,
+		})
 		e.mu.Unlock()
 
 		go e.monitorWorkflow(runID, execution.GetID(), execution.GetRunID())
