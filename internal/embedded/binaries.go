@@ -48,7 +48,7 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		}
 
 		// Download the binary from GitHub releases
-		url := fmt.Sprintf(githubReleaseURL, "0.1.1", binaryName)
+		url := fmt.Sprintf(githubReleaseURL, "0.1.2", binaryName)
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download binary %s: %w", name, err)
