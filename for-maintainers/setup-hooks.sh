@@ -17,4 +17,10 @@ EOL
 # Make it executable
 chmod +x .git/hooks/pre-commit
 
-echo "✅ Pre-commit hook installed successfully!" 
+echo "✅ Pre-commit hook installed successfully!"
+
+# Run initial dev setup if not already done
+if [ ! -f "internal/embedded/bin/engine" ] || [ ! -f "internal/embedded/bin/worker" ]; then
+    echo "Running initial development setup..."
+    make build-binaries
+fi 
