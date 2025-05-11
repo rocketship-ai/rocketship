@@ -1,19 +1,20 @@
 package embedded
 
 import (
-	"bytes"
-	"embed"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
-//go:embed bin/worker bin/engine
-var binaries embed.FS
+const (
+	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/v%s/%s"
+)
 
-// ExtractAndRun extracts a binary from the embedded filesystem and runs it
+// ExtractAndRun extracts a binary from GitHub releases and runs it
 func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) {
 	// Get the temporary directory
 	tempDir, err := os.UserCacheDir()
@@ -40,10 +41,26 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 
 	// Extract the binary if needed
 	if needsExtract {
-		// Read the embedded binary
-		data, err := binaries.ReadFile(fmt.Sprintf("bin/%s", name))
+		// Determine platform-specific binary name
+		binaryName := fmt.Sprintf("%s-%s-%s", name, runtime.GOOS, runtime.GOARCH)
+		if runtime.GOOS == "windows" {
+			binaryName += ".exe"
+		}
+
+		// Download the binary from GitHub releases
+		url := fmt.Sprintf(githubReleaseURL, "0.1.1", binaryName)
+		resp, err := http.Get(url)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read embedded binary %s: %w", name, err)
+			return nil, fmt.Errorf("failed to download binary %s: %w", name, err)
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to close response body: %v\n", err)
+			}
+		}()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to download binary %s: HTTP %d", name, resp.StatusCode)
 		}
 
 		// Create the binary file
@@ -53,7 +70,7 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		}
 
 		// Write the binary data and handle errors, including close
-		_, copyErr := io.Copy(f, bytes.NewReader(data))
+		_, copyErr := io.Copy(f, resp.Body)
 		closeErr := f.Close()
 		if copyErr != nil {
 			return nil, fmt.Errorf("failed to write binary data: %w", copyErr)
