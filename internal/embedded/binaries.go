@@ -33,12 +33,6 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		return cmd, nil
 	}
 
-	// Get the tag from environment, fallback to default version
-	tag := os.Getenv("ROCKETSHIP_VERSION")
-	if tag == "" {
-		tag = defaultVersion
-	}
-
 	// Get the temporary directory
 	tempDir, err := os.UserCacheDir()
 	if err != nil {
@@ -57,11 +51,26 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 
 	// Check if we need to extract the binary
 	needsExtract := true
+	var targetVersion string
+
+	// If binary exists, check its version
 	if stat, err := os.Stat(binaryPath); err == nil && stat.Mode()&0111 != 0 {
-		// Binary exists and is executable, check version
-		if metadata, err := loadMetadata(metadataPath); err == nil && metadata.Version == tag {
-			needsExtract = false
+		if metadata, err := loadMetadata(metadataPath); err == nil {
+			// If ROCKETSHIP_VERSION is set, use that
+			if envVersion := os.Getenv("ROCKETSHIP_VERSION"); envVersion != "" {
+				targetVersion = envVersion
+				needsExtract = metadata.Version != envVersion
+			} else {
+				// Otherwise use the version that was originally installed
+				targetVersion = metadata.Version
+				needsExtract = false
+			}
 		}
+	}
+
+	// If no existing version (first install), use defaultVersion
+	if targetVersion == "" {
+		targetVersion = defaultVersion
 	}
 
 	// Extract the binary if needed
@@ -73,7 +82,7 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		}
 
 		// Download the binary from GitHub releases
-		url := fmt.Sprintf(githubReleaseURL, tag, binaryName)
+		url := fmt.Sprintf(githubReleaseURL, targetVersion, binaryName)
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download binary %s: %w", name, err)
@@ -104,8 +113,8 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 			return nil, fmt.Errorf("failed to close binary file: %w", closeErr)
 		}
 
-		// Save metadata
-		if err := saveMetadata(metadataPath, tag); err != nil {
+		// Save metadata with the version we just downloaded
+		if err := saveMetadata(metadataPath, targetVersion); err != nil {
 			return nil, fmt.Errorf("failed to save binary metadata: %w", err)
 		}
 	}
