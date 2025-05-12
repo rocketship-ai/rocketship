@@ -265,18 +265,18 @@ func (e *Engine) checkIfRunFinished(runID string) {
 			e.mu.Lock()
 			e.runs[runID].Status = "PASSED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, numTests), "green", true)
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, numTests), "n/a", true)
 		} else if numTests == (e.numTestsPassed(runID) + e.numTestsFailed(runID)) {
 			e.mu.Lock()
 			e.runs[runID].Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests), "red", true)
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests), "n/a", true)
 		} else {
 			// we have tests that timed out. Print # failed and # timed out
 			e.mu.Lock()
 			e.runs[runID].Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests, e.numTestsTimedOut(runID), numTests), "red", true)
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests, e.numTestsTimedOut(runID), numTests), "n/a", true)
 		}
 	}
 }
@@ -297,18 +297,36 @@ func (e *Engine) isRunFinished(runID string) bool {
 func (e *Engine) numTestsPassed(runID string) int {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return len(e.runs[runID].Tests)
+	count := 0
+	for _, testInfo := range e.runs[runID].Tests {
+		if testInfo.Status == "PASSED" {
+			count++
+		}
+	}
+	return count
 }
 
 // number of tests in run which are in status FAILED
 func (e *Engine) numTestsFailed(runID string) int {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return len(e.runs[runID].Tests)
+	count := 0
+	for _, testInfo := range e.runs[runID].Tests {
+		if testInfo.Status == "FAILED" {
+			count++
+		}
+	}
+	return count
 }
 
 func (e *Engine) numTestsTimedOut(runID string) int {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return len(e.runs[runID].Tests)
+	count := 0
+	for _, testInfo := range e.runs[runID].Tests {
+		if testInfo.Status == "TIMEOUT" {
+			count++
+		}
+	}
+	return count
 }

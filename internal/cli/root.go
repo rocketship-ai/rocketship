@@ -16,9 +16,6 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(
 		NewStartCmd(),
 		NewRunCmd(),
-		NewStatusCmd(),
-		NewLogsCmd(),
-		NewSuggestCmd(),
 	)
 
 	return cmd

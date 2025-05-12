@@ -8,6 +8,7 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
+// TODO: Not currently used. Might be really complicated in the future. I rather parse per-plugin step.
 func GetJSONSchema() string {
 	return `{
 		"$schema": "http://json-schema.org/draft-07/schema#",
