@@ -12,6 +12,7 @@ import (
 
 const (
 	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/%s/%s"
+	defaultVersion   = "v0.1.5" // This should be updated with each release
 )
 
 // ExtractAndRun extracts a binary and runs it
@@ -27,10 +28,10 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		return cmd, nil
 	}
 
-	// Get the tag from environment, fallback to latest
+	// Get the tag from environment, fallback to default version
 	tag := os.Getenv("ROCKETSHIP_VERSION")
 	if tag == "" {
-		tag = "latest"
+		tag = defaultVersion
 	}
 
 	// Get the temporary directory
