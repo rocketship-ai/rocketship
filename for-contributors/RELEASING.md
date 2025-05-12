@@ -47,7 +47,19 @@ This document describes the process for developing and releasing new versions of
 
 ## Release Process
 
-1. **Create a Release**
+1. **Update Default Version**
+
+   Before creating a release, update the default version in `internal/embedded/binaries.go`:
+
+   ```bash
+   # Example: For releasing v1.2.3
+   sed -i '' 's/defaultVersion *= *".*"/defaultVersion = "v1.2.3"/' internal/embedded/binaries.go
+   git add internal/embedded/binaries.go
+   git commit -m "chore: update default version to v1.2.3"
+   git push
+   ```
+
+2. **Create a Release**
 
    Once changes are merged to main, a maintainer can create a new release:
 
@@ -64,7 +76,7 @@ This document describes the process for developing and releasing new versions of
    - Build platform-specific binaries
    - Attach binaries to the release
 
-2. **Test Installation**
+3. **Test Installation**
 
    ```bash
    # Install released version

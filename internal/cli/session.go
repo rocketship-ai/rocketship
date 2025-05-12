@@ -30,8 +30,17 @@ func SaveSession(session *Session) error {
 
 	// Create .rocketship directory if it doesn't exist
 	dir := filepath.Dir(sessionPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
+
+	// First try to create the directory with user write permissions
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		// If directory exists but we can't write to it, try to fix permissions
+		if os.IsPermission(err) {
+			if chmodErr := os.Chmod(dir, 0700); chmodErr != nil {
+				return fmt.Errorf("failed to set directory permissions: %w", chmodErr)
+			}
+		} else {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
 	}
 
 	data, err := json.MarshalIndent(session, "", "  ")
@@ -39,8 +48,20 @@ func SaveSession(session *Session) error {
 		return fmt.Errorf("failed to marshal session: %w", err)
 	}
 
-	if err := os.WriteFile(sessionPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write session file: %w", err)
+	// Try to write the file with user-only read/write permissions
+	if err := os.WriteFile(sessionPath, data, 0600); err != nil {
+		// If file exists but we can't write to it, try to fix permissions
+		if os.IsPermission(err) {
+			if chmodErr := os.Chmod(sessionPath, 0600); chmodErr != nil {
+				return fmt.Errorf("failed to set file permissions: %w", chmodErr)
+			}
+			// Try writing again after fixing permissions
+			if writeErr := os.WriteFile(sessionPath, data, 0600); writeErr != nil {
+				return fmt.Errorf("failed to write session file after fixing permissions: %w", writeErr)
+			}
+		} else {
+			return fmt.Errorf("failed to write session file: %w", err)
+		}
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package embedded
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,12 @@ import (
 
 const (
 	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/%s/%s"
+	defaultVersion   = "v0.1.6" // This should be updated with each release
 )
+
+type binaryMetadata struct {
+	Version string `json:"version"`
+}
 
 // ExtractAndRun extracts a binary and runs it
 func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) {
@@ -27,10 +33,10 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		return cmd, nil
 	}
 
-	// Get the tag from environment, fallback to latest
+	// Get the tag from environment, fallback to default version
 	tag := os.Getenv("ROCKETSHIP_VERSION")
 	if tag == "" {
-		tag = "latest"
+		tag = defaultVersion
 	}
 
 	// Get the temporary directory
@@ -45,13 +51,15 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Path to the extracted binary
+	// Path to the extracted binary and its metadata
 	binaryPath := filepath.Join(rocketshipDir, name)
+	metadataPath := binaryPath + ".json"
 
 	// Check if we need to extract the binary
 	needsExtract := true
-	if stat, err := os.Stat(binaryPath); err == nil {
-		if stat.Mode()&0111 != 0 { // Check if executable
+	if stat, err := os.Stat(binaryPath); err == nil && stat.Mode()&0111 != 0 {
+		// Binary exists and is executable, check version
+		if metadata, err := loadMetadata(metadataPath); err == nil && metadata.Version == tag {
 			needsExtract = false
 		}
 	}
@@ -95,6 +103,11 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 		if closeErr != nil {
 			return nil, fmt.Errorf("failed to close binary file: %w", closeErr)
 		}
+
+		// Save metadata
+		if err := saveMetadata(metadataPath, tag); err != nil {
+			return nil, fmt.Errorf("failed to save binary metadata: %w", err)
+		}
 	}
 
 	// Create the command
@@ -104,4 +117,31 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 	cmd.Stderr = os.Stderr
 
 	return cmd, nil
+}
+
+func loadMetadata(path string) (*binaryMetadata, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata binaryMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return nil, err
+	}
+
+	return &metadata, nil
+}
+
+func saveMetadata(path string, version string) error {
+	metadata := binaryMetadata{
+		Version: version,
+	}
+
+	data, err := json.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0644)
 }
