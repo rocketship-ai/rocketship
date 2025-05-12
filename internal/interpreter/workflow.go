@@ -18,8 +18,9 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30, // TODO: Make this configurable
 		RetryPolicy: &temporal.RetryPolicy{
-			BackoffCoefficient: 2,
-			MaximumAttempts:    5,
+			MaximumAttempts: 1,
+			// BackoffCoefficient: 2,
+			// MaximumAttempts:    5,
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)

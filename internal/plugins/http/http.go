@@ -18,24 +18,74 @@ func (hp *HTTPPlugin) GetType() string {
 
 func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	logger := activity.GetLogger(ctx)
-	logger.Info("[DEBUG] Starting HTTP request: " + hp.Config.Method + " " + hp.Config.URL)
+
+	// Debug input parameters
+	logger.Info("[DEBUG] Activity input parameters:", "params", fmt.Sprintf("%+v", p))
+
+	// Parse the plugin configuration from the parameters
+	pluginData := p
+
+	// Debug plugin data
+	logger.Info("[DEBUG] Plugin data:", "data", fmt.Sprintf("%+v", pluginData))
+
+	configData, ok := pluginData["config"].(map[string]interface{})
+	if !ok {
+		rawConfig := pluginData["config"]
+		logger.Error("[DEBUG] Failed to parse config data",
+			"config_type", fmt.Sprintf("%T", rawConfig),
+			"raw_config", fmt.Sprintf("%+v", rawConfig))
+		return nil, fmt.Errorf("invalid config format: got type %T", rawConfig)
+	}
+
+	// Debug config data
+	logger.Info("[DEBUG] Config data:", "config", fmt.Sprintf("%+v", configData))
+
+	method, ok := configData["method"].(string)
+	if !ok {
+		rawMethod := configData["method"]
+		logger.Error("[DEBUG] Failed to parse method",
+			"method_type", fmt.Sprintf("%T", rawMethod),
+			"raw_method", fmt.Sprintf("%+v", rawMethod))
+		return nil, fmt.Errorf("method is required: got type %T", rawMethod)
+	}
+
+	url, ok := configData["url"].(string)
+	if !ok {
+		rawURL := configData["url"]
+		logger.Error("[DEBUG] Failed to parse URL",
+			"url_type", fmt.Sprintf("%T", rawURL),
+			"raw_url", fmt.Sprintf("%+v", rawURL))
+		return nil, fmt.Errorf("url is required: got type %T", rawURL)
+	}
+
+	logger.Info("[DEBUG] Starting HTTP request: " + method + " " + url)
 
 	// Create HTTP request
 	var body io.Reader
-	if hp.Config.Body != "" {
-		body = bytes.NewReader([]byte(hp.Config.Body))
-		logger.Info("[DEBUG] Request body: " + hp.Config.Body)
+	if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
+		body = bytes.NewReader([]byte(bodyStr))
+		logger.Info("[DEBUG] Request body: " + bodyStr)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, hp.Config.Method, hp.Config.URL, body)
+	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Add headers
-	for key, value := range hp.Config.Headers {
-		req.Header.Add(key, value)
-		logger.Info(fmt.Sprintf("[DEBUG] Request header: %s: %s", key, value))
+	if headers, ok := configData["headers"].(map[string]interface{}); ok {
+		logger.Info("[DEBUG] Processing headers:", "headers", fmt.Sprintf("%+v", headers))
+		for key, value := range headers {
+			if strValue, ok := value.(string); ok {
+				req.Header.Add(key, strValue)
+				logger.Info(fmt.Sprintf("[DEBUG] Request header: %s: %s", key, strValue))
+			} else {
+				logger.Error("[DEBUG] Invalid header value type",
+					"key", key,
+					"value_type", fmt.Sprintf("%T", value),
+					"raw_value", fmt.Sprintf("%+v", value))
+			}
+		}
 	}
 
 	// Send request
@@ -71,21 +121,52 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	}
 
 	// Process assertions
-	logger.Info(fmt.Sprintf("[DEBUG] Processing %d assertions", len(hp.Assertions)))
-	for i, assertion := range hp.Assertions {
-		logger.Info(fmt.Sprintf("[DEBUG] Processing assertion %d: type=%s", i+1, assertion.Type))
+	assertions, ok := pluginData["assertions"].([]interface{})
+	if !ok {
+		rawAssertions := pluginData["assertions"]
+		logger.Info("[DEBUG] No assertions or invalid format",
+			"assertions_type", fmt.Sprintf("%T", rawAssertions),
+			"raw_assertions", fmt.Sprintf("%+v", rawAssertions))
+		return response, nil
+	}
 
-		switch assertion.Type {
+	logger.Info(fmt.Sprintf("[DEBUG] Processing %d assertions", len(assertions)))
+	for i, assertion := range assertions {
+		logger.Info("[DEBUG] Processing assertion",
+			"index", i,
+			"assertion_type", fmt.Sprintf("%T", assertion),
+			"raw_assertion", fmt.Sprintf("%+v", assertion))
+
+		assertionMap, ok := assertion.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid assertion format: got type %T", assertion)
+		}
+
+		assertionType, ok := assertionMap["type"].(string)
+		if !ok {
+			rawType := assertionMap["type"]
+			logger.Error("[DEBUG] Failed to parse assertion type",
+				"type_type", fmt.Sprintf("%T", rawType),
+				"raw_type", fmt.Sprintf("%+v", rawType))
+			return nil, fmt.Errorf("assertion type is required: got type %T", rawType)
+		}
+
+		logger.Info(fmt.Sprintf("[DEBUG] Processing assertion %d: type=%s", i+1, assertionType))
+
+		switch assertionType {
 		case AssertionTypeStatusCode:
-			expectedStatus, ok := assertion.Expected.(float64)
+			expected, ok := assertionMap["expected"].(float64)
 			if !ok {
-				logger.Error("[DEBUG] Status code assertion failed: expected value is not a number", "expected", assertion.Expected)
-				return nil, fmt.Errorf("status code assertion expected value must be a number")
+				rawExpected := assertionMap["expected"]
+				logger.Error("[DEBUG] Status code assertion failed: expected value is not a number",
+					"expected_type", fmt.Sprintf("%T", rawExpected),
+					"raw_expected", fmt.Sprintf("%+v", rawExpected))
+				return nil, fmt.Errorf("status code assertion expected value must be a number: got type %T", rawExpected)
 			}
-			logger.Info(fmt.Sprintf("[DEBUG] Comparing status code: expected=%d, got=%d", int(expectedStatus), resp.StatusCode))
-			if int(expectedStatus) != resp.StatusCode {
-				logger.Error("[DEBUG] Status code assertion failed", "expected", int(expectedStatus), "got", resp.StatusCode)
-				return nil, fmt.Errorf("status code assertion failed: expected %d, got %d", int(expectedStatus), resp.StatusCode)
+			logger.Info(fmt.Sprintf("[DEBUG] Comparing status code: expected=%d, got=%d", int(expected), resp.StatusCode))
+			if int(expected) != resp.StatusCode {
+				logger.Error("[DEBUG] Status code assertion failed", "expected", int(expected), "got", resp.StatusCode)
+				return nil, fmt.Errorf("status code assertion failed: expected %d, got %d", int(expected), resp.StatusCode)
 			}
 			logger.Info("[DEBUG] Status code assertion passed")
 
@@ -93,29 +174,55 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 			// Parse response body as JSON
 			var jsonData interface{}
 			if err := json.Unmarshal(respBody, &jsonData); err != nil {
-				logger.Error("[DEBUG] Failed to parse response body as JSON", "error", err)
+				logger.Error("[DEBUG] Failed to parse response body as JSON",
+					"error", err,
+					"response_body", string(respBody))
 				return nil, fmt.Errorf("failed to parse response body as JSON: %w", err)
 			}
 
-			logger.Info("[DEBUG] Evaluating JSONPath: " + assertion.Path)
-			// Evaluate JSONPath
-			result, err := jsonpath.Get(assertion.Path, jsonData)
-			if err != nil {
-				logger.Error("[DEBUG] Failed to evaluate JSONPath", "path", assertion.Path, "error", err)
-				return nil, fmt.Errorf("failed to evaluate JSONPath %q: %w", assertion.Path, err)
+			path, ok := assertionMap["path"].(string)
+			if !ok {
+				rawPath := assertionMap["path"]
+				logger.Error("[DEBUG] Failed to parse JSONPath",
+					"path_type", fmt.Sprintf("%T", rawPath),
+					"raw_path", fmt.Sprintf("%+v", rawPath))
+				return nil, fmt.Errorf("path is required for JSONPath assertion: got type %T", rawPath)
 			}
 
-			logger.Info(fmt.Sprintf("[DEBUG] JSONPath result: %v, expected: %v", result, assertion.Expected))
+			logger.Info("[DEBUG] Evaluating JSONPath: " + path)
+			// Evaluate JSONPath
+			result, err := jsonpath.Get(path, jsonData)
+			if err != nil {
+				logger.Error("[DEBUG] Failed to evaluate JSONPath",
+					"path", path,
+					"error", err,
+					"json_data", fmt.Sprintf("%+v", jsonData))
+				return nil, fmt.Errorf("failed to evaluate JSONPath %q: %w", path, err)
+			}
+
+			expected := assertionMap["expected"]
+			logger.Info("[DEBUG] JSONPath result:",
+				"result_type", fmt.Sprintf("%T", result),
+				"result", fmt.Sprintf("%+v", result),
+				"expected_type", fmt.Sprintf("%T", expected),
+				"expected", fmt.Sprintf("%+v", expected))
+
 			// Compare result with expected value
-			if result != assertion.Expected {
-				logger.Error("[DEBUG] JSONPath assertion failed", "path", assertion.Path, "expected", assertion.Expected, "got", result)
-				return nil, fmt.Errorf("JSONPath assertion failed for path %q: expected %v, got %v", assertion.Path, assertion.Expected, result)
+			if result != expected {
+				logger.Error("[DEBUG] JSONPath assertion failed",
+					"path", path,
+					"expected_type", fmt.Sprintf("%T", expected),
+					"expected", fmt.Sprintf("%+v", expected),
+					"result_type", fmt.Sprintf("%T", result),
+					"result", fmt.Sprintf("%+v", result))
+				return nil, fmt.Errorf("JSONPath assertion failed for path %q: expected %v (type %T), got %v (type %T)",
+					path, expected, expected, result, result)
 			}
 			logger.Info("[DEBUG] JSONPath assertion passed")
 
 		default:
-			logger.Error("[DEBUG] Unknown assertion type", "type", assertion.Type)
-			return nil, fmt.Errorf("unknown assertion type: %s", assertion.Type)
+			logger.Error("[DEBUG] Unknown assertion type", "type", assertionType)
+			return nil, fmt.Errorf("unknown assertion type: %s", assertionType)
 		}
 	}
 
