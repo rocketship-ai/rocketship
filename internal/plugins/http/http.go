@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/PaesslerAG/jsonpath"
+	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
 )
 
@@ -102,8 +102,14 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	// FOR DEBUGGING
 	logger.Info(fmt.Sprintf("[DEBUG] Response status code: %d", resp.StatusCode))
-	logger.Info("[DEBUG] Response body: " + string(respBody))
+	respBodyStr := string(respBody)
+	if len(respBodyStr) > 280 {
+		respBodyStr = respBodyStr[:280] + "..."
+	}
+	logger.Info("[DEBUG] Response body: " + respBodyStr)
+	// END FOR DEBUGGING
 
 	// Create response object
 	response := &HTTPResponse{
@@ -189,36 +195,78 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 				return nil, fmt.Errorf("path is required for JSONPath assertion: got type %T", rawPath)
 			}
 
-			logger.Info("[DEBUG] Evaluating JSONPath: " + path)
-			// Evaluate JSONPath
-			result, err := jsonpath.Get(path, jsonData)
+			logger.Info("[DEBUG] Evaluating jq expression: " + path)
+
+			// Parse and run jq query
+			query, err := gojq.Parse(path)
 			if err != nil {
-				logger.Error("[DEBUG] Failed to evaluate JSONPath",
+				logger.Error("[DEBUG] Failed to parse jq expression",
 					"path", path,
-					"error", err,
-					"json_data", fmt.Sprintf("%+v", jsonData))
-				return nil, fmt.Errorf("failed to evaluate JSONPath %q: %w", path, err)
+					"error", err)
+				return nil, fmt.Errorf("failed to parse jq expression %q: %w", path, err)
 			}
 
 			expected := assertionMap["expected"]
-			logger.Info("[DEBUG] JSONPath result:",
+			iter := query.Run(jsonData)
+			var result interface{}
+			var found bool
+
+			for {
+				v, ok := iter.Next()
+				if !ok {
+					break
+				}
+				if err, ok := v.(error); ok {
+					logger.Error("[DEBUG] Error evaluating jq expression",
+						"path", path,
+						"error", err)
+					return nil, fmt.Errorf("error evaluating jq expression %q: %w", path, err)
+				}
+				// Take the first result
+				if !found {
+					result = v
+					found = true
+				}
+			}
+
+			if !found {
+				logger.Error("[DEBUG] No results from jq expression",
+					"path", path)
+				return nil, fmt.Errorf("no results from jq expression %q", path)
+			}
+
+			logger.Info("[DEBUG] jq expression result:",
 				"result_type", fmt.Sprintf("%T", result),
 				"result", fmt.Sprintf("%+v", result),
 				"expected_type", fmt.Sprintf("%T", expected),
 				"expected", fmt.Sprintf("%+v", expected))
 
-			// Compare result with expected value
-			if result != expected {
-				logger.Error("[DEBUG] JSONPath assertion failed",
+			// Compare result with expected value, handling numeric type conversions
+			equal := false
+			switch v := result.(type) {
+			case int:
+				if exp, ok := expected.(float64); ok {
+					equal = float64(v) == exp
+				}
+			case float64:
+				if exp, ok := expected.(float64); ok {
+					equal = v == exp
+				}
+			default:
+				equal = result == expected
+			}
+
+			if !equal {
+				logger.Error("[DEBUG] jq assertion failed",
 					"path", path,
 					"expected_type", fmt.Sprintf("%T", expected),
 					"expected", fmt.Sprintf("%+v", expected),
 					"result_type", fmt.Sprintf("%T", result),
 					"result", fmt.Sprintf("%+v", result))
-				return nil, fmt.Errorf("JSONPath assertion failed for path %q: expected %v (type %T), got %v (type %T)",
+				return nil, fmt.Errorf("jq assertion failed for expression %q: expected %v (type %T), got %v (type %T)",
 					path, expected, expected, result, result)
 			}
-			logger.Info("[DEBUG] JSONPath assertion passed")
+			logger.Info("[DEBUG] jq assertion passed")
 
 		default:
 			logger.Error("[DEBUG] Unknown assertion type", "type", assertionType)

@@ -20,7 +20,7 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.length()"
+            path: "length"
             expected: 10
 
       - name: "Get specific user"
@@ -34,7 +34,7 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.name"
+            path: ".name"
             expected: "Leanne Graham"
 
       - name: "Delay before final step"
@@ -59,5 +59,5 @@ tests:
           - type: "status_code"
             expected: 201
           - type: "json_path"
-            path: "$.id"
+            path: ".id"
             expected: 11
