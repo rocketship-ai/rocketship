@@ -19,5 +19,13 @@ func ParseYAML(step dsl.Step) (*HTTPPlugin, error) {
 		return nil, fmt.Errorf("the YAML step %s could not be parsed into a %s plugin: %w", step.Name, hp.GetType(), err)
 	}
 
+	// Validate required fields
+	if hp.Config.Method == "" {
+		return nil, fmt.Errorf("the YAML step %s is missing required field 'method'", step.Name)
+	}
+	if hp.Config.URL == "" {
+		return nil, fmt.Errorf("the YAML step %s is missing required field 'url'", step.Name)
+	}
+
 	return &hp, nil
 }
