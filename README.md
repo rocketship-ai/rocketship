@@ -33,14 +33,23 @@ It combines a declarative YAML spec, Temporal‑style durable execution, and an 
 
 ---
 
-## 🟢 5‑Minute Quick Start
+## 🟢 1‑Minute Quick Start
 
 ```bash
-# 1. Install Prerequisites & CLI
+# 0. Install the Prerequisites (You're going to need temporal in order to run the engine locally)
 # macOS
-brew install go temporal && go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest
+brew install go temporal
 
 # Linux
+curl -sSf https://temporal.download/cli.sh | sh && \
+  # Install Go 1.24+ from https://go.dev/dl/
+  brew install go
+
+# 1. Install the Rocketship CLI
+# using macOS and Go
+go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest
+
+# using Linux and Go
 curl -sSf https://temporal.download/cli.sh | sh && \
   # Install Go 1.24+ from https://go.dev/dl/
   go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest
@@ -51,7 +60,7 @@ rocketship start server --local
 # 3. [OPTIONAL] Create a Session (in terminal 2)
 rocketship start session --engine localhost:7700
 
-# 4. Create a Test File
+# 4. Create a Test File OR better yet, try one of the examples (examples/simple-http/rocketship.yaml)
 cat > simple-test.yaml << 'EOF'
 name: "Simple Delay Test Suite"
 description: "A simple test suite that demonstrates delays"
