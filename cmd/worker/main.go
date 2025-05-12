@@ -7,6 +7,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
+	"github.com/rocketship-ai/rocketship/internal/plugins/http"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -30,10 +31,7 @@ func main() {
 	w.RegisterWorkflow(interpreter.TestWorkflow)
 
 	plugins.RegisterWithTemporal(w, &delay.DelayPlugin{})
-	// plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
-	// plugins.RegisterWithTemporal(w, &s3.S3Plugin{})
-	// plugins.RegisterWithTemporal(w, &ddb.DynamoDBPlugin{})
-	// plugins.RegisterWithTemporal(w, &sqs.SQSPlugin{})
+	plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
 
 	log.Println("Starting worker")
 	if err := w.Run(worker.InterruptCh()); err != nil {

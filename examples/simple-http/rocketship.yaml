@@ -18,7 +18,7 @@ tests:
             Accept: "application/json"
         assertions:
           - type: "status_code"
-            expected: 200
+            expected: 201
           - type: "json_path"
             path: "$.length()"
             expected: 10

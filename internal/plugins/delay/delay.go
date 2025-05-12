@@ -2,7 +2,6 @@ package delay
 
 import (
 	"context"
-	"fmt"
 )
 
 func (dp *DelayPlugin) GetType() string {
@@ -11,6 +10,5 @@ func (dp *DelayPlugin) GetType() string {
 
 func (dp *DelayPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	// Dummy activity to satisfy the interface. Delay will just be a workflow sleep.
-	fmt.Println("Dummy activity called")
 	return nil, nil
 }

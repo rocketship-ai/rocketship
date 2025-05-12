@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -43,12 +44,14 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
 		case "http":
+			log.Printf("[DEBUG] parsing http YAML for step %q", step.Name)
 			hp, err := http.ParseYAML(step)
 			if err != nil {
 				return fmt.Errorf("step %d: %w", i, err)
 			}
 
 			var resp *http.HTTPResponse
+			log.Printf("[DEBUG] executing http activity for step %q", step.Name)
 			err = workflow.ExecuteActivity(ctx, hp.Activity, hp).Get(ctx, &resp)
 			if err != nil {
 				return fmt.Errorf("step %d: http activity error: %w", i, err)
