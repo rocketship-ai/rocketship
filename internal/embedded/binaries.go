@@ -13,7 +13,7 @@ import (
 
 const (
 	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/%s/%s"
-	defaultVersion   = "v0.1.6" // This should be updated with each release
+	defaultVersion   = "v0.1.9" // This should be updated with each release
 )
 
 type binaryMetadata struct {
