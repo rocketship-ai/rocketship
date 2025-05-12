@@ -1,4 +1,4 @@
-name: "Simple HTTP API Test Suite"
+name: "[FAIL ON PURPOSE] Simple HTTP API Test Suite"
 description: "A simple test suite demonstrating HTTP testing with delays"
 version: "v1.0.0"
 tests:
@@ -16,7 +16,7 @@ tests:
             expected: 200
           - type: "json_path"
             path: "length"
-            expected: 10
+            expected: 5
 
   - name: "Get Single User"
     steps:
@@ -32,7 +32,7 @@ tests:
             expected: 200
           - type: "json_path"
             path: ".name"
-            expected: "Leanne Graham"
+            expected: "John Smith"
           - type: "json_path"
             path: ".email"
             expected: "Sincere@april.biz"
@@ -54,7 +54,7 @@ tests:
             }
         assertions:
           - type: "status_code"
-            expected: 201
+            expected: 200
           - type: "json_path"
             path: ".id"
             expected: 11
