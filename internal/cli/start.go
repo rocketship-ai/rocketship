@@ -146,17 +146,6 @@ func setupLocalEnvironment() error {
 	}
 	pm.Add(engineCmd)
 
-	// Save local session
-	session := &Session{
-		EngineAddress: "localhost:7700",
-		SessionID:     uuid.New().String(),
-		CreatedAt:     time.Now(),
-	}
-
-	if err := SaveSession(session); err != nil {
-		return fmt.Errorf("failed to save session: %w", err)
-	}
-
 	log.Println("Local development environment is ready! 🚀")
 
 	// Keep the parent process running until context is cancelled
