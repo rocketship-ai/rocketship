@@ -4,6 +4,10 @@ version: "v1.0.0"
 tests:
   - name: "Get Users List"
     steps:
+      - name: "Delay Step"
+        plugin: "delay"
+        config:
+          duration: "5s"
       - name: "Get user list"
         plugin: "http"
         config:
@@ -20,6 +24,10 @@ tests:
 
   - name: "Get Single User"
     steps:
+      - name: "Delay Step"
+        plugin: "delay"
+        config:
+          duration: "5s"
       - name: "Get specific user"
         plugin: "http"
         config:
@@ -39,6 +47,10 @@ tests:
 
   - name: "Create New User"
     steps:
+      - name: "Delay Step"
+        plugin: "delay"
+        config:
+          duration: "5s"
       - name: "Create user"
         plugin: "http"
         config:
@@ -61,6 +73,10 @@ tests:
 
   - name: "Update User"
     steps:
+      - name: "Delay Step"
+        plugin: "delay"
+        config:
+          duration: "5s"
       - name: "Update user"
         plugin: "http"
         config:
@@ -86,6 +102,10 @@ tests:
 
   - name: "Delete User"
     steps:
+      - name: "Delay Step"
+        plugin: "delay"
+        config:
+          duration: "5s"
       - name: "Delete user"
         plugin: "http"
         config:
