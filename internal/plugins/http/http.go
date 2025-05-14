@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
-	"strings"
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
@@ -362,22 +361,6 @@ func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Res
 			actual := resp.Header.Get(headerName)
 			if actual != expected {
 				return fmt.Errorf("header assertion failed for %q: expected %q, got %q", headerName, expected, actual)
-			}
-
-		case AssertionTypeResponseBody:
-			contains, ok := assertionMap["contains"].(string)
-			if !ok {
-				return fmt.Errorf("contains field is required for response_body assertion")
-			}
-
-			// Replace variables in contains field
-			contains, err := replaceVariables(contains, state)
-			if err != nil {
-				return fmt.Errorf("failed to replace variables in contains field: %w", err)
-			}
-
-			if !strings.Contains(string(respBody), contains) {
-				return fmt.Errorf("response body assertion failed: expected body to contain %q, got %q", contains, string(respBody))
 			}
 
 		case AssertionTypeJSONPath:

@@ -134,9 +134,7 @@ tests:
           url: "http://localhost:8080/users/{{ second_user_id }}"
         assertions:
           - type: "status_code"
-            expected: 500
-          # - type: "response_body"
-          #   contains: "resource not found"
+            expected: 404
 
       - name: "Verify only first user remains"
         plugin: "http"

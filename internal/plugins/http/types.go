@@ -19,12 +19,11 @@ type HTTPConfig struct {
 
 // HTTPAssertion represents a test assertion
 type HTTPAssertion struct {
-	Type     string      `json:"type" yaml:"type"`                   // "status_code", "json_path", or "header"
-	Path     string      `json:"path" yaml:"path,omitempty"`         // Used for json_path assertions
-	Name     string      `json:"name" yaml:"name,omitempty"`         // Used for header assertions
-	Expected interface{} `json:"expected" yaml:"expected"`           // Expected value to match against
-	Exists   bool        `json:"exists" yaml:"exists"`               // Used for checking if a value exists
-	Contains string      `json:"contains" yaml:"contains,omitempty"` // Used for response_body assertions
+	Type     string      `json:"type" yaml:"type"`           // "status_code", "json_path", or "header"
+	Path     string      `json:"path" yaml:"path,omitempty"` // Used for json_path assertions
+	Name     string      `json:"name" yaml:"name,omitempty"` // Used for header assertions
+	Expected interface{} `json:"expected" yaml:"expected"`   // Expected value to match against
+	Exists   bool        `json:"exists" yaml:"exists"`       // Used for checking if a value exists
 }
 
 // SaveConfig represents a configuration for saving response data
@@ -36,10 +35,9 @@ type SaveConfig struct {
 
 // Common assertion types
 const (
-	AssertionTypeStatusCode   = "status_code"
-	AssertionTypeJSONPath     = "json_path"
-	AssertionTypeHeader       = "header"
-	AssertionTypeResponseBody = "response_body"
+	AssertionTypeStatusCode = "status_code"
+	AssertionTypeJSONPath   = "json_path"
+	AssertionTypeHeader     = "header"
 )
 
 // HTTPResponse represents the response from an HTTP request

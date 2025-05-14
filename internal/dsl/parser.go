@@ -65,8 +65,3 @@ func ParseYAML(yamlPayload []byte) (RocketshipConfig, error) {
 
 	return config, nil
 }
-
-// TODO: Do i even need this? Its not used anywhere. The function is defined in dsl/schema.go
-func ValidateYAML(yamlPayload []byte) error {
-	return ValidateYAMLWithSchema(yamlPayload)
-}
