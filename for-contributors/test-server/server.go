@@ -34,6 +34,15 @@ func (s *TestServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Log the request
 	s.logRequest(r)
 
+	// Special handling for clear state
+	if r.URL.Path == "/_clear" && r.Method == http.MethodPost {
+		s.store.mu.Lock()
+		s.store.data = make(map[string]map[string]interface{})
+		s.store.mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	// Parse the path to get resource type and ID
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) == 0 || parts[0] == "" {

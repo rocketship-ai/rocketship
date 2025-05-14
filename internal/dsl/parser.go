@@ -23,6 +23,7 @@ type Step struct {
 	Plugin     string                   `json:"plugin" yaml:"plugin"`
 	Config     map[string]interface{}   `json:"config" yaml:"config"`
 	Assertions []map[string]interface{} `json:"assertions" yaml:"assertions"`
+	Save       []map[string]interface{} `json:"save" yaml:"save,omitempty"`
 }
 
 // TODO: Probably good to maintain a SSOT for YAML validation. For CLI client and engine server.
