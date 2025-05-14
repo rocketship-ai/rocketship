@@ -9,8 +9,10 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the rocketship CLI binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/rocketship ./cmd/rocketship
+# Build all binaries
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/rocketship ./cmd/rocketship \
+    && CGO_ENABLED=0 GOOS=linux go build -o /bin/worker ./cmd/worker \
+    && CGO_ENABLED=0 GOOS=linux go build -o /bin/engine ./cmd/engine
 
 # Create the final image
 FROM ubuntu:22.04
@@ -28,14 +30,19 @@ ENV PATH="/root/.temporalio/bin:${PATH}"
 
 WORKDIR /app
 
-# Copy the rocketship binary from builder
+# Copy all binaries from builder
 COPY --from=builder /bin/rocketship /usr/local/bin/rocketship
+COPY --from=builder /bin/worker /usr/local/bin/worker
+COPY --from=builder /bin/engine /usr/local/bin/engine
 
-# Create a directory for test files
-RUN mkdir -p /tests
+# Create directories for binaries and tests
+RUN mkdir -p /tests \
+    && mkdir -p /root/.cache/rocketship \
+    && ln -s /usr/local/bin/worker /root/.cache/rocketship/worker \
+    && ln -s /usr/local/bin/engine /root/.cache/rocketship/engine
 
 # Environment variables that can be overridden
-ENV ENGINE_HOST=localhost:7700 \
+ENV ENGINE_HOST=127.0.0.1:7700 \
     TEST_DIR=/tests \
     TEST_FILE=""
 
