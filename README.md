@@ -11,9 +11,9 @@ It combines a declarative YAML spec with Temporal‑style durable execution to p
 
 | Pain                             | Traditional Reality                                                                   | Rocketship Fix                                                                                               |
 | -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **1. Async complexity**          | Existing API tools assume HTTP request‑response; Async flows are hand‑rolled scripts. | First‑class plugins for SQS, Kinesis, Dynamo, S3, HTTP, and more                                             |
+| **1. Async complexity**          | Existing API tools assume HTTP request‑response; Async flows are hand‑rolled scripts. | First‑class plugins for Delays & HTTP. With SQS, Kinesis, Dynamo, S3, etc. coming soon.                      |
 | **2. CI headaches**              | Full E2E env is heavy, slow, and flaky.                                               | Temporal‑based runner spins timers & retries _without_ holding CI pods; run in your cluster or local Docker. |
-| **3. Security / data residency** | SaaS testing tools require exposing internal endpoints.                               | Tests execute in **Rocketship Agent** pods that are part of your infra—only test metadata leaves the VPC.    |
+| **3. Security / data residency** | SaaS testing tools require exposing internal endpoints.                               | Tests can optionally execute in **Rocketship Agent** pods that are part of your infra.                       |
 
 ---
 
@@ -23,7 +23,7 @@ It combines a declarative YAML spec with Temporal‑style durable execution to p
 - **Plugin & Connector SDK** – Drop‑in Go package; implement one Activity function and a JSON schema to add Azure, GCP, or custom infra.
 - **Temporal‑powered Engine** – Durable workflows, back‑offs, and long timers without hogging threads.
 - **Local‑first / K8s‑native** – `rocketship start` spins Temporal + Engine + Agent + LocalStack via Docker Compose (or Helm in minikube).
-- **CI Plugins** – Buildkite, GitHub Actions sample provided.
+- **CI Plugins** – Buildkite, Jenkins, GitHub Actions, etc. samples coming soon.
 
 ---
 
@@ -33,9 +33,6 @@ It combines a declarative YAML spec with Temporal‑style durable execution to p
 # 0. Install the Prerequisites (You're going to need temporal in order to run the engine locally)
 # macOS
 brew install temporal
-
-# Linux
-curl -sSf https://temporal.download/cli.sh | sh
 
 # 1. Install the Rocketship CLI
 
