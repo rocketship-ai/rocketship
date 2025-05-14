@@ -72,6 +72,18 @@ Total Tests: 5
 ✗ Failed Tests: 2
 ```
 
+## 🐳 Docker Quick Start
+
+```bash
+# Pull the multi-arch image
+docker pull rocketshipai/rocketship:latest
+
+# Run a test suite
+docker run -v "$(pwd)/examples:/tests" \
+  -e TEST_FILE=/tests/simple-http/rocketship.yaml \
+  rocketshipai/rocketship:latest
+```
+
 ## 🗺️ Roadmap
 
 1. **AI-Powered Test Generation**
