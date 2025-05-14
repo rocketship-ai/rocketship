@@ -218,6 +218,12 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 			return fmt.Errorf("'as' field is required for save")
 		}
 
+		// Check if required is explicitly set to false
+		required := true
+		if req, ok := saveMap["required"].(bool); ok {
+			required = req
+		}
+
 		// Handle JSON path save
 		if jsonPath, ok := saveMap["json_path"].(string); ok {
 			log.Printf("[DEBUG] Processing JSON path save: %s as %s", jsonPath, as)
@@ -236,8 +242,12 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 			iter := query.Run(jsonData)
 			v, ok := iter.Next()
 			if !ok {
-				log.Printf("[ERROR] No results from jq expression %q. Response body: %s", jsonPath, string(respBody))
-				return fmt.Errorf("no results from jq expression %q", jsonPath)
+				if required {
+					log.Printf("[ERROR] No results from required jq expression %q. Response body: %s", jsonPath, string(respBody))
+					return fmt.Errorf("no results from required jq expression %q", jsonPath)
+				}
+				log.Printf("[WARN] No results from optional jq expression %q, skipping save", jsonPath)
+				continue
 			}
 			if err, ok := v.(error); ok {
 				log.Printf("[ERROR] Error evaluating jq expression: %v", err)
@@ -253,6 +263,9 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 			case bool:
 				saved[as] = fmt.Sprintf("%t", val)
 			case nil:
+				if required {
+					return fmt.Errorf("required value for %q is null", as)
+				}
 				saved[as] = ""
 			default:
 				// For complex types, use JSON marshaling
@@ -271,12 +284,11 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 		if headerName, ok := saveMap["header"].(string); ok {
 			log.Printf("[DEBUG] Processing header save: %s as %s", headerName, as)
 			headerValue := resp.Header.Get(headerName)
-			if headerValue == "" {
-				log.Printf("[WARN] Header %s not found in response", headerName)
-				saved[as] = ""
-			} else {
-				saved[as] = headerValue
+			if headerValue == "" && required {
+				log.Printf("[ERROR] Required header %s not found in response", headerName)
+				return fmt.Errorf("required header %s not found in response", headerName)
 			}
+			saved[as] = headerValue
 			log.Printf("[DEBUG] Saved value for %s: %s", as, saved[as])
 			continue
 		}

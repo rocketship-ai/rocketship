@@ -31,6 +31,7 @@ type SaveConfig struct {
 	JSONPath string `json:"json_path" yaml:"json_path,omitempty"` // JSONPath to extract from response
 	Header   string `json:"header" yaml:"header,omitempty"`       // Header name to extract
 	As       string `json:"as" yaml:"as"`                         // Variable name to save as
+	Required *bool  `json:"required" yaml:"required,omitempty"`   // Whether the value is required (defaults to true)
 }
 
 // Common assertion types
