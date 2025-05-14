@@ -18,8 +18,9 @@ type HTTPConfig struct {
 
 // HTTPAssertion represents a test assertion
 type HTTPAssertion struct {
-	Type     string      `json:"type" yaml:"type"`           // "status_code" or "json_path"
+	Type     string      `json:"type" yaml:"type"`           // "status_code", "json_path", or "header"
 	Path     string      `json:"path" yaml:"path,omitempty"` // Used for json_path assertions
+	Name     string      `json:"name" yaml:"name,omitempty"` // Used for header assertions
 	Expected interface{} `json:"expected" yaml:"expected"`   // Expected value to match against
 }
 
@@ -27,6 +28,7 @@ type HTTPAssertion struct {
 const (
 	AssertionTypeStatusCode = "status_code"
 	AssertionTypeJSONPath   = "json_path"
+	AssertionTypeHeader     = "header"
 )
 
 // HTTPResponse represents the response from an HTTP request

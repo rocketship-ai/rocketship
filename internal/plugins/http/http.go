@@ -120,6 +120,24 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 				return nil, fmt.Errorf("status code assertion failed: expected %d, got %d", int(expected), resp.StatusCode)
 			}
 
+		case AssertionTypeHeader:
+			headerName, ok := assertionMap["name"].(string)
+			if !ok {
+				rawName := assertionMap["name"]
+				return nil, fmt.Errorf("header name is required for header assertion: got type %T", rawName)
+			}
+
+			expected, ok := assertionMap["expected"].(string)
+			if !ok {
+				rawExpected := assertionMap["expected"]
+				return nil, fmt.Errorf("header value must be a string: got type %T", rawExpected)
+			}
+
+			actual := resp.Header.Get(headerName)
+			if actual != expected {
+				return nil, fmt.Errorf("header assertion failed for %q: expected %q, got %q", headerName, expected, actual)
+			}
+
 		case AssertionTypeJSONPath:
 			// Parse response body as JSON
 			var jsonData interface{}
