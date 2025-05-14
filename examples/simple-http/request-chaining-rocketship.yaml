@@ -1,0 +1,154 @@
+name: "Request Chaining Test Suite"
+description: "A test suite demonstrating request chaining with the test server"
+version: "v1.0.0"
+tests:
+  - name: "Create and Chain User Operations"
+    steps:
+      - name: "Create first user"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "http://localhost:8080/users"
+          headers:
+            Content-Type: "application/json"
+          body: |
+            {
+              "name": "John Doe",
+              "email": "john@example.com",
+              "role": "admin"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".name"
+            expected: "John Doe"
+          - type: "json_path"
+            path: ".email"
+            expected: "john@example.com"
+          - type: "header"
+            name: "Content-Type"
+            expected: "application/json"
+        save:
+          - json_path: ".id"
+            as: "first_user_id"
+          - json_path: ".email"
+            as: "first_user_email"
+
+      - name: "Create second user"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "http://localhost:8080/users"
+          headers:
+            Content-Type: "application/json"
+          body: |
+            {
+              "name": "Jane Smith",
+              "email": "jane@example.com",
+              "role": "user"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".id"
+            exists: true
+        save:
+          - json_path: ".id"
+            as: "second_user_id"
+
+      - name: "Get all users"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "http://localhost:8080/users"
+          headers:
+            Accept: "application/json"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "length"
+            expected: 2
+          - type: "header"
+            name: "Content-Type"
+            expected: "application/json"
+
+      - name: "Get first user by ID"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "http://localhost:8080/users/{{ first_user_id }}"
+          headers:
+            Accept: "application/json"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".email"
+            expected: "{{ first_user_email }}"
+          - type: "json_path"
+            path: ".role"
+            expected: "admin"
+
+      - name: "Update first user"
+        plugin: "http"
+        config:
+          method: "PUT"
+          url: "http://localhost:8080/users/{{ first_user_id }}"
+          headers:
+            Content-Type: "application/json"
+          body: |
+            {
+              "name": "John Doe Jr",
+              "email": "{{ first_user_email }}",
+              "role": "super_admin"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".name"
+            expected: "John Doe Jr"
+          - type: "json_path"
+            path: ".role"
+            expected: "super_admin"
+        save:
+          - json_path: ".name"
+            as: "updated_name"
+
+      - name: "Delete second user"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "http://localhost:8080/users/{{ second_user_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
+
+      - name: "Verify second user deleted"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "http://localhost:8080/users/{{ second_user_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 500
+          - type: "response_body"
+            contains: "resource not found"
+
+      - name: "Verify only first user remains"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "http://localhost:8080/users"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "length"
+            expected: 1
+          - type: "json_path"
+            path: "{{ first_user_id }}.name"
+            expected: "{{ updated_name }}"
