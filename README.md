@@ -54,24 +54,6 @@ rocketship start server --local
 rocketship run --file simple-test.yaml --engine localhost:7700
 ```
 
-You should see output like:
-
-```
-Starting test run "Simple Delay Test Suite"... 🚀
-...
-[simple-delay] [2025-05-14T06:45:27-04:00] Test: "Test 1" passed
-[simple-delay] [2025-05-14T06:45:27-04:00] Test: "Test 2" passed
-...
-=== Final Summary ===
-Total Test Suites: 3
-✓ Passed Suites: 1
-✗ Failed Suites: 2
-
-Total Tests: 5
-✓ Passed Tests: 3
-✗ Failed Tests: 2
-```
-
 ## 🐳 Docker Quick Start
 
 ```bash
