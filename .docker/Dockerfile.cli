@@ -19,8 +19,12 @@ FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
+    # we should pin a version
     && curl -sSf https://temporal.download/cli.sh | sh \
     && rm -rf /var/lib/apt/lists/*
+
+# Add Temporal CLI to PATH
+ENV PATH="/root/.temporalio/bin:${PATH}"
 
 WORKDIR /app
 
