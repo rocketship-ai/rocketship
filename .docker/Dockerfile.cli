@@ -1,0 +1,43 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.mod and go.sum
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the rocketship CLI binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/rocketship ./cmd/rocketship
+
+# Create the final image
+FROM ubuntu:22.04
+
+# Install required packages and Temporal CLI
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    && curl -sSf https://temporal.download/cli.sh | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the rocketship binary from builder
+COPY --from=builder /bin/rocketship /usr/local/bin/rocketship
+
+# Create a directory for test files
+RUN mkdir -p /tests
+
+# Environment variables that can be overridden
+ENV ENGINE_HOST=localhost:7700 \
+    TEST_DIR=/tests \
+    TEST_FILE=""
+
+# Copy entrypoint script
+COPY .docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"] 

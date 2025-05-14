@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -40,7 +41,16 @@ func newStartServerCmd() *cobra.Command {
 				return err
 			}
 
+			isBackground, err := cmd.Flags().GetBool("background")
+			if err != nil {
+				return err
+			}
+
 			if isLocal {
+				if isBackground {
+					// Start processes and return immediately
+					return setupLocalEnvironmentBackground()
+				}
 				return setupLocalEnvironment()
 			}
 
@@ -49,6 +59,7 @@ func newStartServerCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Bool("local", false, "Start local development environment")
+	cmd.Flags().Bool("background", false, "Start server in background mode")
 	return cmd
 }
 
@@ -151,4 +162,63 @@ func setupLocalEnvironment() error {
 	// Keep the parent process running until context is cancelled
 	<-ctx.Done()
 	return ctx.Err()
+}
+
+// setupLocalEnvironmentBackground starts all processes but doesn't wait for context cancellation
+func setupLocalEnvironmentBackground() error {
+	// Create a context that we can cancel
+	ctx := context.Background()
+
+	// Set up process manager
+	pm := newProcessManager()
+
+	// Start Temporal server
+	log.Println("Starting Temporal server...")
+	temporalCmd := exec.CommandContext(ctx, "temporal", "server", "start-dev")
+	temporalCmd.Stderr = os.Stderr
+	temporalCmd.Stdout = os.Stdout
+	if err := temporalCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start temporal server: %w", err)
+	}
+	pm.Add(temporalCmd)
+
+	// Give Temporal a moment to start
+	time.Sleep(5 * time.Second)
+
+	// Set environment variables for worker and engine
+	if err := os.Setenv("TEMPORAL_HOST", "localhost:7233"); err != nil {
+		return fmt.Errorf("failed to set TEMPORAL_HOST environment variable: %w", err)
+	}
+
+	// Start the worker from embedded binary
+	log.Println("Starting Rocketship worker...")
+	workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+	if err != nil {
+		return fmt.Errorf("failed to start worker: %w", err)
+	}
+	if err := workerCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start worker: %w", err)
+	}
+	pm.Add(workerCmd)
+
+	// Start the engine from embedded binary
+	log.Println("Starting Rocketship engine...")
+	engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+	if err != nil {
+		return fmt.Errorf("failed to start engine: %w", err)
+	}
+	if err := engineCmd.Start(); err != nil {
+		return fmt.Errorf("failed to start engine: %w", err)
+	}
+	pm.Add(engineCmd)
+
+	log.Println("Local development environment is ready! 🚀")
+
+	// Write the process manager to a file so we can clean up later if needed
+	pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
+	if err := pm.SaveToFile(pidFile); err != nil {
+		log.Printf("Warning: Failed to save process manager state: %v", err)
+	}
+
+	return nil
 }
