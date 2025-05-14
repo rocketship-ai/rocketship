@@ -1,0 +1,54 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.mod and go.sum
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build all binaries
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/rocketship ./cmd/rocketship \
+    && CGO_ENABLED=0 GOOS=linux go build -o /bin/worker ./cmd/worker \
+    && CGO_ENABLED=0 GOOS=linux go build -o /bin/engine ./cmd/engine
+
+# Create the final image
+FROM ubuntu:22.04
+
+# Install required packages and Temporal CLI
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    # we should pin a version
+    && curl -sSf https://temporal.download/cli.sh | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Temporal CLI to PATH
+ENV PATH="/root/.temporalio/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy all binaries from builder
+COPY --from=builder /bin/rocketship /usr/local/bin/rocketship
+COPY --from=builder /bin/worker /usr/local/bin/worker
+COPY --from=builder /bin/engine /usr/local/bin/engine
+
+# Create directories for binaries and tests
+RUN mkdir -p /tests \
+    && mkdir -p /root/.cache/rocketship \
+    && ln -s /usr/local/bin/worker /root/.cache/rocketship/worker \
+    && ln -s /usr/local/bin/engine /root/.cache/rocketship/engine
+
+# Environment variables that can be overridden
+ENV ENGINE_HOST=127.0.0.1:7700 \
+    TEST_DIR=/tests \
+    TEST_FILE=""
+
+# Copy entrypoint script
+COPY .docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

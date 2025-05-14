@@ -16,6 +16,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(
 		NewStartCmd(),
 		NewRunCmd(),
+		NewStopCmd(),
 	)
 
 	return cmd
