@@ -23,6 +23,7 @@ type Step struct {
 	Plugin     string                   `json:"plugin" yaml:"plugin"`
 	Config     map[string]interface{}   `json:"config" yaml:"config"`
 	Assertions []map[string]interface{} `json:"assertions" yaml:"assertions"`
+	Save       []map[string]interface{} `json:"save" yaml:"save,omitempty"`
 }
 
 // TODO: Probably good to maintain a SSOT for YAML validation. For CLI client and engine server.
@@ -63,9 +64,4 @@ func ParseYAML(yamlPayload []byte) (RocketshipConfig, error) {
 	}
 
 	return config, nil
-}
-
-// TODO: Do i even need this? Its not used anywhere. The function is defined in dsl/schema.go
-func ValidateYAML(yamlPayload []byte) error {
-	return ValidateYAMLWithSchema(yamlPayload)
 }
