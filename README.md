@@ -2,7 +2,7 @@
 
 ![Under Construction](docs/misc/assets/under-construction-banner.png)
 
-### 🚀 **Rocketship** – AI‑Native End‑to‑End Testing
+### 🚀 **Rocketship** – Run Enterprise-Grade End‑to‑End Tests With a Single Command
 
 Rocketship is an **open‑source testing platform** that verifies complex, event‑driven micro‑services the same way you reason about them: as real‑world **workflows** that span queues, APIs, databases, and file buckets.  
 It combines a declarative YAML spec with Temporal‑style durable execution to provide reliable, scalable testing for modern architectures.
