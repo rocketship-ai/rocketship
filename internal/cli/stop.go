@@ -49,6 +49,12 @@ func newStopServerCmd() *cobra.Command {
 				log.Printf("Warning: Failed to remove PID file: %v", err)
 			}
 
+			// Clean up log files
+			logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
+			if err := os.RemoveAll(logsDir); err != nil {
+				log.Printf("Warning: Failed to remove logs directory: %v", err)
+			}
+
 			fmt.Println("Server components stopped successfully! 🛑")
 			return nil
 		},

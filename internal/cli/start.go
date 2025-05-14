@@ -169,14 +169,36 @@ func setupLocalEnvironmentBackground() error {
 	// Create a context that we can cancel
 	ctx := context.Background()
 
+	// Create logs directory
+	logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create logs directory: %w", err)
+	}
+
 	// Set up process manager
 	pm := newProcessManager()
+
+	// Open log files
+	temporalLog, err := os.OpenFile(filepath.Join(logsDir, "temporal.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create temporal log file: %w", err)
+	}
+
+	workerLog, err := os.OpenFile(filepath.Join(logsDir, "worker.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create worker log file: %w", err)
+	}
+
+	engineLog, err := os.OpenFile(filepath.Join(logsDir, "engine.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create engine log file: %w", err)
+	}
 
 	// Start Temporal server
 	log.Println("Starting Temporal server...")
 	temporalCmd := exec.CommandContext(ctx, "temporal", "server", "start-dev")
-	temporalCmd.Stderr = os.Stderr
-	temporalCmd.Stdout = os.Stdout
+	temporalCmd.Stdout = temporalLog
+	temporalCmd.Stderr = temporalLog
 	if err := temporalCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start temporal server: %w", err)
 	}
@@ -196,6 +218,8 @@ func setupLocalEnvironmentBackground() error {
 	if err != nil {
 		return fmt.Errorf("failed to start worker: %w", err)
 	}
+	workerCmd.Stdout = workerLog
+	workerCmd.Stderr = workerLog
 	if err := workerCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start worker: %w", err)
 	}
@@ -207,12 +231,12 @@ func setupLocalEnvironmentBackground() error {
 	if err != nil {
 		return fmt.Errorf("failed to start engine: %w", err)
 	}
+	engineCmd.Stdout = engineLog
+	engineCmd.Stderr = engineLog
 	if err := engineCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start engine: %w", err)
 	}
 	pm.Add(engineCmd)
-
-	log.Println("Local development environment is ready! 🚀")
 
 	// Write the process manager to a file so we can clean up later if needed
 	pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
@@ -220,5 +244,14 @@ func setupLocalEnvironmentBackground() error {
 		log.Printf("Warning: Failed to save process manager state: %v", err)
 	}
 
+	// Wait for engine to be ready by polling its health endpoint
+	for i := 0; i < 50; i++ {
+		if _, err := os.Stat(filepath.Join(logsDir, "engine.log")); err == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	log.Println("Local development environment is ready! 🚀")
 	return nil
 }
