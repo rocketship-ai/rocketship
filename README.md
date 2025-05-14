@@ -1,6 +1,6 @@
 # Rocketship
 
-### 🚀 **Rocketship** – Run Enterprise-Grade End‑to‑End Tests With a Single Command
+### 🚀 **Rocketship** – Run Enterprise-Grade e2e Tests With a Single Command
 
 Rocketship is an **open‑source testing platform** that verifies complex, event‑driven micro‑services the same way you reason about them: as real‑world **workflows** that span queues, APIs, databases, and file buckets.  
 It combines a declarative YAML spec with Temporal‑style durable execution to provide reliable, scalable testing for modern architectures.
@@ -75,10 +75,11 @@ Total Tests: 5
 ## 🐳 Docker Quick Start
 
 ```bash
-# Pull the multi-arch image
+# Pull the image
 docker pull rocketshipai/rocketship:latest
 
-# Run a test suite
+# Run a test suite by mounting a directory to the container
+# Use TEST_FILE or TEST_DIR to specify the rocketship.yaml file or directory
 docker run -v "$(pwd)/examples:/tests" \
   -e TEST_FILE=/tests/simple-http/rocketship.yaml \
   rocketshipai/rocketship:latest
