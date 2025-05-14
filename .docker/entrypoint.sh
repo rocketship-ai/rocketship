@@ -4,10 +4,6 @@ set -e
 # Start the rocketship server in background mode
 rocketship start server --local --background
 
-# Wait for the server to be ready (includes waiting for Temporal)
-echo "Waiting for rocketship server to be ready..."
-sleep 10
-
 # Run the tests based on environment variables
 if [ -n "$TEST_FILE" ]; then
     echo "Running single test file: $TEST_FILE"
