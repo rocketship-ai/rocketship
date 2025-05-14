@@ -1,7 +1,5 @@
 # Rocketship
 
-![Under Construction](docs/misc/assets/under-construction-banner.png)
-
 ### 🚀 **Rocketship** – Run Enterprise-Grade End‑to‑End Tests With a Single Command
 
 Rocketship is an **open‑source testing platform** that verifies complex, event‑driven micro‑services the same way you reason about them: as real‑world **workflows** that span queues, APIs, databases, and file buckets.  
