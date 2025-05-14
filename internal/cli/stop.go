@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -29,21 +30,23 @@ func newStopServerCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
 
+			// Check if PID file exists
+			if _, err := os.Stat(pidFile); os.IsNotExist(err) {
+				return fmt.Errorf("no running server found (PID file not found)")
+			}
+
 			// Load process manager state
 			pm, err := LoadFromFile(pidFile)
 			if err != nil {
-				if os.IsNotExist(err) {
-					return fmt.Errorf("no running server found")
-				}
 				return fmt.Errorf("failed to load process state: %w", err)
 			}
 
-			// Clean up processes
+			// Cleanup will send SIGTERM to all processes and wait for them to exit
 			pm.Cleanup()
 
-			// Remove PID file
-			if err := os.Remove(pidFile); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("failed to remove PID file: %w", err)
+			// Remove the PID file
+			if err := os.Remove(pidFile); err != nil {
+				log.Printf("Warning: Failed to remove PID file: %v", err)
 			}
 
 			fmt.Println("Server components stopped successfully! 🛑")
