@@ -37,31 +37,44 @@ Core features:
 
 ## Getting Started
 
-```js
-import http from "k6/http";
-import { check, sleep } from "k6";
+#### Install
 
-// Test configuration
-export const options = {
-  thresholds: {
-    // Assert that 99% of requests finish within 3000ms.
-    http_req_duration: ["p(99) < 3000"],
-  },
-  // Ramp the number of virtual users up and down
-  stages: [
-    { duration: "30s", target: 15 },
-    { duration: "1m", target: 15 },
-    { duration: "20s", target: 0 },
-  ],
-};
+```bash
+brew install temporal # pre-req for the local engine
+curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs # for macos
+```
 
-// Simulated user behavior
-export default function () {
-  let res = http.get("https://quickpizza.grafana.com");
-  // Validate response status
-  check(res, { "status was 200": (r) => r.status == 200 });
-  sleep(1);
-}
+#### Save a test spec
+
+```bash
+cat > simple-test.yaml << 'EOF'
+name: "Simple Test Suite"
+description: "A simple test suite!"
+version: "v1.0.0"
+tests:
+  - name: "Test 1"
+    steps:
+      - name: "Check API status"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/status/200"
+        assertions:
+          - type: "status_code"
+            expected: 200
+  - name: "Test 2"
+    steps:
+      - name: "Do nothing for 1s!"
+        plugin: "delay"
+        config:
+          duration: "1s"
+EOF
+```
+
+#### Run it
+
+```bash
+rs run -af simple-test.yaml # starts the engine, runs the tests, shuts the engine down
 ```
 
 You can run scripts like this on the CLI, or in your CI, or across a Kubernetes cluster.
