@@ -20,7 +20,7 @@ import (
 func NewStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "start",
-		Short: "Start rocketship components",
+		Short: "Start rocketship the rocketship server",
 		Long:  `Start rocketship components like the server or create a new session.`,
 	}
 

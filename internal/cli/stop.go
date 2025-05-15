@@ -13,7 +13,7 @@ import (
 func NewStopCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stop",
-		Short: "Stop rocketship components",
+		Short: "Stop rocketship the rocketship server",
 		Long:  `Stop rocketship components like the server.`,
 	}
 
