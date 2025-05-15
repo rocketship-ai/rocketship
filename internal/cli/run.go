@@ -191,19 +191,42 @@ func NewRunCmd() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			// Check if we're in auto mode
+			isAuto, err := cmd.Flags().GetBool("auto")
+			if err != nil {
+				return err
+			}
+
 			// Get engine address from flag
 			engineAddr, err := cmd.Flags().GetString("engine")
 			if err != nil {
 				return err
 			}
 
-			// If engine address not provided, try to load from session
-			if engineAddr == "" {
-				session, err := LoadSession()
-				if err != nil {
-					return fmt.Errorf("no engine address provided and no active session found - use --engine flag or 'rocketship start' first: %w", err)
+			// Validate flags - cannot use both --auto and --engine
+			if isAuto && engineAddr != "" {
+				return fmt.Errorf("cannot use both --auto and --engine flags together. Use --auto to automatically manage a local server, or --engine to connect to an existing server")
+			}
+
+			var cleanup func()
+			// Handle server management based on flags
+			if isAuto {
+				if err := setupLocalEnvironmentBackground(); err != nil {
+					return fmt.Errorf("failed to start local server: %w", err)
 				}
-				engineAddr = session.EngineAddress
+				engineAddr = "localhost:7700"
+				cleanup = func() {
+					pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
+					if pm, err := LoadFromFile(pidFile); err == nil {
+						pm.Cleanup()
+						_ = os.Remove(pidFile)
+						logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
+						_ = os.RemoveAll(logsDir)
+					}
+				}
+				defer cleanup()
+			} else if engineAddr == "" {
+				return fmt.Errorf("no engine address provided - use --engine flag to specify an address or --auto to start a local server")
 			}
 
 			// Create engine client using the engine address
@@ -279,6 +302,7 @@ func NewRunCmd() *cobra.Command {
 
 	cmd.Flags().String("file", "", "Path to a single test file (default: rocketship.yaml in current directory)")
 	cmd.Flags().String("dir", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
-	cmd.Flags().String("engine", "", "Address of the rocketship engine (e.g., localhost:7700)")
+	cmd.Flags().String("engine", "", "Address of the rocketship engine (default: localhost:7700)")
+	cmd.Flags().Bool("auto", false, "Automatically start and stop the local server for test execution")
 	return cmd
 }
