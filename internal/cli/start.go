@@ -55,7 +55,7 @@ func newStartServerCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Bool("local", false, "Start local development environment")
+	cmd.Flags().Bool("local", false, "Start a local rocketship server")
 	cmd.Flags().Bool("background", false, "Start server in background mode")
 	return cmd
 }
@@ -80,45 +80,54 @@ func setupLocalEnvironment() error {
 		os.Exit(0)
 	}()
 
-	// Start Temporal server
-	log.Println("Starting Temporal server...")
-	temporalCmd := exec.CommandContext(ctx, "temporal", "server", "start-dev")
-	temporalCmd.Stderr = os.Stderr
-	temporalCmd.Stdout = os.Stdout
-	if err := temporalCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start temporal server: %w", err)
-	}
-	pm.Add(temporalCmd)
+	// Start Temporal server if not already running
+	if !pm.IsComponentRunning(Temporal) {
+		log.Println("Starting Temporal server...")
+		temporalCmd := exec.CommandContext(ctx, "temporal", "server", "start-dev")
+		temporalCmd.Stderr = os.Stderr
+		temporalCmd.Stdout = os.Stdout
+		if err := pm.Add(temporalCmd, Temporal); err != nil {
+			return fmt.Errorf("failed to start temporal server: %w", err)
+		}
 
-	// Give Temporal a moment to start
-	time.Sleep(5 * time.Second)
+		// Give Temporal a moment to start
+		time.Sleep(5 * time.Second)
+	} else {
+		log.Println("Temporal server is already running")
+	}
 
 	// Set environment variables for worker and engine
 	if err := os.Setenv("TEMPORAL_HOST", "localhost:7233"); err != nil {
 		return fmt.Errorf("failed to set TEMPORAL_HOST environment variable: %w", err)
 	}
 
-	// Start the worker from embedded binary
-	log.Println("Starting Rocketship worker...")
-	workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
-	if err != nil {
-		return fmt.Errorf("failed to start worker: %w", err)
+	// Start the worker from embedded binary if not already running
+	if !pm.IsComponentRunning(Worker) {
+		log.Println("Starting Rocketship worker...")
+		workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+		if err != nil {
+			return fmt.Errorf("failed to start worker: %w", err)
+		}
+		if err := pm.Add(workerCmd, Worker); err != nil {
+			return fmt.Errorf("failed to start worker: %w", err)
+		}
+	} else {
+		log.Println("Rocketship worker is already running")
 	}
-	if err := workerCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start worker: %w", err)
-	}
-	pm.Add(workerCmd)
 
-	// Start the engine from embedded binary
-	log.Println("Starting Rocketship engine...")
-	engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
-	if err != nil {
-		return fmt.Errorf("failed to start engine: %w", err)
+	// Start the engine from embedded binary if not already running
+	if !pm.IsComponentRunning(Engine) {
+		log.Println("Starting Rocketship engine...")
+		engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+		if err != nil {
+			return fmt.Errorf("failed to start engine: %w", err)
+		}
+		if err := pm.Add(engineCmd, Engine); err != nil {
+			return fmt.Errorf("failed to start engine: %w", err)
+		}
+	} else {
+		log.Println("Rocketship engine is already running")
 	}
-	if err := engineCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start engine: %w", err)
-	}
-	pm.Add(engineCmd)
 
 	log.Println("Local development environment is ready! 🚀")
 
@@ -159,9 +168,6 @@ func waitForEngine(ctx context.Context) error {
 }
 
 func setupLocalEnvironmentBackground() error {
-	// Create a context that we can cancel
-	ctx := context.Background()
-
 	// Create logs directory
 	logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
 	if err := os.MkdirAll(logsDir, 0755); err != nil {
@@ -187,54 +193,63 @@ func setupLocalEnvironmentBackground() error {
 		return fmt.Errorf("failed to create engine log file: %w", err)
 	}
 
-	// Start Temporal server
-	log.Println("Starting Temporal server...")
-	temporalCmd := exec.CommandContext(ctx, "temporal", "server", "start-dev")
-	temporalCmd.Stdout = temporalLog
-	temporalCmd.Stderr = temporalLog
-	if err := temporalCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start temporal server: %w", err)
-	}
-	pm.Add(temporalCmd)
+	// Start Temporal server if not already running
+	if !pm.IsComponentRunning(Temporal) {
+		log.Println("Starting Temporal server...")
+		temporalCmd := exec.Command("temporal", "server", "start-dev")
+		temporalCmd.Stdout = temporalLog
+		temporalCmd.Stderr = temporalLog
+		if err := pm.Add(temporalCmd, Temporal); err != nil {
+			return fmt.Errorf("failed to start temporal server: %w", err)
+		}
 
-	// Give Temporal a moment to start
-	time.Sleep(5 * time.Second)
+		// Give Temporal a moment to start
+		time.Sleep(5 * time.Second)
+	} else {
+		log.Println("Temporal server is already running")
+	}
 
 	// Set environment variables for worker and engine
 	if err := os.Setenv("TEMPORAL_HOST", "localhost:7233"); err != nil {
 		return fmt.Errorf("failed to set TEMPORAL_HOST environment variable: %w", err)
 	}
 
-	// Start the worker from embedded binary
-	log.Println("Starting Rocketship worker...")
-	workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
-	if err != nil {
-		return fmt.Errorf("failed to start worker: %w", err)
+	// Start the worker from embedded binary if not already running
+	if !pm.IsComponentRunning(Worker) {
+		log.Println("Starting Rocketship worker...")
+		workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+		if err != nil {
+			return fmt.Errorf("failed to start worker: %w", err)
+		}
+		workerCmd.Stdout = workerLog
+		workerCmd.Stderr = workerLog
+		if err := pm.Add(workerCmd, Worker); err != nil {
+			return fmt.Errorf("failed to start worker: %w", err)
+		}
+	} else {
+		log.Println("Rocketship worker is already running")
 	}
-	workerCmd.Stdout = workerLog
-	workerCmd.Stderr = workerLog
-	if err := workerCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start worker: %w", err)
-	}
-	pm.Add(workerCmd)
 
-	// Start the engine from embedded binary
-	log.Println("Starting Rocketship engine...")
-	engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
-	if err != nil {
-		return fmt.Errorf("failed to start engine: %w", err)
-	}
-	engineCmd.Stdout = engineLog
-	engineCmd.Stderr = engineLog
-	if err := engineCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start engine: %w", err)
-	}
-	pm.Add(engineCmd)
+	// Start the engine from embedded binary if not already running
+	if !pm.IsComponentRunning(Engine) {
+		log.Println("Starting Rocketship engine...")
+		engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+		if err != nil {
+			return fmt.Errorf("failed to start engine: %w", err)
+		}
+		engineCmd.Stdout = engineLog
+		engineCmd.Stderr = engineLog
+		if err := pm.Add(engineCmd, Engine); err != nil {
+			return fmt.Errorf("failed to start engine: %w", err)
+		}
 
-	// Wait for engine to be ready
-	log.Println("Waiting for engine to become ready...")
-	if err := waitForEngine(context.Background()); err != nil {
-		return fmt.Errorf("engine failed to start: %w", err)
+		// Wait for engine to be ready
+		ctx := context.Background()
+		if err := waitForEngine(ctx); err != nil {
+			return fmt.Errorf("engine failed to start: %w", err)
+		}
+	} else {
+		log.Println("Rocketship engine is already running")
 	}
 
 	// Write the process manager to a file so we can clean up later if needed

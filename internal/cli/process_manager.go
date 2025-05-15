@@ -6,17 +6,40 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
 
+// ComponentType identifies the type of server component
+type ComponentType int
+
+const (
+	Temporal ComponentType = iota
+	Worker
+	Engine
+)
+
+func (c ComponentType) String() string {
+	switch c {
+	case Temporal:
+		return "temporal"
+	case Worker:
+		return "worker"
+	case Engine:
+		return "engine"
+	default:
+		return "unknown"
+	}
+}
+
 // processState represents the serializable state of a process
 type processState struct {
-	PID      int    `json:"pid"`
-	PGID     int    `json:"pgid"`
-	Path     string `json:"path"`
-	IsLeader bool   `json:"is_leader"`
+	PID       int           `json:"pid"`
+	PGID      int           `json:"pgid"`
+	Path      string        `json:"path"`
+	Component ComponentType `json:"component"`
 }
 
 // processManager handles the lifecycle of child processes
@@ -31,17 +54,46 @@ func newProcessManager() *processManager {
 	}
 }
 
-func (pm *processManager) Add(cmd *exec.Cmd) {
+// IsComponentRunning checks if a component is already running
+func (pm *processManager) IsComponentRunning(component ComponentType) bool {
+	var pattern string
+	switch component {
+	case Temporal:
+		pattern = "temporal.*server.*start-dev"
+	case Worker:
+		pattern = "rocketship.*worker"
+	case Engine:
+		pattern = "rocketship.*engine"
+	default:
+		return false
+	}
+
+	// Use pgrep with -f to match against the full command line
+	cmd := exec.Command("pgrep", "-f", pattern)
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+
+	// If we found any processes, the component is running
+	return len(strings.TrimSpace(string(output))) > 0
+}
+
+func (pm *processManager) Add(cmd *exec.Cmd, component ComponentType) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	// Set process group ID to be the same as the process ID
-	// This makes the process a group leader and helps us manage child processes
+	// Set process group
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
 
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start process: %w", err)
+	}
+
 	pm.processes = append(pm.processes, cmd)
+	return nil
 }
 
 func (pm *processManager) Cleanup() {
@@ -81,10 +133,28 @@ func (pm *processManager) Cleanup() {
 				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
 					log.Printf("Failed to kill process group %d: %v", pgid, err)
 				}
-			} else {
-				log.Printf("Process group %d has exited", pgid)
 			}
 		}
+	}
+
+	// Cleanup any orphaned processes with more specific patterns
+	componentPatterns := map[ComponentType]string{
+		Temporal: "temporal.*server.*start-dev",
+		Worker:   "rocketship.*worker",
+		Engine:   "rocketship.*engine",
+	}
+
+	for _, pattern := range componentPatterns {
+		// First try SIGTERM
+		cmd := exec.Command("pkill", "-f", pattern)
+		_ = cmd.Run()
+
+		// Give processes a moment to terminate gracefully
+		time.Sleep(500 * time.Millisecond)
+
+		// Then force kill any remaining matches
+		cmd = exec.Command("pkill", "-9", "-f", pattern)
+		_ = cmd.Run()
 	}
 
 	// Clear the processes list
@@ -106,10 +176,10 @@ func (pm *processManager) SaveToFile(path string) error {
 			}
 
 			state = append(state, processState{
-				PID:      proc.Process.Pid,
-				PGID:     pgid,
-				Path:     proc.Path,
-				IsLeader: true,
+				PID:       proc.Process.Pid,
+				PGID:      pgid,
+				Path:      proc.Path,
+				Component: getComponentType(proc.Path),
 			})
 		}
 	}
@@ -124,6 +194,20 @@ func (pm *processManager) SaveToFile(path string) error {
 	}
 
 	return nil
+}
+
+// getComponentType determines the component type from the process path
+func getComponentType(path string) ComponentType {
+	switch {
+	case strings.Contains(path, "temporal"):
+		return Temporal
+	case strings.Contains(path, "worker"):
+		return Worker
+	case strings.Contains(path, "engine"):
+		return Engine
+	default:
+		return -1
+	}
 }
 
 // LoadFromFile loads process manager state from a file
@@ -155,7 +239,10 @@ func LoadFromFile(path string) (*processManager, error) {
 			Pgid: ps.PGID,
 		}
 
-		pm.Add(cmd)
+		if err := pm.Add(cmd, ps.Component); err != nil {
+			log.Printf("Failed to add process %d to manager: %v", ps.PID, err)
+			continue
+		}
 		log.Printf("Found running process group %d", ps.PGID)
 	}
 
