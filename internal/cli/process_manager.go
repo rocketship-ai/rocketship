@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -33,85 +33,169 @@ func (c ComponentType) String() string {
 	}
 }
 
-// processState represents the serializable state of a process
-type processState struct {
-	PID       int           `json:"pid"`
-	PGID      int           `json:"pgid"`
-	Path      string        `json:"path"`
-	Component ComponentType `json:"component"`
+// ServerState represents the state of all server components
+type ServerState struct {
+	Components map[ComponentType]*ProcessInfo `json:"components"`
+	UpdatedAt  time.Time                      `json:"updated_at"`
 }
 
-// processManager handles the lifecycle of child processes
+// ProcessInfo represents information about a running process
+type ProcessInfo struct {
+	PID        int       `json:"pid"`
+	StartTime  time.Time `json:"start_time"`
+	BinaryPath string    `json:"binary_path"`
+}
+
+// processManager handles the lifecycle of server components
 type processManager struct {
-	processes []*exec.Cmd
+	stateFile string
 	mu        sync.Mutex
 }
 
-func newProcessManager() *processManager {
-	return &processManager{
-		processes: make([]*exec.Cmd, 0),
-	}
+var (
+	globalPM     *processManager
+	globalPMOnce sync.Once
+)
+
+// GetProcessManager returns the singleton process manager instance
+func GetProcessManager() *processManager {
+	globalPMOnce.Do(func() {
+		globalPM = &processManager{
+			stateFile: filepath.Join(os.TempDir(), "rocketship-server-state.json"),
+		}
+	})
+	return globalPM
 }
 
-// IsComponentRunning checks if a component is already running
-func (pm *processManager) IsComponentRunning(component ComponentType) bool {
-	var pattern string
-	switch component {
-	case Temporal:
-		pattern = "temporal.*server.*start-dev"
-	case Worker:
-		pattern = "rocketship.*worker"
-	case Engine:
-		pattern = "rocketship.*engine"
-	default:
-		return false
+// loadState loads the current server state from file
+func (pm *processManager) loadState() (*ServerState, error) {
+	data, err := os.ReadFile(pm.stateFile)
+	if os.IsNotExist(err) {
+		return &ServerState{
+			Components: make(map[ComponentType]*ProcessInfo),
+			UpdatedAt:  time.Now(),
+		}, nil
 	}
-
-	// Use pgrep with -f to match against the full command line
-	cmd := exec.Command("pgrep", "-f", pattern)
-	output, err := cmd.Output()
 	if err != nil {
-		return false
+		return nil, fmt.Errorf("failed to read state file: %w", err)
 	}
 
-	// If we found any processes, the component is running
-	return len(strings.TrimSpace(string(output))) > 0
+	var state ServerState
+	if err := json.Unmarshal(data, &state); err != nil {
+		return nil, fmt.Errorf("failed to parse state file: %w", err)
+	}
+
+	return &state, nil
 }
 
+// saveState saves the current server state to file
+func (pm *processManager) saveState(state *ServerState) error {
+	state.UpdatedAt = time.Now()
+	data, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("failed to marshal state: %w", err)
+	}
+
+	tempFile := pm.stateFile + ".tmp"
+	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to write state file: %w", err)
+	}
+
+	return os.Rename(tempFile, pm.stateFile)
+}
+
+// Add adds a new process to be managed
 func (pm *processManager) Add(cmd *exec.Cmd, component ComponentType) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
+
+	// Load current state
+	state, err := pm.loadState()
+	if err != nil {
+		return fmt.Errorf("failed to load state: %w", err)
+	}
+
+	// Check if component is already running
+	if info, exists := state.Components[component]; exists {
+		if pm.isProcessRunning(info.PID) {
+			return fmt.Errorf("component %s is already running (PID: %d)", component, info.PID)
+		}
+	}
 
 	// Set process group
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
 
+	// Start the process
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start process: %w", err)
 	}
 
-	Logger.Debug("started process", "pid", cmd.Process.Pid, "component", component)
-	pm.processes = append(pm.processes, cmd)
+	// Update state
+	state.Components[component] = &ProcessInfo{
+		PID:        cmd.Process.Pid,
+		StartTime:  time.Now(),
+		BinaryPath: cmd.Path,
+	}
+
+	if err := pm.saveState(state); err != nil {
+		return fmt.Errorf("failed to save state: %w", err)
+	}
+
+	Logger.Debug("started process", "component", component, "pid", cmd.Process.Pid)
 	return nil
 }
 
+// IsComponentRunning checks if a component is already running
+func (pm *processManager) IsComponentRunning(component ComponentType) bool {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	state, err := pm.loadState()
+	if err != nil {
+		Logger.Debug("failed to load state", "error", err)
+		return false
+	}
+
+	info, exists := state.Components[component]
+	if !exists {
+		return false
+	}
+
+	return pm.isProcessRunning(info.PID)
+}
+
+// isProcessRunning checks if a process is running
+func (pm *processManager) isProcessRunning(pid int) bool {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+
+	err = process.Signal(syscall.Signal(0))
+	return err == nil
+}
+
+// Cleanup terminates all managed processes
 func (pm *processManager) Cleanup() {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	// First pass: send SIGTERM to all process groups
-	for _, proc := range pm.processes {
-		if proc != nil && proc.Process != nil {
-			pgid, err := syscall.Getpgid(proc.Process.Pid)
-			if err != nil {
-				Logger.Debug("failed to get pgid", "pid", proc.Process.Pid, "error", err)
-				continue
-			}
+	state, err := pm.loadState()
+	if err != nil {
+		Logger.Debug("failed to load state during cleanup", "error", err)
+		return
+	}
 
-			Logger.Debug("sending SIGTERM", "pgid", pgid, "pid", proc.Process.Pid)
-			if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
-				Logger.Warn("failed to send SIGTERM", "pgid", pgid, "error", err)
+	Logger.Debug("cleaning up processes")
+
+	// First attempt graceful shutdown
+	for component, info := range state.Components {
+		if pm.isProcessRunning(info.PID) {
+			Logger.Debug("sending SIGTERM", "component", component, "pid", info.PID)
+			if err := syscall.Kill(info.PID, syscall.SIGTERM); err != nil {
+				Logger.Debug("SIGTERM failed", "component", component, "error", err)
 			}
 		}
 	}
@@ -119,133 +203,20 @@ func (pm *processManager) Cleanup() {
 	// Give processes time to shut down gracefully
 	time.Sleep(2 * time.Second)
 
-	// Second pass: force kill any remaining processes
-	for _, proc := range pm.processes {
-		if proc != nil && proc.Process != nil {
-			pgid, err := syscall.Getpgid(proc.Process.Pid)
-			if err != nil {
-				continue // Process might have already exited
-			}
-
-			// Check if process group is still running
-			if err := syscall.Kill(-pgid, syscall.Signal(0)); err == nil {
-				Logger.Debug("sending SIGKILL", "pgid", pgid)
-				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
-					Logger.Debug("failed to kill process group", "pgid", pgid, "error", err)
-				}
+	// Force kill any remaining processes
+	for component, info := range state.Components {
+		if pm.isProcessRunning(info.PID) {
+			Logger.Debug("sending SIGKILL", "component", component, "pid", info.PID)
+			if err := syscall.Kill(info.PID, syscall.SIGKILL); err != nil {
+				Logger.Debug("SIGKILL failed", "component", component, "error", err)
 			}
 		}
 	}
 
-	// Cleanup any orphaned processes with more specific patterns
-	componentPatterns := map[ComponentType]string{
-		Temporal: "temporal.*server.*start-dev",
-		Worker:   "rocketship.*worker",
-		Engine:   "rocketship.*engine",
+	// Remove the state file
+	if err := os.Remove(pm.stateFile); err != nil && !os.IsNotExist(err) {
+		Logger.Debug("failed to remove state file", "error", err)
 	}
 
-	for _, pattern := range componentPatterns {
-		// First try SIGTERM
-		cmd := exec.Command("pkill", "-f", pattern)
-		_ = cmd.Run()
-
-		// Give processes a moment to terminate gracefully
-		time.Sleep(500 * time.Millisecond)
-
-		// Then force kill any remaining matches
-		cmd = exec.Command("pkill", "-9", "-f", pattern)
-		_ = cmd.Run()
-	}
-
-	// Clear the processes list
-	pm.processes = make([]*exec.Cmd, 0)
-}
-
-// SaveToFile saves the process manager state to a file
-func (pm *processManager) SaveToFile(path string) error {
-	pm.mu.Lock()
-	defer pm.mu.Unlock()
-
-	var state []processState
-	for _, proc := range pm.processes {
-		if proc != nil && proc.Process != nil {
-			pgid, err := syscall.Getpgid(proc.Process.Pid)
-			if err != nil {
-				Logger.Debug("failed to get pgid", "pid", proc.Process.Pid, "error", err)
-				continue
-			}
-
-			state = append(state, processState{
-				PID:       proc.Process.Pid,
-				PGID:      pgid,
-				Path:      proc.Path,
-				Component: getComponentType(proc.Path),
-			})
-		}
-	}
-
-	data, err := json.Marshal(state)
-	if err != nil {
-		return fmt.Errorf("failed to marshal process state: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write process state: %w", err)
-	}
-
-	Logger.Debug("saved process state", "path", path)
-	return nil
-}
-
-// getComponentType determines the component type from the process path
-func getComponentType(path string) ComponentType {
-	switch {
-	case strings.Contains(path, "temporal"):
-		return Temporal
-	case strings.Contains(path, "worker"):
-		return Worker
-	case strings.Contains(path, "engine"):
-		return Engine
-	default:
-		return -1
-	}
-}
-
-// LoadFromFile loads process manager state from a file
-func LoadFromFile(path string) (*processManager, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read process state: %w", err)
-	}
-
-	var state []processState
-	if err := json.Unmarshal(data, &state); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal process state: %w", err)
-	}
-
-	pm := newProcessManager()
-	for _, ps := range state {
-		Logger.Debug("checking process group", "pgid", ps.PGID, "pid", ps.PID)
-
-		// Try to signal the process group to check if it exists
-		if err := syscall.Kill(-ps.PGID, syscall.Signal(0)); err != nil {
-			Logger.Debug("process group not running", "pgid", ps.PGID, "error", err)
-			continue
-		}
-
-		// Create a dummy command just to track the process group
-		cmd := exec.Command(ps.Path)
-		cmd.Process, _ = os.FindProcess(ps.PID)
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Pgid: ps.PGID,
-		}
-
-		if err := pm.Add(cmd, ps.Component); err != nil {
-			Logger.Debug("failed to add process to manager", "pid", ps.PID, "error", err)
-			continue
-		}
-		Logger.Debug("found running process group", "pgid", ps.PGID)
-	}
-
-	return pm, nil
+	Logger.Debug("cleanup complete")
 }

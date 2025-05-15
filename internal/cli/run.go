@@ -210,18 +210,22 @@ func NewRunCmd() *cobra.Command {
 			var cleanup func()
 			// Handle server management based on flags
 			if isAuto {
+				// Check if server is already running
+				if running, components := IsServerRunning(); running {
+					componentNames := make([]string, len(components))
+					for i, c := range components {
+						componentNames[i] = c.String()
+					}
+					return fmt.Errorf("cannot start in auto mode - server components already running: %s", strings.Join(componentNames, ", "))
+				}
+
 				if err := setupLocalEnvironmentBackground(); err != nil {
 					return fmt.Errorf("failed to start local server: %w", err)
 				}
 				engineAddr = "localhost:7700"
 				cleanup = func() {
-					pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
-					if pm, err := LoadFromFile(pidFile); err == nil {
-						pm.Cleanup()
-						_ = os.Remove(pidFile)
-						logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
-						_ = os.RemoveAll(logsDir)
-					}
+					pm := GetProcessManager()
+					pm.Cleanup()
 				}
 				defer cleanup()
 			} else if engineAddr == "" {
