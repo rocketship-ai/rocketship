@@ -17,7 +17,7 @@ type EngineClient struct {
 }
 
 func NewEngineClient(address string) (*EngineClient, error) {
-	fmt.Printf("Connecting to engine at %s...\n", address)
+	Logger.Debug("connecting to engine", "address", address)
 
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

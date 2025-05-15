@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -32,13 +30,15 @@ func newStopServerCmd() *cobra.Command {
 
 			// Check if PID file exists
 			if _, err := os.Stat(pidFile); os.IsNotExist(err) {
-				return fmt.Errorf("no running server found (PID file not found)")
+				Logger.Debug("no running server found (PID file not found)")
+				return nil
 			}
 
 			// Load process manager state
 			pm, err := LoadFromFile(pidFile)
 			if err != nil {
-				return fmt.Errorf("failed to load process state: %w", err)
+				Logger.Debug("failed to load process state", "error", err)
+				return nil
 			}
 
 			// Cleanup will send SIGTERM to all processes and wait for them to exit
@@ -46,16 +46,16 @@ func newStopServerCmd() *cobra.Command {
 
 			// Remove the PID file
 			if err := os.Remove(pidFile); err != nil {
-				log.Printf("Warning: Failed to remove PID file: %v", err)
+				Logger.Debug("failed to remove PID file", "error", err)
 			}
 
 			// Clean up log files
 			logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
 			if err := os.RemoveAll(logsDir); err != nil {
-				log.Printf("Warning: Failed to remove logs directory: %v", err)
+				Logger.Debug("failed to remove logs directory", "error", err)
 			}
 
-			fmt.Println("Server components stopped successfully! 🛑")
+			Logger.Debug("server components stopped successfully! 🛑")
 			return nil
 		},
 	}

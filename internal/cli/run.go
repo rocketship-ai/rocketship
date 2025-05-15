@@ -57,7 +57,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	// Read and validate YAML file
 	yamlData, err := os.ReadFile(yamlPath)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to read test file %s: %v\n", yamlPath, err)
+		Logger.Error("failed to read test file", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -65,7 +65,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	// Parse YAML to get test suite name
 	_, err = dsl.ParseYAML(yamlData)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to parse YAML %s: %v\n", yamlPath, err)
+		Logger.Error("failed to parse YAML", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -76,7 +76,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 
 	runID, err := client.RunTest(runCtx, yamlData)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to create run for %s: %v\n", yamlPath, err)
+		Logger.Error("failed to create run", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -84,7 +84,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	// Stream logs and track results
 	logStream, err := client.StreamLogs(ctx, runID)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to stream logs for %s: %v\n", yamlPath, err)
+		Logger.Error("failed to stream logs", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -108,7 +108,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 					resultChan <- result
 					return
 				}
-				fmt.Printf("[ERROR] Error receiving log for %s: %v\n", yamlPath, err)
+				Logger.Error("error receiving log", "path", yamlPath, "error", err)
 				resultChan <- result
 				return
 			}
@@ -145,8 +145,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 					_, err := fmt.Sscanf(log.Msg, "Test run: %q finished. %d/%d tests passed, %d/%d tests failed.",
 						&result.Name, &result.PassedTests, &result.TotalTests, &result.FailedTests, &result.TotalTests)
 					if err != nil {
-						// If parsing fails, don't update the results
-						fmt.Printf("[ERROR] Failed to parse test results from message: %s\n", log.Msg)
+						Logger.Error("failed to parse test results", "message", log.Msg, "error", err)
 					}
 				}
 			}

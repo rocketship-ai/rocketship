@@ -24,6 +24,7 @@ This document describes the process for developing and releasing new versions of
 
 3. **Development Guidelines**
 
+   - Set the ROCKETSHIP_LOG env var to DEBUG to see more verbose logging
    - All changes must pass linting and tests (`make lint test`)
    - Pre-commit hooks will automatically run these checks
    - Use conventional commit messages:

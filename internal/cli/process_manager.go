@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -92,6 +91,7 @@ func (pm *processManager) Add(cmd *exec.Cmd, component ComponentType) error {
 		return fmt.Errorf("failed to start process: %w", err)
 	}
 
+	Logger.Debug("started process", "pid", cmd.Process.Pid, "component", component)
 	pm.processes = append(pm.processes, cmd)
 	return nil
 }
@@ -105,13 +105,13 @@ func (pm *processManager) Cleanup() {
 		if proc != nil && proc.Process != nil {
 			pgid, err := syscall.Getpgid(proc.Process.Pid)
 			if err != nil {
-				log.Printf("Failed to get pgid for process %d: %v", proc.Process.Pid, err)
+				Logger.Debug("failed to get pgid", "pid", proc.Process.Pid, "error", err)
 				continue
 			}
 
-			log.Printf("Sending SIGTERM to process group %d (leader: %d)", pgid, proc.Process.Pid)
+			Logger.Debug("sending SIGTERM", "pgid", pgid, "pid", proc.Process.Pid)
 			if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
-				log.Printf("Failed to send SIGTERM to process group %d: %v", pgid, err)
+				Logger.Warn("failed to send SIGTERM", "pgid", pgid, "error", err)
 			}
 		}
 	}
@@ -129,9 +129,9 @@ func (pm *processManager) Cleanup() {
 
 			// Check if process group is still running
 			if err := syscall.Kill(-pgid, syscall.Signal(0)); err == nil {
-				log.Printf("Process group %d still running, sending SIGKILL", pgid)
+				Logger.Debug("sending SIGKILL", "pgid", pgid)
 				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
-					log.Printf("Failed to kill process group %d: %v", pgid, err)
+					Logger.Debug("failed to kill process group", "pgid", pgid, "error", err)
 				}
 			}
 		}
@@ -171,7 +171,7 @@ func (pm *processManager) SaveToFile(path string) error {
 		if proc != nil && proc.Process != nil {
 			pgid, err := syscall.Getpgid(proc.Process.Pid)
 			if err != nil {
-				log.Printf("Warning: Failed to get pgid for process %d: %v", proc.Process.Pid, err)
+				Logger.Debug("failed to get pgid", "pid", proc.Process.Pid, "error", err)
 				continue
 			}
 
@@ -193,6 +193,7 @@ func (pm *processManager) SaveToFile(path string) error {
 		return fmt.Errorf("failed to write process state: %w", err)
 	}
 
+	Logger.Debug("saved process state", "path", path)
 	return nil
 }
 
@@ -224,11 +225,11 @@ func LoadFromFile(path string) (*processManager, error) {
 
 	pm := newProcessManager()
 	for _, ps := range state {
-		log.Printf("Looking for process group %d (leader: %d)", ps.PGID, ps.PID)
+		Logger.Debug("checking process group", "pgid", ps.PGID, "pid", ps.PID)
 
 		// Try to signal the process group to check if it exists
 		if err := syscall.Kill(-ps.PGID, syscall.Signal(0)); err != nil {
-			log.Printf("Process group %d is not running: %v", ps.PGID, err)
+			Logger.Debug("process group not running", "pgid", ps.PGID, "error", err)
 			continue
 		}
 
@@ -240,10 +241,10 @@ func LoadFromFile(path string) (*processManager, error) {
 		}
 
 		if err := pm.Add(cmd, ps.Component); err != nil {
-			log.Printf("Failed to add process %d to manager: %v", ps.PID, err)
+			Logger.Debug("failed to add process to manager", "pid", ps.PID, "error", err)
 			continue
 		}
-		log.Printf("Found running process group %d", ps.PGID)
+		Logger.Debug("found running process group", "pgid", ps.PGID)
 	}
 
 	return pm, nil
