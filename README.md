@@ -30,28 +30,14 @@ It combines a declarative YAML spec with Temporal‑style durable execution to p
 ## 🟢 1‑Minute Quick Start
 
 ```bash
-# 0. Install the Prerequisites (You're going to need temporal in order to run the engine locally)
-# macOS
+# 0. Install the Prerequisites (Need temporal if you want to run the engine locally)
 brew install temporal
 
 # 1. Install the Rocketship CLI
+curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs
 
-####### OPTION 1: Direct Download #######
-# macOS (Apple Silicon)
-curl -LO https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64
-chmod +x rocketship-darwin-arm64
-sudo mv rocketship-darwin-arm64 /usr/local/bin/rocketship
-
-
-####### OPTION 2: Using Go Install (for my fellow Gophers) #######
-# using Go
-go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest
-
-# 2. Start the Local Server (in terminal 1)
-rocketship start server --local
-
-# 3. Run the Test (engine flag is optional if you have a session)
-rocketship run --file simple-test.yaml --engine localhost:7700
+# 2. Run a test!
+rs run -af examples/simple-delay/rocketship.yaml
 ```
 
 ## 🐳 Docker Quick Start
@@ -60,7 +46,7 @@ rocketship run --file simple-test.yaml --engine localhost:7700
 # Pull the image
 docker pull rocketshipai/rocketship:latest
 
-# Run a test suite by mounting a directory to the container
+# Run a test suite by mounting a directory containing your test to the container
 # Use TEST_FILE or TEST_DIR to specify the rocketship.yaml file or directory
 docker run -v "$(pwd)/examples:/tests" \
   -e TEST_FILE=/tests/simple-http/rocketship.yaml \
@@ -108,3 +94,7 @@ docker run -v "$(pwd)/examples:/tests" \
    - Resource optimization for large test suites
 
 Want to contribute? Check out our [contribution guidelines](CONTRIBUTING.md)
+
+```
+
+```
