@@ -13,8 +13,10 @@ import (
 
 // processState represents the serializable state of a process
 type processState struct {
-	PID  int    `json:"pid"`
-	Path string `json:"path"`
+	PID      int    `json:"pid"`
+	PGID     int    `json:"pgid"`
+	Path     string `json:"path"`
+	IsLeader bool   `json:"is_leader"`
 }
 
 // processManager handles the lifecycle of child processes
@@ -32,6 +34,13 @@ func newProcessManager() *processManager {
 func (pm *processManager) Add(cmd *exec.Cmd) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
+
+	// Set process group ID to be the same as the process ID
+	// This makes the process a group leader and helps us manage child processes
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+
 	pm.processes = append(pm.processes, cmd)
 }
 
@@ -39,12 +48,18 @@ func (pm *processManager) Cleanup() {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	// First pass: send SIGTERM to all processes
+	// First pass: send SIGTERM to all process groups
 	for _, proc := range pm.processes {
 		if proc != nil && proc.Process != nil {
-			log.Printf("Sending SIGTERM to process %d (%s)", proc.Process.Pid, proc.Path)
-			if err := proc.Process.Signal(syscall.SIGTERM); err != nil {
-				log.Printf("Failed to send SIGTERM to process %d: %v", proc.Process.Pid, err)
+			pgid, err := syscall.Getpgid(proc.Process.Pid)
+			if err != nil {
+				log.Printf("Failed to get pgid for process %d: %v", proc.Process.Pid, err)
+				continue
+			}
+
+			log.Printf("Sending SIGTERM to process group %d (leader: %d)", pgid, proc.Process.Pid)
+			if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
+				log.Printf("Failed to send SIGTERM to process group %d: %v", pgid, err)
 			}
 		}
 	}
@@ -52,17 +67,22 @@ func (pm *processManager) Cleanup() {
 	// Give processes time to shut down gracefully
 	time.Sleep(2 * time.Second)
 
-	// Second pass: check if processes are still running and force kill if necessary
+	// Second pass: force kill any remaining processes
 	for _, proc := range pm.processes {
 		if proc != nil && proc.Process != nil {
-			// Check if process is still running
-			if err := proc.Process.Signal(syscall.Signal(0)); err == nil {
-				log.Printf("Process %d still running, sending SIGKILL", proc.Process.Pid)
-				if err := proc.Process.Kill(); err != nil {
-					log.Printf("Failed to kill process %d: %v", proc.Process.Pid, err)
+			pgid, err := syscall.Getpgid(proc.Process.Pid)
+			if err != nil {
+				continue // Process might have already exited
+			}
+
+			// Check if process group is still running
+			if err := syscall.Kill(-pgid, syscall.Signal(0)); err == nil {
+				log.Printf("Process group %d still running, sending SIGKILL", pgid)
+				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+					log.Printf("Failed to kill process group %d: %v", pgid, err)
 				}
 			} else {
-				log.Printf("Process %d has exited", proc.Process.Pid)
+				log.Printf("Process group %d has exited", pgid)
 			}
 		}
 	}
@@ -79,9 +99,17 @@ func (pm *processManager) SaveToFile(path string) error {
 	var state []processState
 	for _, proc := range pm.processes {
 		if proc != nil && proc.Process != nil {
+			pgid, err := syscall.Getpgid(proc.Process.Pid)
+			if err != nil {
+				log.Printf("Warning: Failed to get pgid for process %d: %v", proc.Process.Pid, err)
+				continue
+			}
+
 			state = append(state, processState{
-				PID:  proc.Process.Pid,
-				Path: proc.Path,
+				PID:      proc.Process.Pid,
+				PGID:     pgid,
+				Path:     proc.Path,
+				IsLeader: true,
 			})
 		}
 	}
@@ -112,23 +140,23 @@ func LoadFromFile(path string) (*processManager, error) {
 
 	pm := newProcessManager()
 	for _, ps := range state {
-		log.Printf("Looking for process %d (%s)", ps.PID, ps.Path)
-		proc, err := os.FindProcess(ps.PID)
-		if err != nil {
-			log.Printf("Failed to find process %d: %v", ps.PID, err)
+		log.Printf("Looking for process group %d (leader: %d)", ps.PGID, ps.PID)
+
+		// Try to signal the process group to check if it exists
+		if err := syscall.Kill(-ps.PGID, syscall.Signal(0)); err != nil {
+			log.Printf("Process group %d is not running: %v", ps.PGID, err)
 			continue
 		}
 
-		// Check if process is actually running
-		if err := proc.Signal(syscall.Signal(0)); err != nil {
-			log.Printf("Process %d is not running: %v", ps.PID, err)
-			continue
-		}
-
+		// Create a dummy command just to track the process group
 		cmd := exec.Command(ps.Path)
-		cmd.Process = proc
+		cmd.Process, _ = os.FindProcess(ps.PID)
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Pgid: ps.PGID,
+		}
+
 		pm.Add(cmd)
-		log.Printf("Found running process %d", ps.PID)
+		log.Printf("Found running process group %d", ps.PGID)
 	}
 
 	return pm, nil

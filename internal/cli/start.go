@@ -274,6 +274,12 @@ func setupLocalEnvironmentBackground() error {
 		return fmt.Errorf("engine failed to start: %w", err)
 	}
 
+	// Write the process manager to a file so we can clean up later if needed
+	pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
+	if err := pm.SaveToFile(pidFile); err != nil {
+		log.Printf("Warning: Failed to save process manager state: %v", err)
+	}
+
 	log.Println("Local development environment is ready! 🚀")
 	return nil
 }
