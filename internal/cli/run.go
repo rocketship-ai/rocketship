@@ -303,9 +303,9 @@ func NewRunCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("file", "", "Path to a single test file (default: rocketship.yaml in current directory)")
-	cmd.Flags().String("dir", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
-	cmd.Flags().String("engine", "", "Address of the rocketship engine (default: localhost:7700)")
-	cmd.Flags().Bool("auto", false, "Automatically start and stop the local server for test execution")
+	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
+	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
+	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (default: localhost:7700)")
+	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	return cmd
 }

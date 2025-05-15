@@ -61,8 +61,8 @@ func newStartServerCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Bool("local", false, "Start a local rocketship server")
-	cmd.Flags().Bool("background", false, "Start server in background mode")
+	cmd.Flags().BoolP("local", "l", false, "Start a local rocketship server")
+	cmd.Flags().BoolP("background", "b", false, "Start server in background mode")
 	return cmd
 }
 
