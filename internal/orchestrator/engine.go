@@ -330,3 +330,10 @@ func (e *Engine) numTestsTimedOut(runID string) int {
 	}
 	return count
 }
+
+// Health implements the health check endpoint
+func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*generated.HealthResponse, error) {
+	return &generated.HealthResponse{
+		Status: "ok",
+	}, nil
+}

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"net"
-	"net/http"
 	"os"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -29,10 +26,7 @@ func main() {
 	defer c.Close()
 
 	engine := orchestrator.NewEngine(c)
-
-	go startGRPCServer(engine)
-
-	startHTTPServer()
+	startGRPCServer(engine)
 }
 
 func startGRPCServer(engine generated.EngineServer) {
@@ -47,26 +41,5 @@ func startGRPCServer(engine generated.EngineServer) {
 	log.Println("gRPC server listening on :7700 !")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve gRPC: %v", err)
-	}
-}
-
-func startHTTPServer() {
-	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
-			return
-		}
-	})
-
-	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := fmt.Fprintf(w, "pong"); err != nil {
-			return
-		}
-	})
-
-	log.Println("HTTP server listening on :7701 !")
-	if err := http.ListenAndServe(":7701", nil); err != nil {
-		log.Fatalf("Failed to serve HTTP: %v", err)
 	}
 }

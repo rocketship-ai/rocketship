@@ -164,7 +164,37 @@ func setupLocalEnvironment() error {
 	return ctx.Err()
 }
 
-// setupLocalEnvironmentBackground starts all processes but doesn't wait for context cancellation
+// waitForEngine attempts to connect to the engine with exponential backoff
+func waitForEngine(ctx context.Context) error {
+	client, err := NewEngineClient("localhost:7700")
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	backoff := 100 * time.Millisecond
+	maxBackoff := 2 * time.Second
+	deadline := time.Now().Add(30 * time.Second)
+
+	for time.Now().Before(deadline) {
+		checkCtx, cancel := context.WithTimeout(ctx, time.Second)
+		err := client.HealthCheck(checkCtx)
+		cancel()
+
+		if err == nil {
+			return nil
+		}
+
+		time.Sleep(backoff)
+		backoff *= 2
+		if backoff > maxBackoff {
+			backoff = maxBackoff
+		}
+	}
+
+	return fmt.Errorf("timeout waiting for engine to become ready")
+}
+
 func setupLocalEnvironmentBackground() error {
 	// Create a context that we can cancel
 	ctx := context.Background()
@@ -238,18 +268,10 @@ func setupLocalEnvironmentBackground() error {
 	}
 	pm.Add(engineCmd)
 
-	// Write the process manager to a file so we can clean up later if needed
-	pidFile := filepath.Join(os.TempDir(), "rocketship-server.pid")
-	if err := pm.SaveToFile(pidFile); err != nil {
-		log.Printf("Warning: Failed to save process manager state: %v", err)
-	}
-
-	// Wait for engine to be ready by polling its health endpoint
-	for i := 0; i < 50; i++ {
-		if _, err := os.Stat(filepath.Join(logsDir, "engine.log")); err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+	// Wait for engine to be ready
+	log.Println("Waiting for engine to become ready...")
+	if err := waitForEngine(context.Background()); err != nil {
+		return fmt.Errorf("engine failed to start: %w", err)
 	}
 
 	log.Println("Local development environment is ready! 🚀")

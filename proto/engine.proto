@@ -7,6 +7,7 @@ service Engine {
   rpc CreateRun(CreateRunRequest) returns (CreateRunResponse);
   rpc StreamLogs(LogStreamRequest) returns (stream LogLine);
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
 }
 
 message CreateRunRequest {
@@ -33,4 +34,9 @@ message RunSummary {
   string status    = 2;  // PENDING | RUNNING | PASSED | FAILED
   string started_at = 3;
   string ended_at   = 4;
+}
+
+message HealthRequest {}
+message HealthResponse {
+  string status = 1;  // "ok" | "error"
 }
