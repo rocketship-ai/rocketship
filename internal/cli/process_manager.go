@@ -122,10 +122,8 @@ func (pm *processManager) Add(cmd *exec.Cmd, component ComponentType) error {
 		}
 	}
 
-	// Set process group
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
+	// Set platform-specific process attributes
+	setPlatformSpecificAttrs(cmd)
 
 	// Start the process
 	if err := cmd.Start(); err != nil {
@@ -177,6 +175,15 @@ func (pm *processManager) isProcessRunning(pid int) bool {
 	return err == nil
 }
 
+// sendSignal sends the appropriate signal to a process based on the platform
+func (pm *processManager) sendSignal(pid int, sig syscall.Signal) error {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return sendPlatformSignal(process, sig)
+}
+
 // Cleanup terminates all managed processes
 func (pm *processManager) Cleanup() {
 	pm.mu.Lock()
@@ -194,7 +201,7 @@ func (pm *processManager) Cleanup() {
 	for component, info := range state.Components {
 		if pm.isProcessRunning(info.PID) {
 			Logger.Debug("sending SIGTERM", "component", component, "pid", info.PID)
-			if err := syscall.Kill(info.PID, syscall.SIGTERM); err != nil {
+			if err := pm.sendSignal(info.PID, syscall.SIGTERM); err != nil {
 				Logger.Debug("SIGTERM failed", "component", component, "error", err)
 			}
 		}
@@ -207,7 +214,7 @@ func (pm *processManager) Cleanup() {
 	for component, info := range state.Components {
 		if pm.isProcessRunning(info.PID) {
 			Logger.Debug("sending SIGKILL", "component", component, "pid", info.PID)
-			if err := syscall.Kill(info.PID, syscall.SIGKILL); err != nil {
+			if err := pm.sendSignal(info.PID, syscall.SIGKILL); err != nil {
 				Logger.Debug("SIGKILL failed", "component", component, "error", err)
 			}
 		}
