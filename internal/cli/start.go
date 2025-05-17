@@ -52,9 +52,9 @@ func newStartServerCmd() *cobra.Command {
 
 				if isBackground {
 					// Start processes and return immediately
-					return setupLocalEnvironmentBackground()
+					return setupLocalServerBackground()
 				}
-				return setupLocalEnvironment()
+				return setupLocalServer()
 			}
 
 			return fmt.Errorf("remote server connection not yet implemented")
@@ -66,7 +66,7 @@ func newStartServerCmd() *cobra.Command {
 	return cmd
 }
 
-func setupLocalEnvironment() error {
+func setupLocalServer() error {
 	// Create a context that we can cancel
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -98,7 +98,7 @@ func setupLocalEnvironment() error {
 		return err
 	}
 
-	Logger.Info("local development environment is ready! 🚀")
+	Logger.Info("local server is ready! 🚀")
 
 	// Keep the parent process running until context is cancelled
 	<-ctx.Done()
@@ -136,7 +136,7 @@ func waitForEngine(ctx context.Context) error {
 	return fmt.Errorf("timeout waiting for engine to become ready")
 }
 
-func setupLocalEnvironmentBackground() error {
+func setupLocalServerBackground() error {
 	// Create server configuration
 	config, err := NewServerConfig()
 	if err != nil {
@@ -152,6 +152,6 @@ func setupLocalEnvironmentBackground() error {
 		return err
 	}
 
-	Logger.Info("local development environment is ready! 🚀")
+	Logger.Info("local server is ready! 🚀")
 	return nil
 }
