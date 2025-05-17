@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -123,14 +122,8 @@ func (pm *processManager) Add(cmd *exec.Cmd, component ComponentType) error {
 		}
 	}
 
-	// Set process group based on platform
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	} else {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Setpgid: true,
-		}
-	}
+	// Set platform-specific process attributes
+	setPlatformSpecificAttrs(cmd)
 
 	// Start the process
 	if err := cmd.Start(); err != nil {
@@ -188,7 +181,7 @@ func (pm *processManager) sendSignal(pid int, sig syscall.Signal) error {
 	if err != nil {
 		return err
 	}
-	return process.Signal(sig)
+	return sendPlatformSignal(process, sig)
 }
 
 // Cleanup terminates all managed processes
