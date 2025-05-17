@@ -30,7 +30,7 @@ Define your test scenarios as **declarative YAML specs** -> and have Rocketship 
 Core features:
 
 - **Rocketship CLI** Run the engine locally or connect to a remote address.
-- **Deploy-Ready Images** Need long-running, highly scalable tests? Or just want to save their history? Host Rocketship on your own infra.
+- **Deploy-Ready Images** Need long-running, highly-scalable tests? Or just want to save test history? Host Rocketship on your own infra.
 - **Declarative YAML** Define your test scenarios as declarative YAML specs.
 - **Durable Execution** Need a test step to retry? Or a test to run for 10 hours? No problem!
 - **Plugin Ecosystem** Add the APIs and protocols that matter to you.
