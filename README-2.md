@@ -41,7 +41,10 @@ Core features:
 
 ```bash
 brew install temporal # pre-req for the local engine
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs # for macos
+```
+
+```bash
+curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs # for arm64 macos
 ```
 
 #### Save a test spec
@@ -81,39 +84,22 @@ You can run scripts like this on the CLI, or in your CI, or across a Kubernetes 
 
 ## Documentation
 
-The docs cover all aspects of using k6. Some highlights include:
-
-- [Get Started](https://grafana.com/docs/k6/latest/). Install, run a test, inspect results.
-- [HTTP requests](https://grafana.com/docs/k6/latest/using-k6/http-requests/). Have your virtual users use HTTP methods.
-  Or, check the other [Protocols](https://grafana.com/docs/k6/latest/using-k6/protocols/).
-- [Thresholds](https://grafana.com/docs/k6/latest/using-k6/thresholds/). Set goals for your test, and codify your SLOs.
-- [Options](https://grafana.com/docs/k6/latest/using-k6/k6-options/). Configure your load, duration, TLS certificates, and much, much more.
-- [Scenarios](https://grafana.com/docs/k6/latest/using-k6/scenarios/).
-  Choose how to model your workload: open models, closed models, constant RPS, fixed iterations, and more.
-- [Results output](https://grafana.com/docs/k6/latest/results-output/). Study, filter, and export your test results.
-- [JavaScript API](https://grafana.com/docs/k6/latest/javascript-api/). Reference and examples of all k6 modules.
-- [Extensions](https://grafana.com/docs/k6/latest/extensions/). Extend k6 for new protocols and use cases.
-
-These links barely scratch the surface! If you're looking for conceptual information, you can read about [Test types](https://grafana.com/docs/k6/latest/testing-guides/test-types/), [Test strategies](https://grafana.com/docs/k6/latest/testing-guides/), or one of the many informative [Blog posts](https://k6.io/blog).
+Working on it!
 
 ## Roadmap
 
-Our team is dedicated to continuously improving and providing the best user experience possible. The [public roadmap](https://github.com/orgs/grafana/projects/443/views/1) covers user-oriented features, UX improvements and JavaScript support that our team will focus on. Remember that timeframes and priorities may shift, but we believe it's important to share our vision.
+I have a ton of ideas for Rocketship, and I'm open to any and all suggestions. Here are just some of the things you can expect in weeks not years:
 
-We hope it provides a clear overview of our plans for future development. We welcome feedback, corrections, and suggestions via GitHub to make it more comprehensive, accessible, and valuable for the community.
+- [ ] **LLM Browser Testing Support** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) to build & run deterministic browser tests.
+- [ ] **Smoke Testing** A test suite-wide configuration to schedule tests to run on a cadence.
+- [ ] **Environment Variables** Pass in environment variables to your tests. Run tests against different environments.
+- [ ] **Core AWS Plugins** Add support for AWS services like S3, SQS, SNS, etc. Other providers to follow.
+- [ ] **Agentic Friendly Testing** Vibe code in peace. Have your agent iteratively test your codebase for regressions.
 
-It's worth mentioning that we consider [upvotes (thumbs-up)](https://github.com/grafana/k6/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc) to be one of the essential metrics for determining community needs. If you want to show us the importance of a feature, please give it a thumbs-up.
+## Contribute!!!
 
-## Contribute
-
-If you want to contribute or help with the development of k6, start by reading [CONTRIBUTING.md](CONTRIBUTING.md). Before you start coding, it might be a good idea to first discuss your plans and implementation details with the k6 maintainers—especially when it comes to big changes and features. You can do this in the [GitHub issue](https://github.com/grafana/k6/issues) for the problem you're solving (create one if it doesn't exist).
-
-> **Note:** To disclose security issues, refer to [SECURITY.md](SECURITY.md).
-
-## Support
-
-To get help, report bugs, suggest features, and discuss k6 with others, refer to [SUPPORT.md](SUPPORT.md).
+I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [X](https://x.com/matteo_agius) or [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-k6 is distributed under the [AGPL-3.0 license](https://github.com/grafana/k6/blob/master/LICENSE.md).
+Rocketship is distributed under the [MIT license](https://github.com/rocketship-ai/rocketship/blob/main/LICENSE).
