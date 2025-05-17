@@ -22,6 +22,7 @@ const (
 	Engine_CreateRun_FullMethodName  = "/rocketship.v1.Engine/CreateRun"
 	Engine_StreamLogs_FullMethodName = "/rocketship.v1.Engine/StreamLogs"
 	Engine_ListRuns_FullMethodName   = "/rocketship.v1.Engine/ListRuns"
+	Engine_Health_FullMethodName     = "/rocketship.v1.Engine/Health"
 )
 
 // EngineClient is the client API for Engine service.
@@ -31,6 +32,7 @@ type EngineClient interface {
 	CreateRun(ctx context.Context, in *CreateRunRequest, opts ...grpc.CallOption) (*CreateRunResponse, error)
 	StreamLogs(ctx context.Context, in *LogStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
+	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
 }
 
 type engineClient struct {
@@ -80,6 +82,16 @@ func (c *engineClient) ListRuns(ctx context.Context, in *ListRunsRequest, opts .
 	return out, nil
 }
 
+func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HealthResponse)
+	err := c.cc.Invoke(ctx, Engine_Health_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EngineServer is the server API for Engine service.
 // All implementations must embed UnimplementedEngineServer
 // for forward compatibility.
@@ -87,6 +99,7 @@ type EngineServer interface {
 	CreateRun(context.Context, *CreateRunRequest) (*CreateRunResponse, error)
 	StreamLogs(*LogStreamRequest, grpc.ServerStreamingServer[LogLine]) error
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
+	Health(context.Context, *HealthRequest) (*HealthResponse, error)
 	mustEmbedUnimplementedEngineServer()
 }
 
@@ -105,6 +118,9 @@ func (UnimplementedEngineServer) StreamLogs(*LogStreamRequest, grpc.ServerStream
 }
 func (UnimplementedEngineServer) ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListRuns not implemented")
+}
+func (UnimplementedEngineServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
 }
 func (UnimplementedEngineServer) mustEmbedUnimplementedEngineServer() {}
 func (UnimplementedEngineServer) testEmbeddedByValue()                {}
@@ -174,6 +190,24 @@ func _Engine_ListRuns_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Engine_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HealthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).Health(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_Health_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).Health(ctx, req.(*HealthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Engine_ServiceDesc is the grpc.ServiceDesc for Engine service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -188,6 +222,10 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListRuns",
 			Handler:    _Engine_ListRuns_Handler,
+		},
+		{
+			MethodName: "Health",
+			Handler:    _Engine_Health_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

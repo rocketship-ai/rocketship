@@ -57,7 +57,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	// Read and validate YAML file
 	yamlData, err := os.ReadFile(yamlPath)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to read test file %s: %v\n", yamlPath, err)
+		Logger.Error("failed to read test file", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -65,7 +65,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	// Parse YAML to get test suite name
 	_, err = dsl.ParseYAML(yamlData)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to parse YAML %s: %v\n", yamlPath, err)
+		Logger.Error("failed to parse YAML", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -76,7 +76,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 
 	runID, err := client.RunTest(runCtx, yamlData)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to create run for %s: %v\n", yamlPath, err)
+		Logger.Error("failed to create run", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -84,7 +84,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	// Stream logs and track results
 	logStream, err := client.StreamLogs(ctx, runID)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to stream logs for %s: %v\n", yamlPath, err)
+		Logger.Error("failed to stream logs", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -108,7 +108,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 					resultChan <- result
 					return
 				}
-				fmt.Printf("[ERROR] Error receiving log for %s: %v\n", yamlPath, err)
+				Logger.Error("error receiving log", "path", yamlPath, "error", err)
 				resultChan <- result
 				return
 			}
@@ -145,8 +145,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 					_, err := fmt.Sscanf(log.Msg, "Test run: %q finished. %d/%d tests passed, %d/%d tests failed.",
 						&result.Name, &result.PassedTests, &result.TotalTests, &result.FailedTests, &result.TotalTests)
 					if err != nil {
-						// If parsing fails, don't update the results
-						fmt.Printf("[ERROR] Failed to parse test results from message: %s\n", log.Msg)
+						Logger.Error("failed to parse test results", "message", log.Msg, "error", err)
 					}
 				}
 			}
@@ -191,19 +190,46 @@ func NewRunCmd() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			// Check if we're in auto mode
+			isAuto, err := cmd.Flags().GetBool("auto")
+			if err != nil {
+				return err
+			}
+
 			// Get engine address from flag
 			engineAddr, err := cmd.Flags().GetString("engine")
 			if err != nil {
 				return err
 			}
 
-			// If engine address not provided, try to load from session
-			if engineAddr == "" {
-				session, err := LoadSession()
-				if err != nil {
-					return fmt.Errorf("no engine address provided and no active session found - use --engine flag or 'rocketship start' first: %w", err)
+			// Validate flags - cannot use both --auto and --engine
+			if isAuto && engineAddr != "" {
+				return fmt.Errorf("cannot use both --auto and --engine flags together. Use --auto to automatically manage a local server, or --engine to connect to an existing server")
+			}
+
+			var cleanup func()
+			// Handle server management based on flags
+			if isAuto {
+				// Check if server is already running
+				if running, components := IsServerRunning(); running {
+					componentNames := make([]string, len(components))
+					for i, c := range components {
+						componentNames[i] = c.String()
+					}
+					return fmt.Errorf("cannot start in auto mode - server components already running: %s", strings.Join(componentNames, ", "))
 				}
-				engineAddr = session.EngineAddress
+
+				if err := setupLocalEnvironmentBackground(); err != nil {
+					return fmt.Errorf("failed to start local server: %w", err)
+				}
+				engineAddr = "localhost:7700"
+				cleanup = func() {
+					pm := GetProcessManager()
+					pm.Cleanup()
+				}
+				defer cleanup()
+			} else if engineAddr == "" {
+				return fmt.Errorf("no engine address provided - use --engine flag to specify an address or --auto to start a local server")
 			}
 
 			// Create engine client using the engine address
@@ -277,8 +303,9 @@ func NewRunCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("file", "", "Path to a single test file (default: rocketship.yaml in current directory)")
-	cmd.Flags().String("dir", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
-	cmd.Flags().String("engine", "", "Address of the rocketship engine (e.g., localhost:7700)")
+	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
+	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
+	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (default: localhost:7700)")
+	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	return cmd
 }

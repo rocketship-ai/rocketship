@@ -369,6 +369,86 @@ func (x *RunSummary) GetEndedAt() string {
 	return ""
 }
 
+type HealthRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthRequest) Reset() {
+	*x = HealthRequest{}
+	mi := &file_engine_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthRequest) ProtoMessage() {}
+
+func (x *HealthRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
+func (*HealthRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{7}
+}
+
+type HealthResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"` // "ok" | "error"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthResponse) Reset() {
+	*x = HealthResponse{}
+	mi := &file_engine_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthResponse) ProtoMessage() {}
+
+func (x *HealthResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
+func (*HealthResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *HealthResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -394,12 +474,16 @@ const file_engine_proto_rawDesc = "" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
 	"started_at\x18\x03 \x01(\tR\tstartedAt\x12\x19\n" +
-	"\bended_at\x18\x04 \x01(\tR\aendedAt2\xee\x01\n" +
+	"\bended_at\x18\x04 \x01(\tR\aendedAt\"\x0f\n" +
+	"\rHealthRequest\"(\n" +
+	"\x0eHealthResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status2\xb5\x02\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +
 	"StreamLogs\x12\x1f.rocketship.v1.LogStreamRequest\x1a\x16.rocketship.v1.LogLine0\x01\x12K\n" +
-	"\bListRuns\x12\x1e.rocketship.v1.ListRunsRequest\x1a\x1f.rocketship.v1.ListRunsResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
+	"\bListRuns\x12\x1e.rocketship.v1.ListRunsRequest\x1a\x1f.rocketship.v1.ListRunsResponse\x12E\n" +
+	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -413,7 +497,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_engine_proto_goTypes = []any{
 	(*CreateRunRequest)(nil),  // 0: rocketship.v1.CreateRunRequest
 	(*CreateRunResponse)(nil), // 1: rocketship.v1.CreateRunResponse
@@ -422,17 +506,21 @@ var file_engine_proto_goTypes = []any{
 	(*ListRunsRequest)(nil),   // 4: rocketship.v1.ListRunsRequest
 	(*ListRunsResponse)(nil),  // 5: rocketship.v1.ListRunsResponse
 	(*RunSummary)(nil),        // 6: rocketship.v1.RunSummary
+	(*HealthRequest)(nil),     // 7: rocketship.v1.HealthRequest
+	(*HealthResponse)(nil),    // 8: rocketship.v1.HealthResponse
 }
 var file_engine_proto_depIdxs = []int32{
 	6, // 0: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
 	0, // 1: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
 	2, // 2: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
 	4, // 3: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
-	1, // 4: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
-	3, // 5: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
-	5, // 6: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	7, // 4: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
+	1, // 5: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
+	3, // 6: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
+	5, // 7: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
+	8, // 8: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -449,7 +537,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

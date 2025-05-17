@@ -30,4 +30,4 @@ git push origin $VERSION
 
 echo "Tag $VERSION created and pushed!"
 echo "GitHub Actions will now build and create the release."
-echo "You can monitor the progress at: https://github.com/rocketship-ai/rocketship/actions" 
+echo "You can monitor the progress at: https://github.com/rocketship-ai/rocketship/actions"

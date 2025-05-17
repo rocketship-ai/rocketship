@@ -17,7 +17,7 @@ type EngineClient struct {
 }
 
 func NewEngineClient(address string) (*EngineClient, error) {
-	fmt.Printf("Connecting to engine at %s...\n", address)
+	Logger.Debug("connecting to engine", "address", address)
 
 	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -36,6 +36,20 @@ func NewEngineClient(address string) (*EngineClient, error) {
 
 func (c *EngineClient) Close() error {
 	return c.conn.Close()
+}
+
+// HealthCheck performs a health check against the engine
+func (c *EngineClient) HealthCheck(ctx context.Context) error {
+	resp, err := c.client.Health(ctx, &generated.HealthRequest{})
+	if err != nil {
+		return fmt.Errorf("health check failed: %w", err)
+	}
+
+	if resp.Status != "ok" {
+		return fmt.Errorf("engine reported unhealthy status: %s", resp.Status)
+	}
+
+	return nil
 }
 
 func (c *EngineClient) RunTest(ctx context.Context, yamlData []byte) (string, error) {

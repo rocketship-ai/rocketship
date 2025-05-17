@@ -6,6 +6,9 @@ import (
 
 // NewRootCmd creates a new root command
 func NewRootCmd() *cobra.Command {
+	// Initialize logging at the root level
+	InitLogging()
+
 	cmd := &cobra.Command{
 		Use:   "rocketship",
 		Short: "Rocketship CLI",

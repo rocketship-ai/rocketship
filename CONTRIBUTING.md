@@ -1,6 +1,6 @@
-# Releasing Rocketship
+# Contributing to Rocketship
 
-This document describes the process for developing and releasing new versions of Rocketship.
+This document describes the process for contributing to Rocketship.
 
 ## Development Process
 
@@ -24,9 +24,10 @@ This document describes the process for developing and releasing new versions of
 
 3. **Development Guidelines**
 
+   - Set the ROCKETSHIP_LOG env var to DEBUG to see more verbose logging
    - All changes must pass linting and tests (`make lint test`)
    - Pre-commit hooks will automatically run these checks
-   - Use conventional commit messages:
+   - Using conventional commit messages would be nice:
      - `feat:` for new features
      - `fix:` for bug fixes
      - `chore:` for maintenance tasks
@@ -38,12 +39,23 @@ This document describes the process for developing and releasing new versions of
 
    ```bash
    # Build and install your local changes
-   make install    # Builds all binaries and installs CLI
+   make install    # Removes old executable and go installs the local version
 
    # Test your changes
    rocketship start server --local    # Start required services
+   # in another session, run the test
    rocketship run --file <path/to/rocketship.yaml> --engine localhost:7700
    ```
+
+5. **BONUS! Run a test server**
+
+   Inside [for-contributors/](https://github.com/rocketship-ai/rocketship/blob/main/for-contributors), you'll a test server. That you can run with
+
+   ```bash
+   go run for-contributors/test-server/main.go
+   ```
+
+   This will help you test your changes. It has an in-memory store, so it can preserve resources.
 
 ## Release Process
 
