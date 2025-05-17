@@ -1,100 +1,105 @@
-# Rocketship
+<p align="center">
+  <a href="https://docs.rocketship.sh">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/misc/assets/transparent-reverse.png">
+      <source media="(prefers-color-scheme: light)" srcset="docs/misc/assets/transparent.png">
+      <img src="docs/misc/assets/transparent.png" alt="Rocketship" width="210" />
+    </picture>
+  </a>
+</p>
+<h3 align="center">E2E API Testing For Any Cloud Environment</h3>
+<p align="center">Run Enterprise-Grade e2e Tests With a Single Command</p>
 
-### 🚀 **Rocketship** – Run Enterprise-Grade e2e Tests With a Single Command
+<p align="center">
+  <a href="https://github.com/rocketship-ai/rocketship/releases"><img src="https://img.shields.io/github/v/release/rocketship-ai/rocketship.svg" alt="Github release"></a>
+  <a href="https://github.com/rocketship-ai/rocketship/actions/workflows/all.yml"><img src="https://github.com/rocketship-ai/rocketship/actions/workflows/release.yml/badge.svg" alt="Build status"></a>
+  <a href="https://goreportcard.com/report/github.com/rocketship-ai/rocketship"><img src="https://goreportcard.com/badge/github.com/rocketship-ai/rocketship" alt="Go Report Card"></a>
+  <br>
+</p>
+<p align="center">
+    <a href="https://github.com/rocketship-ai/rocketship/releases">Download</a> ·
+    <a href="https://docs.rocketship.sh">Documentation</a> ·
+</p>
 
-Rocketship is an **open‑source testing platform** that verifies complex, event‑driven micro‑services the same way you reason about them: as real‑world **workflows** that span queues, APIs, databases, and file buckets.  
-It combines a declarative YAML spec with Temporal‑style durable execution to provide reliable, scalable testing for modern architectures.
+<br>
 
----
+🚀 Rocketship is an **open‑source testing engine** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers an extensible plugin system so you can add the APIs and protocols that matter to you.
 
-## 🐞 What Problems Does Rocketship Solve?
+Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment.
 
-| Pain                             | Traditional Reality                                                                   | Rocketship Fix                                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **1. Async complexity**          | Existing API tools assume HTTP request‑response; Async flows are hand‑rolled scripts. | First‑class plugins for Delays & HTTP. With SQS, Kinesis, Dynamo, S3, etc. coming soon.                      |
-| **2. CI headaches**              | Full E2E env is heavy, slow, and flaky.                                               | Temporal‑based runner spins timers & retries _without_ holding CI pods; run in your cluster or local Docker. |
-| **3. Security / data residency** | SaaS testing tools require exposing internal endpoints.                               | Tests can optionally execute in **Rocketship Agent** pods that are part of your infra.                       |
+Core features:
 
----
+- **Rocketship CLI** Run the engine locally or connect to a remote address.
+- **Deploy-Ready Images** Need long-running, highly-scalable tests? Or just want to save test history? Host Rocketship on your own infra.
+- **Declarative YAML** Define your test scenarios as declarative YAML specs.
+- **Durable Execution** Need a test step to retry? Or a test to run for 10 hours? No problem!
+- **Plugin Ecosystem** Add the APIs and protocols that matter to you.
 
-## ✨ Core Features
+## Getting Started
 
-- **YAML Specs (`rocketship.yaml`)** – Declarative steps: publish message ➜ sleep ➜ assert DB row ➜ assert S3 object.
-- **Plugin & Connector SDK** – Drop‑in Go package; implement one Activity function and a JSON schema to add Azure, GCP, or custom infra.
-- **Temporal‑powered Engine** – Durable workflows, back‑offs, and long timers without hogging threads.
-- **Local‑first / K8s‑native** – `rocketship start` spins Temporal + Engine + Agent + LocalStack via Docker Compose (or Helm in minikube).
-- **CI Plugins** – Buildkite, Jenkins, GitHub Actions, etc. samples coming soon.
-
----
-
-## 🟢 1‑Minute Quick Start
-
-```bash
-# 0. Install the Prerequisites (Need temporal if you want to run the engine locally)
-brew install temporal
-
-# 1. Install the Rocketship CLI
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs
-
-# 2. Run a test!
-rs run -af examples/simple-delay/rocketship.yaml
-```
-
-## 🐳 Docker Quick Start
+#### Install
 
 ```bash
-# Pull the image
-docker pull rocketshipai/rocketship:latest
-
-# Run a test suite by mounting a directory containing your test to the container
-# Use TEST_FILE or TEST_DIR to specify the rocketship.yaml file or directory
-docker run -v "$(pwd)/examples:/tests" \
-  -e TEST_FILE=/tests/simple-http/rocketship.yaml \
-  rocketshipai/rocketship:latest
+brew install temporal # pre-req for the local engine
 ```
 
-## 🗺️ Roadmap
-
-1. **AI-Powered Test Generation**
-
-   - LLM integration for generating test cases from code changes
-   - Automatic test maintenance based on code diffs
-   - Natural language test case description and generation
-
-2. **Enhanced Plugin Ecosystem**
-
-   - Kafka plugin for message streaming
-   - MongoDB and Redis plugins for NoSQL testing
-   - gRPC plugin for service-to-service testing
-   - GraphQL plugin for API testing
-
-3. **Developer Experience**
-
-   - Interactive test debugger with step-through capability
-   - Visual test flow builder and editor
-   - Real-time test execution visualization
-   - Enhanced test reporting with insights and trends
-
-4. **Enterprise Features**
-
-   - Role-based access control (RBAC)
-   - Test environment management
-   - Secrets management integration
-   - Test data management and cleanup
-
-5. **Cloud Integration**
-
-   - Native Azure and GCP plugins
-   - Cloud-specific best practices and patterns
-   - Multi-cloud test orchestration
-
-6. **Performance & Scale**
-   - Distributed test execution
-   - Test sharding and parallelization
-   - Resource optimization for large test suites
-
-Want to contribute? Check out our [contribution guidelines](CONTRIBUTING.md)
-
+```bash
+curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs # for arm64 macos
 ```
 
+#### Save a test spec
+
+```bash
+cat > simple-test.yaml << 'EOF'
+name: "Simple Test Suite"
+description: "A simple test suite!"
+version: "v1.0.0"
+tests:
+  - name: "Test 1"
+    steps:
+      - name: "Check API status"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/status/200"
+        assertions:
+          - type: "status_code"
+            expected: 200
+  - name: "Test 2"
+    steps:
+      - name: "Do nothing for 1s!"
+        plugin: "delay"
+        config:
+          duration: "1s"
+EOF
 ```
+
+#### Run it
+
+```bash
+rs run -af simple-test.yaml # starts the engine, runs the tests, shuts the engine down
+```
+
+You can run scripts like this on the CLI, or in your CI, or across a Kubernetes cluster.
+
+## Documentation
+
+Working on it!
+
+## Roadmap
+
+I have a ton of ideas for Rocketship, and I'm open to any and all suggestions. Here are just some of the things you can expect in weeks not years:
+
+- [ ] **LLM Browser Testing Support** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) to build & run deterministic browser tests.
+- [ ] **Smoke Testing** A test suite-wide configuration to schedule tests to run on a cadence.
+- [ ] **Environment Variables** Pass in environment variables to your tests. Run tests against different environments.
+- [ ] **Core AWS Plugins** Add support for AWS services like S3, SQS, SNS, etc. Other providers to follow.
+- [ ] **Agentic Friendly Testing** Vibe code in peace. Have your agent iteratively test your codebase for regressions.
+
+## Contribute!!!
+
+I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [X](https://x.com/matteo_agius) or [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+Rocketship is distributed under the [MIT license](https://github.com/rocketship-ai/rocketship/blob/main/LICENSE).
