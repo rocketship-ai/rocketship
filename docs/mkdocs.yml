@@ -53,9 +53,11 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Quick Start: quickstart.md
-  - Examples: examples.md
+  - Examples:
+      - Overview: examples.md
+      - HTTP Testing:
+          - Request Chaining & Delays: examples/request-chaining.md
   - Command Reference:
-      - run: reference/rocketship_run.md
       - start:
           - Overview: reference/rocketship_start.md
           - start server: reference/rocketship_start_server.md
