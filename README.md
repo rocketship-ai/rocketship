@@ -39,8 +39,10 @@ brew install temporal # pre-req for the local engine
 ```
 
 ```bash
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs # for arm64 macos
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rocketship # for arm64 macos
 ```
+
+For detailed installation instructions for other platforms and optional aliases, see our [Installation Guide](https://docs.rocketship.sh/installation).
 
 #### Save a test spec
 
@@ -72,7 +74,7 @@ EOF
 #### Run it
 
 ```bash
-rs run -af simple-test.yaml # starts the engine, runs the tests, shuts the engine down
+rocketship run -af simple-test.yaml # starts the engine, runs the tests, shuts the engine down
 ```
 
 You can run scripts like this on the CLI, or in your CI, or across a Kubernetes cluster.

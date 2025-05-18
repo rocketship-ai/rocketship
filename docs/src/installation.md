@@ -17,13 +17,13 @@ For other platforms, please follow the [Temporal installation guide](https://doc
 ### Apple Silicon
 
 ```bash
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rocketship
 ```
 
 ### Intel
 
 ```bash
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-amd64 && chmod +x /usr/local/bin/rs
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-amd64 && chmod +x /usr/local/bin/rocketship
 ```
 
 ## Linux
@@ -31,19 +31,19 @@ curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/
 ### AMD64
 
 ```bash
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64 && chmod +x /usr/local/bin/rs
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64 && chmod +x /usr/local/bin/rocketship
 ```
 
 ### ARM64
 
 ```bash
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64 && chmod +x /usr/local/bin/rs
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64 && chmod +x /usr/local/bin/rocketship
 ```
 
 ## Windows
 
 1. Download the latest Windows executable from our [releases page](https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-windows-amd64.exe)
-2. Rename it to `rs.exe`
+2. Rename it to `rocketship.exe`
 3. Move it to a directory in your PATH (e.g., `C:\Windows\System32\`)
 
 ## Docker
@@ -65,8 +65,34 @@ docker run rocketshipai/rocketship:latest
 To verify your installation, run:
 
 ```bash
-rs --version
+rocketship --version
 ```
+
+## Optional: Creating an Alias
+
+If you prefer a shorter command, you can create an alias for the `rocketship` command. Here's how to do it on different platforms:
+
+### Unix-like Systems (macOS, Linux)
+
+Add one of these to your shell's configuration file (`.bashrc`, `.zshrc`, etc.):
+
+```bash
+# Option 1: Short alias
+alias rs="rocketship"
+
+# Option 2: More descriptive alias
+alias rocket="rocketship"
+```
+
+### Windows (PowerShell)
+
+Add this to your PowerShell profile:
+
+```powershell
+Set-Alias -Name rs -Value rocketship
+```
+
+Remember to restart your shell or run `source ~/.bashrc` (or equivalent) to apply the changes.
 
 ## Next Steps
 

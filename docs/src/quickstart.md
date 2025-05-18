@@ -13,8 +13,10 @@ brew install temporal
 Then install Rocketship:
 
 ```bash
-curl -Lo /usr/local/bin/rs https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rs # for arm64 macos
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rocketship # for arm64 macos
 ```
+
+For detailed installation instructions for other platforms and optional aliases, see the [Installation Guide](installation.md).
 
 ## Your First Test
 
@@ -42,7 +44,7 @@ EOF
 2. Run the test:
 
 ```bash
-rs run -af simple-test.yaml
+rocketship run -af simple-test.yaml
 ```
 
 The `-a` flag tells Rocketship to automatically start and stop the local server, and `-f` specifies the test file to run.
