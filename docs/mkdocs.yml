@@ -56,6 +56,10 @@ nav:
   - Examples: examples.md
   - Command Reference:
       - run: reference/rocketship_run.md
-      - start: reference/rocketship_start.md
-      - stop: reference/rocketship_stop.md
+      - start:
+          - Overview: reference/rocketship_start.md
+          - start server: reference/rocketship_start_server.md
+      - stop:
+          - Overview: reference/rocketship_stop.md
+          - stop server: reference/rocketship_stop_server.md
   - Contributing: contributing.md
