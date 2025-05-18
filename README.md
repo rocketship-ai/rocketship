@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/misc/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" />
-  <img src="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" />
+  <img src="docs/misc/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
+  <img src="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
 <h3 align="center">E2E API Testing For Any Cloud Environment</h3>
 <p align="center">Run Enterprise-Grade e2e Tests With a Single Command</p>
