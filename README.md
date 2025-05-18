@@ -1,12 +1,6 @@
 <p align="center">
-  <a href="https://docs.rocketship.sh">
-    <picture>
-      <!-- <source srcset="docs/misc/assets/transparent-reverse.png#gh-light-mode-only"> -->
-      <!-- <source srcset="docs/misc/assets/transparent.png#gh-dark-mode-only"> -->
-      <img src="docs/misc/assets/transparent.png#gh-light-mode-only" alt="Rocketship" width="210" />
-      <img src="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship" width="210" />
-    </picture>
-  </a>
+  <img src="docs/misc/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" />
+  <img src="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" />
 </p>
 <h3 align="center">E2E API Testing For Any Cloud Environment</h3>
 <p align="center">Run Enterprise-Grade e2e Tests With a Single Command</p>
