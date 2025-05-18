@@ -219,7 +219,7 @@ func NewRunCmd() *cobra.Command {
 					return fmt.Errorf("cannot start in auto mode - server components already running: %s", strings.Join(componentNames, ", "))
 				}
 
-				if err := setupLocalEnvironmentBackground(); err != nil {
+				if err := setupLocalServerBackground(); err != nil {
 					return fmt.Errorf("failed to start local server: %w", err)
 				}
 				engineAddr = "localhost:7700"

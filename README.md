@@ -1,9 +1,10 @@
 <p align="center">
   <a href="https://docs.rocketship.sh">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/misc/assets/transparent-reverse.png">
-      <source media="(prefers-color-scheme: light)" srcset="docs/misc/assets/transparent.png">
-      <img src="docs/misc/assets/transparent.png" alt="Rocketship" width="210" />
+      <!-- <source srcset="docs/misc/assets/transparent-reverse.png#gh-light-mode-only"> -->
+      <!-- <source srcset="docs/misc/assets/transparent.png#gh-dark-mode-only"> -->
+      <img src="docs/misc/assets/transparent.png#gh-light-mode-only" alt="Rocketship" width="210" />
+      <img src="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship" width="210" />
     </picture>
   </a>
 </p>

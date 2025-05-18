@@ -77,6 +77,7 @@ func (c *ServerConfig) Cleanup() {
 
 // StartServer starts all server components
 func StartServer(config *ServerConfig, pm *processManager) error {
+	Logger.Info("starting Rocketship server...")
 	// Start Temporal server if not already running
 	if !pm.IsComponentRunning(Temporal) {
 		Logger.Debug("starting Temporal server")
