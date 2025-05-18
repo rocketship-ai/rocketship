@@ -51,14 +51,11 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-      - Quick Start: quickstart.md
       - Installation: installation.md
-      - Test Specifications: test-specs.md
+      - Quick Start: quickstart.md
   - Examples: examples.md
   - Command Reference:
-      - Overview: reference/rocketship.md
-      - Commands:
-          - run: reference/rocketship_run.md
-          - start: reference/rocketship_start.md
-          - stop: reference/rocketship_stop.md
+      - run: reference/rocketship_run.md
+      - start: reference/rocketship_start.md
+      - stop: reference/rocketship_stop.md
   - Contributing: contributing.md
