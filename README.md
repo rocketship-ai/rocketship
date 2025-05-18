@@ -1,8 +1,8 @@
 <p align="center">
   <a href="https://docs.rocketship.sh">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/misc/assets/transparent-reverse.png">
-      <source media="(prefers-color-scheme: light)" srcset="docs/misc/assets/transparent.png">
+      <source srcset="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only">
+      <source srcset="docs/misc/assets/transparent.png#gh-light-mode-only">
       <img src="docs/misc/assets/transparent.png" alt="Rocketship" width="210" />
     </picture>
   </a>
