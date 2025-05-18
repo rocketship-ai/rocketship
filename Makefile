@@ -1,4 +1,4 @@
-.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup
+.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean
 
 prepare-embed:
 	@mkdir -p internal/embedded/bin
@@ -67,3 +67,23 @@ clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf bin/
 	rm -rf internal/embedded/bin/
+
+# Generate and serve documentation
+docs-deps:
+	@echo "Setting up documentation environment..."
+	@python3 -m venv docs/.venv
+	@. docs/.venv/bin/activate && cd docs && python3 -m pip install -r requirements.txt
+
+docs: docs-deps
+	@echo "Generating documentation..."
+	@go run ./cmd/docgen
+	@. docs/.venv/bin/activate && cd docs && mkdocs build
+
+docs-serve: docs-deps
+	@echo "Starting documentation server..."
+	@go run ./cmd/docgen
+	@. docs/.venv/bin/activate && cd docs && mkdocs serve
+
+docs-clean:
+	@echo "Cleaning up documentation environment..."
+	@rm -rf docs/.venv docs/site
