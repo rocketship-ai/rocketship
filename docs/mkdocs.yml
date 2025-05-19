@@ -7,19 +7,19 @@ site_dir: site
 
 theme:
   name: material
-  logo: misc/assets/transparent-reverse.png
-  favicon: misc/assets/transparent.png
+  logo: assets/transparent-reverse.png
+  favicon: assets/transparent.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: indigo
+      primary: black
       accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: indigo
+      primary: black
       accent: indigo
       toggle:
         icon: material/brightness-4
@@ -34,6 +34,9 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -58,10 +61,13 @@ nav:
       - HTTP Testing:
           - Request Chaining & Delays: examples/request-chaining.md
   - Command Reference:
+      - Overview: reference/rocketship.md
+      - run: reference/rocketship_run.md
       - start:
           - Overview: reference/rocketship_start.md
           - start server: reference/rocketship_start_server.md
       - stop:
           - Overview: reference/rocketship_stop.md
           - stop server: reference/rocketship_stop_server.md
+      - version: reference/rocketship_version.md
   - Contributing: contributing.md

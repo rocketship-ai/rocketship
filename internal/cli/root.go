@@ -20,6 +20,7 @@ func NewRootCmd() *cobra.Command {
 		NewStartCmd(),
 		NewRunCmd(),
 		NewStopCmd(),
+		NewVersionCmd(),
 	)
 
 	return cmd

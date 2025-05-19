@@ -65,7 +65,7 @@ docker run rocketshipai/rocketship:latest
 To verify your installation, run:
 
 ```bash
-rocketship --version
+rocketship version
 ```
 
 ## Optional: Creating an Alias
@@ -77,11 +77,8 @@ If you prefer a shorter command, you can create an alias for the `rocketship` co
 Add one of these to your shell's configuration file (`.bashrc`, `.zshrc`, etc.):
 
 ```bash
-# Option 1: Short alias
+# Alias to "rs"
 alias rs="rocketship"
-
-# Option 2: More descriptive alias
-alias rocket="rocketship"
 ```
 
 ### Windows (PowerShell)
