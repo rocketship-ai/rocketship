@@ -65,4 +65,9 @@
          <lastmod>2025-05-19</lastmod>
          <changefreq>daily</changefreq>
     </url>
+    <url>
+         <loc>https://docs.rocketship.sh/reference/rocketship_version/</loc>
+         <lastmod>2025-05-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
 </urlset>

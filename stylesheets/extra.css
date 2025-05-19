@@ -1,0 +1,8 @@
+.md-header__button.md-logo {
+  padding: 0.5rem 0 0 0;
+}
+
+.md-header__button.md-logo img {
+  width: 2.4rem;
+  height: 2.4rem;
+}
