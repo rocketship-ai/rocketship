@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/misc/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
-  <img src="docs/misc/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
+  <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
+  <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
 <h3 align="center">E2E API Testing For Any Cloud Environment</h3>
 <p align="center">Run Enterprise-Grade e2e Tests With a Single Command</p>
@@ -95,7 +95,7 @@ I have a ton of ideas for Rocketship, and I'm open to any and all suggestions. H
 
 ## Contribute!!!
 
-I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [X](https://x.com/matteo_agius) or [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [CONTRIBUTING.md](CONTRIBUTING.md).
+I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [X](https://x.com/matteo_agius) or [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [Contributing to Rocketship](https://docs.rocketship.sh/contributing).
 
 ## License
 
