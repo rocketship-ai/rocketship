@@ -1,72 +1,63 @@
-# Test Server
+# Rocketship Test Server
 
-The test server is a simple HTTP server that can be used during development and testing of the Rocketship CLI. It provides detailed request/response logging and an in-memory store for data persistence during the session.
+A simple HTTP test server for Rocketship CLI examples and testing.
 
 ## Features
 
-- Supports GET, POST, PUT, DELETE HTTP methods
-- In-memory data store for session persistence
-- Detailed request and response logging
-- JSON-based API
-- Automatic ID generation for resources
-- Thread-safe operations
+- RESTful API endpoints for testing
+- In-memory data store
+- CORS enabled for cross-origin requests
+- Rate limiting (100 requests per minute)
+- Automatic HTTPS with Fly.io
+- Request/response logging
 
-## Usage
+## API Endpoints
 
-### Starting the server
+- `GET /{resource}` - List all resources of a type
+- `GET /{resource}/{id}` - Get a specific resource
+- `POST /{resource}` - Create a new resource
+- `PUT /{resource}/{id}` - Update a resource
+- `DELETE /{resource}/{id}` - Delete a resource
+- `POST /_clear` - Clear all data
 
-```bash
-# Start on default port 8080
-go run .
+## Local Development
 
-# Start on custom port
-go run . -port 3000
-```
+1. Run the server:
 
-### API Endpoints
+   ```bash
+   go run .
+   ```
 
-The server supports RESTful operations on any resource type. Resources are stored in memory and will persist until the server is stopped.
+2. The server will start on port 8080 by default. You can change this with the `-port` flag:
+   ```bash
+   go run . -port 3000
+   ```
 
-#### Examples
-
-1. Create a resource (POST):
-
-```bash
-curl -X POST http://localhost:8080/users -H "Content-Type: application/json" -d '{"name": "John Doe", "email": "john@example.com"}'
-```
-
-2. Get all resources of a type (GET):
+## Example Usage
 
 ```bash
+# Create a user
+curl -X POST http://localhost:8080/users \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Doe", "email": "john@example.com"}'
+
+# Get all users
 curl http://localhost:8080/users
-```
 
-3. Get a specific resource (GET):
-
-```bash
+# Get a specific user
 curl http://localhost:8080/users/user_0
-```
 
-4. Update a resource (PUT):
+# Update a user
+curl -X PUT http://localhost:8080/users/user_0 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Updated", "email": "john@example.com"}'
 
-```bash
-curl -X PUT http://localhost:8080/users/user_0 -H "Content-Type: application/json" -d '{"name": "John Updated", "email": "john.updated@example.com"}'
-```
-
-5. Delete a resource (DELETE):
-
-```bash
+# Delete a user
 curl -X DELETE http://localhost:8080/users/user_0
+
+# Clear all data
+curl -X POST http://localhost:8080/_clear
 ```
-
-### Server Output
-
-The server provides detailed logging of all requests and responses:
-
-- 📥 Incoming requests (headers, body, method, path)
-- 📤 Outgoing responses (status, body)
-- 💾 Store operations
-- ❌ Error messages (if any)
 
 ## Notes
 
