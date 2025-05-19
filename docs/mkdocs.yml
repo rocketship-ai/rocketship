@@ -61,10 +61,13 @@ nav:
       - HTTP Testing:
           - Request Chaining & Delays: examples/request-chaining.md
   - Command Reference:
+      - Overview: reference/rocketship.md
+      - run: reference/rocketship_run.md
       - start:
           - Overview: reference/rocketship_start.md
           - start server: reference/rocketship_start_server.md
       - stop:
           - Overview: reference/rocketship_stop.md
           - stop server: reference/rocketship_stop_server.md
+      - version: reference/rocketship_version.md
   - Contributing: contributing.md

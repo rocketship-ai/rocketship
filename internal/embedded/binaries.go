@@ -13,7 +13,7 @@ import (
 
 const (
 	githubReleaseURL = "https://github.com/rocketship-ai/rocketship/releases/download/%s/%s"
-	defaultVersion   = "v0.4.1" // This should be updated with each release
+	DefaultVersion   = "v0.5.0" // This should be updated with each release
 )
 
 type binaryMetadata struct {
@@ -70,7 +70,7 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 
 	// If no existing version (first install), use defaultVersion
 	if targetVersion == "" {
-		targetVersion = defaultVersion
+		targetVersion = DefaultVersion
 	}
 
 	// Extract the binary if needed
