@@ -1,0 +1,71 @@
+name: "Request Chaining & Delays Example"
+description: "A test suite demonstrating request chaining and delays with the test server"
+version: "v1.0.0"
+tests:
+  - name: "User Management Flow"
+    steps:
+      - name: "Create first user"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/users"
+          body: |
+            {
+              "name": "John Doe",
+              "email": "john@example.com",
+              "role": "admin"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "$.name"
+            expected: "John Doe"
+        save:
+          - json_path: "$.id"
+            as: "first_user_id"
+          - json_path: "$.email"
+            as: "first_user_email"
+
+      - name: "Wait for system processing"
+        plugin: "delay"
+        config:
+          duration: "1s"
+
+      - name: "Create second user"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/users"
+          body: |
+            {
+              "name": "Jane Smith",
+              "email": "jane@example.com",
+              "role": "user"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: "$.id"
+            as: "second_user_id"
+
+      - name: "Short delay for consistency"
+        plugin: "delay"
+        config:
+          duration: "500ms"
+
+      - name: "List all users"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/users"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "$.users_0.name"
+            expected: "John Doe"
+          - type: "json_path"
+            path: "$.users_1.name"
+            expected: "Jane Smith"
