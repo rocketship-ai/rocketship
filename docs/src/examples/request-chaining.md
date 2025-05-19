@@ -1,6 +1,6 @@
 # Request Chaining & Delays
 
-This example demonstrates how to chain HTTP requests and use delays in your test suites. It uses the test server included in the repository to show real-world API testing scenarios.
+This example demonstrates how to chain HTTP requests and use delays in your test suites. It uses our hosted test server at `tryme.rocketship.sh` to show real-world API testing scenarios.
 
 ## Test Specification
 
@@ -9,15 +9,13 @@ name: "Request Chaining & Delays Example"
 description: "A test suite demonstrating request chaining and delays with the test server"
 version: "v1.0.0"
 tests:
-  - name: "Create and Verify User"
+  - name: "User Management Flow"
     steps:
-      - name: "Create a new user"
+      - name: "Create first user"
         plugin: "http"
         config:
           method: "POST"
-          url: "http://localhost:8080/users"
-          headers:
-            Content-Type: "application/json"
+          url: "https://tryme.rocketship.sh/users"
           body: |
             {
               "name": "John Doe",
@@ -28,50 +26,36 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: ".name"
+            path: "$.name"
             expected: "John Doe"
         save:
-          - json_path: ".id"
-            as: "user_id"
+          - json_path: "$.id"
+            as: "first_user_id"
+          - json_path: "$.email"
+            as: "first_user_email"
 
       - name: "Wait for system processing"
         plugin: "delay"
         config:
           duration: "1s"
 
-      - name: "Verify user creation"
+      - name: "Create second user"
         plugin: "http"
         config:
-          method: "GET"
-          url: "http://localhost:8080/users/{{ user_id }}"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".email"
-            expected: "john@example.com"
-
-  - name: "Update and List Users"
-    steps:
-      - name: "Update user information"
-        plugin: "http"
-        config:
-          method: "PUT"
-          url: "http://localhost:8080/users/{{ user_id }}"
-          headers:
-            Content-Type: "application/json"
+          method: "POST"
+          url: "https://tryme.rocketship.sh/users"
           body: |
             {
-              "name": "John Doe Jr",
-              "email": "john.jr@example.com",
+              "name": "Jane Smith",
+              "email": "jane@example.com",
               "role": "user"
             }
         assertions:
           - type: "status_code"
             expected: 200
-          - type: "json_path"
-            path: ".name"
-            expected: "John Doe Jr"
+        save:
+          - json_path: "$.id"
+            as: "second_user_id"
 
       - name: "Short delay for consistency"
         plugin: "delay"
@@ -82,22 +66,26 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "http://localhost:8080/users"
+          url: "https://tryme.rocketship.sh/users"
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "to_entries | length"
-            expected: 1
+            path: "$.users_0.name"
+            expected: "John Doe"
+          - type: "json_path"
+            path: "$.users_1.name"
+            expected: "Jane Smith"
 ```
 
 ## Key Features Demonstrated
 
 **Request Chaining**:
 
-1. Creating a user and saving its ID
-2. Using the saved ID in subsequent requests
-3. Verifying changes across requests
+1. Creating multiple users
+2. Saving response values for later use
+3. Using saved values in subsequent requests
+4. Verifying changes across requests
 
 **Delays**:
 
@@ -105,27 +93,15 @@ tests:
 2. Different delay durations (1s, 500ms)
 3. Strategic placement for system consistency
 
-**HTTP Operations**:
-
-1. POST: Creating resources
-2. GET: Retrieving resources
-3. PUT: Updating resources
-
 **Assertions**:
 
 1. Status code validation
 2. JSON response validation using JSONPath
-3. Response count validation
+3. Response content validation
 
 ## Running the Example
 
-1. Start the test server (included in the repository):
-
-```bash
-go run for-contributors/test-server/main.go
-```
-
-2. Run the test suite:
+Run the test suite:
 
 ```bash
 rocketship run -af examples/request-chaining/rocketship.yaml
@@ -133,16 +109,22 @@ rocketship run -af examples/request-chaining/rocketship.yaml
 
 ## Understanding the Flow
 
-1. First Test ("Create and Verify User"):
+The example demonstrates a complete user management workflow:
 
-   - Creates a new user
-   - Waits for 1 second to simulate system processing
-   - Verifies the user was created correctly
+1. Create first user and save their ID and email
+2. Wait for 1 second to simulate system processing
+3. Create second user and save their ID
+4. Add a short 500ms delay for system consistency
+5. Get all users and verify both exist
 
-2. Second Test ("Update and List Users"):
-   - Updates the user's information
-   - Adds a short delay for system consistency
-   - Lists all users to verify the update
+Each step builds on the previous ones, showing how to:
+
+- Chain requests together
+- Save and use response data
+- Verify state changes
+- Handle different HTTP methods
+- Work with multiple resources
+- Use strategic delays for system consistency
 
 The delays in this example are for demonstration purposes. In real-world scenarios, you might use delays when:
 
