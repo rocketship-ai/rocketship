@@ -81,7 +81,7 @@ You can run scripts like this on the CLI, or in your CI, or across a Kubernetes 
 
 ## Documentation
 
-Working on it!
+[https://docs.rocketship.sh](https://docs.rocketship.sh)
 
 ## Roadmap
 
