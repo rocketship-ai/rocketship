@@ -1,0 +1,67 @@
+site_name: Rocketship CLI
+site_url: https://docs.rocketship.sh/
+repo_url: https://github.com/rocketship-ai/rocketship
+repo_name: rocketship-ai/rocketship
+docs_dir: src
+site_dir: site
+
+theme:
+  name: material
+  logo: misc/assets/transparent-reverse.png
+  favicon: misc/assets/transparent.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: installation.md
+      - Quick Start: quickstart.md
+  - Examples:
+      - Overview: examples.md
+      - HTTP Testing:
+          - Request Chaining & Delays: examples/request-chaining.md
+  - Command Reference:
+      - start:
+          - Overview: reference/rocketship_start.md
+          - start server: reference/rocketship_start_server.md
+      - stop:
+          - Overview: reference/rocketship_stop.md
+          - stop server: reference/rocketship_stop_server.md
+  - Contributing: contributing.md
