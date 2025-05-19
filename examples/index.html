@@ -1005,21 +1005,16 @@
 <li><a href="request-chaining/">Request Chaining &amp; Delays</a> - Learn how to chain HTTP requests, handle responses, and use delays in your test suites</li>
 </ul>
 <h2 id="running-the-examples">Running the Examples</h2>
-<p>To run any example, first start the test server (included in the repository):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start the test server</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>go<span class="w"> </span>run<span class="w"> </span><span class="k">for</span>-contributors/test-server/main.go
-</code></pre></div>
-<p>Then in another terminal, run the example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Run the example test suite</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/request-chaining/rocketship.yaml
-</code></pre></div>
-<p>The test server provides a simple HTTP API that you can use to experiment with Rocketship's features. It includes:</p>
+<p>The examples use the hosted test server at <code>tryme.rocketship.sh</code>. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:</p>
 <ul>
-<li>Full CRUD operations for any resource type</li>
-<li>JSON request/response handling</li>
-<li>Automatic ID generation</li>
-<li>In-memory storage for the session</li>
+<li>Test CRUD operations for a resource type</li>
+<li>Resources are isolated based off your IP</li>
+<li>FYI: Resource cleanup is done hourly (every :00)</li>
 </ul>
+<p>Then, run an example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Run the example test suite</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/request-chaining/rocketship.yaml
+</code></pre></div>
 <p>You can find the test server's source code in the <code>for-contributors/test-server</code> directory.</p>
 
 
