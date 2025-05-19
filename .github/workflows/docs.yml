@@ -6,6 +6,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+  pages: write
+
 jobs:
   build-docs:
     runs-on: ubuntu-latest
@@ -41,4 +45,6 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
           publish_dir: ./docs/site
+          cname: docs.rocketship.sh
