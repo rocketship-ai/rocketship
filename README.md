@@ -54,20 +54,35 @@ version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:
-      - name: "Check API status"
+      - name: "Create a test user"
         plugin: "http"
         config:
-          method: "GET"
-          url: "https://httpbin.org/status/200"
+          method: "POST"
+          url: "https://tryme.rocketship.sh/users"
+          body: |
+            {
+              "name": "Test User",
+              "email": "test@example.com"
+            }
+        assertions:
+          - type: "json_path"
+            path: "$.name"
+            expected: "Test User"
+  - name: "Test 2"
+    steps:
+      - name: "Create a test order"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/orders"
+          body: |
+            {
+              "product": "Test Product",
+              "quantity": 1
+            }
         assertions:
           - type: "status_code"
             expected: 200
-  - name: "Test 2"
-    steps:
-      - name: "Do nothing for 1s!"
-        plugin: "delay"
-        config:
-          duration: "1s"
 EOF
 ```
 
@@ -77,7 +92,11 @@ EOF
 rocketship run -af simple-test.yaml # starts the engine, runs the tests, shuts the engine down
 ```
 
-You can run scripts like this on the CLI, or in your CI, or across a Kubernetes cluster.
+The examples use our hosted test server at `tryme.rocketship.sh` that you can use:
+
+- Test CRUD operations for a resource type
+- Resources are isolated based off your IP
+- FYI: Resource cleanup is done hourly (every :00)
 
 ## Documentation
 

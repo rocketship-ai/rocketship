@@ -1,262 +1,112 @@
 name: "Complex HTTP Test Suite"
-description: "A comprehensive test suite to validate all HTTP plugin features"
+description: "A test suite demonstrating complex HTTP operations with request chaining"
 version: "v1.0.0"
 tests:
-  - name: "Complex User Operations"
+  - name: "User Management Flow"
     steps:
-      # Test 0: Clear server state
-      - name: "Clear server state"
+      - name: "Create first user"
         plugin: "http"
         config:
           method: "POST"
-          url: "http://localhost:8080/_clear"
-        assertions:
-          - type: "status_code"
-            expected: 204
-
-      # Test 1: Bulk User Creation with Array Response
-      - name: "Create multiple users in batch"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "http://localhost:8080/users"
-          headers:
-            Content-Type: "application/json"
+          url: "https://tryme.rocketship.sh/users"
           body: |
             {
-              "name": "Alice Cooper",
-              "email": "alice@example.com",
-              "role": "admin",
-              "metadata": {
-                "department": "Engineering",
-                "location": "NYC",
-                "tags": ["senior", "backend"]
-              }
-            }
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "header"
-            name: "Content-Type"
-            expected: "application/json"
-          - type: "json_path"
-            path: ".metadata.tags | length"
-            expected: 2
-          - type: "json_path"
-            path: '.metadata.tags[] | select(. == "senior")'
-            exists: true
-        save:
-          - json_path: ".id"
-            as: "user1_id"
-          - json_path: ".metadata.department"
-            as: "user1_dept"
-          - json_path: ".metadata.tags[0]"
-            as: "user1_first_tag"
-
-      # Test 2: Create user with optional fields
-      - name: "Create user with minimal fields"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "http://localhost:8080/users"
-          headers:
-            Content-Type: "application/json"
-          body: |
-            {
-              "name": "Bob Simple",
-              "email": "bob@example.com"
+              "name": "John Doe",
+              "email": "john@example.com",
+              "role": "admin"
             }
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: 'has("role")'
-            expected: false
+            path: "$.name"
+            expected: "John Doe"
         save:
-          - json_path: ".id"
-            as: "user2_id"
-          - json_path: ".nonexistent"
-            as: "optional_field"
-            required: false
+          - json_path: "$.id"
+            as: "first_user_id"
+          - json_path: "$.email"
+            as: "first_user_email"
 
-      # Test 3: Complex Update with Nested JSON
-      - name: "Update user with complex nested structure"
+      - name: "Create second user"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/users"
+          body: |
+            {
+              "name": "Jane Smith",
+              "email": "jane@example.com",
+              "role": "user"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: "$.id"
+            as: "second_user_id"
+
+      - name: "Get all users"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/users"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "$.users_0.name"
+            expected: "John Doe"
+          - type: "json_path"
+            path: "$.users_1.name"
+            expected: "Jane Smith"
+
+      - name: "Update first user"
         plugin: "http"
         config:
           method: "PUT"
-          url: "http://localhost:8080/users/{{ user1_id }}"
-          headers:
-            Content-Type: "application/json"
+          url: "https://tryme.rocketship.sh/users/{{ first_user_id }}"
           body: |
             {
-              "name": "Alice Super Cooper",
-              "email": "alice@example.com",
-              "role": "super_admin",
-              "metadata": {
-                "department": "{{ user1_dept }}",
-                "location": "SF",
-                "tags": ["{{ user1_first_tag }}", "architect", "lead"],
-                "projects": {
-                  "active": ["Project X", "Project Y"],
-                  "completed": ["Project Z"]
-                }
-              }
+              "name": "John Doe Jr",
+              "email": "{{ first_user_email }}",
+              "role": "super_admin"
             }
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: ".metadata.tags | length"
-            expected: 3
-          - type: "json_path"
-            path: ".metadata.projects.active | length"
-            expected: 2
-          - type: "json_path"
-            path: ".metadata.location"
-            expected: "SF"
+            path: "$.name"
+            expected: "John Doe Jr"
+        save:
+          - json_path: "$.name"
+            as: "updated_name"
 
-      # Test 4: Complex Query and Validation
-      - name: "Query users with complex filters"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "http://localhost:8080/users"
-          headers:
-            Accept: "application/json"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: "to_entries | length"
-            expected: 2 # We have Alice and Bob after creating and before deletion
-          - type: "json_path"
-            path: 'to_entries[] | select(.value.role == "super_admin") | .value.name'
-            expected: "Alice Super Cooper"
-          - type: "json_path"
-            path: 'to_entries[] | select(.value.metadata.location == "SF") | .value.metadata.tags | length'
-            expected: 3
-
-      # Test 5: Deletion with Verification
-      - name: "Delete second user and verify counts"
+      - name: "Delete second user"
         plugin: "http"
         config:
           method: "DELETE"
-          url: "http://localhost:8080/users/{{ user2_id }}"
+          url: "https://tryme.rocketship.sh/users/{{ second_user_id }}"
         assertions:
           - type: "status_code"
             expected: 204
 
-      # Test 6: Verify Deletion and Complex State
-      - name: "Complex state verification after deletion"
+      - name: "Verify second user deleted"
         plugin: "http"
         config:
           method: "GET"
-          url: "http://localhost:8080/users"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: "to_entries | length"
-            expected: 1
-          - type: "json_path"
-            path: "to_entries[] | select(.value.metadata.projects.active | length > 1) | .value.name"
-            expected: "Alice Super Cooper"
-        save:
-          - json_path: 'to_entries[] | select(.value.role == "super_admin") | .value.metadata.projects.active[0]'
-            as: "active_project"
-            required: true
-
-      # Test 7: Error Cases
-      - name: "Test various error scenarios"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "http://localhost:8080/users/nonexistent"
+          url: "https://tryme.rocketship.sh/users/{{ second_user_id }}"
         assertions:
           - type: "status_code"
             expected: 404
 
-      # Test 8: Complex Header Validation
-      - name: "Validate response headers"
+      - name: "Verify only first user remains"
         plugin: "http"
         config:
           method: "GET"
-          url: "http://localhost:8080/users/{{ user1_id }}"
-          headers:
-            Accept: "application/json"
-            X-Custom-Header: "test"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "header"
-            name: "Content-Type"
-            expected: "application/json"
-          - type: "json_path"
-            path: '.metadata.projects.active[] | select(. == "{{ active_project }}")'
-            exists: true
-
-  - name: "Edge Cases and Special Characters"
-    steps:
-      # Test 0: Clear server state
-      - name: "Clear server state"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "http://localhost:8080/_clear"
-        assertions:
-          - type: "status_code"
-            expected: 204
-
-      # Test 9: Special Characters in Data
-      - name: "Create user with special characters"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "http://localhost:8080/users"
-          headers:
-            Content-Type: "application/json"
-          body: |
-            {
-              "name": "O'Connor & Sons",
-              "email": "special+chars@example.com",
-              "metadata": {
-                "description": "Testing {special} [characters] & <symbols>",
-                "tags": ["tag,with,comma", "tag with spaces", "tag.with.dots"]
-              }
-            }
+          url: "https://tryme.rocketship.sh/users"
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: '.metadata.tags[] | select(contains(","))'
-            exists: true
-        save:
-          - json_path: ".id"
-            as: "special_user_id"
-
-      # Test 10: Unicode and Escaping
-      - name: "Update user with unicode content"
-        plugin: "http"
-        config:
-          method: "PUT"
-          url: "http://localhost:8080/users/{{ special_user_id }}"
-          headers:
-            Content-Type: "application/json"
-          body: |
-            {
-              "name": "🚀 José Möbius",
-              "email": "unicode😊@example.com",
-              "metadata": {
-                "description": "Testing unicode: 你好, שָׁלוֹם, مرحبا",
-                "tags": ["emoji⭐", "unicode✨", "mixed🎉chars"]
-              }
-            }
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: '.name | startswith("🚀")'
-            expected: true
-          - type: "json_path"
-            path: '.metadata.tags[] | select(contains("⭐"))'
-            exists: true
+            path: "$.users_0.name"
+            expected: "{{ updated_name }}"

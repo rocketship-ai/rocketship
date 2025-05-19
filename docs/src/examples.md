@@ -10,25 +10,17 @@ Rocketship comes with example test suites that demonstrate different features an
 
 ## Running the Examples
 
-To run any example, first start the test server (included in the repository):
+The examples use the hosted test server at `tryme.rocketship.sh`. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:
 
-```bash
-# Start the test server
-go run for-contributors/test-server/main.go
-```
+- Test CRUD operations for a resource type
+- Resources are isolated based off your IP
+- FYI: Resource cleanup is done hourly (every :00)
 
-Then in another terminal, run the example:
+Then, run an example:
 
 ```bash
 # Run the example test suite
 rocketship run -af examples/request-chaining/rocketship.yaml
 ```
-
-The test server provides a simple HTTP API that you can use to experiment with Rocketship's features. It includes:
-
-- Full CRUD operations for any resource type
-- JSON request/response handling
-- Automatic ID generation
-- In-memory storage for the session
 
 You can find the test server's source code in the `for-contributors/test-server` directory.

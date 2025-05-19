@@ -1,153 +1,65 @@
-name: "Request Chaining Test Suite"
-description: "A test suite demonstrating request chaining with the test server"
+name: "Simple HTTP Test Suite"
+description: "A simple test suite that demonstrates basic HTTP operations"
 version: "v1.0.0"
 tests:
-  - name: "Create and Chain User Operations"
+  - name: "Create and Get User"
     steps:
-      - name: "Create first user"
+      - name: "Create a new user"
         plugin: "http"
         config:
           method: "POST"
-          url: "http://localhost:8080/users"
-          headers:
-            Content-Type: "application/json"
+          url: "https://tryme.rocketship.sh/users"
           body: |
             {
               "name": "John Doe",
-              "email": "john@example.com",
-              "role": "admin"
+              "email": "john@example.com"
             }
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: ".name"
+            path: "$.name"
             expected: "John Doe"
-          - type: "json_path"
-            path: ".email"
-            expected: "john@example.com"
-          - type: "header"
-            name: "Content-Type"
-            expected: "application/json"
-        save:
-          - json_path: ".id"
-            as: "first_user_id"
-          - json_path: ".email"
-            as: "first_user_email"
 
-      - name: "Create second user"
+      - name: "Get the created user"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/users"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: "$.users_0.name"
+            expected: "John Doe"
+
+  - name: "Create and Get Order"
+    steps:
+      - name: "Create a new order"
         plugin: "http"
         config:
           method: "POST"
-          url: "http://localhost:8080/users"
-          headers:
-            Content-Type: "application/json"
+          url: "https://tryme.rocketship.sh/orders"
           body: |
             {
-              "name": "Jane Smith",
-              "email": "jane@example.com",
-              "role": "user"
+              "product": "Test Product",
+              "quantity": 1
             }
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: ".id"
-            # you actually don't need this because "save" key below default fails if the json path doesn't exist
-            exists: true
-        save:
-          - json_path: ".id"
-            as: "second_user_id"
+            path: "$.product"
+            expected: "Test Product"
 
-      - name: "Get all users"
+      - name: "Get the created order"
         plugin: "http"
         config:
           method: "GET"
-          url: "http://localhost:8080/users"
-          headers:
-            Accept: "application/json"
+          url: "https://tryme.rocketship.sh/orders"
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "to_entries | length"
-            expected: 2
-          - type: "header"
-            name: "Content-Type"
-            expected: "application/json"
-
-      - name: "Get first user by ID"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "http://localhost:8080/users/{{ first_user_id }}"
-          headers:
-            Accept: "application/json"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".email"
-            expected: "{{ first_user_email }}"
-          - type: "json_path"
-            path: ".role"
-            expected: "admin"
-
-      - name: "Update first user"
-        plugin: "http"
-        config:
-          method: "PUT"
-          url: "http://localhost:8080/users/{{ first_user_id }}"
-          headers:
-            Content-Type: "application/json"
-          body: |
-            {
-              "name": "John Doe Jr",
-              "email": "{{ first_user_email }}",
-              "role": "super_admin"
-            }
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".name"
-            expected: "John Doe Jr"
-          - type: "json_path"
-            path: ".role"
-            expected: "super_admin"
-        save:
-          - json_path: ".name"
-            as: "updated_name"
-
-      - name: "Delete second user"
-        plugin: "http"
-        config:
-          method: "DELETE"
-          url: "http://localhost:8080/users/{{ second_user_id }}"
-        assertions:
-          - type: "status_code"
-            expected: 204
-
-      - name: "Verify second user deleted"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "http://localhost:8080/users/{{ second_user_id }}"
-        assertions:
-          - type: "status_code"
-            expected: 404
-
-      - name: "Verify only first user remains"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "http://localhost:8080/users"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: "to_entries | length"
-            expected: 1
-          - type: "json_path"
-            path: ".{{ first_user_id }}.name"
-            expected: "{{ updated_name }}"
+            path: "$.orders_0.product"
+            expected: "Test Product"

@@ -1,114 +1,46 @@
-name: "[FAIL ON PURPOSE] Simple HTTP API Test Suite"
-description: "A simple test suite demonstrating HTTP testing with delays"
+name: "HTTP Failure Test Suite"
+description: "A test suite demonstrating how to handle HTTP failures"
 version: "v1.0.0"
 tests:
-  - name: "Get Users List"
+  - name: "Test 404 Not Found"
     steps:
-      - name: "Get user list"
+      - name: "Try to get non-existent user"
         plugin: "http"
         config:
           method: "GET"
-          url: "https://jsonplaceholder.typicode.com/users"
-          headers:
-            Accept: "application/json"
+          url: "https://tryme.rocketship.sh/users/nonexistent"
         assertions:
           - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: "length"
-            expected: 5
+            expected: 404
 
-  - name: "Get Single User"
+  - name: "Test Invalid Resource Type"
     steps:
-      - name: "Get specific user"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "https://jsonplaceholder.typicode.com/users/1"
-          headers:
-            Accept: "application/json"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".name"
-            expected: "John Smith"
-          - type: "json_path"
-            path: ".email"
-            expected: "Sincere@april.biz"
-
-  - name: "Create New User"
-    steps:
-      - name: "Create user"
+      - name: "Try to create invalid resource"
         plugin: "http"
         config:
           method: "POST"
-          url: "https://jsonplaceholder.typicode.com/users"
-          headers:
-            Content-Type: "application/json"
+          url: "https://tryme.rocketship.sh/invalid"
           body: |
             {
-              "name": "John Doe",
-              "username": "johndoe",
-              "email": "john@example.com"
+              "name": "Test"
             }
         assertions:
           - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".id"
-            expected: 11
+            expected: 400
 
-  - name: "Update User"
+  - name: "Test Invalid JSON"
     steps:
-      - name: "Update user"
+      - name: "Try to create user with invalid JSON"
         plugin: "http"
         config:
-          method: "PUT"
-          url: "https://jsonplaceholder.typicode.com/users/1"
-          headers:
-            Content-Type: "application/json"
+          method: "POST"
+          url: "https://tryme.rocketship.sh/users"
           body: |
             {
-              "name": "Jane Smith",
-              "username": "janesmith",
-              "email": "jane@example.com"
+              "name": "Test User",
+              "email": "test@example.com",
+              invalid json
             }
         assertions:
           - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".name"
-            expected: "Jane Smith"
-          - type: "json_path"
-            path: ".email"
-            expected: "jane@example.com"
-
-  - name: "Delete User"
-    steps:
-      - name: "Delete user"
-        plugin: "http"
-        config:
-          method: "DELETE"
-          url: "https://jsonplaceholder.typicode.com/users/1"
-          headers:
-            Accept: "application/json"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: "tostring"
-            expected: "{}"
-      - name: "Verify user still accessible (mock API behavior)"
-        plugin: "http"
-        config:
-          method: "GET"
-          url: "https://jsonplaceholder.typicode.com/users/1"
-          headers:
-            Accept: "application/json"
-        assertions:
-          - type: "status_code"
-            expected: 200
-          - type: "json_path"
-            path: ".id"
-            expected: 1
+            expected: 400
