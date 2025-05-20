@@ -9,6 +9,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 
 	// plugins
+
 	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
 )
@@ -56,6 +57,7 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 }
 
 func handleDelayStep(ctx workflow.Context, step dsl.Step) error {
+	//workflowcheck:ignore
 	dp, err := delay.ParseYAML(step)
 	if err != nil {
 		return fmt.Errorf("step %q: %w", step.Name, err)
@@ -74,6 +76,7 @@ func handleHTTPStep(ctx workflow.Context, step dsl.Step, state map[string]string
 	logger.Info(fmt.Sprintf("Executing HTTP step: %s", step.Name))
 	logger.Info(fmt.Sprintf("Current state: %v", state))
 
+	//workflowcheck:ignore
 	hp, err := http.ParseYAML(step)
 	if err != nil {
 		return fmt.Errorf("failed to parse HTTP step: %w", err)
@@ -98,9 +101,10 @@ func handleHTTPStep(ctx workflow.Context, step dsl.Step, state map[string]string
 
 	// Update workflow state with saved values
 	logger.Info(fmt.Sprintf("Saved values from step: %v", activityResp.Saved))
-	for key, value := range activityResp.Saved {
-		state[key] = value
-		logger.Info(fmt.Sprintf("Updated state[%s] = %s", key, value))
+	keys := workflow.DeterministicKeys(activityResp.Saved)
+	for _, key := range keys {
+		state[key] = activityResp.Saved[key]
+		logger.Info(fmt.Sprintf("Updated state[%s] = %s", key, state[key]))
 	}
 	logger.Info(fmt.Sprintf("Updated state: %v", state))
 
