@@ -35,7 +35,7 @@ Core features:
 #### Install
 
 ```bash
-brew install temporal # pre-req for the local engine
+brew install temporal # pre-req for if you want to run the local engine
 ```
 
 ```bash
