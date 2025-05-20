@@ -35,69 +35,13 @@ See the [Kubernetes Deployment](deploy-on-kubernetes.md) guide for details.
 
 ## Docker Compose Setup
 
-1. Create a `docker-compose.yaml` file:
-
-```yaml
-services:
-  temporal:
-    image: temporalio/auto-setup:1.27.2
-    environment:
-      - DB=postgres12
-      - DB_PORT=5432
-      - POSTGRES_USER=temporal
-      - POSTGRES_PWD=temporal
-      - POSTGRES_SEEDS=postgresql
-      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
-      - ENABLE_ES=true
-      - ES_SEEDS=elasticsearch
-      - ES_VERSION=v7
-    ports:
-      - "7233:7233"
-
-  postgresql:
-    image: postgres:16
-    environment:
-      POSTGRES_PASSWORD: temporal
-      POSTGRES_USER: temporal
-    volumes:
-      - postgresql-data:/var/lib/postgresql/data
-
-  elasticsearch:
-    image: elasticsearch:7.17.27
-    environment:
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms256m -Xmx256m
-      - xpack.security.enabled=false
-
-  engine:
-    image: rocketshipai/rocketship-engine:latest
-    depends_on:
-      - temporal
-    environment:
-      - TEMPORAL_HOST=temporal:7233
-    ports:
-      - "7700:7700"
-      - "7701:7701"
-
-  worker:
-    image: rocketshipai/rocketship-worker:latest
-    depends_on:
-      - temporal
-      - engine
-    environment:
-      - TEMPORAL_HOST=temporal:7233
-
-volumes:
-  postgresql-data:
-```
-
-2. Start the services:
+Clone the Rocketship repository, navigate to the `.docker` directory, and run the following command:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-3. Verify the deployment:
+Verify the deployment:
 
 ```bash
 # Check service status
@@ -110,7 +54,7 @@ docker-compose logs engine
 docker-compose logs worker
 ```
 
-4. Run a test:
+Run a test:
 
 ```bash
 rocketship run -f your-test.yaml -e localhost:7700
