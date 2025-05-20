@@ -4,7 +4,7 @@ Rocketship CLI is available for macOS, Linux, and Windows. Choose your platform 
 
 ## Prerequisites
 
-If you want to run tests without needing to connect to a remote engine, you need to install Temporal which is required for the local engine:
+If you want to run tests **without needing to connect to a remote engine**, you need to install Temporal which is required for the local engine:
 
 ```bash
 brew install temporal  # macOS
