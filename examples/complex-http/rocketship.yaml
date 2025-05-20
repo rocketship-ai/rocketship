@@ -2,111 +2,120 @@ name: "Complex HTTP Test Suite"
 description: "A test suite demonstrating complex HTTP operations with request chaining"
 version: "v1.0.0"
 tests:
-  - name: "User Management Flow"
+  - name: "Product Management Flow"
     steps:
-      - name: "Create first user"
+      - name: "Create first product"
         plugin: "http"
         config:
           method: "POST"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/products"
           body: |
             {
-              "name": "John Doe",
-              "email": "john@example.com",
-              "role": "admin"
+              "name": "Widget",
+              "sku": "W123",
+              "price": 19.99
             }
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.name"
-            expected: "John Doe"
+            path: ".name"
+            expected: "Widget"
         save:
-          - json_path: "$.id"
-            as: "first_user_id"
-          - json_path: "$.email"
-            as: "first_user_email"
+          - json_path: ".id"
+            as: "first_product_id"
+          - json_path: ".sku"
+            as: "first_product_sku"
 
-      - name: "Create second user"
+      - name: "Create second product"
         plugin: "http"
         config:
           method: "POST"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/products"
           body: |
             {
-              "name": "Jane Smith",
-              "email": "jane@example.com",
-              "role": "user"
+              "name": "Gadget",
+              "sku": "G456",
+              "price": 29.99
             }
         assertions:
           - type: "status_code"
             expected: 200
         save:
-          - json_path: "$.id"
-            as: "second_user_id"
+          - json_path: ".id"
+            as: "second_product_id"
 
-      - name: "Get all users"
+      - name: "Get all products"
         plugin: "http"
         config:
           method: "GET"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/products"
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.users_0.name"
-            expected: "John Doe"
+            path: ".products_0.name"
+            expected: "Widget"
           - type: "json_path"
-            path: "$.users_1.name"
-            expected: "Jane Smith"
+            path: ".products_1.name"
+            expected: "Gadget"
 
-      - name: "Update first user"
+      - name: "Update first product"
         plugin: "http"
         config:
           method: "PUT"
-          url: "https://tryme.rocketship.sh/users/{{ first_user_id }}"
+          url: "https://tryme.rocketship.sh/products/{{ first_product_id }}"
           body: |
             {
-              "name": "John Doe Jr",
-              "email": "{{ first_user_email }}",
-              "role": "super_admin"
+              "name": "Widget Pro",
+              "sku": "{{ first_product_sku }}",
+              "price": 24.99
             }
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.name"
-            expected: "John Doe Jr"
+            path: ".name"
+            expected: "Widget Pro"
         save:
-          - json_path: "$.name"
+          - json_path: ".name"
             as: "updated_name"
 
-      - name: "Delete second user"
+      - name: "Delete second product"
         plugin: "http"
         config:
           method: "DELETE"
-          url: "https://tryme.rocketship.sh/users/{{ second_user_id }}"
+          url: "https://tryme.rocketship.sh/products/{{ second_product_id }}"
         assertions:
           - type: "status_code"
             expected: 204
 
-      - name: "Verify second user deleted"
+      - name: "Verify second product deleted"
         plugin: "http"
         config:
           method: "GET"
-          url: "https://tryme.rocketship.sh/users/{{ second_user_id }}"
+          url: "https://tryme.rocketship.sh/products/{{ second_product_id }}"
         assertions:
           - type: "status_code"
             expected: 404
 
-      - name: "Verify only first user remains"
+      - name: "Verify only first product remains"
         plugin: "http"
         config:
           method: "GET"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/products"
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.users_0.name"
+            path: ".products_0.name"
             expected: "{{ updated_name }}"
+
+      - name: "Cleanup - Delete first product"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/products/{{ first_product_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
