@@ -35,7 +35,7 @@ Core features:
 #### Install
 
 ```bash
-brew install temporal # pre-req for the local engine
+brew install temporal # pre-req for if you want to run the local engine
 ```
 
 ```bash
@@ -114,7 +114,7 @@ I have a ton of ideas for Rocketship, and I'm open to any and all suggestions. H
 
 ## Contribute!!!
 
-I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [X](https://x.com/matteo_agius) or [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [Contributing to Rocketship](https://docs.rocketship.sh/contributing).
+I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [Contributing to Rocketship](https://docs.rocketship.sh/contributing).
 
 ## License
 

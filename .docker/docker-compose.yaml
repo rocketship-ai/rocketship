@@ -17,6 +17,11 @@ services:
       - 9200:9200
     volumes:
       - /var/lib/elasticsearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   postgresql:
     container_name: temporal-postgresql
     environment:
@@ -29,11 +34,18 @@ services:
       - 5432:5432
     volumes:
       - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   temporal:
     container_name: temporal
     depends_on:
-      - postgresql
-      - elasticsearch
+      postgresql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     environment:
       - DB=postgres12
       - DB_PORT=5432
@@ -53,10 +65,16 @@ services:
       - 7233:7233
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   temporal-admin-tools:
     container_name: temporal-admin-tools
     depends_on:
-      - temporal
+      temporal:
+        condition: service_healthy
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
@@ -68,7 +86,8 @@ services:
   temporal-ui:
     container_name: temporal-ui
     depends_on:
-      - temporal
+      temporal:
+        condition: service_healthy
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
@@ -89,32 +108,27 @@ services:
     build:
       context: ..
       dockerfile: .docker/Dockerfile.engine
-    depends_on: [temporal]
+    depends_on:
+      temporal:
+        condition: service_healthy
     environment:
       - TEMPORAL_HOST=temporal:7233
     ports: ["7700:7700", "7701:7701"]
+    networks:
+      - temporal-network
+    restart: unless-stopped
   worker:
     build:
       context: ..
       dockerfile: .docker/Dockerfile.worker
-    depends_on: [temporal, engine]
+    depends_on:
+      temporal:
+        condition: service_healthy
     environment:
       - TEMPORAL_HOST=temporal:7233
-  localstack:
-    image: localstack/localstack:3
-    ports: ["4566:4566"]
-    environment:
-      - services=dynamodb
-  localstack-init:
-    build:
-      context: .
-      dockerfile: localstack/Dockerfile
-    depends_on:
-      - localstack
-    environment:
-      - AWS_ACCESS_KEY_ID=test
-      - AWS_SECRET_ACCESS_KEY=test
-      - AWS_DEFAULT_REGION=us-east-1
+    networks:
+      - temporal-network
+    restart: unless-stopped
   ### END OF ROCKETSHIP CORE ###
 # .
 # .

@@ -60,6 +60,9 @@ nav:
       - Overview: examples.md
       - HTTP Testing:
           - Request Chaining & Delays: examples/request-chaining.md
+  - Deploy On Your Cloud:
+      - Overview: deploy-on-your-cloud.md
+      - Kubernetes: deploy-on-kubernetes.md
   - Command Reference:
       - Overview: reference/rocketship.md
       - run: reference/rocketship_run.md

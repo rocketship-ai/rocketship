@@ -150,7 +150,7 @@ Supported platforms:
 ## Getting Help
 
 - Open an issue on GitHub
-- Reach out to me on [X](https://x.com/matteo_agius) or [LinkedIn](https://www.linkedin.com/in/magiusdarrigo)
+- Reach out to me on [LinkedIn](https://www.linkedin.com/in/magiusdarrigo)
 
 ## License
 

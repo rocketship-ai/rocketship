@@ -2,3 +2,6 @@
 /bin/
 /internal/embedded/bin/*
 !/internal/embedded/bin/.gitkeep
+
+# python
+.DS_Store
