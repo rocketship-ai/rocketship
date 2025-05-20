@@ -1,0 +1,89 @@
+name: "Request Chaining & Delays Example"
+description: "A test suite demonstrating request chaining and delays with the test server"
+version: "v1.0.0"
+tests:
+  - name: "Car Management Flow"
+    steps:
+      - name: "Create first car"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/cars"
+          body: |
+            {
+              "make": "Toyota",
+              "model": "Corolla",
+              "year": 2020
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".make"
+            expected: "Toyota"
+        save:
+          - json_path: ".id"
+            as: "first_car_id"
+          - json_path: ".model"
+            as: "first_car_model"
+
+      - name: "Wait for system processing"
+        plugin: "delay"
+        config:
+          duration: "1s"
+
+      - name: "Create second car"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/cars"
+          body: |
+            {
+              "make": "Honda",
+              "model": "Civic",
+              "year": 2022
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "second_car_id"
+
+      - name: "Short delay for consistency"
+        plugin: "delay"
+        config:
+          duration: "500ms"
+
+      - name: "List all cars"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/cars"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".cars_0.make"
+            expected: "Toyota"
+          - type: "json_path"
+            path: ".cars_1.make"
+            expected: "Honda"
+
+      - name: "Cleanup - Delete first car"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/cars/{{ first_car_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
+
+      - name: "Cleanup - Delete second car"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/cars/{{ second_car_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204

@@ -18,8 +18,11 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.name"
+            path: ".name"
             expected: "John Doe"
+        save:
+          - json_path: ".id"
+            as: "user_id"
 
       - name: "Get the created user"
         plugin: "http"
@@ -30,8 +33,17 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.users_0.name"
+            path: ".users_0.name"
             expected: "John Doe"
+
+      - name: "Cleanup - Delete created user"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/users/{{ user_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
 
   - name: "Create and Get Order"
     steps:
@@ -49,8 +61,11 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.product"
+            path: ".product"
             expected: "Test Product"
+        save:
+          - json_path: ".id"
+            as: "order_id"
 
       - name: "Get the created order"
         plugin: "http"
@@ -61,5 +76,14 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.orders_0.product"
+            path: ".orders_0.product"
             expected: "Test Product"
+
+      - name: "Cleanup - Delete created order"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/orders/{{ order_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204

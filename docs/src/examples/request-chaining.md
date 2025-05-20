@@ -26,12 +26,12 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.name"
+            path: ".name"
             expected: "John Doe"
         save:
-          - json_path: "$.id"
+          - json_path: ".id"
             as: "first_user_id"
-          - json_path: "$.email"
+          - json_path: ".email"
             as: "first_user_email"
 
       - name: "Wait for system processing"
@@ -54,7 +54,7 @@ tests:
           - type: "status_code"
             expected: 200
         save:
-          - json_path: "$.id"
+          - json_path: ".id"
             as: "second_user_id"
 
       - name: "Short delay for consistency"
@@ -71,10 +71,10 @@ tests:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: "$.users_0.name"
+            path: ".users_0.name"
             expected: "John Doe"
           - type: "json_path"
-            path: "$.users_1.name"
+            path: ".users_1.name"
             expected: "Jane Smith"
 ```
 

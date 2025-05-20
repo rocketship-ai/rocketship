@@ -42,7 +42,7 @@ brew install temporal # pre-req for the local engine
 curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rocketship # for arm64 macos
 ```
 
-For detailed installation instructions for other platforms and optional aliases, see our [Installation Guide](https://docs.rocketship.sh/installation).
+For detailed installation instructions for other platforms and optional aliases, see the [Installation Guide](https://docs.rocketship.sh/installation).
 
 #### Save a test spec
 
@@ -66,7 +66,7 @@ tests:
             }
         assertions:
           - type: "json_path"
-            path: "$.name"
+            path: ".name"
             expected: "Test User"
   - name: "Test 2"
     steps:
@@ -89,10 +89,10 @@ EOF
 #### Run it
 
 ```bash
-rocketship run -af simple-test.yaml # starts the engine, runs the tests, shuts the engine down
+rocketship run -af simple-test.yaml # starts the local engine, runs the tests, shuts the engine down
 ```
 
-The examples use our hosted test server at `tryme.rocketship.sh` that you can use:
+The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 - Test CRUD operations for a resource type
 - Resources are isolated based off your IP
@@ -108,7 +108,7 @@ I have a ton of ideas for Rocketship, and I'm open to any and all suggestions. H
 
 - [ ] **LLM Browser Testing Support** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) to build & run deterministic browser tests.
 - [ ] **Smoke Testing** A test suite-wide configuration to schedule tests to run on a cadence.
-- [ ] **Environment Variables** Pass in environment variables to your tests. Run tests against different environments.
+- [ ] **Environment Variables & Secrets** Pass in environment variables to your tests. Reach APIs requiring authentication.
 - [ ] **Core AWS Plugins** Add support for AWS services like S3, SQS, SNS, etc. Other providers to follow.
 - [ ] **Agentic Friendly Testing** Vibe code in peace. Have your agent iteratively test your codebase for regressions.
 
