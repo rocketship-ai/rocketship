@@ -13,7 +13,9 @@ brew install temporal
 Then install the Rocketship CLI:
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rocketship # for arm64 macos
+# for arm64 macos
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64
+chmod +x /usr/local/bin/rocketship
 ```
 
 For detailed installation instructions for other platforms and optional aliases, see the [Installation Guide](installation.md).
