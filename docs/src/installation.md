@@ -17,13 +17,15 @@ For other platforms, please follow the [Temporal installation guide](https://doc
 ### Apple Silicon
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64 && chmod +x /usr/local/bin/rocketship
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64
+chmod +x /usr/local/bin/rocketship
 ```
 
 ### Intel
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-amd64 && chmod +x /usr/local/bin/rocketship
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-amd64
+chmod +x /usr/local/bin/rocketship
 ```
 
 ## Linux
@@ -31,13 +33,15 @@ curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/r
 ### AMD64
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64 && chmod +x /usr/local/bin/rocketship
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64
+chmod +x /usr/local/bin/rocketship
 ```
 
 ### ARM64
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64 && chmod +x /usr/local/bin/rocketship
+curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64
+chmod +x /usr/local/bin/rocketship
 ```
 
 ## Windows
