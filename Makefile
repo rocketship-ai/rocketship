@@ -1,4 +1,4 @@
-.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean
+.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck
 
 prepare-embed:
 	@mkdir -p internal/embedded/bin
@@ -17,10 +17,17 @@ build: build-binaries
 	go test ./...
 	go build -o bin/rocketship cmd/rocketship/main.go
 
+install-workflowcheck:
+	@if ! command -v workflowcheck &> /dev/null; then \
+		go install go.temporal.io/sdk/contrib/tools/workflowcheck@latest; \
+	fi
+
 # Run linting
-lint: build-binaries
+lint: build-binaries install-workflowcheck
 	@echo "Running linter..."
 	golangci-lint run
+	@echo "Checking workflows..."
+	workflowcheck ./...
 
 # Run tests
 test: build-binaries
@@ -46,7 +53,7 @@ install: build
 dev-setup: prepare-embed
 	@echo "Setting up development environment..."
 	@if [ ! -f .git/hooks/pre-commit ]; then \
-		./for-maintainers/setup-hooks.sh; \
+		./for-contributors/setup-hooks.sh; \
 	fi
 	@echo "Building initial binaries..."
 	@$(MAKE) build-binaries

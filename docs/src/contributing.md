@@ -51,7 +51,7 @@ rocketship run --file <path/to/rocketship.yaml> --engine localhost:7700
    Inside [for-contributors/](https://github.com/rocketship-ai/rocketship/blob/main/for-contributors), you'll find a test server that you can run with:
 
 ```bash
-go run for-contributors/test-server/main.go
+cd ./for-contributors/test-server && go run .
 ```
 
 This will help you test your changes with an in-memory store that can preserve resources.
