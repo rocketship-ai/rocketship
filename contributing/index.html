@@ -1216,39 +1216,31 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USERNAME/rocketship.git
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>rocketship
 </code></pre></div>
-<ol>
-<li>Set up your development environment:</li>
-</ol>
+<p>Set up your development environment:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>dev-setup
 </code></pre></div>
 <h2 id="development-workflow">Development Workflow</h2>
-<ol>
-<li>Create a new branch for your feature/fix:</li>
-</ol>
+<p>Create a new branch for your feature/fix:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
 </code></pre></div>
-<ol>
-<li>Make your changes and ensure tests pass:</li>
-</ol>
+<p>Make your changes and ensure tests pass:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span><span class="nb">test</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span>lint
 </code></pre></div>
-<ol>
-<li>Build and install your local changes:</li>
-</ol>
+<p>Build and install your local changes:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>install<span class="w">    </span><span class="c1"># Removes old executable and go installs the local version</span>
 </code></pre></div>
-<ol>
-<li>Test your changes:</li>
-</ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>rocketship<span class="w"> </span>start<span class="w"> </span>server<span class="w"> </span>--local<span class="w">    </span><span class="c1"># Start required services</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># in another session, run the test</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>rocketship<span class="w"> </span>run<span class="w"> </span>--file<span class="w"> </span>&lt;path/to/rocketship.yaml&gt;<span class="w"> </span>--engine<span class="w"> </span>localhost:7700
+<p>Test your changes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># OPTION 1: this will start the local rocketship server, run all tests in the examples directory, and then stop the server</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-ad<span class="w"> </span>examples
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># OPTION 2: run the test server in a separate session and then run the tests</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>rocketship<span class="w"> </span>start<span class="w"> </span>server<span class="w"> </span>--local
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># in another session, run the test(s)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>&lt;path/to/rocketship.yaml&gt;
 </code></pre></div>
-<ol>
-<li>Test Server for Development:
-   Inside <a href="https://github.com/rocketship-ai/rocketship/blob/main/for-contributors">for-contributors/</a>, you'll find a test server that you can run with:</li>
-</ol>
+<p>Test Server for Development:</p>
+<p>Inside <a href="https://github.com/rocketship-ai/rocketship/blob/main/for-contributors">for-contributors/</a>, you'll find a test HTTP server that you can run as an in-memory store to test changes. Make sure your rocketship.yaml files point to this server (localhost:8080):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>./for-contributors/test-server<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>go<span class="w"> </span>run<span class="w"> </span>.
 </code></pre></div>
 <p>This will help you test your changes with an in-memory store that can preserve resources.</p>
@@ -1263,15 +1255,13 @@
 </ol>
 <h2 id="documentation">Documentation</h2>
 <p>If you're updating features or adding new ones, please update the documentation:</p>
-<ol>
+<ul>
 <li>Documentation is written in Markdown under <code>docs/src/</code></li>
 <li>Run the documentation server locally:</li>
-</ol>
+</ul>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>docs-serve
 </code></pre></div>
-<ol>
-<li>View your changes at <code>http://localhost:8000</code></li>
-</ol>
+<p>View your changes at <code>http://localhost:8000</code></p>
 <h2 id="code-style">Code Style</h2>
 <ul>
 <li>Follow Go best practices and conventions</li>
@@ -1286,9 +1276,7 @@
 <li>Always test your changes locally before submitting a PR</li>
 </ul>
 <h2 id="release-process">Release Process</h2>
-<ol>
-<li><strong>Update Default Version</strong></li>
-</ol>
+<p><strong>Update Default Version</strong></p>
 <p>Before creating a release, update the default version in <code>internal/embedded/binaries.go</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Example: For releasing v1.2.3</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="s1">&#39;s/defaultVersion *= *&quot;.*&quot;/defaultVersion = &quot;v1.2.3&quot;/&#39;</span><span class="w"> </span>internal/embedded/binaries.go
@@ -1296,9 +1284,7 @@
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: update default version to v1.2.3&quot;</span>
 <a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>git<span class="w"> </span>push
 </code></pre></div>
-<ol>
-<li><strong>Create a Release</strong></li>
-</ol>
+<p><strong>Create a Release</strong></p>
 <p>Once changes are merged to main, a maintainer can create a new release:</p>
 <ul>
 <li>Go to GitHub Releases: https://github.com/rocketship-ai/rocketship/releases</li>
@@ -1312,13 +1298,9 @@
 <li>Create and push a Git tag</li>
 <li>Trigger the release workflow</li>
 <li>Build platform-specific binaries</li>
-<li>
-<p>Attach binaries to the release</p>
-</li>
-<li>
-<p><strong>Test Installation</strong></p>
-</li>
+<li>Attach binaries to the release</li>
 </ul>
+<p><strong>Test Installation</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Install released version</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/rocketship-ai/rocketship/cmd/rocketship@v1.2.3
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>

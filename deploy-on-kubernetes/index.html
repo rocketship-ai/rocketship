@@ -1511,19 +1511,13 @@
 </code></pre></div>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <h3 id="common-issues">Common Issues</h3>
-<ol>
-<li><strong>Worker Connection Issues</strong>:</li>
-</ol>
+<p><strong>Worker Connection Issues</strong>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>-l<span class="w"> </span><span class="nv">app</span><span class="o">=</span>rocketship-worker
 </code></pre></div>
-<ol>
-<li><strong>Engine Service Issues</strong>:</li>
-</ol>
+<p><strong>Engine Service Issues</strong>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>-l<span class="w"> </span><span class="nv">app</span><span class="o">=</span>rocketship-engine
 </code></pre></div>
-<ol>
-<li><strong>Temporal Issues</strong>:</li>
-</ol>
+<p><strong>Temporal Issues</strong>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>-l<span class="w"> </span><span class="nv">app</span><span class="o">=</span>temporal-frontend
 </code></pre></div>
 <h3 id="health-checks">Health Checks</h3>

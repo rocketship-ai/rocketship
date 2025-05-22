@@ -1095,9 +1095,7 @@
 </code></pre></div>
 <p>For detailed installation instructions for other platforms and optional aliases, see the <a href="../installation/">Installation Guide</a>.</p>
 <h2 id="your-first-test">Your First Test</h2>
-<ol>
-<li>Create a test file:</li>
-</ol>
+<p>Create a test file:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>cat<span class="w"> </span>&gt;<span class="w"> </span>simple-test.yaml<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="s">name: &quot;Simple Test Suite&quot;</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="s">description: &quot;A simple test suite!&quot;</span>
@@ -1115,9 +1113,7 @@
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="s">            expected: 200</span>
 <a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="s">EOF</span>
 </code></pre></div>
-<ol>
-<li>Run the test:</li>
-</ol>
+<p>Run the test:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>simple-test.yaml
 </code></pre></div>
 <p>The <code>-a</code> flag tells Rocketship to automatically start and stop the local server, and <code>-f</code> specifies the test file to run.</p>
