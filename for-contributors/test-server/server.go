@@ -51,15 +51,20 @@ func (s *TestServer) startCleanupScheduler() {
 		// Sleep until next hour
 		time.Sleep(timeUntilNextHour)
 
-		// Clean up all stores
-		s.mu.Lock()
-		for clientIP, store := range s.stores {
+		// First collect all stores
+		s.mu.RLock()
+		stores := make([]*Store, 0, len(s.stores))
+		for _, store := range s.stores {
+			stores = append(stores, store)
+		}
+		s.mu.RUnlock()
+
+		// Then clean up each store
+		for _, store := range stores {
 			store.mu.Lock()
 			store.data = make(map[string]map[string]interface{})
 			store.mu.Unlock()
-			log.Printf("🧹 Cleaned up store for client IP: %s", clientIP)
 		}
-		s.mu.Unlock()
 
 		log.Printf("🧹 Hourly cleanup completed at %s", time.Now().Format(time.RFC3339))
 	}
@@ -247,18 +252,20 @@ func (s *TestServer) handlePost(store *Store, resourceType string, r *http.Reque
 		return nil, err
 	}
 
+	store.mu.Lock()
+	defer store.mu.Unlock()
+
+	// Initialize the resource type map if it doesn't exist
+	if _, ok := store.data[resourceType]; !ok {
+		store.data[resourceType] = make(map[string]interface{})
+	}
+
 	// Generate an ID if not provided
 	if _, ok := resource["id"]; !ok {
 		resource["id"] = fmt.Sprintf("%s_%d", resourceType, len(store.data[resourceType]))
 	}
 	resourceID := resource["id"].(string)
 
-	store.mu.Lock()
-	defer store.mu.Unlock()
-
-	if _, ok := store.data[resourceType]; !ok {
-		store.data[resourceType] = make(map[string]interface{})
-	}
 	store.data[resourceType][resourceID] = resource
 
 	return resource, nil

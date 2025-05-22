@@ -12,7 +12,7 @@ git clone https://github.com/YOUR_USERNAME/rocketship.git
 cd rocketship
 ```
 
-3. Set up your development environment:
+Set up your development environment:
 
 ```bash
 make dev-setup
@@ -20,35 +20,40 @@ make dev-setup
 
 ## Development Workflow
 
-1. Create a new branch for your feature/fix:
+Create a new branch for your feature/fix:
 
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-2. Make your changes and ensure tests pass:
+Make your changes and ensure tests pass:
 
 ```bash
 make test
 make lint
 ```
 
-3. Build and install your local changes:
+Build and install your local changes:
 
 ```bash
 make install    # Removes old executable and go installs the local version
 ```
 
-4. Test your changes:
+Test your changes:
 
 ```bash
-rocketship start server --local    # Start required services
-# in another session, run the test
-rocketship run --file <path/to/rocketship.yaml> --engine localhost:7700
+# OPTION 1: this will start the local rocketship server, run all tests in the examples directory, and then stop the server
+rocketship run -ad examples
+
+# OPTION 2: run the test server in a separate session and then run the tests
+rocketship start server --local
+# in another session, run the test(s)
+rocketship run -f <path/to/rocketship.yaml>
 ```
 
-5. Test Server for Development:
-   Inside [for-contributors/](https://github.com/rocketship-ai/rocketship/blob/main/for-contributors), you'll find a test server that you can run with:
+Test Server for Development:
+
+Inside [for-contributors/](https://github.com/rocketship-ai/rocketship/blob/main/for-contributors), you'll find a test HTTP server that you can run as an in-memory store to test changes. Make sure your rocketship.yaml files point to this server (localhost:8080):
 
 ```bash
 cd ./for-contributors/test-server && go run .
@@ -70,14 +75,14 @@ Rocketship's plugin system allows you to add support for new APIs and protocols.
 
 If you're updating features or adding new ones, please update the documentation:
 
-1. Documentation is written in Markdown under `docs/src/`
-2. Run the documentation server locally:
+- Documentation is written in Markdown under `docs/src/`
+- Run the documentation server locally:
 
 ```bash
 make docs-serve
 ```
 
-3. View your changes at `http://localhost:8000`
+View your changes at `http://localhost:8000`
 
 ## Code Style
 
@@ -94,44 +99,44 @@ make docs-serve
 
 ## Release Process
 
-1. **Update Default Version**
+**Update Default Version**
 
-   Before creating a release, update the default version in `internal/embedded/binaries.go`:
+Before creating a release, update the default version in `internal/embedded/binaries.go`:
 
-   ```bash
-   # Example: For releasing v1.2.3
-   sed -i '' 's/defaultVersion *= *".*"/defaultVersion = "v1.2.3"/' internal/embedded/binaries.go
-   git add internal/embedded/binaries.go
-   git commit -m "chore: update default version to v1.2.3"
-   git push
-   ```
+```bash
+# Example: For releasing v1.2.3
+sed -i '' 's/defaultVersion *= *".*"/defaultVersion = "v1.2.3"/' internal/embedded/binaries.go
+git add internal/embedded/binaries.go
+git commit -m "chore: update default version to v1.2.3"
+git push
+```
 
-2. **Create a Release**
+**Create a Release**
 
-   Once changes are merged to main, a maintainer can create a new release:
+Once changes are merged to main, a maintainer can create a new release:
 
-   - Go to GitHub Releases: https://github.com/rocketship-ai/rocketship/releases
-   - Click "Draft a new release"
-   - Create a new tag (e.g., `v1.2.3`) following semantic versioning
-   - Write release notes
-   - Publish release
+- Go to GitHub Releases: https://github.com/rocketship-ai/rocketship/releases
+- Click "Draft a new release"
+- Create a new tag (e.g., `v1.2.3`) following semantic versioning
+- Write release notes
+- Publish release
 
-   This will automatically:
+This will automatically:
 
-   - Create and push a Git tag
-   - Trigger the release workflow
-   - Build platform-specific binaries
-   - Attach binaries to the release
+- Create and push a Git tag
+- Trigger the release workflow
+- Build platform-specific binaries
+- Attach binaries to the release
 
-3. **Test Installation**
+**Test Installation**
 
-   ```bash
-   # Install released version
-   go install github.com/rocketship-ai/rocketship/cmd/rocketship@v1.2.3
+```bash
+# Install released version
+go install github.com/rocketship-ai/rocketship/cmd/rocketship@v1.2.3
 
-   # Test basic functionality
-   rocketship version
-   ```
+# Test basic functionality
+rocketship version
+```
 
 ## Release Artifacts
 
