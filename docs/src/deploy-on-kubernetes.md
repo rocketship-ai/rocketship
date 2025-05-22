@@ -215,23 +215,23 @@ spec:
 
 ### Common Issues
 
-1. **Worker Connection Issues**:
+**Worker Connection Issues**:
 
-   ```bash
-   kubectl logs -n rocketship -l app=rocketship-worker
-   ```
+```bash
+kubectl logs -n rocketship -l app=rocketship-worker
+```
 
-2. **Engine Service Issues**:
+**Engine Service Issues**:
 
-   ```bash
-   kubectl logs -n rocketship -l app=rocketship-engine
-   ```
+```bash
+kubectl logs -n rocketship -l app=rocketship-engine
+```
 
-3. **Temporal Issues**:
+**Temporal Issues**:
 
-   ```bash
-   kubectl logs -n rocketship -l app=temporal-frontend
-   ```
+```bash
+kubectl logs -n rocketship -l app=temporal-frontend
+```
 
 ### Health Checks
 

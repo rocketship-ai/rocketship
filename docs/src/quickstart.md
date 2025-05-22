@@ -22,7 +22,7 @@ For detailed installation instructions for other platforms and optional aliases,
 
 ## Your First Test
 
-1. Create a test file:
+Create a test file:
 
 ```bash
 cat > simple-test.yaml << 'EOF'
@@ -43,7 +43,7 @@ tests:
 EOF
 ```
 
-2. Run the test:
+Run the test:
 
 ```bash
 rocketship run -af simple-test.yaml
