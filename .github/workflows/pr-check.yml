@@ -105,13 +105,21 @@ jobs:
           echo "Downloading Temporal CLI..."
           curl -sSf https://temporal.download/cli.sh | sh || { echo "Failed to download Temporal CLI"; exit 1; }
 
+          # The download script creates an archive that needs to be extracted
+          # Find the downloaded temporal binary and copy it to /usr/local/bin
           if [ -f temporal ]; then
             echo "Temporal CLI downloaded successfully."
-            sudo mv temporal /usr/local/bin/
+            chmod +x temporal
+            sudo cp temporal /usr/local/bin/
           else
             echo "Error: 'temporal' binary not found after download."
+            echo "Looking for temporal files in current directory:"
+            ls -la | grep -i temporal || echo "No temporal files found"
             exit 1
           fi
+
+          # Verify installation
+          temporal version
 
       - name: Build and install Rocketship CLI
         run: |
