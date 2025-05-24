@@ -21,27 +21,44 @@ type ServerConfig struct {
 
 // NewServerConfig creates a new server configuration
 func NewServerConfig() (*ServerConfig, error) {
-	logsDir := filepath.Join(os.TempDir(), "rocketship-logs")
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create logs directory: %w", err)
-	}
+	// Check if DEBUG logging is enabled
+	logLevel := os.Getenv("ROCKETSHIP_LOG")
+	useStdout := logLevel == "DEBUG"
 
-	temporalLog, err := os.OpenFile(filepath.Join(logsDir, "temporal.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporal log file: %w", err)
-	}
+	var temporalLog, workerLog, engineLog *os.File
+	var logsDir string
 
-	workerLog, err := os.OpenFile(filepath.Join(logsDir, "worker.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		_ = temporalLog.Close()
-		return nil, fmt.Errorf("failed to create worker log file: %w", err)
-	}
+	if useStdout {
+		// Use stdout for all logs when DEBUG is enabled
+		temporalLog = os.Stdout
+		workerLog = os.Stdout
+		engineLog = os.Stdout
+		logsDir = "" // No logs directory needed
+	} else {
+		// Use log files for non-DEBUG mode
+		logsDir = filepath.Join(os.TempDir(), "rocketship-logs")
+		if err := os.MkdirAll(logsDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create logs directory: %w", err)
+		}
 
-	engineLog, err := os.OpenFile(filepath.Join(logsDir, "engine.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		_ = temporalLog.Close()
-		_ = workerLog.Close()
-		return nil, fmt.Errorf("failed to create engine log file: %w", err)
+		var err error
+		temporalLog, err = os.OpenFile(filepath.Join(logsDir, "temporal.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temporal log file: %w", err)
+		}
+
+		workerLog, err = os.OpenFile(filepath.Join(logsDir, "worker.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			_ = temporalLog.Close()
+			return nil, fmt.Errorf("failed to create worker log file: %w", err)
+		}
+
+		engineLog, err = os.OpenFile(filepath.Join(logsDir, "engine.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			_ = temporalLog.Close()
+			_ = workerLog.Close()
+			return nil, fmt.Errorf("failed to create engine log file: %w", err)
+		}
 	}
 
 	return &ServerConfig{
@@ -54,24 +71,28 @@ func NewServerConfig() (*ServerConfig, error) {
 
 // Cleanup cleans up server resources
 func (c *ServerConfig) Cleanup() {
-	if c.TemporalLog != nil {
+	// Don't close stdout, only close actual log files
+	if c.TemporalLog != nil && c.TemporalLog != os.Stdout {
 		if err := c.TemporalLog.Close(); err != nil {
 			Logger.Debug("failed to close temporal log", "error", err)
 		}
 	}
-	if c.WorkerLog != nil {
+	if c.WorkerLog != nil && c.WorkerLog != os.Stdout {
 		if err := c.WorkerLog.Close(); err != nil {
 			Logger.Debug("failed to close worker log", "error", err)
 		}
 	}
-	if c.EngineLog != nil {
+	if c.EngineLog != nil && c.EngineLog != os.Stdout {
 		if err := c.EngineLog.Close(); err != nil {
 			Logger.Debug("failed to close engine log", "error", err)
 		}
 	}
 
-	if err := os.RemoveAll(c.LogsDir); err != nil {
-		Logger.Debug("failed to remove logs directory", "error", err)
+	// Only remove logs directory if it exists (not empty for DEBUG mode)
+	if c.LogsDir != "" {
+		if err := os.RemoveAll(c.LogsDir); err != nil {
+			Logger.Debug("failed to remove logs directory", "error", err)
+		}
 	}
 }
 
@@ -102,7 +123,11 @@ func StartServer(config *ServerConfig, pm *processManager) error {
 	// Start the worker from embedded binary if not already running
 	if !pm.IsComponentRunning(Worker) {
 		Logger.Debug("starting Rocketship worker")
-		workerCmd, err := embedded.ExtractAndRun("worker", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+		env := []string{"TEMPORAL_HOST=localhost:7233"}
+		if logLevel := os.Getenv("ROCKETSHIP_LOG"); logLevel != "" {
+			env = append(env, "ROCKETSHIP_LOG="+logLevel)
+		}
+		workerCmd, err := embedded.ExtractAndRun("worker", nil, env)
 		if err != nil {
 			return fmt.Errorf("failed to start worker: %w", err)
 		}
@@ -118,7 +143,11 @@ func StartServer(config *ServerConfig, pm *processManager) error {
 	// Start the engine from embedded binary if not already running
 	if !pm.IsComponentRunning(Engine) {
 		Logger.Debug("starting Rocketship engine")
-		engineCmd, err := embedded.ExtractAndRun("engine", nil, []string{"TEMPORAL_HOST=localhost:7233"})
+		env := []string{"TEMPORAL_HOST=localhost:7233"}
+		if logLevel := os.Getenv("ROCKETSHIP_LOG"); logLevel != "" {
+			env = append(env, "ROCKETSHIP_LOG="+logLevel)
+		}
+		engineCmd, err := embedded.ExtractAndRun("engine", nil, env)
 		if err != nil {
 			return fmt.Errorf("failed to start engine: %w", err)
 		}

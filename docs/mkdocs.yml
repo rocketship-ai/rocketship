@@ -72,5 +72,6 @@ nav:
       - stop:
           - Overview: reference/rocketship_stop.md
           - stop server: reference/rocketship_stop_server.md
+      - validate: reference/rocketship_validate.md
       - version: reference/rocketship_version.md
   - Contributing: contributing.md

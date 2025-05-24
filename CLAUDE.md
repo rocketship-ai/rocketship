@@ -57,6 +57,53 @@ make docs-serve     # Start local documentation server
 make docs           # Build documentation
 ```
 
+## Debugging and Logging
+
+### Debug Logging
+All processes (CLI, engine, worker) use unified structured logging from `internal/cli/logging.go`:
+
+```bash
+ROCKETSHIP_LOG=DEBUG rocketship run -af test.yaml    # Full debug output
+ROCKETSHIP_LOG=INFO rocketship run -af test.yaml     # Info level (default)
+ROCKETSHIP_LOG=ERROR rocketship run -af test.yaml    # Errors only
+```
+
+Debug logging shows:
+- Process lifecycle (start, stop, cleanup)
+- Temporal connections and workflow execution
+- Plugin execution details
+- gRPC server initialization
+
+### Development Workflow
+
+1. **Make code changes** to engine/worker/CLI
+2. **Rebuild binaries**: `make build` (includes `make build-binaries`)
+3. **Test with debug logging**: `ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml`
+4. **Run full test suite**: `make test`
+5. **Check linting**: `make lint`
+
+### Local Development Binary Usage
+
+The system automatically uses local development binaries from `internal/embedded/bin/` when available, avoiding GitHub downloads. This makes iterative development faster.
+
+### Common Development Tasks
+
+```bash
+# Quick test with debug output
+ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml
+
+# Background server for iterative testing
+ROCKETSHIP_LOG=DEBUG rocketship start server -lb
+rocketship run test.yaml
+rocketship stop server
+
+# Validate YAML changes
+rocketship validate test.yaml
+
+# Run CI checks locally
+make test && make lint
+```
+
 ## Test Specifications
 
 Tests are defined in YAML files with this structure:
