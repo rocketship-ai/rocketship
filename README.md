@@ -111,7 +111,7 @@ Building the next-gen of integration testing for humans and AI agents. Suggestio
 - [ ] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
 - [ ] **Data Resource Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 - [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
-- [ ] **Continuous Integration Testing** Schedule tests on a cadence, trigger on deployments, and integrate with CI/CD pipelines.
+- [ ] **Smoke and CI Testing** Schedule tests on a cadence, trigger on deployments, and integrate with CI/CD pipelines.
 - [ ] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
 
 ## Contribute!!!
