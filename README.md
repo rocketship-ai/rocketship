@@ -2,8 +2,8 @@
   <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
   <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
-<h3 align="center">E2E API Testing For Any Cloud Environment</h3>
-<p align="center">Run Enterprise-Grade e2e Tests With a Single Command</p>
+<h3 align="center">Enterprise-Grade Integration Testing for Humans and Agents</h3>
+<p align="center">Validate Any Data Resource, API, or Workflow With Declarative Tests</p>
 
 <p align="center">
   <a href="https://github.com/rocketship-ai/rocketship/releases"><img src="https://img.shields.io/github/v/release/rocketship-ai/rocketship.svg" alt="Github release"></a>
@@ -18,7 +18,9 @@
 
 <br>
 
-🚀 Rocketship is an **open‑source testing platform** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers an extensible plugin system so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an **open‑source integration testing platform** built for the AI-native future. Whether you're a developer validating complex data pipelines or an AI agent automatically testing code changes, Rocketship provides enterprise-grade reliability for any integration scenario. From REST APIs to databases, event streams to file systems—if your system talks to it, Rocketship can test it.
+
+**Built for both humans and AI agents**, Rocketship brings durable execution powered by **Temporal** and an extensible plugin ecosystem to handle any data resource or protocol your systems depend on.
 
 Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment.
 
@@ -106,13 +108,14 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 ## Roadmap
 
-I have a ton of ideas for Rocketship, and I'm open to any and all suggestions. Here are just some of the things you can expect in weeks not years:
+Building the future of integration testing for humans and AI agents. Here's what's coming in weeks, not years:
 
-- [ ] **LLM Browser Testing Support** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) to build & run deterministic browser tests.
-- [ ] **Smoke Testing** A test suite-wide configuration to schedule tests to run on a cadence.
-- [ ] **Environment Variables & Secrets** Pass in environment variables to your tests. Reach APIs requiring authentication.
-- [ ] **Core AWS Plugins** Add support for AWS services like S3, SQS, SNS, etc. Other providers to follow.
-- [ ] **Agentic Friendly Testing** Vibe code in peace. Have your agent iteratively test your codebase for regressions.
+- [ ] **AI Agent Integration** Native support for AI agents to automatically generate, run, and maintain integration tests based on code changes and system behavior.
+- [ ] **Data Resource Plugins** Support for databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
+- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based integration tests.
+- [ ] **Continuous Integration Testing** Schedule tests on a cadence, trigger on deployments, and integrate with CI/CD pipelines.
+- [ ] **Enterprise Security & Secrets** Environment variables, secrets management, and enterprise authentication for production integration testing.
+- [ ] **Multi-Cloud Provider Support** Native plugins for AWS, GCP, Azure services and protocols.
 
 ## Contribute!!!
 

@@ -1,10 +1,10 @@
 # Rocketship Documentation
 
-Welcome to the Rocketship documentation! Rocketship is an open-source testing platform that can verify complex, API-driven scenarios in any cloud environment.
+Welcome to the Rocketship documentation! Rocketship is an enterprise-grade integration testing platform designed for humans and agents in an AI-native future.
 
 ## What is Rocketship?
 
-🚀 Rocketship is an **open‑source testing platform** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers an extensible plugin system so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an **enterprise-grade integration testing platform** built for the AI-native future where humans and agents collaborate on complex system verification. Whether you're testing APIs, databases, message queues, or any interconnected system, Rocketship provides the reliability and extensibility needed for modern integration testing. Built on **Temporal's** durable execution engine with an extensible plugin architecture, Rocketship scales from simple health checks to complex multi-hour integration scenarios.
 
 ## Key Features
 

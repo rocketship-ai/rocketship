@@ -1,12 +1,12 @@
 # Examples
 
-Rocketship comes with example test suites that demonstrate different features and use cases. Each example includes detailed explanations and ready-to-use test specifications.
+Rocketship comes with example integration test suites that demonstrate different features and use cases. Each example includes detailed explanations and ready-to-use integration test specifications.
 
 ## Available Examples
 
 ### HTTP Testing
 
-- [Request Chaining & Delays](examples/request-chaining.md) - Learn how to chain HTTP requests, handle responses, and use delays in your test suites
+- [Request Chaining & Delays](examples/request-chaining.md) - Learn how to chain HTTP requests, handle responses, and use delays in your integration test suites
 
 ## Running the Examples
 
@@ -19,7 +19,7 @@ The examples use the hosted test server at `tryme.rocketship.sh`. This server pr
 Then, run an example:
 
 ```bash
-# Run the example test suite
+# Run the example integration test suite
 rocketship run -af examples/request-chaining/rocketship.yaml
 ```
 
