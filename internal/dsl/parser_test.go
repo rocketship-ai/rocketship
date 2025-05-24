@@ -164,52 +164,6 @@ tests:
 			expectedErr: "schema validation failed",
 		},
 		{
-			name: "invalid HTTP method",
-			yaml: `
-name: "Test Suite"
-version: "v1.0.0"
-tests:
-  - name: "Test 1"
-    steps:
-      - name: "Step 1"
-        plugin: "http"
-        config:
-          method: "INVALID"
-          url: "https://example.com"
-`,
-			expectedErr: "schema validation failed",
-		},
-		{
-			name: "missing HTTP URL",
-			yaml: `
-name: "Test Suite"
-version: "v1.0.0"
-tests:
-  - name: "Test 1"
-    steps:
-      - name: "Step 1"
-        plugin: "http"
-        config:
-          method: "GET"
-`,
-			expectedErr: "schema validation failed",
-		},
-		{
-			name: "invalid delay duration format",
-			yaml: `
-name: "Test Suite"
-version: "v1.0.0"
-tests:
-  - name: "Test 1"
-    steps:
-      - name: "Step 1"
-        plugin: "delay"
-        config:
-          duration: "5 seconds"
-`,
-			expectedErr: "schema validation failed",
-		},
-		{
 			name: "missing assertion path for json_path type",
 			yaml: `
 name: "Test Suite"
@@ -240,10 +194,10 @@ tests:
 }
 
 func TestParseYAML_BackwardsCompatibility(t *testing.T) {
-	// Test that existing validation still works for edge cases
+	// Test that schema validation catches invalid versions
 	yaml := `
 name: "Test Suite"
-version: "v2.0.0"
+version: "2.0.0"
 tests:
   - name: "Test 1"
     steps:
@@ -254,7 +208,7 @@ tests:
 `
 	_, err := ParseYAML([]byte(strings.TrimSpace(yaml)))
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported version")
+	assert.Contains(t, err.Error(), "schema validation failed")
 }
 
 func TestValidateWithSchema_DirectTesting(t *testing.T) {

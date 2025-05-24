@@ -45,7 +45,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "aws/s3", "aws/sqs", "aws/dynamodb"]
+                  "enum": ["http", "delay"]
                 },
                 "config": {
                   "type": "object",
@@ -61,7 +61,7 @@
                       "type": {
                         "type": "string",
                         "description": "Type of assertion",
-                        "enum": ["status_code", "json_path"]
+                        "enum": ["status_code", "json_path", "header"]
                       },
                       "expected": {
                         "description": "Expected value for the assertion"
@@ -69,6 +69,10 @@
                       "path": {
                         "type": "string",
                         "description": "JSON path for json_path assertion type"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Header name for header assertion type"
                       }
                     },
                     "allOf": [
@@ -78,6 +82,14 @@
                         },
                         "then": {
                           "required": ["path"]
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": { "type": { "enum": ["header"] } }
+                        },
+                        "then": {
+                          "required": ["name"]
                         }
                       }
                     ]

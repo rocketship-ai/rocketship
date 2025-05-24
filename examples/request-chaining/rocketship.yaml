@@ -18,6 +18,9 @@ tests:
         assertions:
           - type: "status_code"
             expected: 200
+          - type: "header"
+            name: "content-type"
+            expected: "application/json"
           - type: "json_path"
             path: ".make"
             expected: "Toyota"
@@ -63,6 +66,12 @@ tests:
         assertions:
           - type: "status_code"
             expected: 200
+          - type: "header"
+            name: "content-type"
+            expected: "application/json"
+          - type: "header"
+            name: "access-control-allow-origin"
+            expected: "*"
           - type: "json_path"
             path: ".cars_0.make"
             expected: "Toyota"
