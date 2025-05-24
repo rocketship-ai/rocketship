@@ -119,7 +119,7 @@ jobs:
           fi
 
           # Verify installation
-          temporal version
+          temporal --version
 
       - name: Build and install Rocketship CLI
         run: |
