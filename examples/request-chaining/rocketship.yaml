@@ -29,6 +29,8 @@ tests:
             as: "first_car_id"
           - json_path: ".model"
             as: "first_car_model"
+          - header: "server"
+            as: "server_info"
 
       - name: "Wait for system processing"
         plugin: "delay"
@@ -44,7 +46,8 @@ tests:
             {
               "make": "Honda",
               "model": "Civic", 
-              "year": 2022
+              "year": 2022,
+              "server_used": "{{ server_info }}"
             }
         assertions:
           - type: "status_code"
@@ -72,6 +75,9 @@ tests:
           - type: "json_path"
             path: ".cars_1.make"
             expected: "Honda"
+          - type: "json_path"
+            path: ".cars_1.server_used"
+            expected: "{{ server_info }}"
 
       - name: "Cleanup - Delete first car"
         plugin: "http"
