@@ -136,15 +136,40 @@ jobs:
           rocketship validate examples/simple-http/rocketship.yaml
           
           echo "Testing individual example files..."
-          rocketship run -af examples/simple-delay/rocketship.yaml || true
+          echo "Running simple-delay example..."
+          OUTPUT=$(rocketship run -af examples/simple-delay/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ simple-delay tests passed"
+          else
+            echo "❌ simple-delay tests had failures"
+            exit 1
+          fi
           
-          echo "Testing all examples directory (allowing some failures due to external service flakiness)..."
-          rocketship run -ad examples || true
+          echo "Running simple-http example..."
+          OUTPUT=$(rocketship run -af examples/simple-http/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ simple-http tests passed"
+          else
+            echo "❌ simple-http tests had failures"
+            exit 1
+          fi
+          
+          echo "Testing all examples directory..."
+          OUTPUT=$(rocketship run -ad examples)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ All example tests passed"
+          else
+            echo "❌ Some example tests failed - this indicates a regression"
+            exit 1
+          fi
           
           echo "Testing start/stop commands..."
           rocketship start server --local --background &
           sleep 5
-          rocketship stop server || true
+          rocketship stop server
 
       - name: Test CLI error handling
         run: |
