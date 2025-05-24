@@ -18,6 +18,9 @@ tests:
         assertions:
           - type: "status_code"
             expected: 200
+          - type: "header"
+            name: "content-type"
+            expected: "application/json"
           - type: "json_path"
             path: ".make"
             expected: "Toyota"
@@ -26,6 +29,8 @@ tests:
             as: "first_car_id"
           - json_path: ".model"
             as: "first_car_model"
+          - header: "server"
+            as: "server_info"
 
       - name: "Wait for system processing"
         plugin: "delay"
@@ -40,8 +45,9 @@ tests:
           body: |
             {
               "make": "Honda",
-              "model": "Civic",
-              "year": 2022
+              "model": "Civic", 
+              "year": 2022,
+              "server_used": "{{ server_info }}"
             }
         assertions:
           - type: "status_code"
@@ -69,6 +75,9 @@ tests:
           - type: "json_path"
             path: ".cars_1.make"
             expected: "Honda"
+          - type: "json_path"
+            path: ".cars_1.server_used"
+            expected: "{{ server_info }}"
 
       - name: "Cleanup - Delete first car"
         plugin: "http"

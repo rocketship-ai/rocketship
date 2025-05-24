@@ -70,6 +70,7 @@ func getStateKeys(state map[string]string) []string {
 	return keys
 }
 
+
 func (hp *HTTPPlugin) GetType() string {
 	return "http"
 }
@@ -213,6 +214,7 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 			return fmt.Errorf("invalid save format: got type %T", save)
 		}
 
+
 		as, ok := saveMap["as"].(string)
 		if !ok {
 			return fmt.Errorf("'as' field is required for save")
@@ -225,8 +227,8 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 		}
 
 		// Handle JSON path save
-		if jsonPath, ok := saveMap["json_path"].(string); ok {
-			log.Printf("[DEBUG] Processing JSON path save: %s as %s", jsonPath, as)
+		if jsonPath, ok := saveMap["json_path"].(string); ok && jsonPath != "" {
+			log.Printf("[DEBUG] Processing JSON path save: '%s' as %s", jsonPath, as)
 			var jsonData interface{}
 			if err := json.Unmarshal(respBody, &jsonData); err != nil {
 				log.Printf("[ERROR] Failed to parse response body as JSON: %v\nBody: %s", err, string(respBody))

@@ -21,6 +21,7 @@ func NewRootCmd() *cobra.Command {
 		NewRunCmd(),
 		NewStopCmd(),
 		NewVersionCmd(),
+		NewValidateCmd(),
 	)
 
 	return cmd

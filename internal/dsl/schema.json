@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Rocketship Test Suite Schema",
+  "description": "Schema for Rocketship test suite definition files",
+  "type": "object",
+  "required": ["name", "version", "tests"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the test suite"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the test suite"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the test suite definition",
+      "pattern": "^v\\d+\\.\\d+\\.\\d+$"
+    },
+    "tests": {
+      "type": "array",
+      "description": "Array of test cases",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "steps"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the test case"
+          },
+          "steps": {
+            "type": "array",
+            "description": "Array of test steps to execute",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name", "plugin", "config"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the test step"
+                },
+                "plugin": {
+                  "type": "string",
+                  "description": "Plugin to use for this step",
+                  "enum": ["http", "delay"]
+                },
+                "config": {
+                  "type": "object",
+                  "description": "Configuration for the plugin"
+                },
+                "assertions": {
+                  "type": "array",
+                  "description": "Assertions to validate the response",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "expected"],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "description": "Type of assertion",
+                        "enum": ["status_code", "json_path", "header"]
+                      },
+                      "expected": {
+                        "description": "Expected value for the assertion"
+                      },
+                      "path": {
+                        "type": "string",
+                        "description": "JSON path for json_path assertion type"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Header name for header assertion type"
+                      }
+                    },
+                    "allOf": [
+                      {
+                        "if": {
+                          "properties": { "type": { "enum": ["json_path"] } }
+                        },
+                        "then": {
+                          "required": ["path"]
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": { "type": { "enum": ["header"] } }
+                        },
+                        "then": {
+                          "required": ["name"]
+                        }
+                      }
+                    ]
+                  }
+                },
+                "save": {
+                  "type": "array",
+                  "description": "Response values to save for use in later steps",
+                  "items": {
+                    "type": "object",
+                    "required": ["as"],
+                    "properties": {
+                      "json_path": {
+                        "type": "string",
+                        "description": "JSON path to extract from response"
+                      },
+                      "header": {
+                        "type": "string",
+                        "description": "Header name to extract from response"
+                      },
+                      "as": {
+                        "type": "string",
+                        "description": "Variable name to save the extracted value as"
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "description": "Whether the value is required (defaults to true)"
+                      }
+                    },
+                    "oneOf": [
+                      {
+                        "required": ["json_path"]
+                      },
+                      {
+                        "required": ["header"]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

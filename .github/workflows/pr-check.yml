@@ -9,6 +9,8 @@ on:
       - "go.sum"
       - ".github/workflows/**"
       - ".docker/**"
+      - "examples/**"
+      - "internal/dsl/schema.json"
 
 jobs:
   test-build:
@@ -85,3 +87,125 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
+
+  cli-integration:
+    name: CLI Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          check-latest: true
+
+      - name: Install Temporal CLI
+        run: |
+          echo "Downloading Temporal CLI..."
+          curl -sSf https://temporal.download/cli.sh | sh || { echo "Failed to download Temporal CLI"; exit 1; }
+
+          # The installation script places the binary at ~/.temporalio/bin/temporal
+          TEMPORAL_PATH="$HOME/.temporalio/bin/temporal"
+          if [ -f "$TEMPORAL_PATH" ]; then
+            echo "Temporal CLI downloaded successfully to $TEMPORAL_PATH"
+            chmod +x "$TEMPORAL_PATH"
+            sudo cp "$TEMPORAL_PATH" /usr/local/bin/
+          else
+            echo "Error: 'temporal' binary not found at expected location: $TEMPORAL_PATH"
+            echo "Looking for temporal files in home directory:"
+            find "$HOME" -name "*temporal*" -type f 2>/dev/null || echo "No temporal files found"
+            exit 1
+          fi
+
+          # Verify installation
+          temporal --version
+
+      - name: Build and install Rocketship CLI
+        run: |
+          make install
+
+      - name: Warm up test server
+        run: |
+          echo "Warming up test server at tryme.rocketship.sh..."
+
+          # Make initial request to wake up the server
+          echo "Making initial request to wake up server..."
+          curl -s https://tryme.rocketship.sh/ || echo "Initial request completed (expected to fail)"
+
+          # Wait for server to be ready with retries
+          echo "Waiting for server to be ready..."
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt/$max_attempts..."
+            
+            # Test a simple endpoint that should return 200
+            if curl -s -f https://tryme.rocketship.sh/users > /dev/null 2>&1; then
+              echo "✅ Test server is ready!"
+              break
+            fi
+            
+            if [ $attempt -eq $max_attempts ]; then
+              echo "❌ Test server failed to respond after $max_attempts attempts"
+              exit 1
+            fi
+            
+            echo "Server not ready yet, waiting 3 seconds..."
+            sleep 3
+            attempt=$((attempt + 1))
+          done
+
+      - name: Test CLI commands
+        run: |
+          echo "Testing CLI help and version commands..."
+          rocketship --help
+          rocketship version
+
+          echo "Testing validate command..."
+          rocketship validate examples/
+          rocketship validate examples/simple-http/rocketship.yaml
+
+          echo "Testing individual example files..."
+          echo "Running simple-delay example..."
+          OUTPUT=$(rocketship run -af examples/simple-delay/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ simple-delay tests passed"
+          else
+            echo "❌ simple-delay tests had failures"
+            exit 1
+          fi
+
+          echo "Running simple-http example..."
+          OUTPUT=$(rocketship run -af examples/simple-http/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ simple-http tests passed"
+          else
+            echo "❌ simple-http tests had failures"
+            exit 1
+          fi
+
+          echo "Testing all examples directory..."
+          OUTPUT=$(rocketship run -ad examples)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ All example tests passed"
+          else
+            echo "❌ Some example tests failed - this indicates a regression"
+            exit 1
+          fi
+
+          echo "Testing start/stop commands..."
+          rocketship start server --local --background &
+          sleep 5
+          rocketship stop server
+
+      - name: Test CLI error handling
+        run: |
+          echo "Testing error scenarios..."
+          ! rocketship validate nonexistent.yaml
+          ! rocketship run -f nonexistent.yaml
+          ! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
