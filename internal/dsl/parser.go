@@ -170,18 +170,31 @@ func validateDelayConfig(config map[string]interface{}, testName, stepName strin
 		return fmt.Errorf("test %q: step %q: delay plugin requires 'duration' field", testName, stepName)
 	}
 
-	// Validate duration format (should match pattern ^\d+[smh]$)
+	// Validate duration format (should match pattern ^\d+(ms|[smh])$)
 	if len(duration) < 2 {
 		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
 	}
 
-	unit := duration[len(duration)-1:]
-	if unit != "s" && unit != "m" && unit != "h" {
+	// Check for milliseconds (ms) or single character units (s, m, h)
+	var unit string
+	var numPart string
+	if len(duration) >= 3 && duration[len(duration)-2:] == "ms" {
+		unit = "ms"
+		numPart = duration[:len(duration)-2]
+	} else {
+		unit = duration[len(duration)-1:]
+		numPart = duration[:len(duration)-1]
+	}
+
+	if unit != "ms" && unit != "s" && unit != "m" && unit != "h" {
 		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
 	}
 
 	// Check if prefix is numeric
-	for _, char := range duration[:len(duration)-1] {
+	if len(numPart) == 0 {
+		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
+	}
+	for _, char := range numPart {
 		if char < '0' || char > '9' {
 			return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
 		}
