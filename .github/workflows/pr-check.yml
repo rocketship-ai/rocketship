@@ -9,6 +9,8 @@ on:
       - "go.sum"
       - ".github/workflows/**"
       - ".docker/**"
+      - "examples/**"
+      - "internal/dsl/schema.json"
 
 jobs:
   test-build:
@@ -85,3 +87,68 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
+
+  cli-integration:
+    name: CLI Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          check-latest: true
+
+      - name: Install Temporal CLI
+        run: |
+          curl -sSf https://temporal.download/cli.sh | sh
+          sudo mv temporal /usr/local/bin/
+
+      - name: Start Temporal server
+        run: |
+          temporal server start-dev --headless --log-level warn &
+          echo "Waiting for Temporal server to be ready..."
+          for i in {1..30}; do
+            if temporal workflow list > /dev/null 2>&1; then
+              echo "Temporal server is ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Temporal server failed to start"
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Build and install Rocketship CLI
+        run: |
+          make install
+
+      - name: Test CLI commands
+        run: |
+          echo "Testing CLI help and version commands..."
+          rocketship --help
+          rocketship version
+          
+          echo "Testing validate command..."
+          rocketship validate examples/
+          rocketship validate examples/simple-http/rocketship.yaml
+          
+          echo "Testing individual example files..."
+          rocketship run -af examples/simple-delay/rocketship.yaml || true
+          
+          echo "Testing all examples directory (allowing some failures due to external service flakiness)..."
+          rocketship run -ad examples || true
+          
+          echo "Testing start/stop commands..."
+          rocketship start server --local --background &
+          sleep 5
+          rocketship stop server || true
+
+      - name: Test CLI error handling
+        run: |
+          echo "Testing error scenarios..."
+          ! rocketship validate nonexistent.yaml
+          ! rocketship run -f nonexistent.yaml
+          ! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
