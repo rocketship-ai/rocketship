@@ -9,83 +9,116 @@ name: "Request Chaining & Delays Example"
 description: "A test suite demonstrating request chaining and delays with the test server"
 version: "v1.0.0"
 tests:
-  - name: "User Management Flow"
+  - name: "Car Management Flow"
     steps:
-      - name: "Create first user"
+      - name: "Create first car"
         plugin: "http"
         config:
           method: "POST"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/cars"
           body: |
             {
-              "name": "John Doe",
-              "email": "john@example.com",
-              "role": "admin"
+              "make": "Toyota",
+              "model": "Corolla",
+              "year": 2020
             }
         assertions:
           - type: "status_code"
             expected: 200
+          - type: "header"
+            name: "content-type"
+            expected: "application/json"
           - type: "json_path"
-            path: ".name"
-            expected: "John Doe"
+            path: ".make"
+            expected: "Toyota"
         save:
           - json_path: ".id"
-            as: "first_user_id"
-          - json_path: ".email"
-            as: "first_user_email"
+            as: "first_car_id"
+          - json_path: ".model"
+            as: "first_car_model"
+          - header: "server"
+            as: "server_info"
 
       - name: "Wait for system processing"
         plugin: "delay"
         config:
           duration: "1s"
 
-      - name: "Create second user"
+      - name: "Create second car"
         plugin: "http"
         config:
           method: "POST"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/cars"
           body: |
             {
-              "name": "Jane Smith",
-              "email": "jane@example.com",
-              "role": "user"
+              "make": "Honda",
+              "model": "Civic", 
+              "year": 2022,
+              "server_used": "{{ server_info }}"
             }
         assertions:
           - type: "status_code"
             expected: 200
         save:
           - json_path: ".id"
-            as: "second_user_id"
+            as: "second_car_id"
 
       - name: "Short delay for consistency"
         plugin: "delay"
         config:
           duration: "500ms"
 
-      - name: "List all users"
+      - name: "List all cars"
         plugin: "http"
         config:
           method: "GET"
-          url: "https://tryme.rocketship.sh/users"
+          url: "https://tryme.rocketship.sh/cars"
         assertions:
           - type: "status_code"
             expected: 200
           - type: "json_path"
-            path: ".users_0.name"
-            expected: "John Doe"
+            path: ".cars_0.make"
+            expected: "Toyota"
           - type: "json_path"
-            path: ".users_1.name"
-            expected: "Jane Smith"
+            path: ".cars_1.make"
+            expected: "Honda"
+          - type: "json_path"
+            path: ".cars_1.server_used"
+            expected: "{{ server_info }}"
+
+      - name: "Cleanup - Delete first car"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/cars/{{ first_car_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
+
+      - name: "Cleanup - Delete second car"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/cars/{{ second_car_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
 ```
 
 ## Key Features Demonstrated
 
 **Request Chaining**:
 
-1. Creating multiple users
-2. Saving response values for later use
-3. Using saved values in subsequent requests
-4. Verifying changes across requests
+1. Creating multiple cars with different data
+2. Saving response values (JSON and headers) for later use  
+3. Using saved header values in subsequent request bodies
+4. Verifying changes across requests with variable substitution
+
+**Header Operations**:
+
+1. Header validation with `type: "header"` assertions
+2. Header value extraction with `header: "server"` saves
+3. Using saved header values in request body: `"server_used": "{{ server_info }}"`
 
 **Delays**:
 
@@ -96,8 +129,9 @@ tests:
 **Assertions**:
 
 1. Status code validation
-2. JSON response validation using JSONPath
-3. Response content validation
+2. Header validation (content-type)
+3. JSON response validation using JSONPath
+4. Variable substitution validation
 
 ## Running the Example
 
@@ -109,22 +143,24 @@ rocketship run -af examples/request-chaining/rocketship.yaml
 
 ## Understanding the Flow
 
-The example demonstrates a complete user management workflow:
+The example demonstrates a complete car management workflow with header operations:
 
-1. Create first user and save their ID and email
-2. Wait for 1 second to simulate system processing
-3. Create second user and save their ID
-4. Add a short 500ms delay for system consistency
-5. Get all users and verify both exist
+1. **Create first car** - Save car ID, model (JSON) and server header value
+2. **Wait for system processing** - 1 second delay
+3. **Create second car** - Use saved header value in request body
+4. **Short delay** - 500ms for consistency 
+5. **List all cars** - Verify both cars exist and header value was passed through
+6. **Cleanup** - Delete both cars using saved IDs
 
 Each step builds on the previous ones, showing how to:
 
-- Chain requests together
-- Save and use response data
-- Verify state changes
-- Handle different HTTP methods
-- Work with multiple resources
-- Use strategic delays for system consistency
+- **Chain requests together** with variable substitution
+- **Save and use response data** from both JSON and headers
+- **Pass header values through request workflows**
+- **Verify state changes** across multiple operations
+- **Handle different HTTP methods** (POST, GET, DELETE)
+- **Work with multiple resources** and lifecycle management
+- **Use strategic delays** for system consistency
 
 The delays in this example are for demonstration purposes. In real-world scenarios, you might use delays when:
 
