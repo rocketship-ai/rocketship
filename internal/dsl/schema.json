@@ -100,17 +100,33 @@
                   "description": "Response values to save for use in later steps",
                   "items": {
                     "type": "object",
-                    "required": ["json_path", "as"],
+                    "required": ["as"],
                     "properties": {
                       "json_path": {
                         "type": "string",
                         "description": "JSON path to extract from response"
                       },
+                      "header": {
+                        "type": "string",
+                        "description": "Header name to extract from response"
+                      },
                       "as": {
                         "type": "string",
                         "description": "Variable name to save the extracted value as"
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "description": "Whether the value is required (defaults to true)"
                       }
-                    }
+                    },
+                    "oneOf": [
+                      {
+                        "required": ["json_path"]
+                      },
+                      {
+                        "required": ["header"]
+                      }
+                    ]
                   }
                 }
               }

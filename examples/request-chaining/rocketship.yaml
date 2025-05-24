@@ -43,7 +43,7 @@ tests:
           body: |
             {
               "make": "Honda",
-              "model": "Civic",
+              "model": "Civic", 
               "year": 2022
             }
         assertions:
