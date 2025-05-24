@@ -9,21 +9,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var validateCmd = &cobra.Command{
-	Use:   "validate [file_or_directory]",
-	Short: "Validate Rocketship test files against the JSON schema",
-	Long: `Validate one or more Rocketship test files against the JSON schema.
+// NewValidateCmd creates a new validate command
+func NewValidateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "validate [file_or_directory]",
+		Short: "Validate Rocketship test files against the JSON schema",
+		Long: `Validate one or more Rocketship test files against the JSON schema.
 This command checks test file syntax, structure, and configuration without executing tests.
 
 Examples:
   rocketship validate test.yaml                    # Validate a single file
   rocketship validate ./tests/                     # Validate all YAML files in a directory
   rocketship validate test1.yaml test2.yaml       # Validate multiple files`,
-	RunE: runValidate,
-}
-
-func init() {
-	rootCmd.AddCommand(validateCmd)
+		RunE: runValidate,
+	}
 }
 
 func runValidate(cmd *cobra.Command, args []string) error {

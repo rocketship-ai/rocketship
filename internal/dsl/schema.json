@@ -49,53 +49,7 @@
                 },
                 "config": {
                   "type": "object",
-                  "description": "Configuration for the plugin",
-                  "oneOf": [
-                    {
-                      "title": "Delay Plugin Configuration",
-                      "properties": {
-                        "duration": {
-                          "type": "string",
-                          "description": "Duration for the delay plugin",
-                          "pattern": "^\\d+[smh]$"
-                        }
-                      },
-                      "required": ["duration"],
-                      "additionalProperties": false
-                    },
-                    {
-                      "title": "HTTP Plugin Configuration",
-                      "properties": {
-                        "method": {
-                          "type": "string",
-                          "description": "HTTP method",
-                          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
-                        },
-                        "url": {
-                          "type": "string",
-                          "description": "URL to request, may contain variable references like {{ var_name }}"
-                        },
-                        "body": {
-                          "type": "string",
-                          "description": "Request body, often a JSON string"
-                        },
-                        "headers": {
-                          "type": "object",
-                          "description": "HTTP headers to include with the request",
-                          "additionalProperties": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "required": ["method", "url"],
-                      "additionalProperties": false
-                    },
-                    {
-                      "title": "AWS Plugin Configuration",
-                      "description": "Configuration for AWS plugins (S3, SQS, DynamoDB)",
-                      "additionalProperties": true
-                    }
-                  ]
+                  "description": "Configuration for the plugin"
                 },
                 "assertions": {
                   "type": "array",

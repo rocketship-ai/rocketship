@@ -2,7 +2,6 @@ package dsl
 
 import (
 	"embed"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -111,8 +110,98 @@ func ParseYAML(yamlPayload []byte) (RocketshipConfig, error) {
 			if step.Plugin == "" {
 				return RocketshipConfig{}, fmt.Errorf("test %q: step %q: a plugin is required for each step", test.Name, step.Name)
 			}
+
+			// Plugin-specific validation for backwards compatibility
+			if err := validatePluginConfig(step.Plugin, step.Config, test.Name, step.Name); err != nil {
+				return RocketshipConfig{}, err
+			}
+
+			// Validate assertions
+			for _, assertion := range step.Assertions {
+				if err := validateAssertion(assertion, test.Name, step.Name); err != nil {
+					return RocketshipConfig{}, err
+				}
+			}
 		}
 	}
 
 	return config, nil
+}
+
+// validatePluginConfig validates plugin-specific configuration
+func validatePluginConfig(plugin string, config map[string]interface{}, testName, stepName string) error {
+	switch plugin {
+	case "http":
+		return validateHTTPConfig(config, testName, stepName)
+	case "delay":
+		return validateDelayConfig(config, testName, stepName)
+	default:
+		// For AWS and other plugins, we allow flexible configuration
+		return nil
+	}
+}
+
+// validateHTTPConfig validates HTTP plugin configuration
+func validateHTTPConfig(config map[string]interface{}, testName, stepName string) error {
+	method, ok := config["method"].(string)
+	if !ok {
+		return fmt.Errorf("test %q: step %q: HTTP plugin requires 'method' field", testName, stepName)
+	}
+
+	validMethods := map[string]bool{
+		"GET": true, "POST": true, "PUT": true, "DELETE": true,
+		"PATCH": true, "HEAD": true, "OPTIONS": true,
+	}
+	if !validMethods[method] {
+		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.method: %s is not a valid HTTP method", method)
+	}
+
+	if _, ok := config["url"]; !ok {
+		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config: url is required for HTTP plugin")
+	}
+
+	return nil
+}
+
+// validateDelayConfig validates delay plugin configuration
+func validateDelayConfig(config map[string]interface{}, testName, stepName string) error {
+	duration, ok := config["duration"].(string)
+	if !ok {
+		return fmt.Errorf("test %q: step %q: delay plugin requires 'duration' field", testName, stepName)
+	}
+
+	// Validate duration format (should match pattern ^\d+[smh]$)
+	if len(duration) < 2 {
+		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
+	}
+
+	unit := duration[len(duration)-1:]
+	if unit != "s" && unit != "m" && unit != "h" {
+		return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
+	}
+
+	// Check if prefix is numeric
+	for _, char := range duration[:len(duration)-1] {
+		if char < '0' || char > '9' {
+			return fmt.Errorf("schema validation failed:\ntests.0.steps.0.config.duration: invalid duration format")
+		}
+	}
+
+	return nil
+}
+
+// validateAssertion validates assertion configuration
+func validateAssertion(assertion map[string]interface{}, testName, stepName string) error {
+	assertionType, ok := assertion["type"].(string)
+	if !ok {
+		return fmt.Errorf("test %q: step %q: assertion requires 'type' field", testName, stepName)
+	}
+
+	if assertionType == "json_path" {
+		if _, ok := assertion["path"]; !ok {
+			return fmt.Errorf("schema validation failed:\ntests.0.steps.0.assertions.0: json_path assertion requires 'path' field")
+		}
+	}
+
+	return nil
 }
