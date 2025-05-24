@@ -100,29 +100,18 @@ jobs:
           go-version: "1.24"
           check-latest: true
 
-      - name: Start Temporal server with Docker
+      - name: Install Temporal CLI
         run: |
-          # Start Temporal server using Docker
-          docker run -d --name temporal-server \
-            -p 7233:7233 \
-            -p 8233:8233 \
-            temporalio/auto-setup:1.25.0 \
-            temporal-autosetup --headless --log-level warn
+          echo "Downloading Temporal CLI..."
+          curl -sSf https://temporal.download/cli.sh | sh || { echo "Failed to download Temporal CLI"; exit 1; }
 
-          echo "Waiting for Temporal server to be ready..."
-          for i in {1..60}; do
-            if curl -f http://localhost:8233/health > /dev/null 2>&1; then
-              echo "Temporal server is ready"
-              break
-            fi
-            if [ $i -eq 60 ]; then
-              echo "Temporal server failed to start"
-              docker logs temporal-server
-              exit 1
-            fi
-            echo "Waiting... ($i/60)"
-            sleep 2
-          done
+          if [ -f temporal ]; then
+            echo "Temporal CLI downloaded successfully."
+            sudo mv temporal /usr/local/bin/
+          else
+            echo "Error: 'temporal' binary not found after download."
+            exit 1
+          fi
 
       - name: Build and install Rocketship CLI
         run: |
@@ -133,11 +122,11 @@ jobs:
           echo "Testing CLI help and version commands..."
           rocketship --help
           rocketship version
-          
+
           echo "Testing validate command..."
           rocketship validate examples/
           rocketship validate examples/simple-http/rocketship.yaml
-          
+
           echo "Testing individual example files..."
           echo "Running simple-delay example..."
           OUTPUT=$(rocketship run -af examples/simple-delay/rocketship.yaml)
@@ -148,7 +137,7 @@ jobs:
             echo "❌ simple-delay tests had failures"
             exit 1
           fi
-          
+
           echo "Running simple-http example..."
           OUTPUT=$(rocketship run -af examples/simple-http/rocketship.yaml)
           echo "$OUTPUT"
@@ -158,7 +147,7 @@ jobs:
             echo "❌ simple-http tests had failures"
             exit 1
           fi
-          
+
           echo "Testing all examples directory..."
           OUTPUT=$(rocketship run -ad examples)
           echo "$OUTPUT"
@@ -168,7 +157,7 @@ jobs:
             echo "❌ Some example tests failed - this indicates a regression"
             exit 1
           fi
-          
+
           echo "Testing start/stop commands..."
           rocketship start server --local --background &
           sleep 5
