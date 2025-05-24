@@ -125,6 +125,38 @@ jobs:
         run: |
           make install
 
+      - name: Warm up test server
+        run: |
+          echo "Warming up test server at tryme.rocketship.sh..."
+
+          # Make initial request to wake up the server
+          echo "Making initial request to wake up server..."
+          curl -s https://tryme.rocketship.sh/ || echo "Initial request completed (expected to fail)"
+
+          # Wait for server to be ready with retries
+          echo "Waiting for server to be ready..."
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt/$max_attempts..."
+            
+            # Test a simple endpoint that should return 200
+            if curl -s -f https://tryme.rocketship.sh/users > /dev/null 2>&1; then
+              echo "✅ Test server is ready!"
+              break
+            fi
+            
+            if [ $attempt -eq $max_attempts ]; then
+              echo "❌ Test server failed to respond after $max_attempts attempts"
+              exit 1
+            fi
+            
+            echo "Server not ready yet, waiting 3 seconds..."
+            sleep 3
+            attempt=$((attempt + 1))
+          done
+
       - name: Test CLI commands
         run: |
           echo "Testing CLI help and version commands..."
