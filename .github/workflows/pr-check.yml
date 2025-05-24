@@ -100,25 +100,28 @@ jobs:
           go-version: "1.24"
           check-latest: true
 
-      - name: Install Temporal CLI
+      - name: Start Temporal server with Docker
         run: |
-          curl -sSf https://temporal.download/cli.sh | sh
-          sudo mv temporal /usr/local/bin/
+          # Start Temporal server using Docker
+          docker run -d --name temporal-server \
+            -p 7233:7233 \
+            -p 8233:8233 \
+            temporalio/auto-setup:1.25.0 \
+            temporal-autosetup --headless --log-level warn
 
-      - name: Start Temporal server
-        run: |
-          temporal server start-dev --headless --log-level warn &
           echo "Waiting for Temporal server to be ready..."
-          for i in {1..30}; do
-            if temporal workflow list > /dev/null 2>&1; then
+          for i in {1..60}; do
+            if curl -f http://localhost:8233/health > /dev/null 2>&1; then
               echo "Temporal server is ready"
               break
             fi
-            if [ $i -eq 30 ]; then
+            if [ $i -eq 60 ]; then
               echo "Temporal server failed to start"
+              docker logs temporal-server
               exit 1
             fi
-            sleep 1
+            echo "Waiting... ($i/60)"
+            sleep 2
           done
 
       - name: Build and install Rocketship CLI
