@@ -9,7 +9,6 @@ import (
 	"go.temporal.io/sdk/workflow"
 
 	// plugins
-	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
 )
 
@@ -56,13 +55,13 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 }
 
 func handleDelayStep(ctx workflow.Context, step dsl.Step) error {
-	//workflowcheck:ignore
-	dp, err := delay.ParseYAML(step)
-	if err != nil {
-		return fmt.Errorf("step %q: %w", step.Name, err)
+	// Extract duration directly from step config
+	durationStr, ok := step.Config["duration"].(string)
+	if !ok {
+		return fmt.Errorf("step %q: duration is required and must be a string", step.Name)
 	}
 
-	duration, err := time.ParseDuration(dp.Config.Duration)
+	duration, err := time.ParseDuration(durationStr)
 	if err != nil {
 		return fmt.Errorf("step %q: invalid duration format: %w", step.Name, err)
 	}
@@ -75,24 +74,21 @@ func handleHTTPStep(ctx workflow.Context, step dsl.Step, state map[string]string
 	logger.Info(fmt.Sprintf("Executing HTTP step: %s", step.Name))
 	logger.Info(fmt.Sprintf("Current state: %v", state))
 
-	//workflowcheck:ignore
-	hp, err := http.ParseYAML(step)
-	if err != nil {
-		return fmt.Errorf("failed to parse HTTP step: %w", err)
-	}
-
-	// Add state to plugin parameters
+	// Pass raw step data to activity
 	pluginParams := map[string]interface{}{
-		"name":       hp.Name,
-		"plugin":     hp.Plugin,
-		"config":     hp.Config,
-		"assertions": hp.Assertions,
-		"save":       hp.Save,
+		"name":       step.Name,
+		"plugin":     step.Plugin,
+		"config":     step.Config,
+		"assertions": step.Assertions,
+		"save":       step.Save,
 		"state":      state,
 	}
 
+	// Create HTTP plugin instance for activity execution
+	httpPlugin := &http.HTTPPlugin{}
+
 	var activityResp http.ActivityResponse
-	err = workflow.ExecuteActivity(ctx, hp.Activity, pluginParams).Get(ctx, &activityResp)
+	err := workflow.ExecuteActivity(ctx, httpPlugin.Activity, pluginParams).Get(ctx, &activityResp)
 	if err != nil {
 		logger.Error("HTTP activity failed", "error", err)
 		return fmt.Errorf("http activity error: %w", err)
