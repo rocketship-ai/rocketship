@@ -4,7 +4,7 @@ Rocketship CLI is available for macOS, Linux, and Windows. Choose your platform 
 
 ## Prerequisites
 
-If you want to run integration tests **without needing to connect to a remote engine**, you need to install Temporal which is required for the local engine:
+If you want to run tests **without needing to connect to a remote engine**, you need to install Temporal which is required for the local engine:
 
 ```bash
 brew install temporal  # macOS
@@ -97,6 +97,6 @@ Remember to restart your shell or run `source ~/.bashrc` (or equivalent) to appl
 
 ## Next Steps
 
-- Check out our [Quick Start Guide](quickstart.md) to run your first integration test
+- Check out our [Quick Start Guide](quickstart.md) to run your first test
 - Learn about [test specifications](test-specs.md)
 - Explore our [examples](examples.md)

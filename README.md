@@ -18,9 +18,7 @@
 
 <br>
 
-🚀 Rocketship is an **open‑source integration testing platform** built for the AI-native future. Whether you're a developer validating complex data pipelines or an AI agent automatically testing code changes, Rocketship provides enterprise-grade reliability for any integration scenario. From REST APIs to databases, event streams to file systems—if your system talks to it, Rocketship can test it.
-
-**Built for both humans and AI agents**, Rocketship brings durable execution powered by **Temporal** and an extensible plugin ecosystem to handle any data resource or protocol your systems depend on.
+🚀 Rocketship is an **open‑source testing platform** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers an extensible plugin system so you can add the APIs and protocols that matter to you.
 
 Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment.
 
@@ -108,14 +106,13 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 ## Roadmap
 
-Building the future of integration testing for humans and AI agents. Here's what's coming in weeks, not years:
+Building the next-gen of integration testing for humans and AI agents. Suggestions and issues are welcomed! Here's what's coming in weeks, not years:
 
-- [ ] **AI Agent Integration** Native support for AI agents to automatically generate, run, and maintain integration tests based on code changes and system behavior.
-- [ ] **Data Resource Plugins** Support for databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
-- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based integration tests.
+- [ ] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
+- [ ] **Data Resource Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
+- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
 - [ ] **Continuous Integration Testing** Schedule tests on a cadence, trigger on deployments, and integrate with CI/CD pipelines.
-- [ ] **Enterprise Security & Secrets** Environment variables, secrets management, and enterprise authentication for production integration testing.
-- [ ] **Multi-Cloud Provider Support** Native plugins for AWS, GCP, Azure services and protocols.
+- [ ] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
 
 ## Contribute!!!
 

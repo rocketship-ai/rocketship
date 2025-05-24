@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get started with Rocketship in minutes! This guide will help you install Rocketship and run your first integration test.
+Get started with Rocketship in minutes! This guide will help you install Rocketship and run your first test.
 
 ## Installation
 
@@ -20,9 +20,9 @@ chmod +x /usr/local/bin/rocketship
 
 For detailed installation instructions for other platforms and optional aliases, see the [Installation Guide](installation.md).
 
-## Your First Integration Test
+## Your First Test
 
-Create an integration test file:
+Create a test file:
 
 ```bash
 cat > simple-test.yaml << 'EOF'
@@ -43,7 +43,7 @@ tests:
 EOF
 ```
 
-Run the integration test:
+Run the test:
 
 ```bash
 rocketship run -af simple-test.yaml
