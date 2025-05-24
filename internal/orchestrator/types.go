@@ -38,3 +38,12 @@ type TestInfo struct {
 	EndedAt    time.Time
 	RunID      string
 }
+
+// TestStatusCounts represents the count of tests in different states
+type TestStatusCounts struct {
+	Total    int
+	Passed   int
+	Failed   int
+	TimedOut int
+	Pending  int
+}

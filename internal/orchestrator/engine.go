@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -21,20 +22,34 @@ func NewEngine(c client.Client) *Engine {
 }
 
 func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest) (*generated.CreateRunResponse, error) {
-	log.Printf("[DEBUG] CreateRun called with %d bytes of YAML data", len(req.YamlPayload))
+	// Validate input
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+	if len(req.YamlPayload) == 0 {
+		return nil, fmt.Errorf("YAML payload cannot be empty")
+	}
+	
+	slog.Debug("CreateRun called", "payload_size", len(req.YamlPayload))
 
 	runID, err := generateID()
 	if err != nil {
-		log.Printf("[ERROR] Failed to generate run ID: %v", err)
+		slog.Error("Failed to generate run ID", "error", err)
 		return nil, fmt.Errorf("failed to generate run ID: %w", err)
 	}
 
 	run, err := dsl.ParseYAML(req.YamlPayload)
 	if err != nil {
-		log.Printf("[ERROR] Failed to parse YAML: %v", err)
+		slog.Error("Failed to parse YAML", "error", err)
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	log.Printf("[DEBUG] Starting run: %s", run.Name)
+	
+	// Validate parsed run has tests
+	if len(run.Tests) == 0 {
+		return nil, fmt.Errorf("test run must contain at least one test")
+	}
+	
+	slog.Debug("Starting run", "name", run.Name, "test_count", len(run.Tests))
 
 	runInfo := &RunInfo{
 		ID:        runID,
@@ -101,19 +116,19 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.Engine_StreamLogsServer) error {
 	runID := req.RunId
 
+	// Initial validation and log copy
 	e.mu.RLock()
 	runInfo, exists := e.runs[runID]
-	e.mu.RUnlock()
-
 	if !exists {
+		e.mu.RUnlock()
 		return fmt.Errorf("run not found: %s", runID)
 	}
-
-	e.mu.RLock()
+	
 	logs := make([]LogLine, len(runInfo.Logs))
 	copy(logs, runInfo.Logs)
 	e.mu.RUnlock()
 
+	// Send initial logs
 	for _, logMsg := range logs {
 		if err := stream.Send(&generated.LogLine{
 			Ts:    time.Now().Format(time.RFC3339),
@@ -133,6 +148,7 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 	for {
 		select {
 		case <-ticker.C:
+			// Get new logs and status in a single lock acquisition
 			e.mu.RLock()
 			runInfo, exists := e.runs[runID]
 			if !exists {
@@ -140,31 +156,30 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 				return fmt.Errorf("run not found: %s", runID)
 			}
 
-			if len(runInfo.Logs) > lastLogIndex {
-				newLogs := runInfo.Logs[lastLogIndex:]
-				lastLogIndex = len(runInfo.Logs)
-				e.mu.RUnlock()
-
-				for _, logMsg := range newLogs {
-					if err := stream.Send(&generated.LogLine{
-						Ts:    time.Now().Format(time.RFC3339),
-						Msg:   logMsg.Msg,
-						Color: logMsg.Color,
-						Bold:  logMsg.Bold,
-					}); err != nil {
-						return err
-					}
-				}
-			} else {
-				e.mu.RUnlock()
-			}
-
-			e.mu.RLock()
+			var newLogs []LogLine
 			status := runInfo.Status
+			
+			if len(runInfo.Logs) > lastLogIndex {
+				newLogs = make([]LogLine, len(runInfo.Logs)-lastLogIndex)
+				copy(newLogs, runInfo.Logs[lastLogIndex:])
+				lastLogIndex = len(runInfo.Logs)
+			}
 			e.mu.RUnlock()
 
+			// Send new logs (outside of lock)
+			for _, logMsg := range newLogs {
+				if err := stream.Send(&generated.LogLine{
+					Ts:    time.Now().Format(time.RFC3339),
+					Msg:   logMsg.Msg,
+					Color: logMsg.Color,
+					Bold:  logMsg.Bold,
+				}); err != nil {
+					return err
+				}
+			}
+
+			// Check if run is finished
 			if status == "PASSED" || status == "FAILED" {
-				// Run is finished, end the stream
 				return nil
 			}
 		case <-stream.Context().Done():
@@ -177,11 +192,18 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
-	log.Printf("[DEBUG] Starting to monitor workflow %s", workflowID)
+	log.Printf("[DEBUG] Starting to monitor workflow %s for run %s", workflowID, runID)
 	workflowRun := e.temporal.GetWorkflow(ctx, workflowID, workflowRunID)
 
 	resultChan := make(chan error, 1)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[ERROR] Panic in workflow monitoring goroutine: %v", r)
+				resultChan <- fmt.Errorf("workflow monitoring panic: %v", r)
+			}
+		}()
+		
 		var result interface{}
 		err := workflowRun.Get(ctx, &result)
 		resultChan <- err
@@ -189,43 +211,52 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 
 	select {
 	case err := <-resultChan:
-		e.mu.Lock()
-		runInfo, exists := e.runs[runID]
-		if !exists {
-			log.Printf("[ERROR] Run not found during monitoring: %s", runID)
+		e.updateTestStatus(runID, workflowID, err)
+	case <-ctx.Done():
+		log.Printf("[WARN] Monitoring timed out for workflow %s in run %s", workflowID, runID)
+		e.updateTestStatus(runID, workflowID, fmt.Errorf("workflow monitoring timeout"))
+	}
+}
+
+// updateTestStatus updates the test status and handles cleanup atomically
+func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
+	e.mu.Lock()
+	runInfo, exists := e.runs[runID]
+	if !exists {
+		e.mu.Unlock()
+		log.Printf("[ERROR] Run not found during status update: %s", runID)
+		return
+	}
+
+	testInfo, exists := runInfo.Tests[workflowID]
+	if !exists {
+		e.mu.Unlock()
+		log.Printf("[ERROR] Test not found during status update: %s in run %s", workflowID, runID)
+		return
+	}
+
+	testInfo.EndedAt = time.Now()
+	
+	if workflowErr != nil {
+		if workflowErr.Error() == "workflow monitoring timeout" {
+			testInfo.Status = "TIMEOUT"
 			e.mu.Unlock()
-			return
-		}
-
-		testInfo := runInfo.Tests[workflowID]
-		testInfo.EndedAt = time.Now()
-
-		if err != nil {
-			log.Printf("[ERROR] Workflow failed for test %s: %v", testInfo.Name, err)
+			log.Printf("[WARN] Test timed out: %s", testInfo.Name)
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", testInfo.Name), "red", true)
+		} else {
 			testInfo.Status = "FAILED"
 			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testInfo.Name, err), "red", true)
-			e.checkIfRunFinished(runID)
-		} else {
-			log.Printf("[DEBUG] Workflow completed successfully for run %s", runID)
-			testInfo.Status = "PASSED"
-			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name), "green", true)
-			e.checkIfRunFinished(runID)
+			log.Printf("[ERROR] Test failed: %s - %v", testInfo.Name, workflowErr)
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testInfo.Name, workflowErr), "red", true)
 		}
-	case <-ctx.Done():
-		log.Printf("[DEBUG] Monitoring timed out for test ID %s", workflowID)
-		e.mu.Lock()
-		if runInfo, exists := e.runs[runID]; exists {
-			runInfo.Tests[workflowID].Status = "TIMEOUT"
-			runInfo.Tests[workflowID].EndedAt = time.Now()
-			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", runInfo.Tests[workflowID].Name), "red", true)
-			e.checkIfRunFinished(runID)
-		} else {
-			e.mu.Unlock()
-		}
+	} else {
+		testInfo.Status = "PASSED"
+		e.mu.Unlock()
+		log.Printf("[INFO] Test passed: %s", testInfo.Name)
+		e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name), "green", true)
 	}
+	
+	e.checkIfRunFinished(runID)
 }
 
 func (e *Engine) addLog(runID, message, color string, bold bool) {
@@ -255,80 +286,77 @@ func generateID() (string, error) {
 }
 
 func (e *Engine) checkIfRunFinished(runID string) {
-	if e.isRunFinished(runID) {
-		// get run name
-		e.mu.RLock()
-		runName := e.runs[runID].Name
-		e.mu.RUnlock()
-		numTests := len(e.runs[runID].Tests)
-		if numTests == e.numTestsPassed(runID) {
-			e.mu.Lock()
-			e.runs[runID].Status = "PASSED"
-			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, numTests), "n/a", true)
-		} else if numTests == (e.numTestsPassed(runID) + e.numTestsFailed(runID)) {
-			e.mu.Lock()
-			e.runs[runID].Status = "FAILED"
-			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests), "n/a", true)
+	counts, err := e.getTestStatusCounts(runID)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get test status counts for run %s: %v", runID, err)
+		return
+	}
+	
+	// Only proceed if all tests are finished (no pending tests)
+	if counts.Pending > 0 {
+		return
+	}
+	
+	// Get run name and update status atomically
+	e.mu.Lock()
+	runInfo, exists := e.runs[runID]
+	if !exists {
+		e.mu.Unlock()
+		log.Printf("[ERROR] Run not found when checking if finished: %s", runID)
+		return
+	}
+	
+	runName := runInfo.Name
+	
+	// Determine final status and update
+	if counts.Failed == 0 && counts.TimedOut == 0 {
+		// All tests passed
+		runInfo.Status = "PASSED"
+		runInfo.EndedAt = time.Now()
+		e.mu.Unlock()
+		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, counts.Total), "n/a", true)
+	} else {
+		// Some tests failed or timed out
+		runInfo.Status = "FAILED"
+		runInfo.EndedAt = time.Now()
+		e.mu.Unlock()
+		
+		if counts.TimedOut == 0 {
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, counts.Passed, counts.Total, counts.Failed, counts.Total), "n/a", true)
 		} else {
-			// we have tests that timed out. Print # failed and # timed out
-			e.mu.Lock()
-			e.runs[runID].Status = "FAILED"
-			e.mu.Unlock()
-			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, e.numTestsPassed(runID), numTests, e.numTestsFailed(runID), numTests, e.numTestsTimedOut(runID), numTests), "n/a", true)
+			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, counts.Passed, counts.Total, counts.Failed, counts.Total, counts.TimedOut, counts.Total), "n/a", true)
 		}
 	}
 }
 
-// helper function that checks if any tests are still in PENDING status. isRunFinished()
-func (e *Engine) isRunFinished(runID string) bool {
+// getTestStatusCounts returns all test status counts in a single lock acquisition
+func (e *Engine) getTestStatusCounts(runID string) (TestStatusCounts, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	for _, testInfo := range e.runs[runID].Tests {
-		if testInfo.Status == "PENDING" {
-			return false
+	
+	runInfo, exists := e.runs[runID]
+	if !exists {
+		return TestStatusCounts{}, fmt.Errorf("run not found: %s", runID)
+	}
+	
+	counts := TestStatusCounts{
+		Total: len(runInfo.Tests),
+	}
+	
+	for _, testInfo := range runInfo.Tests {
+		switch testInfo.Status {
+		case "PASSED":
+			counts.Passed++
+		case "FAILED":
+			counts.Failed++
+		case "TIMEOUT":
+			counts.TimedOut++
+		case "PENDING":
+			counts.Pending++
 		}
 	}
-	return true
-}
-
-// number of tests in run which are in status PASSED
-func (e *Engine) numTestsPassed(runID string) int {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	count := 0
-	for _, testInfo := range e.runs[runID].Tests {
-		if testInfo.Status == "PASSED" {
-			count++
-		}
-	}
-	return count
-}
-
-// number of tests in run which are in status FAILED
-func (e *Engine) numTestsFailed(runID string) int {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	count := 0
-	for _, testInfo := range e.runs[runID].Tests {
-		if testInfo.Status == "FAILED" {
-			count++
-		}
-	}
-	return count
-}
-
-func (e *Engine) numTestsTimedOut(runID string) int {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	count := 0
-	for _, testInfo := range e.runs[runID].Tests {
-		if testInfo.Status == "TIMEOUT" {
-			count++
-		}
-	}
-	return count
+	
+	return counts, nil
 }
 
 // Health implements the health check endpoint
