@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-Rocketship is an open-source testing engine for E2E API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.
+Rocketship is an open-source testing platform for E2E API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.
 
 **Key Components:**
 
@@ -60,6 +60,7 @@ make docs           # Build documentation
 ## Debugging and Logging
 
 ### Debug Logging
+
 All processes (CLI, engine, worker) use unified structured logging from `internal/cli/logging.go`:
 
 ```bash
@@ -69,6 +70,7 @@ ROCKETSHIP_LOG=ERROR rocketship run -af test.yaml    # Errors only
 ```
 
 Debug logging shows:
+
 - Process lifecycle (start, stop, cleanup)
 - Temporal connections and workflow execution
 - Plugin execution details
