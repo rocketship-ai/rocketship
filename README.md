@@ -112,7 +112,7 @@ Building the next-gen of integration testing for humans and AI agents. Suggestio
 - [ ] **Data Resource Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 - [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
 - [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
-- [ ] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
+- [x] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
 
 ## Contribute!!!
 

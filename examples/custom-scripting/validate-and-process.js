@@ -4,10 +4,8 @@
 // 2. Performing complex data validation and transformation
 // 3. Saving processed data for subsequent HTTP steps to use
 
-console.log("=== EXTERNAL JS FILE: validate-and-process.js ===");
 
 // Validate that we have all expected data from previous steps
-console.log("Validating data from previous steps...");
 
 // Check HTTP step data
 if (!state.animal_name || !state.animal_species) {
@@ -19,13 +17,8 @@ if (!state.processed_user_name || !state.step1_completed) {
     assert(false, "Missing data from script step 1");
 }
 
-console.log("✓ All required data present from previous steps");
 
 // Access and validate config variables
-console.log("Config variables:");
-console.log("- API URL:", vars.api_url);
-console.log("- User name:", vars.user_name);
-console.log("- Max retries:", vars.max_retries);
 
 // Process animal data with business logic
 const animalName = state.animal_name;
@@ -96,8 +89,3 @@ assert(animalScore > 0, "Animal score should be positive");
 assert(animalCategory !== "unknown", "Animal category should be determined");
 assert(recommendations.length > 0, "Should have at least one recommendation");
 
-console.log("✓ External JS processing completed successfully");
-console.log("- Animal category:", animalCategory);
-console.log("- Animal score:", animalScore);
-console.log("- Recommendations:", recommendations.length);
-console.log("=== END EXTERNAL JS FILE ===");
