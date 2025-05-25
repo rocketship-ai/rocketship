@@ -132,17 +132,6 @@ func (dp *DelayPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 }
 ```
 
-### Complex Plugin (HTTP)
-
-The HTTP plugin demonstrates a more sophisticated implementation with:
-
-- Configuration parsing
-- Variable replacement
-- Response processing
-- Assertions and data extraction
-
-See `internal/plugins/http/` for the complete implementation.
-
 ## Best Practices
 
 ### Error Handling
@@ -223,4 +212,4 @@ Once your plugin is implemented and registered:
 2. The workflow interpreter can execute it as part of test scenarios
 3. It can be configured through YAML test definitions
 
-For more examples, see the existing plugins in `internal/plugins/http/` and `internal/plugins/delay/`.
+For an example, see the http plugin in `internal/plugins/http/`.
