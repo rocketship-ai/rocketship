@@ -484,6 +484,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#configuration-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration &amp; Variables
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1085,6 +1094,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#configuration-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration &amp; Variables
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1124,6 +1142,10 @@
 <ul>
 <li><a href="request-chaining/">Request Chaining &amp; Delays</a> - Learn how to chain HTTP requests, handle responses, and use delays in your test suites</li>
 </ul>
+<h3 id="configuration-variables">Configuration &amp; Variables</h3>
+<ul>
+<li><a href="config-variables/">Configuration Variables</a> - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files</li>
+</ul>
 <h2 id="running-the-examples">Running the Examples</h2>
 <p>The examples use the hosted test server at <code>tryme.rocketship.sh</code>. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:</p>
 <ul>
@@ -1132,8 +1154,14 @@
 <li>FYI: Resource cleanup is done hourly (every :00)</li>
 </ul>
 <p>Then, run an example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Run the example test suite</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Run the request chaining example</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/request-chaining/rocketship.yaml
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Run the configuration variables example</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/config-variables/rocketship.yaml
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Run with variable overrides</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/config-variables/rocketship.yaml<span class="w"> </span>--var<span class="w"> </span><span class="nv">environment</span><span class="o">=</span>production
 </code></pre></div>
 <p>You can find the test server's source code in the <code>for-contributors/test-server</code> directory.</p>
 
