@@ -1,0 +1,121 @@
+name: "Configuration Variables Example"
+description: "Demonstrates config variables with vars. prefix and mixing with runtime variables"
+version: "v1.0.0"
+
+# Configuration variables - accessed with {{ .vars.variable_name }}
+vars:
+  base_url: "https://tryme.rocketship.sh"
+  environment: "staging"
+  timeout: 2
+  auth:
+    header_name: "X-API-Key"
+    token: "test-api-key-123"
+  book:
+    title: "The Go Programming Language"
+    author: "Alan Donovan"
+    isbn: "978-0134190440"
+
+tests:
+  - name: "Config Variables Demo"
+    steps:
+      - name: "Create book with config variables"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.base_url }}/books"
+          headers:
+            "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+            "X-Environment": "{{ .vars.environment }}"
+          body: |
+            {
+              "title": "{{ .vars.book.title }}",
+              "author": "{{ .vars.book.author }}",
+              "isbn": "{{ .vars.book.isbn }}",
+              "environment": "{{ .vars.environment }}"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".title"
+            expected: "{{ .vars.book.title }}"
+          - type: "json_path"
+            path: ".author"
+            expected: "{{ .vars.book.author }}"
+        save:
+          - json_path: ".id"
+            as: "book_id"
+          - json_path: ".title"
+            as: "book_title"
+
+      - name: "Get book mixing config and runtime variables"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ .vars.base_url }}/books/{{ book_id }}" # Mix: config var + runtime var
+          headers:
+            "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".id"
+            expected: "{{ book_id }}" # Runtime variable (no vars. prefix)
+          - type: "json_path"
+            path: ".title"
+            expected: "{{ book_title }}" # Runtime variable
+          - type: "json_path"
+            path: ".environment"
+            expected: "{{ .vars.environment }}" # Config variable
+
+      - name: "Wait with config timeout"
+        plugin: "delay"
+        config:
+          duration: "{{ .vars.timeout }}s"
+
+      - name: "Update book with mixed variables"
+        plugin: "http"
+        config:
+          method: "PUT"
+          url: "{{ .vars.base_url }}/books/{{ book_id }}"
+          headers:
+            "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+          body: |
+            {
+              "title": "{{ book_title }}",
+              "author": "{{ .vars.book.author }} & Brian Kernighan",
+              "isbn": "{{ .vars.book.isbn }}",
+              "environment": "{{ .vars.environment }}"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".author"
+            expected: "{{ .vars.book.author }} & Brian Kernighan"
+        save:
+          - json_path: ".author"
+            as: "updated_author"
+
+      - name: "Verify update with runtime variable"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ .vars.base_url }}/books/{{ book_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".author"
+            expected: "{{ updated_author }}"
+
+      - name: "Cleanup with config and runtime variables"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "{{ .vars.base_url }}/books/{{ book_id }}"
+          headers:
+            "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+        assertions:
+          - type: "status_code"
+            expected: 204

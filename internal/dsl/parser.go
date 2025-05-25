@@ -13,10 +13,11 @@ import (
 var schemaFS embed.FS
 
 type RocketshipConfig struct {
-	Name        string `json:"name" yaml:"name"`
-	Description string `json:"description" yaml:"description"`
-	Version     string `json:"version" yaml:"version"`
-	Tests       []Test `json:"tests" yaml:"tests"`
+	Name        string                 `json:"name" yaml:"name"`
+	Description string                 `json:"description" yaml:"description"`
+	Version     string                 `json:"version" yaml:"version"`
+	Vars        map[string]interface{} `json:"vars" yaml:"vars,omitempty"`
+	Tests       []Test                 `json:"tests" yaml:"tests"`
 }
 
 type Test struct {

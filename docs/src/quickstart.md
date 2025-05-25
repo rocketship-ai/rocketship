@@ -30,7 +30,7 @@ name: "Simple Test Suite"
 description: "A simple test suite!"
 version: "v1.0.0"
 tests:
-  - name: "Test 1"
+  - name: "API Health Check"
     steps:
       - name: "Check API status"
         plugin: "http"
@@ -53,6 +53,5 @@ The `-a` flag tells Rocketship to automatically start and stop the local server,
 
 ## Next Steps
 
-- Learn about [test specifications](test-specs.md)
 - Explore the [CLI reference](reference/rocketship.md)
 - Check out [example tests](examples.md)
