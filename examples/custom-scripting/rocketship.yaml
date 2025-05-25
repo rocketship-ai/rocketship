@@ -1,61 +1,211 @@
-name: "Custom Scripting Demo"
+name: "Custom Scripting Demo - HTTP↔Script State Integration"
 version: "v1.0.0"
 vars:
-  api_url: "https://httpbin.org"
+  api_url: "https://tryme.rocketship.sh"
   max_retries: 3
   user_name: "test_user"
 
 tests:
-  - name: "Data Processing Pipeline"
+  - name: "Complete HTTP and Script State Integration"
     steps:
-      - name: "Fetch User Data"
+      - name: "Clear Previous Test Data"
         plugin: "http"
         config:
-          method: "GET"
-          url: "{{ .vars.api_url }}/json"
-        save:
-          - json_path: ".slideshow.author"
-            as: "author"
-          - json_path: ".slideshow.title"
-            as: "slideshow_title"
+          method: "POST"
+          url: "{{ .vars.api_url }}/_clear"
+        assertions:
+          - type: "status_code"
+            expected: 204
 
-      - name: "Debug Script Step"
+      - name: "HTTP Step 1 - Create Animal Data"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.api_url }}/animals"
+          headers:
+            Content-Type: "application/json"
+          body: |
+            {
+              "name": "African Elephant",
+              "species": "Loxodonta africana",
+              "habitat": "Savanna",
+              "weight_kg": 6000,
+              "conservation_status": "Endangered"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "animal_id"
+          - json_path: ".name"
+            as: "animal_name"
+          - json_path: ".species"
+            as: "animal_species"
+          - json_path: ".habitat"
+            as: "animal_habitat"
+          - json_path: ".weight_kg"
+            as: "animal_weight"
+
+      - name: "Script Step 1 - Initial Processing (Inline)"
         plugin: "script"
         config:
           language: "javascript"
           script: |
-            // Debug: Log all available data
-            console.log("=== DEBUG: Script execution started ===");
+            console.log("=== SCRIPT STEP 1 (INLINE) ===");
             
-            // Check what vars are available
-            console.log("Available vars keys:", Object.keys(vars || {}));
-            if (vars.api_url) console.log("vars.api_url:", vars.api_url);
-            if (vars.user_name) console.log("vars.user_name:", vars.user_name);
-            if (vars.max_retries) console.log("vars.max_retries:", vars.max_retries);
+            // Access config variables and HTTP data
+            console.log("Config vars:", vars.api_url, vars.user_name, vars.max_retries);
+            console.log("Animal data from HTTP:", state.animal_name, state.animal_species, state.animal_habitat);
             
-            // Check what state is available
-            console.log("Available state keys:", Object.keys(state || {}));
-            if (state.author) console.log("state.author:", state.author);
-            if (state.slideshow_title) console.log("state.slideshow_title:", state.slideshow_title);
+            // Validate HTTP data exists
+            assert(state.animal_name, "Animal name should be available from HTTP step");
+            assert(state.animal_species, "Animal species should be available from HTTP step");
+            assert(state.animal_id, "Animal ID should be available from HTTP step");
             
-            // Test save function
-            save("debug_test", "Script is working!");
+            // Process user and config data
+            let processedUserName = vars.user_name.toUpperCase();
+            let maxRetriesDoubled = vars.max_retries * 2;
+            let animalNameLength = state.animal_name.length;
+            let animalWeight = parseInt(state.animal_weight);
             
-            // Only assert if we have the expected data
-            if (!vars.api_url) {
-              assert(false, "vars.api_url is missing");
-            }
-            if (!vars.user_name) {
-              assert(false, "vars.user_name is missing");
-            }
+            // Create additional computed values
+            let animalSlug = state.animal_name.toLowerCase().replace(/\s+/g, '-');
+            let processingId = Date.now().toString();
+            let weightCategory = animalWeight > 1000 ? "large" : animalWeight > 100 ? "medium" : "small";
             
-            console.log("=== DEBUG: Script execution completed ===");
+            // Save processed results for next steps
+            save("processed_user_name", processedUserName);
+            save("max_retries_doubled", maxRetriesDoubled.toString());
+            save("animal_name_length", animalNameLength.toString());
+            save("animal_slug", animalSlug);
+            save("processing_id", processingId);
+            save("weight_category", weightCategory);
+            save("step1_completed", "true");
+            
+            console.log("Inline script completed - data ready for external JS file");
+            console.log("=== END SCRIPT STEP 1 ===");
 
-      - name: "Final HTTP Request"
+      - name: "Script Step 2 - External File Processing"
+        plugin: "script"
+        config:
+          language: "javascript"
+          file: "examples/custom-scripting/validate-and-process.js"
+
+      - name: "HTTP Step 2 - Create Animal Assessment with Script Data"
         plugin: "http"
         config:
-          method: "GET"
-          url: "{{ .vars.api_url }}/delay/1"
+          method: "POST"
+          url: "{{ .vars.api_url }}/animals/assessments"
+          headers:
+            Content-Type: "application/json"
+            X-Assessment-Category: "{{ animal_category }}"
+            X-Processed-By: "{{ processed_user_name }}"
+          body: |
+            {
+              "assessment_id": "{{ processing_id }}",
+              "animal_id": "{{ animal_id }}",
+              "animal_profile": {{ animal_profile }},
+              "assessed_by": "{{ processed_user_name }}",
+              "category": "{{ animal_category }}",
+              "score": {{ animal_score }},
+              "weight_category": "{{ weight_category }}",
+              "recommendations": [
+                "{{ recommendation_1 }}",
+                "{{ recommendation_2 }}"
+              ],
+              "metadata": {
+                "processing_timestamp": "{{ processing_timestamp }}",
+                "name_length": {{ animal_name_length }},
+                "slug": "{{ animal_slug }}"
+              }
+            }
         assertions:
           - type: "status_code"
             expected: 200
+        save:
+          - json_path: ".id"
+            as: "assessment_record_id"
+          - json_path: ".assessment_id"
+            as: "created_assessment_id"
+
+      - name: "Script Step 3 - Final Validation (Inline)"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            console.log("=== FINAL VALIDATION SCRIPT ===");
+            
+            // Validate complete data flow: HTTP → Script → HTTP → Script
+            console.log("Validating complete data flow...");
+            
+            // Check original HTTP data is preserved
+            assert(state.animal_name === "African Elephant", "Original animal name should be preserved");
+            assert(state.animal_species === "Loxodonta africana", "Original animal species should be preserved");
+            assert(state.animal_id, "Original animal ID should be preserved");
+            
+            // Check script step 1 data is preserved  
+            assert(state.processed_user_name === "TEST_USER", "Processed user name should be preserved");
+            assert(state.step1_completed === "true", "Step 1 completion flag should be preserved");
+            assert(state.weight_category === "large", "Weight category should be 'large' for 6000kg elephant");
+            
+            // Check external JS file processing is preserved
+            assert(state.assessment_complete === "true", "External JS assessment should be complete");
+            assert(state.animal_category, "Animal category should be set by external JS");
+            assert(state.animal_score, "Animal score should be calculated by external JS");
+            
+            // Check HTTP step used script data successfully
+            assert(state.created_assessment_id, "HTTP POST should have created assessment");
+            assert(state.assessment_record_id, "Assessment record ID should be returned");
+            
+            // Validate the complete state contains all expected data
+            const requiredFields = [
+              // From HTTP Step 1 (Create)
+              'animal_id', 'animal_name', 'animal_species', 'animal_habitat', 'animal_weight',
+              // From Script Step 1  
+              'processed_user_name', 'animal_slug', 'weight_category', 'step1_completed',
+              // From External JS File
+              'animal_category', 'animal_score', 'animal_profile', 'assessment_complete',
+              // From HTTP Step 2 (Assessment)
+              'assessment_record_id', 'created_assessment_id'
+            ];
+            
+            let missingFields = [];
+            for (let field of requiredFields) {
+              if (!state[field]) {
+                missingFields.push(field);
+              }
+            }
+            
+            if (missingFields.length > 0) {
+              assert(false, "Missing required fields: " + missingFields.join(", "));
+            }
+            
+            // Generate final summary
+            const stateCount = Object.keys(state).length;
+            const summary = {
+              totalStateFields: stateCount,
+              httpStepsCompleted: 3, // Clear + Create + Assessment
+              scriptStepsCompleted: 3,
+              externalFileUsed: true,
+              dataFlowValid: true,
+              animalProcessed: state.animal_name,
+              finalCategory: state.animal_category,
+              finalScore: parseInt(state.animal_score),
+              weightCategory: state.weight_category,
+              assessmentCreated: state.created_assessment_id
+            };
+            
+            save("final_summary", JSON.stringify(summary));
+            save("test_result", "SUCCESS");
+            save("all_integrations_complete", "true");
+            
+            console.log("✅ COMPLETE SUCCESS!");
+            console.log("✅ HTTP→Script state flow: WORKING");
+            console.log("✅ Script→HTTP state flow: WORKING"); 
+            console.log("✅ External JS file usage: WORKING");
+            console.log("✅ Server data persistence: WORKING");
+            console.log("✅ Multi-step state accumulation: WORKING");
+            console.log("✅ Total state fields:", stateCount);
+            console.log("=== ALL TESTS PASSED ===");
+

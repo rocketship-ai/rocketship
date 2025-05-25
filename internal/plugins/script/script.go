@@ -93,7 +93,19 @@ func (p *ScriptPlugin) parseRequest(params map[string]interface{}) (ActivityRequ
 	if state, ok := params["state"].(map[string]string); ok {
 		req.State = state
 	} else {
-		req.State = make(map[string]string)
+		// Handle the case where state comes as map[string]interface{}
+		if stateInterface, ok := params["state"].(map[string]interface{}); ok {
+			req.State = make(map[string]string)
+			for k, v := range stateInterface {
+				if strVal, ok := v.(string); ok {
+					req.State[k] = strVal
+				} else {
+					req.State[k] = fmt.Sprintf("%v", v)
+				}
+			}
+		} else {
+			req.State = make(map[string]string)
+		}
 	}
 	if vars, ok := params["vars"].(map[string]interface{}); ok {
 		req.Vars = vars
