@@ -1,5 +1,5 @@
 name: "Simple Script Test"
-description: "Basic test to verify script plugin works"
+description: "Basic test to verify script plugin functionality"
 version: "v1.0.0"
 
 vars:
@@ -7,37 +7,37 @@ vars:
   max_count: 10
 
 tests:
-  - name: "Pure Script Test"
+  - name: "Single Script Test"
     steps:
-      - name: "Script processing test"
+      - name: "Test script plugin features"
         plugin: "script"
         config:
           language: "javascript"
           script: |
-            // Debug what's in vars - save everything as strings for inspection
-            save('vars_type', typeof vars);
-            save('vars_keys', JSON.stringify(Object.keys(vars)));
-            save('vars_stringified', JSON.stringify(vars));
+            console.log("Testing script plugin functionality");
             
-            // Check if vars exists and has properties
-            if (vars && vars.test_value) {
-                save('test_value_found', vars.test_value);
+            // Test basic JavaScript features
+            let testString = "Script is working!";
+            let testNumber = 42;
+            let testArray = [1, 2, 3];
+            
+            // Test mathematical operations
+            let sum = 10 + 32;
+            let product = 6 * 7;
+            assert(sum === 42, "Addition should work correctly");
+            assert(product === 42, "Multiplication should work correctly");
+            
+            // Test save function
+            save('test_result', 'PASSED');
+            save('math_check', 'OK');
+            
+            // Test config variables if available
+            if (typeof vars !== 'undefined' && vars && vars.test_value) {
+                console.log("Config variables accessible:", vars.test_value);
+                save('config_access', 'SUCCESS');
             } else {
-                save('test_value_found', 'NOT_FOUND');
+                console.log("Config variables not accessible");
+                save('config_access', 'FAILED');
             }
             
-            save('script_completed', 'true');
-
-      - name: "Debug output step"
-        plugin: "script"
-        config:
-          language: "javascript"
-          script: |
-            // Read back the debug info from state
-            const varsType = state.vars_type || 'undefined';
-            const varsKeys = state.vars_keys || '[]';
-            const varsStringified = state.vars_stringified || '{}';
-            const testValueFound = state.test_value_found || 'NOT_SET';
-            
-            // This will cause an assertion failure that shows us the debug info
-            assert(false, 'DEBUG INFO - vars_type: ' + varsType + ', vars_keys: ' + varsKeys + ', vars_stringified: ' + varsStringified + ', test_value_found: ' + testValueFound);
+            console.log("Script plugin test completed successfully!");

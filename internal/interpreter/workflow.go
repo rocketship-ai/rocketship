@@ -10,7 +10,6 @@ import (
 
 	// plugins
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
-	"github.com/rocketship-ai/rocketship/internal/plugins/script"
 )
 
 func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}) error {
@@ -90,11 +89,8 @@ func handleHTTPStep(ctx workflow.Context, step dsl.Step, state map[string]string
 		"state":      state,
 	}
 
-	// Create HTTP plugin instance for activity execution
-	httpPlugin := &http.HTTPPlugin{}
-
 	var activityResp http.ActivityResponse
-	err := workflow.ExecuteActivity(ctx, httpPlugin.Activity, pluginParams).Get(ctx, &activityResp)
+	err := workflow.ExecuteActivity(ctx, "http", pluginParams).Get(ctx, &activityResp)
 	if err != nil {
 		logger.Error("HTTP activity failed", "error", err)
 		return fmt.Errorf("http activity error: %w", err)
@@ -126,11 +122,8 @@ func handleScriptStep(ctx workflow.Context, step dsl.Step, state map[string]stri
 		"vars":   vars,
 	}
 
-	// Create script plugin instance for activity execution
-	scriptPlugin := &script.ScriptPlugin{}
-
 	var activityResp interface{}
-	err := workflow.ExecuteActivity(ctx, scriptPlugin.Activity, pluginParams).Get(ctx, &activityResp)
+	err := workflow.ExecuteActivity(ctx, "script", pluginParams).Get(ctx, &activityResp)
 	if err != nil {
 		logger.Error("Script activity failed", "error", err)
 		return fmt.Errorf("script activity error: %w", err)

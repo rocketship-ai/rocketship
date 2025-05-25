@@ -91,6 +91,14 @@ func (e *JavaScriptExecutor) setupBuiltins(vm *goja.Runtime, rtCtx *runtime.Cont
 		}
 	})
 
+	// Inject console object for logging
+	console := vm.NewObject()
+	_ = console.Set("log", func(args ...interface{}) {
+		// For now, just ignore console.log calls
+		// In the future, we could implement proper logging
+	})
+	_ = vm.Set("console", console)
+
 	return nil
 }
 
@@ -104,7 +112,6 @@ func (e *JavaScriptExecutor) setupRuntimeData(vm *goja.Runtime, rtCtx *runtime.C
 	_ = vm.Set("state", stateObj)
 
 	// Inject configuration variables
-	fmt.Printf("[DEBUG] rtCtx.Vars contains: %+v\n", rtCtx.Vars)
 	varsObj := e.convertToGojaValue(vm, rtCtx.Vars)
 	_ = vm.Set("vars", varsObj)
 

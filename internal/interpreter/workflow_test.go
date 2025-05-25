@@ -9,6 +9,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
 	"github.com/stretchr/testify/mock"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 	"go.temporal.io/sdk/workflow"
 )
@@ -149,8 +150,10 @@ func TestHandleHTTPStep(t *testing.T) {
 			state:   map[string]string{},
 			wantErr: false,
 			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
+				// Register activities
+				env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
 				// Mock the HTTP activity to return success
-				env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.Anything).Return(
+				env.OnActivity("http", mock.Anything, mock.Anything).Return(
 					&http.ActivityResponse{
 						Response: &http.HTTPResponse{StatusCode: 200},
 						Saved:    map[string]string{"user_id": "123"},
@@ -171,8 +174,10 @@ func TestHandleHTTPStep(t *testing.T) {
 			wantErr: true,
 			errMsg:  "http activity error",
 			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
+				// Register activities
+				env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
 				// Mock the HTTP activity to return error
-				env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.Anything).Return(
+				env.OnActivity("http", mock.Anything, mock.Anything).Return(
 					nil, fmt.Errorf("network error"))
 			},
 		},
@@ -262,7 +267,9 @@ func TestTestWorkflow(t *testing.T) {
 			},
 			wantErr: false,
 			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
-				env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.Anything).Return(
+				// Register activities
+				env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+				env.OnActivity("http", mock.Anything, mock.Anything).Return(
 					&http.ActivityResponse{
 						Response: &http.HTTPResponse{StatusCode: 200},
 						Saved:    map[string]string{},
@@ -322,8 +329,10 @@ func TestTestWorkflow(t *testing.T) {
 			},
 			wantErr: false,
 			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
+				// Register activities
+				env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
 				// First HTTP call returns user creation
-				env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
+				env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 					config := params["config"].(map[string]interface{})
 					return config["method"] == "POST"
 				})).Return(
@@ -333,7 +342,7 @@ func TestTestWorkflow(t *testing.T) {
 					}, nil)
 				
 				// Second HTTP call uses the saved user_id
-				env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
+				env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 					config := params["config"].(map[string]interface{})
 					return config["method"] == "GET"
 				})).Return(
@@ -390,11 +399,14 @@ func TestWorkflowStatePropagation(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 	
+	// Register activities with proper names
+	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+	
 	// Track the calls to verify state propagation
 	var callOrder []map[string]interface{}
 	var mu sync.Mutex
 	
-	env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.Anything).Return(
+	env.OnActivity("http", mock.Anything, mock.Anything).Return(
 		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			mu.Lock()
 			callOrder = append(callOrder, params)
@@ -493,10 +505,13 @@ func TestWorkflowConcurrency(t *testing.T) {
 			testSuite := &testsuite.WorkflowTestSuite{}
 			env := testSuite.NewTestWorkflowEnvironment()
 			
+			// Register activities
+			env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+			
 			// Each workflow should have its own isolated state
 			expectedValue := fmt.Sprintf("value-%d", workflowID)
 			
-			env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.Anything).Return(
+			env.OnActivity("http", mock.Anything, mock.Anything).Return(
 				&http.ActivityResponse{
 					Response: &http.HTTPResponse{StatusCode: 200},
 					Saved:    map[string]string{"workflow_id": expectedValue},
@@ -555,8 +570,11 @@ func TestWorkflowWithComplexState(t *testing.T) {
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
 	
+	// Register activities
+	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+	
 	// Mock responses for different steps
-	env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
+	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 		config := params["config"].(map[string]interface{})
 		return config["url"] == "http://api.example.com/auth"
 	})).Return(
@@ -565,7 +583,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 			Saved:    map[string]string{"auth_token": "token123", "user_id": "user456"},
 		}, nil)
 	
-	env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
+	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 		config := params["config"].(map[string]interface{})
 		return contains(config["url"].(string), "/users/")
 	})).Return(
@@ -574,7 +592,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 			Saved:    map[string]string{"profile_id": "profile789"},
 		}, nil)
 	
-	env.OnActivity((&http.HTTPPlugin{}).Activity, mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
+	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 		config := params["config"].(map[string]interface{})
 		return contains(config["url"].(string), "/profiles/")
 	})).Return(
