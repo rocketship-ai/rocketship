@@ -41,6 +41,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://docs.rocketship.sh/examples/custom-scripting/</loc>
+         <lastmod>2025-05-25</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://docs.rocketship.sh/examples/request-chaining/</loc>
          <lastmod>2025-05-25</lastmod>
          <changefreq>daily</changefreq>
