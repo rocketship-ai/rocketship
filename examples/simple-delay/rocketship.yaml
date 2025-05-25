@@ -7,18 +7,18 @@ tests:
       - name: "Step 1"
         plugin: "delay"
         config:
-          duration: "5s"
+          duration: "1s"
       - name: "Step 2"
         plugin: "delay"
         config:
-          duration: "5s"
+          duration: "2s"
   - name: "Test 2"
     steps:
       - name: "Step 1"
         plugin: "delay"
         config:
-          duration: "5s"
+          duration: "2s"
       - name: "Step 2"
         plugin: "delay"
         config:
-          duration: "5s"
+          duration: "1s"

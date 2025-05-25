@@ -51,8 +51,32 @@ rocketship run -af simple-test.yaml
 
 The `-a` flag tells Rocketship to automatically start and stop the local server, and `-f` specifies the test file to run.
 
+## Configuration Variables
+
+Make your tests reusable across environments with configuration variables:
+
+```yaml
+vars:
+  api_url: "https://api.staging.com"
+  timeout: 30
+
+tests:
+  - name: "API Test"
+    steps:
+      - plugin: "http"
+        config:
+          url: "{{ .vars.api_url }}/health"
+          timeout: "{{ .vars.timeout }}s"
+```
+
+Override variables from the command line:
+
+```bash
+rocketship run -af test.yaml --var api_url=https://prod.api.com
+```
+
 ## Next Steps
 
-- Learn about [test specifications](test-specs.md)
+- Learn about [configuration variables](examples/config-variables.md)
 - Explore the [CLI reference](reference/rocketship.md)
 - Check out [example tests](examples.md)

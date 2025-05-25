@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	yaml "gopkg.in/yaml.v3"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 )
@@ -23,6 +24,30 @@ type TestSuiteResult struct {
 	TotalTests  int
 	PassedTests int
 	FailedTests int
+}
+
+// processConfigTemplates processes only config variable templates ({{ .vars.* }}) in the YAML
+// Leaves runtime variables ({{ variable }}) untouched for later processing
+func processConfigTemplates(yamlData []byte, vars map[string]interface{}) ([]byte, error) {
+	// Parse YAML to interface{} for template processing
+	var yamlDoc interface{}
+	if err := yaml.Unmarshal(yamlData, &yamlDoc); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML for template processing: %w", err)
+	}
+
+	// Process only config variables, leaving runtime variables for later
+	processedDoc, err := dsl.ProcessConfigVariablesRecursive(yamlDoc, vars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process config variables: %w", err)
+	}
+
+	// Convert back to YAML
+	processedYaml, err := yaml.Marshal(processedDoc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal processed YAML: %w", err)
+	}
+
+	return processedYaml, nil
 }
 
 // findRocketshipFiles recursively finds all rocketship.yaml files in the given directory
@@ -41,7 +66,7 @@ func findRocketshipFiles(dir string) ([]string, error) {
 }
 
 // runSingleTest runs a single test file and streams its logs
-func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, resultChan chan<- TestSuiteResult) {
+func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, resultChan chan<- TestSuiteResult) {
 	defer func() {
 		// Ensure we always send a result, even on panic
 		if r := recover(); r != nil {
@@ -62,10 +87,48 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 		return
 	}
 
-	// Parse YAML to get test suite name
-	_, err = dsl.ParseYAML(yamlData)
+	// Parse YAML to get config
+	config, err := dsl.ParseYAML(yamlData)
 	if err != nil {
 		Logger.Error("failed to parse YAML", "path", yamlPath, "error", err)
+		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+		return
+	}
+
+	// Load variables from file if specified
+	var varFileVars map[string]interface{}
+	if varFile != "" {
+		varFileData, err := os.ReadFile(varFile)
+		if err != nil {
+			Logger.Error("failed to read variable file", "path", varFile, "error", err)
+			resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+			return
+		}
+		var varFileConfig map[string]interface{}
+		if err := yaml.Unmarshal(varFileData, &varFileConfig); err != nil {
+			Logger.Error("failed to parse variable file", "path", varFile, "error", err)
+			resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+			return
+		}
+		varFileVars = varFileConfig
+	}
+
+	// Merge variables: YAML vars < var-file < CLI vars (CLI takes highest precedence)
+	mergedVars := config.Vars
+	if varFileVars != nil {
+		if mergedVars == nil {
+			mergedVars = make(map[string]interface{})
+		}
+		for k, v := range varFileVars {
+			mergedVars[k] = v
+		}
+	}
+	finalVars := dsl.MergeVariables(mergedVars, cliVars)
+
+	// Process templates in the config before sending to engine
+	processedYamlData, err := processConfigTemplates(yamlData, finalVars)
+	if err != nil {
+		Logger.Error("failed to process templates", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
 		return
 	}
@@ -74,7 +137,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, r
 	runCtx, runCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer runCancel()
 
-	runID, err := client.RunTest(runCtx, yamlData)
+	runID, err := client.RunTest(runCtx, processedYamlData)
 	if err != nil {
 		Logger.Error("failed to create run", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
@@ -239,6 +302,17 @@ func NewRunCmd() *cobra.Command {
 			}
 			defer func() { _ = client.Close() }()
 
+			// Get variable flags
+			cliVars, err := cmd.Flags().GetStringToString("var")
+			if err != nil {
+				return err
+			}
+
+			varFile, err := cmd.Flags().GetString("var-file")
+			if err != nil {
+				return err
+			}
+
 			// Get test file or directory path
 			testFile, err := cmd.Flags().GetString("file")
 			if err != nil {
@@ -281,7 +355,7 @@ func NewRunCmd() *cobra.Command {
 				wg.Add(1)
 				go func(testFile string) {
 					defer wg.Done()
-					runSingleTest(ctx, client, testFile, resultChan)
+					runSingleTest(ctx, client, testFile, cliVars, varFile, resultChan)
 				}(tf)
 			}
 
@@ -307,5 +381,7 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
 	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (default: localhost:7700)")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
+	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
+	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
 	return cmd
 }

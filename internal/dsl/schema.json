@@ -18,6 +18,11 @@
       "description": "Version of the test suite definition",
       "pattern": "^v\\d+\\.\\d+\\.\\d+$"
     },
+    "vars": {
+      "type": "object",
+      "description": "Configuration variables that can be referenced in test steps using {{ vars.key }} syntax",
+      "additionalProperties": true
+    },
     "tests": {
       "type": "array",
       "description": "Array of test cases",
