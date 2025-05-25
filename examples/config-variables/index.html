@@ -11,6 +11,10 @@
         <link rel="canonical" href="https://docs.rocketship.sh/examples/config-variables/">
       
       
+        <link rel="prev" href="../request-chaining/">
+      
+      
+        <link rel="next" href="../../deploy-on-your-cloud/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -18,7 +22,7 @@
     
     
       
-        <title>Configuration Variables Example - Rocketship CLI</title>
+        <title>All About Variables - Rocketship CLI</title>
       
     
     
@@ -107,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Configuration Variables Example
+              All About Variables
             
           </span>
         </div>
@@ -365,8 +369,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -382,13 +388,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -402,7 +406,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Examples
@@ -434,10 +438,14 @@
                 
   
   
+    
   
   
+  
     
     
+      
+        
       
         
       
@@ -446,13 +454,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
         
           
           <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
@@ -466,7 +472,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             HTTP Testing
@@ -489,6 +495,253 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    All About Variables
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    All About Variables
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#key-features-demonstrated" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Features Demonstrated
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features Demonstrated">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration-variables-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Variables Section
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#variable-usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Usage Patterns
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Variable Usage Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-basic-config-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Basic Config Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-mixed-config-and-runtime-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Mixed Config and Runtime Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-config-variables-in-plugin-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Config Variables in Plugin Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-the-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running the Example
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Running the Example">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-variable-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      CLI Variable Overrides
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-variable-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Using Variable Files
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Precedence
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-clear-variable-naming" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Clear Variable Naming
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-environment-specific-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Environment-Specific Configurations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-separate-config-from-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Separate Config from Runtime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-variable-files-for-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Variable Files for Environments
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-types-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Types Supported
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-test-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration with Test Flow
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -996,16 +1249,7 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Structure
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Example Structure">
+    <nav class="md-nav" aria-label="Key Features Demonstrated">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1213,8 +1457,6 @@
 <li><strong>CLI Overrides</strong>: Override variables from the command line</li>
 <li><strong>Variable Files</strong>: Load variables from external files</li>
 </ul>
-<h2 id="example-structure">Example Structure</h2>
-<p>The example uses a <strong>books</strong> resource to avoid conflicts with other parallel tests.</p>
 <h3 id="configuration-variables-section">Configuration Variables Section</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">vars</span><span class="p">:</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://tryme.rocketship.sh&quot;</span>
@@ -1227,6 +1469,7 @@
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;The</span><span class="nv"> </span><span class="s">Go</span><span class="nv"> </span><span class="s">Programming</span><span class="nv"> </span><span class="s">Language&quot;</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">author</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Alan</span><span class="nv"> </span><span class="s">Donovan&quot;</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">isbn</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;978-0134190440&quot;</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nt">tests</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">...</span>
 </code></pre></div>
 <h3 id="variable-usage-patterns">Variable Usage Patterns</h3>
 <h4 id="1-basic-config-variables">1. Basic Config Variables</h4>
@@ -1242,14 +1485,14 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Get</span><span class="nv"> </span><span class="s">book&quot;</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/books/{{</span><span class="nv"> </span><span class="s">book_id</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">  </span><span class="c1"># Config + Runtime</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/books/{{</span><span class="nv"> </span><span class="s">book_id</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w"> </span><span class="c1"># Config + Runtime</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">assertions</span><span class="p">:</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json_path&quot;</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.environment&quot;</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.environment</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">  </span><span class="c1"># Config variable</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.environment</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w"> </span><span class="c1"># Config variable</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json_path&quot;</span>
 <a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.id&quot;</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">book_id</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">  </span><span class="c1"># Runtime variable (from save)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">book_id</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w"> </span><span class="c1"># Runtime variable (from save)</span>
 </code></pre></div>
 <h4 id="3-config-variables-in-plugin-configuration">3. Config Variables in Plugin Configuration</h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Wait</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">config</span><span class="nv"> </span><span class="s">timeout&quot;</span>
@@ -1274,16 +1517,16 @@
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--var<span class="w"> </span>book.title<span class="o">=</span><span class="s2">&quot;Advanced Go Programming&quot;</span>
 </code></pre></div>
 <h3 id="using-variable-files">Using Variable Files</h3>
-<p>Create a <code>prod-vars.yaml</code> file:
+<p>Create a <code>prod-vars.yaml</code> file:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.production.com&quot;</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">environment</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;production&quot;</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">auth</span><span class="p">:</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;prod-api-key-456&quot;</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
-</code></pre></div></p>
-<p>Then run:
+</code></pre></div>
+<p>Then run:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/config-variables/rocketship.yaml<span class="w"> </span>--var-file<span class="w"> </span>prod-vars.yaml
-</code></pre></div></p>
+</code></pre></div>
 <h2 id="variable-precedence">Variable Precedence</h2>
 <p>Variables are resolved in this order (highest to lowest precedence):</p>
 <ol>
@@ -1293,14 +1536,14 @@
 </ol>
 <h2 id="best-practices">Best Practices</h2>
 <h3 id="1-clear-variable-naming">1. Clear Variable Naming</h3>
-<p>Use descriptive names that indicate purpose:
+<p>Use descriptive names that indicate purpose:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">vars</span><span class="p">:</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">api_base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.staging.com&quot;</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">max_retry_count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">test_user_email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test@example.com&quot;</span>
-</code></pre></div></p>
+</code></pre></div>
 <h3 id="2-environment-specific-configurations">2. Environment-Specific Configurations</h3>
-<p>Structure variables for easy environment switching:
+<p>Structure variables for easy environment switching:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">vars</span><span class="p">:</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">environment</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;staging&quot;</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">api</span><span class="p">:</span>
@@ -1309,17 +1552,19 @@
 <a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="nt">database</span><span class="p">:</span>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;db.staging.com&quot;</span>
 <a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5432</span>
-</code></pre></div></p>
+</code></pre></div>
 <h3 id="3-separate-config-from-runtime">3. Separate Config from Runtime</h3>
 <ul>
 <li><strong>Config variables</strong>: Use <code>{{ .vars.* }}</code> for environment/configuration values</li>
 <li><strong>Runtime variables</strong>: Use <code>{{ variable }}</code> for values captured during test execution</li>
 </ul>
 <h3 id="4-variable-files-for-environments">4. Variable Files for Environments</h3>
-<p>Create separate variable files for each environment:
-- <code>vars/staging.yaml</code>
-- <code>vars/production.yaml</code>
-- <code>vars/development.yaml</code></p>
+<p>Create separate variable files for each environment:</p>
+<ul>
+<li><code>vars/staging.yaml</code></li>
+<li><code>vars/production.yaml</code></li>
+<li><code>vars/development.yaml</code></li>
+</ul>
 <h2 id="variable-types-supported">Variable Types Supported</h2>
 <ul>
 <li><strong>Strings</strong>: <code>"value"</code></li>
