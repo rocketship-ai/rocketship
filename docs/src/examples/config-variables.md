@@ -11,10 +11,6 @@ This example demonstrates how to use configuration variables in Rocketship test 
 - **CLI Overrides**: Override variables from the command line
 - **Variable Files**: Load variables from external files
 
-## Example Structure
-
-The example uses a **books** resource to avoid conflicts with other parallel tests.
-
 ### Configuration Variables Section
 
 ```yaml
@@ -29,11 +25,13 @@ vars:
     title: "The Go Programming Language"
     author: "Alan Donovan"
     isbn: "978-0134190440"
+tests: ...
 ```
 
 ### Variable Usage Patterns
 
 #### 1. Basic Config Variables
+
 ```yaml
 - name: "Create book"
   plugin: "http"
@@ -45,21 +43,23 @@ vars:
 ```
 
 #### 2. Mixed Config and Runtime Variables
+
 ```yaml
 - name: "Get book"
   plugin: "http"
   config:
-    url: "{{ .vars.base_url }}/books/{{ book_id }}"  # Config + Runtime
+    url: "{{ .vars.base_url }}/books/{{ book_id }}" # Config + Runtime
   assertions:
     - type: "json_path"
       path: ".environment"
-      expected: "{{ .vars.environment }}"  # Config variable
+      expected: "{{ .vars.environment }}" # Config variable
     - type: "json_path"
       path: ".id"
-      expected: "{{ book_id }}"  # Runtime variable (from save)
+      expected: "{{ book_id }}" # Runtime variable (from save)
 ```
 
 #### 3. Config Variables in Plugin Configuration
+
 ```yaml
 - name: "Wait with config timeout"
   plugin: "delay"
@@ -70,12 +70,14 @@ vars:
 ## Running the Example
 
 ### Basic Usage
+
 ```bash
 # Run with default variables
 rocketship run -af examples/config-variables/rocketship.yaml
 ```
 
 ### CLI Variable Overrides
+
 ```bash
 # Override single variables
 rocketship run -af examples/config-variables/rocketship.yaml \
@@ -89,7 +91,9 @@ rocketship run -af examples/config-variables/rocketship.yaml \
 ```
 
 ### Using Variable Files
+
 Create a `prod-vars.yaml` file:
+
 ```yaml
 base_url: "https://api.production.com"
 environment: "production"
@@ -99,6 +103,7 @@ timeout: 60
 ```
 
 Then run:
+
 ```bash
 rocketship run -af examples/config-variables/rocketship.yaml --var-file prod-vars.yaml
 ```
@@ -114,7 +119,9 @@ Variables are resolved in this order (highest to lowest precedence):
 ## Best Practices
 
 ### 1. Clear Variable Naming
+
 Use descriptive names that indicate purpose:
+
 ```yaml
 vars:
   api_base_url: "https://api.staging.com"
@@ -123,7 +130,9 @@ vars:
 ```
 
 ### 2. Environment-Specific Configurations
+
 Structure variables for easy environment switching:
+
 ```yaml
 vars:
   environment: "staging"
@@ -136,11 +145,14 @@ vars:
 ```
 
 ### 3. Separate Config from Runtime
+
 - **Config variables**: Use `{{ .vars.* }}` for environment/configuration values
 - **Runtime variables**: Use `{{ variable }}` for values captured during test execution
 
 ### 4. Variable Files for Environments
+
 Create separate variable files for each environment:
+
 - `vars/staging.yaml`
 - `vars/production.yaml`
 - `vars/development.yaml`
