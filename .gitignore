@@ -6,3 +6,6 @@
 # python
 .DS_Store
 **/.DS_Store
+
+# custom debugging
+test_stability.sh

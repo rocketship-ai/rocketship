@@ -17,7 +17,7 @@ Rocketship comes with example test suites that demonstrate different features an
 The examples use the hosted test server at `tryme.rocketship.sh`. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:
 
 - Test CRUD operations for a resource type
-- Resources are isolated based off your IP
+- Resources are isolated based off a session header
 - FYI: Resource cleanup is done hourly (every :00)
 
 Then, run an example:

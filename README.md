@@ -97,7 +97,7 @@ rocketship run -af simple-test.yaml # starts the local engine, runs the tests, s
 The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 - Test CRUD operations for a resource type
-- Resources are isolated based off your IP
+- Resources are isolated based off a session header
 - FYI: Resource cleanup is done hourly (every :00)
 
 ## Documentation

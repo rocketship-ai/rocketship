@@ -13,6 +13,8 @@ tests:
         config:
           method: "POST"
           url: "{{ .vars.api_url }}/_clear"
+          headers:
+            X-Test-Session: "custom-scripting-session"
         assertions:
           - type: "status_code"
             expected: 204
@@ -24,6 +26,7 @@ tests:
           url: "{{ .vars.api_url }}/animals"
           headers:
             Content-Type: "application/json"
+            X-Test-Session: "custom-scripting-session"
           body: |
             {
               "name": "African Elephant",
@@ -101,6 +104,7 @@ tests:
             Content-Type: "application/json"
             X-Assessment-Category: "{{ animal_category }}"
             X-Processed-By: "{{ processed_user_name }}"
+            X-Test-Session: "custom-scripting-session"
           body: |
             {
               "assessment_id": "{{ processing_id }}",

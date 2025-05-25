@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,13 +16,14 @@ import (
 
 // Store represents an in-memory data store
 type Store struct {
-	data map[string]map[string]interface{}
-	mu   sync.RWMutex
+	data     map[string]map[string]interface{}
+	mu       sync.RWMutex
+	counters map[string]int64 // Per-resource-type counters (simplified)
 }
 
 // TestServer implements the HTTP test server
 type TestServer struct {
-	stores  map[string]*Store // Map of client IP to store
+	stores  map[string]*Store // Map of session ID to store
 	mu      sync.RWMutex      // Mutex for stores map
 	limiter *rate.Limiter
 }
@@ -63,6 +65,7 @@ func (s *TestServer) startCleanupScheduler() {
 		for _, store := range stores {
 			store.mu.Lock()
 			store.data = make(map[string]map[string]interface{})
+			store.counters = make(map[string]int64)
 			store.mu.Unlock()
 		}
 
@@ -70,10 +73,10 @@ func (s *TestServer) startCleanupScheduler() {
 	}
 }
 
-// getStore returns the store for a given client IP
-func (s *TestServer) getStore(clientIP string) *Store {
+// getStore returns the store for a given session ID
+func (s *TestServer) getStore(sessionID string) *Store {
 	s.mu.RLock()
-	store, exists := s.stores[clientIP]
+	store, exists := s.stores[sessionID]
 	s.mu.RUnlock()
 
 	if exists {
@@ -84,36 +87,41 @@ func (s *TestServer) getStore(clientIP string) *Store {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	store, exists = s.stores[clientIP]
+	store, exists = s.stores[sessionID]
 	if exists {
 		return store
 	}
 
 	store = &Store{
-		data: make(map[string]map[string]interface{}),
+		data:     make(map[string]map[string]interface{}),
+		counters: make(map[string]int64),
 	}
-	s.stores[clientIP] = store
+	s.stores[sessionID] = store
 	return store
 }
 
-// getClientIP extracts the client IP from the request
-func (s *TestServer) getClientIP(r *http.Request) string {
-	// Try to get the real IP from X-Forwarded-For header
+// getSessionID extracts session ID from request for store isolation
+func (s *TestServer) getSessionID(r *http.Request) string {
+	// Check for test session header first
+	if sessionID := r.Header.Get("X-Test-Session"); sessionID != "" {
+		return "session_" + sessionID
+	}
+	
+	// Fallback to IP-based isolation for requests without session header
+	ip := r.RemoteAddr
 	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		// X-Forwarded-For can contain multiple IPs, take the first one
 		ips := strings.Split(forwardedFor, ",")
 		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
+			ip = strings.TrimSpace(ips[0])
 		}
 	}
-
-	// Fallback to RemoteAddr
-	ip := r.RemoteAddr
+	
 	// Remove port if present
 	if colonIndex := strings.LastIndex(ip, ":"); colonIndex != -1 {
 		ip = ip[:colonIndex]
 	}
-	return ip
+	
+	return "ip_" + ip
 }
 
 // corsMiddleware adds CORS headers to all responses
@@ -159,14 +167,15 @@ func (s *TestServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get client IP and corresponding store
-	clientIP := s.getClientIP(r)
-	store := s.getStore(clientIP)
+	// Get session ID and corresponding store
+	sessionID := s.getSessionID(r)
+	store := s.getStore(sessionID)
 
 	// Special handling for clear state
 	if r.URL.Path == "/_clear" && r.Method == http.MethodPost {
 		store.mu.Lock()
 		store.data = make(map[string]map[string]interface{})
+		store.counters = make(map[string]int64)
 		store.mu.Unlock()
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -230,9 +239,22 @@ func (s *TestServer) handleGet(store *Store, resourceType, resourceID string) (i
 	defer store.mu.RUnlock()
 
 	if resourceID == "" {
-		// Return all resources of this type
+		// Return all resources of this type in consistent indexed format
 		if resources, ok := store.data[resourceType]; ok {
-			return resources, nil
+			// Sort resources by ID to ensure consistent ordering
+			var sortedKeys []string
+			for key := range resources {
+				sortedKeys = append(sortedKeys, key)
+			}
+			sort.Strings(sortedKeys)
+
+			// Convert to indexed format for client expectations
+			indexedResources := make(map[string]interface{})
+			for index, key := range sortedKeys {
+				indexKey := fmt.Sprintf("%s_%d", resourceType, index)
+				indexedResources[indexKey] = resources[key]
+			}
+			return indexedResources, nil
 		}
 		return map[string]interface{}{}, nil
 	}
@@ -262,7 +284,10 @@ func (s *TestServer) handlePost(store *Store, resourceType string, r *http.Reque
 
 	// Generate an ID if not provided
 	if _, ok := resource["id"]; !ok {
-		resource["id"] = fmt.Sprintf("%s_%d", resourceType, len(store.data[resourceType]))
+		// Use simple per-resource-type counter within lock for sequential IDs
+		currentCount := store.counters[resourceType]
+		store.counters[resourceType] = currentCount + 1
+		resource["id"] = fmt.Sprintf("%s_%d", resourceType, currentCount)
 	}
 	resourceID := resource["id"].(string)
 
