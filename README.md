@@ -18,7 +18,7 @@
 
 <br>
 
-🚀 Rocketship is an **open‑source testing platform** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers an extensible plugin system so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an **open‑source testing platform** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
 
 Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment.
 
@@ -97,7 +97,7 @@ rocketship run -af simple-test.yaml # starts the local engine, runs the tests, s
 The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 - Test CRUD operations for a resource type
-- Resources are isolated based off your IP
+- Resources are isolated based off a session header
 - FYI: Resource cleanup is done hourly (every :00)
 
 ## Documentation
@@ -111,8 +111,8 @@ Building the next-gen of integration testing for humans and AI agents. Suggestio
 - [ ] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
 - [ ] **Data Resource Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 - [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
-- [ ] **Smoke and CI Testing** Schedule tests on a cadence, trigger on deployments, and integrate with CI/CD pipelines.
-- [ ] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
+- [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
+- [x] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
 
 ## Contribute!!!
 

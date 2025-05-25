@@ -8,6 +8,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
+	"github.com/rocketship-ai/rocketship/internal/plugins/script"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -41,6 +42,7 @@ func main() {
 
 	plugins.RegisterWithTemporal(w, &delay.DelayPlugin{})
 	plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
+	plugins.RegisterWithTemporal(w, &script.ScriptPlugin{})
 
 	logger.Info("starting worker")
 	if err := w.Run(worker.InterruptCh()); err != nil {

@@ -1,0 +1,206 @@
+name: "Custom Scripting Demo - HTTP↔Script State Integration"
+version: "v1.0.0"
+vars:
+  api_url: "https://tryme.rocketship.sh"
+  max_retries: 3
+  user_name: "test_user"
+
+tests:
+  - name: "Complete HTTP and Script State Integration"
+    steps:
+      - name: "Clear Previous Test Data"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.api_url }}/_clear"
+          headers:
+            X-Test-Session: "custom-scripting-session"
+        assertions:
+          - type: "status_code"
+            expected: 204
+
+      - name: "HTTP Step 1 - Create Animal Data"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.api_url }}/animals"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "custom-scripting-session"
+          body: |
+            {
+              "name": "African Elephant",
+              "species": "Loxodonta africana",
+              "habitat": "Savanna",
+              "weight_kg": 6000,
+              "conservation_status": "Endangered"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "animal_id"
+          - json_path: ".name"
+            as: "animal_name"
+          - json_path: ".species"
+            as: "animal_species"
+          - json_path: ".habitat"
+            as: "animal_habitat"
+          - json_path: ".weight_kg"
+            as: "animal_weight"
+
+      - name: "Script Step 1 - Initial Processing (Inline)"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Access config variables and HTTP data
+
+            // Validate HTTP data exists
+            assert(state.animal_name, "Animal name should be available from HTTP step");
+            assert(state.animal_species, "Animal species should be available from HTTP step");
+            assert(state.animal_id, "Animal ID should be available from HTTP step");
+
+            // Process user and config data
+            let processedUserName = vars.user_name.toUpperCase();
+            let maxRetriesDoubled = vars.max_retries * 2;
+            let animalNameLength = state.animal_name.length;
+            let animalWeight = parseInt(state.animal_weight);
+
+            // Create additional computed values
+            let animalSlug = state.animal_name.toLowerCase().replace(/\s+/g, '-');
+            let processingId = Date.now().toString();
+            let weightCategory = animalWeight > 1000 ? "large" : animalWeight > 100 ? "medium" : "small";
+
+            // Save processed results for next steps
+            save("processed_user_name", processedUserName);
+            save("max_retries_doubled", maxRetriesDoubled.toString());
+            save("animal_name_length", animalNameLength.toString());
+            save("animal_slug", animalSlug);
+            save("processing_id", processingId);
+            save("weight_category", weightCategory);
+            save("step1_completed", "true");
+
+            // Inline script completed - data ready for external JS file
+
+      - name: "Script Step 2 - External File Processing"
+        plugin: "script"
+        config:
+          language: "javascript"
+          file: "examples/custom-scripting/validate-and-process.js"
+
+      - name: "HTTP Step 2 - Create Animal Assessment with Script Data"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.api_url }}/animals/assessments"
+          headers:
+            Content-Type: "application/json"
+            X-Assessment-Category: "{{ animal_category }}"
+            X-Processed-By: "{{ processed_user_name }}"
+            X-Test-Session: "custom-scripting-session"
+          body: |
+            {
+              "assessment_id": "{{ processing_id }}",
+              "animal_id": "{{ animal_id }}",
+              "animal_profile": {{ animal_profile }},
+              "assessed_by": "{{ processed_user_name }}",
+              "category": "{{ animal_category }}",
+              "score": {{ animal_score }},
+              "weight_category": "{{ weight_category }}",
+              "recommendations": [
+                "{{ recommendation_1 }}",
+                "{{ recommendation_2 }}"
+              ],
+              "metadata": {
+                "processing_timestamp": "{{ processing_timestamp }}",
+                "name_length": {{ animal_name_length }},
+                "slug": "{{ animal_slug }}"
+              }
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "assessment_record_id"
+          - json_path: ".assessment_id"
+            as: "created_assessment_id"
+
+      - name: "Script Step 3 - Final Validation (Inline)"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Validate complete data flow: HTTP → Script → HTTP → Script
+
+            // Check original HTTP data is preserved
+            assert(state.animal_name === "African Elephant", "Original animal name should be preserved");
+            assert(state.animal_species === "Loxodonta africana", "Original animal species should be preserved");
+            assert(state.animal_id, "Original animal ID should be preserved");
+
+            // Check script step 1 data is preserved  
+            assert(state.processed_user_name === "TEST_USER", "Processed user name should be preserved");
+            assert(state.step1_completed === "true", "Step 1 completion flag should be preserved");
+            assert(state.weight_category === "large", "Weight category should be 'large' for 6000kg elephant");
+
+            // Check external JS file processing is preserved
+            assert(state.assessment_complete === "true", "External JS assessment should be complete");
+            assert(state.animal_category, "Animal category should be set by external JS");
+            assert(state.animal_score, "Animal score should be calculated by external JS");
+
+            // Check HTTP step used script data successfully
+            assert(state.created_assessment_id, "HTTP POST should have created assessment");
+            assert(state.assessment_record_id, "Assessment record ID should be returned");
+
+            // Validate the complete state contains all expected data
+            const requiredFields = [
+              // From HTTP Step 1 (Create)
+              'animal_id', 'animal_name', 'animal_species', 'animal_habitat', 'animal_weight',
+              // From Script Step 1  
+              'processed_user_name', 'animal_slug', 'weight_category', 'step1_completed',
+              // From External JS File
+              'animal_category', 'animal_score', 'animal_profile', 'assessment_complete',
+              // From HTTP Step 2 (Assessment)
+              'assessment_record_id', 'created_assessment_id'
+            ];
+
+            let missingFields = [];
+            for (let field of requiredFields) {
+              if (!state[field]) {
+                missingFields.push(field);
+              }
+            }
+
+            if (missingFields.length > 0) {
+              assert(false, "Missing required fields: " + missingFields.join(", "));
+            }
+
+            // Generate final summary
+            const stateCount = Object.keys(state).length;
+            const summary = {
+              totalStateFields: stateCount,
+              httpStepsCompleted: 3, // Clear + Create + Assessment
+              scriptStepsCompleted: 3,
+              externalFileUsed: true,
+              dataFlowValid: true,
+              animalProcessed: state.animal_name,
+              finalCategory: state.animal_category,
+              finalScore: parseInt(state.animal_score),
+              weightCategory: state.weight_category,
+              assessmentCreated: state.created_assessment_id
+            };
+
+            save("final_summary", JSON.stringify(summary));
+            save("test_result", "SUCCESS");
+            save("all_integrations_complete", "true");
+
+            // ✅ COMPLETE SUCCESS!
+            // ✅ HTTP→Script state flow: WORKING
+            // ✅ Script→HTTP state flow: WORKING
+            // ✅ External JS file usage: WORKING
+            // ✅ Server data persistence: WORKING
+            // ✅ Multi-step state accumulation: WORKING
+            // ✅ Total state fields: ${stateCount}
+            // === ALL TESTS PASSED ===

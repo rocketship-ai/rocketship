@@ -26,6 +26,7 @@ tests:
           headers:
             "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
             "X-Environment": "{{ .vars.environment }}"
+            "X-Test-Session": "config-variables-session"
           body: |
             {
               "title": "{{ .vars.book.title }}",
@@ -55,6 +56,7 @@ tests:
           url: "{{ .vars.base_url }}/books/{{ book_id }}" # Mix: config var + runtime var
           headers:
             "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+            "X-Test-Session": "config-variables-session"
         assertions:
           - type: "status_code"
             expected: 200
@@ -80,6 +82,7 @@ tests:
           url: "{{ .vars.base_url }}/books/{{ book_id }}"
           headers:
             "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+            "X-Test-Session": "config-variables-session"
           body: |
             {
               "title": "{{ book_title }}",
@@ -102,6 +105,8 @@ tests:
         config:
           method: "GET"
           url: "{{ .vars.base_url }}/books/{{ book_id }}"
+          headers:
+            "X-Test-Session": "config-variables-session"
         assertions:
           - type: "status_code"
             expected: 200
@@ -116,6 +121,7 @@ tests:
           url: "{{ .vars.base_url }}/books/{{ book_id }}"
           headers:
             "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+            "X-Test-Session": "config-variables-session"
         assertions:
           - type: "status_code"
             expected: 204

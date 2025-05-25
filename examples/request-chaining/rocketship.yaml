@@ -9,6 +9,8 @@ tests:
         config:
           method: "POST"
           url: "https://tryme.rocketship.sh/cars"
+          headers:
+            X-Test-Session: "request-chaining-session"
           body: |
             {
               "make": "Toyota",
@@ -42,6 +44,8 @@ tests:
         config:
           method: "POST"
           url: "https://tryme.rocketship.sh/cars"
+          headers:
+            X-Test-Session: "request-chaining-session"
           body: |
             {
               "make": "Honda",
@@ -66,6 +70,8 @@ tests:
         config:
           method: "GET"
           url: "https://tryme.rocketship.sh/cars"
+          headers:
+            X-Test-Session: "request-chaining-session"
         assertions:
           - type: "status_code"
             expected: 200
@@ -84,6 +90,8 @@ tests:
         config:
           method: "DELETE"
           url: "https://tryme.rocketship.sh/cars/{{ first_car_id }}"
+          headers:
+            X-Test-Session: "request-chaining-session"
         assertions:
           - type: "status_code"
             expected: 204
@@ -93,6 +101,8 @@ tests:
         config:
           method: "DELETE"
           url: "https://tryme.rocketship.sh/cars/{{ second_car_id }}"
+          headers:
+            X-Test-Session: "request-chaining-session"
         assertions:
           - type: "status_code"
             expected: 204

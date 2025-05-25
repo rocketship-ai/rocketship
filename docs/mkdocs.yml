@@ -60,7 +60,10 @@ nav:
       - Overview: examples.md
       - HTTP Testing:
           - Request Chaining & Delays: examples/request-chaining.md
+      - Parameterizing Tests:
           - All About Variables: examples/config-variables.md
+      - Custom Scripting:
+          - JavaScript Integration: examples/custom-scripting.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
       - Kubernetes: deploy-on-kubernetes.md

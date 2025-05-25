@@ -12,7 +12,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/plugins/http"
 )
 
-func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
+func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}) error {
 	logger := workflow.GetLogger(ctx)
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30, // TODO: Make this configurable
@@ -40,6 +40,11 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test) error {
 
 		case "http":
 			if err := handleHTTPStep(ctx, step, state); err != nil {
+				return fmt.Errorf("step %d: %w", i, err)
+			}
+
+		case "script":
+			if err := handleScriptStep(ctx, step, state, vars); err != nil {
 				return fmt.Errorf("step %d: %w", i, err)
 			}
 
@@ -84,11 +89,8 @@ func handleHTTPStep(ctx workflow.Context, step dsl.Step, state map[string]string
 		"state":      state,
 	}
 
-	// Create HTTP plugin instance for activity execution
-	httpPlugin := &http.HTTPPlugin{}
-
 	var activityResp http.ActivityResponse
-	err := workflow.ExecuteActivity(ctx, httpPlugin.Activity, pluginParams).Get(ctx, &activityResp)
+	err := workflow.ExecuteActivity(ctx, "http", pluginParams).Get(ctx, &activityResp)
 	if err != nil {
 		logger.Error("HTTP activity failed", "error", err)
 		return fmt.Errorf("http activity error: %w", err)
@@ -99,6 +101,61 @@ func handleHTTPStep(ctx workflow.Context, step dsl.Step, state map[string]string
 	keys := workflow.DeterministicKeys(activityResp.Saved)
 	for _, key := range keys {
 		state[key] = activityResp.Saved[key]
+		logger.Info(fmt.Sprintf("Updated state[%s] = %s", key, state[key]))
+	}
+	logger.Info(fmt.Sprintf("Updated state: %v", state))
+
+	return nil
+}
+
+func handleScriptStep(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info(fmt.Sprintf("Executing script step: %s", step.Name))
+	logger.Info(fmt.Sprintf("Current state: %v", state))
+
+	// Pass raw step data to activity
+	pluginParams := map[string]interface{}{
+		"name":   step.Name,
+		"plugin": step.Plugin,
+		"config": step.Config,
+		"state":  state,
+		"vars":   vars,
+	}
+
+	var activityResp interface{}
+	err := workflow.ExecuteActivity(ctx, "script", pluginParams).Get(ctx, &activityResp)
+	if err != nil {
+		logger.Error("Script activity failed", "error", err)
+		return fmt.Errorf("script activity error: %w", err)
+	}
+
+	// Handle response - it comes back as map[string]interface{} due to JSON serialization
+	var savedValues map[string]string
+	if respMap, ok := activityResp.(map[string]interface{}); ok {
+		if savedInterface, exists := respMap["saved"]; exists {
+			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
+				savedValues = make(map[string]string)
+				// Use deterministic keys for Temporal workflow compliance
+				keys := workflow.DeterministicKeys(savedMap)
+				for _, k := range keys {
+					v := savedMap[k]
+					if strVal, ok := v.(string); ok {
+						savedValues[k] = strVal
+					} else {
+						savedValues[k] = fmt.Sprintf("%v", v)
+					}
+				}
+			}
+		}
+	} else {
+		return fmt.Errorf("unexpected response type from script activity: %T", activityResp)
+	}
+
+	// Update workflow state with saved values
+	logger.Info(fmt.Sprintf("Saved values from script: %v", savedValues))
+	keys := workflow.DeterministicKeys(savedValues)
+	for _, key := range keys {
+		state[key] = savedValues[key]
 		logger.Info(fmt.Sprintf("Updated state[%s] = %s", key, state[key]))
 	}
 	logger.Info(fmt.Sprintf("Updated state: %v", state))

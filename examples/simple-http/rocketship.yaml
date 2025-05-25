@@ -9,6 +9,8 @@ tests:
         config:
           method: "POST"
           url: "https://tryme.rocketship.sh/users"
+          headers:
+            X-Test-Session: "simple-http-session"
           body: |
             {
               "name": "John Doe",
@@ -29,6 +31,8 @@ tests:
         config:
           method: "GET"
           url: "https://tryme.rocketship.sh/users"
+          headers:
+            X-Test-Session: "simple-http-session"
         assertions:
           - type: "status_code"
             expected: 200
@@ -41,6 +45,8 @@ tests:
         config:
           method: "DELETE"
           url: "https://tryme.rocketship.sh/users/{{ user_id }}"
+          headers:
+            X-Test-Session: "simple-http-session"
         assertions:
           - type: "status_code"
             expected: 204
@@ -52,6 +58,8 @@ tests:
         config:
           method: "POST"
           url: "https://tryme.rocketship.sh/orders"
+          headers:
+            X-Test-Session: "simple-http-session"
           body: |
             {
               "product": "Test Product",
@@ -72,6 +80,8 @@ tests:
         config:
           method: "GET"
           url: "https://tryme.rocketship.sh/orders"
+          headers:
+            X-Test-Session: "simple-http-session"
         assertions:
           - type: "status_code"
             expected: 200
@@ -84,6 +94,8 @@ tests:
         config:
           method: "DELETE"
           url: "https://tryme.rocketship.sh/orders/{{ order_id }}"
+          headers:
+            X-Test-Session: "simple-http-session"
         assertions:
           - type: "status_code"
             expected: 204
