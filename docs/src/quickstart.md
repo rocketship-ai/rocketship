@@ -26,8 +26,8 @@ Create a test file:
 
 ```bash
 cat > simple-test.yaml << 'EOF'
-name: "Simple Integration Test Suite"
-description: "A simple integration test suite!"
+name: "Simple Test Suite"
+description: "A simple test suite!"
 version: "v1.0.0"
 tests:
   - name: "API Health Check"
