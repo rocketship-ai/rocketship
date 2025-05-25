@@ -1,0 +1,43 @@
+name: "Simple Script Test"
+description: "Basic test to verify script plugin works"
+version: "v1.0.0"
+
+vars:
+  test_value: "Hello World"
+  max_count: 10
+
+tests:
+  - name: "Pure Script Test"
+    steps:
+      - name: "Script processing test"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Debug what's in vars - save everything as strings for inspection
+            save('vars_type', typeof vars);
+            save('vars_keys', JSON.stringify(Object.keys(vars)));
+            save('vars_stringified', JSON.stringify(vars));
+            
+            // Check if vars exists and has properties
+            if (vars && vars.test_value) {
+                save('test_value_found', vars.test_value);
+            } else {
+                save('test_value_found', 'NOT_FOUND');
+            }
+            
+            save('script_completed', 'true');
+
+      - name: "Debug output step"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Read back the debug info from state
+            const varsType = state.vars_type || 'undefined';
+            const varsKeys = state.vars_keys || '[]';
+            const varsStringified = state.vars_stringified || '{}';
+            const testValueFound = state.test_value_found || 'NOT_SET';
+            
+            // This will cause an assertion failure that shows us the debug info
+            assert(false, 'DEBUG INFO - vars_type: ' + varsType + ', vars_keys: ' + varsKeys + ', vars_stringified: ' + varsStringified + ', test_value_found: ' + testValueFound);

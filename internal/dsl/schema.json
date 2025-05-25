@@ -50,7 +50,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay"]
+                  "enum": ["http", "delay", "script"]
                 },
                 "config": {
                   "type": "object",
@@ -134,7 +134,46 @@
                     ]
                   }
                 }
-              }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": { "plugin": { "const": "script" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["language"],
+                        "properties": {
+                          "language": {
+                            "type": "string",
+                            "enum": ["javascript"],
+                            "description": "Script language to use"
+                          },
+                          "script": {
+                            "type": "string",
+                            "description": "Inline script content"
+                          },
+                          "file": {
+                            "type": "string",
+                            "description": "Path to external script file"
+                          },
+                          "timeout": {
+                            "type": "string",
+                            "pattern": "^[0-9]+(s|m|h)$",
+                            "description": "Script execution timeout"
+                          }
+                        },
+                        "oneOf": [
+                          { "required": ["script"] },
+                          { "required": ["file"] }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
             }
           }
         }

@@ -1,0 +1,221 @@
+name: "Custom Scripting Example"
+description: "Demonstrates custom JavaScript scripting with data validation, transformation, and assertions"
+version: "v1.0.0"
+
+# Configuration variables for the scripting example
+vars:
+  api_base: "https://tryme.rocketship.sh"
+  max_items: 5
+  validation:
+    min_length: 3
+    max_length: 50
+  environment: "testing"
+
+tests:
+  - name: "Data Processing and Validation Flow"
+    steps:
+      - name: "Create initial data"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.api_base }}/orders"
+          body: |
+            {
+              "customer_name": "John Doe",
+              "email": "john.doe@example.com",
+              "items": [
+                {"name": "Widget A", "price": 19.99, "quantity": 2},
+                {"name": "Widget B", "price": 29.99, "quantity": 1}
+              ],
+              "environment": "{{ .vars.environment }}"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "order_id"
+          - json_path: ".total"
+            as: "order_total"
+          - json_path: ".customer_name"
+            as: "customer_name"
+          - json_path: ".email"
+            as: "customer_email"
+
+      - name: "Validate and transform order data"
+        plugin: "script"
+        config:
+          language: "javascript"
+          timeout: "10s"
+          script: |
+            // Access workflow state and config variables
+            const orderId = state.order_id;
+            const customerName = state.customer_name;
+            const customerEmail = state.customer_email;
+            const orderTotal = parseFloat(state.order_total);
+            const maxItems = vars.max_items;
+            const minLength = vars.validation.min_length;
+            const maxLength = vars.validation.max_length;
+            
+            // Data validation using assert
+            assert(orderId && orderId.length > 0, 'Order ID must not be empty');
+            assert(customerName.length >= minLength, 'Customer name too short (min ' + minLength + ' chars)');
+            assert(customerName.length <= maxLength, 'Customer name too long (max ' + maxLength + ' chars)');
+            assert(customerEmail.includes('@'), 'Invalid email format - missing @');
+            assert(customerEmail.includes('.'), 'Invalid email format - missing domain');
+            assert(orderTotal > 0, 'Order total must be positive');
+            assert(orderTotal < 1000, 'Order total seems too high: $' + orderTotal);
+            
+            // Data transformation and calculations
+            const emailDomain = customerEmail.split('@')[1];
+            const isBusinessEmail = emailDomain.includes('.com') || emailDomain.includes('.org');
+            const customerType = isBusinessEmail ? 'business' : 'personal';
+            const salesTax = orderTotal * 0.08;
+            const totalWithTax = orderTotal + salesTax;
+            const discountPercent = orderTotal > 50 ? 10 : 5;
+            const discountAmount = (orderTotal * discountPercent) / 100;
+            const finalTotal = totalWithTax - discountAmount;
+            
+            // Generate additional metadata
+            const processingTime = new Date().toISOString();
+            const validationStatus = 'passed';
+            const priority = orderTotal > 100 ? 'high' : 'normal';
+            
+            // Save computed values back to workflow state
+            save('email_domain', emailDomain);
+            save('customer_type', customerType);
+            save('sales_tax', salesTax.toFixed(2));
+            save('total_with_tax', totalWithTax.toFixed(2));
+            save('discount_percent', discountPercent.toString());
+            save('discount_amount', discountAmount.toFixed(2));
+            save('final_total', finalTotal.toFixed(2));
+            save('processing_time', processingTime);
+            save('validation_status', validationStatus);
+            save('priority', priority);
+            save('item_count_valid', 'true'); // Assuming we validated item count elsewhere
+
+      - name: "Verify processed data"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ .vars.api_base }}/orders/{{ order_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".id"
+            expected: "{{ order_id }}"
+
+      - name: "Advanced data processing"
+        plugin: "script"
+        config:
+          language: "javascript"
+          timeout: "15s"
+          script: |
+            // Complex business logic processing
+            const finalTotal = parseFloat(state.final_total);
+            const customerType = state.customer_type;
+            const priority = state.priority;
+            
+            // Business rules validation
+            assert(state.validation_status === 'passed', 'Previous validation must have passed');
+            assert(finalTotal > 0, 'Final total must be positive');
+            
+            // Shipping calculations based on customer type and order value
+            let shippingCost = 0;
+            if (customerType === 'business') {
+              shippingCost = finalTotal > 75 ? 0 : 15.00; // Free shipping for business orders > $75
+            } else {
+              shippingCost = finalTotal > 50 ? 5.00 : 10.00; // Reduced shipping for personal orders > $50
+            }
+            
+            // Priority handling
+            const expeditedShipping = priority === 'high' ? 25.00 : 0;
+            const totalShipping = shippingCost + expeditedShipping;
+            const grandTotal = finalTotal + totalShipping;
+            
+            // Order status determination
+            let orderStatus = 'pending';
+            if (grandTotal > 200) {
+              orderStatus = 'requires_approval';
+            } else if (priority === 'high') {
+              orderStatus = 'expedited';
+            } else {
+              orderStatus = 'confirmed';
+            }
+            
+            // Risk assessment (simplified)
+            const isHighValue = grandTotal > 150;
+            const isNewCustomer = !state.customer_email.includes('returning'); // Simplified check
+            const riskScore = (isHighValue ? 2 : 0) + (isNewCustomer ? 1 : 0);
+            let riskLevel = 'low';
+            if (riskScore >= 2) {
+              riskLevel = 'medium';
+            }
+            if (riskScore >= 3) {
+              riskLevel = 'high';
+            }
+            
+            // Final assertions
+            assert(grandTotal >= finalTotal, 'Grand total cannot be less than final total');
+            assert(orderStatus.length > 0, 'Order status must be set');
+            assert(['low', 'medium', 'high'].includes(riskLevel), 'Invalid risk level');
+            
+            // Save final processing results
+            save('shipping_cost', shippingCost.toFixed(2));
+            save('expedited_shipping', expeditedShipping.toFixed(2));
+            save('total_shipping', totalShipping.toFixed(2));
+            save('grand_total', grandTotal.toFixed(2));
+            save('order_status', orderStatus);
+            save('risk_level', riskLevel);
+            save('risk_score', riskScore.toString());
+            save('processing_complete', 'true');
+
+      - name: "Final validation and cleanup"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Final validation of all processed data
+            const requiredFields = [
+              'order_id', 'customer_type', 'final_total', 'grand_total', 
+              'order_status', 'risk_level', 'processing_complete'
+            ];
+            
+            // Ensure all required fields are present
+            for (let field of requiredFields) {
+              assert(state[field] !== undefined, 'Required field missing: ' + field);
+              assert(state[field] !== '', 'Required field empty: ' + field);
+            }
+            
+            // Business logic final checks
+            const finalTotal = parseFloat(state.final_total);
+            const grandTotal = parseFloat(state.grand_total);
+            assert(grandTotal >= finalTotal, 'Grand total must be >= final total');
+            assert(state.processing_complete === 'true', 'Processing must be complete');
+            
+            // Generate summary report
+            const report = {
+              order_id: state.order_id,
+              customer_type: state.customer_type,
+              totals: {
+                original: state.order_total,
+                final: state.final_total,
+                grand: state.grand_total
+              },
+              status: state.order_status,
+              risk: state.risk_level,
+              timestamp: state.processing_time
+            };
+            
+            save('summary_report', JSON.stringify(report));
+            save('test_completed', 'success');
+
+      - name: "Cleanup - Delete test order"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "{{ .vars.api_base }}/orders/{{ order_id }}"
+        assertions:
+          - type: "status_code"
+            expected: 204

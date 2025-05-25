@@ -85,7 +85,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			TaskQueue: "test-workflows",
 		}
 
-		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test)
+		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars)
 		if err != nil {
 			log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
 			return nil, fmt.Errorf("failed to start workflow: %w", err)
