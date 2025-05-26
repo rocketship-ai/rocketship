@@ -91,6 +91,36 @@ jobs:
   cli-integration:
     name: CLI Integration Tests
     runs-on: ubuntu-latest
+    services:
+      postgres-test:
+        image: postgres:13
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql-test:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testdb
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+          MYSQL_ROOT_PASSWORD: rootpass
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u testuser -ptestpass"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -99,6 +129,12 @@ jobs:
         with:
           go-version: "1.24"
           check-latest: true
+
+      - name: Install database clients
+        run: |
+          echo "Installing PostgreSQL and MySQL clients..."
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client mysql-client
 
       - name: Install Temporal CLI
         run: |
@@ -120,6 +156,56 @@ jobs:
 
           # Verify installation
           temporal --version
+
+      - name: Initialize test databases
+        run: |
+          echo "Waiting for databases to be ready..."
+          
+          # Wait for PostgreSQL to be ready with timeout
+          echo "Waiting for PostgreSQL..."
+          timeout=30
+          count=0
+          until pg_isready -h localhost -p 5433 -U testuser; do
+            if [ $count -ge $timeout ]; then
+              echo "❌ PostgreSQL failed to start within ${timeout} seconds"
+              exit 1
+            fi
+            echo "PostgreSQL not ready yet (${count}/${timeout})..."
+            sleep 1
+            count=$((count + 1))
+          done
+          echo "✅ PostgreSQL is ready!"
+          
+          # Wait for MySQL to be ready with timeout
+          echo "Waiting for MySQL..."
+          count=0
+          until mysqladmin ping -h localhost -P 3307 -u testuser -ptestpass --silent; do
+            if [ $count -ge $timeout ]; then
+              echo "❌ MySQL failed to start within ${timeout} seconds"
+              exit 1
+            fi
+            echo "MySQL not ready yet (${count}/${timeout})..."
+            sleep 1
+            count=$((count + 1))
+          done
+          echo "✅ MySQL is ready!"
+          
+          echo "Initializing PostgreSQL test data..."
+          PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -f .docker/test-db-init/postgres/01-init.sql
+          
+          echo "Initializing MySQL test data..."
+          mysql -h localhost -P 3307 -u testuser -ptestpass testdb < .docker/test-db-init/mysql/01-init.sql
+          
+          echo "Verifying database setup..."
+          # Verify PostgreSQL data
+          PG_COUNT=$(PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -t -c "SELECT COUNT(*) FROM users;")
+          echo "PostgreSQL users count: $PG_COUNT"
+          
+          # Verify MySQL data  
+          MYSQL_COUNT=$(mysql -h localhost -P 3307 -u testuser -ptestpass testdb -N -e "SELECT COUNT(*) FROM users;")
+          echo "MySQL users count: $MYSQL_COUNT"
+          
+          echo "✅ Database initialization complete!"
 
       - name: Build and install Rocketship CLI
         run: |
