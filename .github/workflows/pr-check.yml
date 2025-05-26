@@ -116,10 +116,10 @@ jobs:
         ports:
           - 3307:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -u testuser -ptestpass"
+          --health-cmd="mysqladmin ping -h localhost -u root -prootpass"
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-timeout 10s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -157,44 +157,47 @@ jobs:
           # Verify installation
           temporal --version
 
+      - name: Wait for service containers
+        run: |
+          echo "Waiting for GitHub Actions service containers to be ready..."
+          echo "Services should be ready when this step runs due to health checks"
+          
+          # Give extra time for services to stabilize
+          echo "Allowing extra time for service stabilization..."
+          sleep 10
+
       - name: Initialize test databases
         run: |
-          echo "Waiting for databases to be ready..."
+          echo "Initializing test databases..."
           
-          # Wait for PostgreSQL to be ready with timeout
-          echo "Waiting for PostgreSQL..."
-          timeout=30
-          count=0
-          until pg_isready -h localhost -p 5433 -U testuser; do
-            if [ $count -ge $timeout ]; then
-              echo "❌ PostgreSQL failed to start within ${timeout} seconds"
+          # Verify PostgreSQL is accessible
+          echo "Testing PostgreSQL connection..."
+          if ! pg_isready -h localhost -p 5433 -U testuser; then
+            echo "❌ PostgreSQL is not ready"
+            exit 1
+          fi
+          echo "✅ PostgreSQL is accessible!"
+          
+          # Verify MySQL is accessible
+          echo "Testing MySQL connection..."
+          export MYSQL_PWD=rootpass
+          if ! mysqladmin ping -h localhost -P 3307 -u root --silent; then
+            echo "❌ MySQL is not ready"
+            echo "Attempting to connect with testuser..."
+            export MYSQL_PWD=testpass
+            if ! mysqladmin ping -h localhost -P 3307 -u testuser --silent; then
+              echo "❌ MySQL is not accessible with either user"
               exit 1
             fi
-            echo "PostgreSQL not ready yet (${count}/${timeout})..."
-            sleep 1
-            count=$((count + 1))
-          done
-          echo "✅ PostgreSQL is ready!"
-          
-          # Wait for MySQL to be ready with timeout
-          echo "Waiting for MySQL..."
-          count=0
-          until mysqladmin ping -h localhost -P 3307 -u testuser -ptestpass --silent; do
-            if [ $count -ge $timeout ]; then
-              echo "❌ MySQL failed to start within ${timeout} seconds"
-              exit 1
-            fi
-            echo "MySQL not ready yet (${count}/${timeout})..."
-            sleep 1
-            count=$((count + 1))
-          done
-          echo "✅ MySQL is ready!"
+          fi
+          echo "✅ MySQL is accessible!"
           
           echo "Initializing PostgreSQL test data..."
           PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -f .docker/test-db-init/postgres/01-init.sql
           
           echo "Initializing MySQL test data..."
-          mysql -h localhost -P 3307 -u testuser -ptestpass testdb < .docker/test-db-init/mysql/01-init.sql
+          export MYSQL_PWD=testpass  # Set password for testuser
+          mysql -h localhost -P 3307 -u testuser testdb < .docker/test-db-init/mysql/01-init.sql
           
           echo "Verifying database setup..."
           # Verify PostgreSQL data
@@ -202,7 +205,7 @@ jobs:
           echo "PostgreSQL users count: $PG_COUNT"
           
           # Verify MySQL data  
-          MYSQL_COUNT=$(mysql -h localhost -P 3307 -u testuser -ptestpass testdb -N -e "SELECT COUNT(*) FROM users;")
+          MYSQL_COUNT=$(mysql -h localhost -P 3307 -u testuser testdb -N -e "SELECT COUNT(*) FROM users;")
           echo "MySQL users count: $MYSQL_COUNT"
           
           echo "✅ Database initialization complete!"
