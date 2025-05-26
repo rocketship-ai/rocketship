@@ -49,11 +49,10 @@ For detailed installation instructions for other platforms and optional aliases,
 #### Save a test spec
 
 ```bash
-cat > simple-test.yaml << 'EOF'
+cat > rocketship.yaml << 'EOF'
 name: "Simple Test Suite"
-description: "Showcasing some of the plugins"
+description: "Showing some of the plugins"
 version: "v1.0.0"
-
 tests:
   - name: "User Workflow with Processing Delay"
     steps:
@@ -114,7 +113,7 @@ EOF
 #### Run it
 
 ```bash
-rocketship run -af simple-test.yaml # starts the local engine, runs the tests, shuts the engine down
+rocketship run -af rocketship.yaml # starts the local engine, runs the tests, shuts the engine down
 ```
 
 The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
