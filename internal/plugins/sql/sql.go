@@ -174,19 +174,130 @@ func getQueries(config *SQLConfig) ([]string, error) {
 			return nil, fmt.Errorf("failed to read SQL file %s: %w", config.File, err)
 		}
 		
-		// Split by semicolon and filter empty queries
-		queries := strings.Split(string(content), ";")
-		var result []string
-		for _, query := range queries {
-			query = strings.TrimSpace(query)
-			if query != "" {
-				result = append(result, query)
-			}
+		// Parse SQL file content with proper delimiter handling
+		queries, err := parseSQLFile(string(content))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse SQL file %s: %w", config.File, err)
 		}
-		return result, nil
+		
+		return queries, nil
 	}
 	
 	return nil, fmt.Errorf("no queries specified")
+}
+
+// parseSQLFile parses SQL file content and splits queries while respecting string literals and comments
+func parseSQLFile(content string) ([]string, error) {
+	var queries []string
+	var currentQuery strings.Builder
+	
+	runes := []rune(content)
+	length := len(runes)
+	
+	for i := 0; i < length; i++ {
+		char := runes[i]
+		
+		switch char {
+		case '-':
+			// Handle SQL line comments (-- comment)
+			if i+1 < length && runes[i+1] == '-' {
+				// Skip until end of line
+				for i < length && runes[i] != '\n' {
+					i++
+				}
+				if i < length {
+					currentQuery.WriteRune('\n') // Preserve newline
+				}
+				continue
+			}
+			currentQuery.WriteRune(char)
+			
+		case '/':
+			// Handle SQL block comments (/* comment */)
+			if i+1 < length && runes[i+1] == '*' {
+				i += 2 // Skip /*
+				// Skip until */
+				for i+1 < length {
+					if runes[i] == '*' && runes[i+1] == '/' {
+						i += 2 // Skip */
+						break
+					}
+					i++
+				}
+				currentQuery.WriteRune(' ') // Replace comment with space
+				continue
+			}
+			currentQuery.WriteRune(char)
+			
+		case '\'':
+			// Handle single-quoted strings
+			currentQuery.WriteRune(char)
+			i++
+			for i < length {
+				char = runes[i]
+				currentQuery.WriteRune(char)
+				if char == '\'' {
+					// Check for escaped quote ('')
+					if i+1 < length && runes[i+1] == '\'' {
+						i++ // Skip escaped quote
+						currentQuery.WriteRune('\'')
+					} else {
+						break // End of string
+					}
+				}
+				i++
+			}
+			
+		case '"':
+			// Handle double-quoted identifiers
+			currentQuery.WriteRune(char)
+			i++
+			for i < length {
+				char = runes[i]
+				currentQuery.WriteRune(char)
+				if char == '"' {
+					// Check for escaped quote ("")
+					if i+1 < length && runes[i+1] == '"' {
+						i++ // Skip escaped quote
+						currentQuery.WriteRune('"')
+					} else {
+						break // End of identifier
+					}
+				}
+				i++
+			}
+			
+		case ';':
+			// Found statement delimiter outside of strings/comments
+			currentQuery.WriteRune(char)
+			query := strings.TrimSpace(currentQuery.String())
+			if query != "" && query != ";" {
+				// Remove trailing semicolon and add clean query
+				query = strings.TrimSuffix(query, ";")
+				query = strings.TrimSpace(query)
+				if query != "" {
+					queries = append(queries, query)
+				}
+			}
+			currentQuery.Reset()
+			
+		default:
+			currentQuery.WriteRune(char)
+		}
+	}
+	
+	// Handle any remaining content as the last query
+	lastQuery := strings.TrimSpace(currentQuery.String())
+	if lastQuery != "" {
+		// Remove trailing semicolon if present
+		lastQuery = strings.TrimSuffix(lastQuery, ";")
+		lastQuery = strings.TrimSpace(lastQuery)
+		if lastQuery != "" {
+			queries = append(queries, lastQuery)
+		}
+	}
+	
+	return queries, nil
 }
 
 // executeQueries executes SQL queries and returns results
