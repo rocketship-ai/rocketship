@@ -91,6 +91,37 @@ jobs:
   cli-integration:
     name: CLI Integration Tests
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testdb
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+          MYSQL_ROOT_PASSWORD: rootpass
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -100,28 +131,31 @@ jobs:
           go-version: "1.24"
           check-latest: true
 
-      - name: Setup PostgreSQL
-        uses: harmon758/postgresql-action@v1
-        with:
-          postgresql version: '13'
-          postgresql database: testdb
-          postgresql user: testuser
-          postgresql password: testpass
-          postgresql port: 5433
-
-      - name: Setup MySQL
-        uses: mirromutth/mysql-action@v1.1
-        with:
-          mysql version: '8.0'
-          mysql database: testdb
-          mysql user: testuser
-          mysql password: testpass
-          mysql port: 3307
-
-      - name: Initialize databases
+      - name: Wait for databases and initialize
         run: |
           echo "Waiting for databases to be ready..."
-          sleep 10
+          
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -c "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ PostgreSQL is ready!"
+              break
+            fi
+            echo "PostgreSQL not ready, waiting... ($i/30)"
+            sleep 2
+          done
+          
+          # Wait for MySQL to be ready
+          echo "Waiting for MySQL..."
+          for i in {1..30}; do
+            if mysql -h localhost -P 3307 -u testuser -ptestpass testdb -e "SELECT 1" > /dev/null 2>&1; then
+              echo "✅ MySQL is ready!"
+              break
+            fi
+            echo "MySQL not ready, waiting... ($i/30)"
+            sleep 2
+          done
           
           echo "Setting up PostgreSQL schema..."
           PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb << 'EOF'
@@ -236,9 +270,26 @@ jobs:
           EOF
 
           echo "Verifying database setup..."
-          PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -c "SELECT COUNT(*) as postgres_users FROM users;"
-          mysql -h localhost -P 3307 -u testuser -ptestpass testdb -e "SELECT COUNT(*) as mysql_users FROM users;"
-          echo "✅ Databases initialized successfully!"
+          
+          # Verify PostgreSQL setup
+          PG_COUNT=$(PGPASSWORD=testpass psql -h localhost -p 5433 -U testuser -d testdb -t -c "SELECT COUNT(*) FROM users;" | xargs)
+          if [ "$PG_COUNT" -eq 4 ]; then
+            echo "✅ PostgreSQL setup verified: $PG_COUNT users"
+          else
+            echo "❌ PostgreSQL setup failed: expected 4 users, got $PG_COUNT"
+            exit 1
+          fi
+          
+          # Verify MySQL setup  
+          MYSQL_COUNT=$(mysql -h localhost -P 3307 -u testuser -ptestpass testdb -sN -e "SELECT COUNT(*) FROM users;")
+          if [ "$MYSQL_COUNT" -eq 4 ]; then
+            echo "✅ MySQL setup verified: $MYSQL_COUNT users"
+          else
+            echo "❌ MySQL setup failed: expected 4 users, got $MYSQL_COUNT"
+            exit 1
+          fi
+          
+          echo "✅ Both databases initialized successfully!"
 
       - name: Install Temporal CLI
         run: |
