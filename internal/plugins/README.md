@@ -97,23 +97,64 @@ func (yp *YourPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 
 ### 4. Register Plugin
 
-Add your plugin to the worker in `cmd/worker/main.go`:
+Plugins are automatically registered using Go's `init()` function. Add the following to your plugin's main file (e.g., `yourplugin.go`):
+
+```go
+package yourplugin
+
+import (
+    "context"
+    "fmt"
+
+    "github.com/rocketship-ai/rocketship/internal/plugins"
+    "go.temporal.io/sdk/activity"
+)
+
+// Auto-register the plugin when the package is imported
+func init() {
+    plugins.RegisterPlugin(&YourPlugin{})
+}
+```
+
+Then add a blank import to `cmd/worker/main.go` to trigger the auto-registration:
 
 ```go
 import (
     // ... other imports
-    "github.com/rocketship-ai/rocketship/internal/plugins/yourplugin"
+    
+    // Import plugins to trigger auto-registration
+    _ "github.com/rocketship-ai/rocketship/internal/plugins/yourplugin"
 )
 
 func main() {
     // ... existing code ...
-
-    // Register your plugin
-    plugins.RegisterWithTemporal(w, &yourplugin.YourPlugin{})
-
+    
+    // Plugins are automatically registered through imports
+    plugins.RegisterAllWithTemporal(w)
+    
     // ... rest of the code ...
 }
 ```
+
+The plugin registry system automatically discovers and registers all imported plugins, eliminating the need for manual registration.
+
+## Plugin Registry System
+
+Rocketship uses a centralized plugin registry that provides:
+
+- **Auto-discovery**: Plugins register themselves through `init()` functions when imported
+- **Thread-safe registration**: Concurrent access to the registry is protected with mutexes
+- **Type safety**: Each plugin type can only be registered once
+- **Automatic workflow integration**: All registered plugins are automatically available in workflows
+
+### Registry Functions
+
+- `RegisterPlugin(plugin Plugin)`: Register a plugin in the global registry (called by plugin `init()` functions)
+- `GetPlugin(pluginType string) (Plugin, bool)`: Retrieve a registered plugin by type
+- `GetRegisteredPlugins() []Plugin`: Get all registered plugins
+- `RegisterAllWithTemporal(worker Worker)`: Register all plugins with a Temporal worker
+
+This design eliminates the need for manual switch statements and makes adding new plugins as simple as importing them.
 
 ## Plugin Examples
 

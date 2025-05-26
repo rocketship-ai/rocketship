@@ -13,7 +13,14 @@ import (
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
+	
+	"github.com/rocketship-ai/rocketship/internal/plugins"
 )
+
+// Auto-register the plugin when the package is imported
+func init() {
+	plugins.RegisterPlugin(&HTTPPlugin{})
+}
 
 // ActivityResponse represents the response from the HTTP activity
 type ActivityResponse struct {

@@ -2,7 +2,14 @@ package delay
 
 import (
 	"context"
+
+	"github.com/rocketship-ai/rocketship/internal/plugins"
 )
+
+// Auto-register the plugin when the package is imported
+func init() {
+	plugins.RegisterPlugin(&DelayPlugin{})
+}
 
 func (dp *DelayPlugin) GetType() string {
 	return "delay"
