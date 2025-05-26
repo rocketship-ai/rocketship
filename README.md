@@ -51,7 +51,7 @@ For detailed installation instructions for other platforms and optional aliases,
 ```bash
 cat > simple-test.yaml << 'EOF'
 name: "Simple Test Suite"
-description: "Showcasing HTTP, delay, and scripting capabilities"
+description: "Showcasing some of the plugins"
 version: "v1.0.0"
 
 tests:
