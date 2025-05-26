@@ -267,7 +267,7 @@ The test databases include:
   plugin: sql
   config:
     driver: postgres
-    dsn: "{{ vars.db_dsn }}"
+    dsn: "{{ .vars.db_dsn }}"
     commands:
       - "SELECT * FROM nonexistent_table;"
   # This step will fail, which might be expected for negative testing
