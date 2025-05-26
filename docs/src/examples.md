@@ -12,6 +12,14 @@ Rocketship comes with example test suites that demonstrate different features an
 
 - [Configuration Variables](examples/config-variables.md) - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files
 
+### Database Testing
+
+- [SQL Testing](examples/sql-testing.md) - Learn how to test database operations with PostgreSQL, MySQL, SQLite, and SQL Server
+
+### Scripting & Custom Logic
+
+- [Custom Scripting](examples/custom-scripting.md) - Learn how to add custom JavaScript logic to your test suites
+
 ## Running the Examples
 
 The examples use the hosted test server at `tryme.rocketship.sh`. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:
@@ -31,6 +39,25 @@ rocketship run -af examples/config-variables/rocketship.yaml
 
 # Run with variable overrides
 rocketship run -af examples/config-variables/rocketship.yaml --var environment=production
+
+# Run the custom scripting example
+rocketship run -af examples/custom-scripting/rocketship.yaml
 ```
+
+### Database Examples
+
+For SQL testing examples, you'll need to start the test databases first:
+
+```bash
+# Start test databases with Docker Compose
+cd .docker && docker-compose up postgres-test mysql-test -d
+
+# Wait for databases to be ready, then run SQL tests
+rocketship run -f examples/sql-testing/rocketship.yaml -e localhost:7700
+```
+
+The SQL examples use local test databases with pre-populated sample data:
+- **PostgreSQL**: Available at `localhost:5433` 
+- **MySQL**: Available at `localhost:3307`
 
 You can find the test server's source code in the `for-contributors/test-server` directory.

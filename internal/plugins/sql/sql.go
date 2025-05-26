@@ -1,0 +1,356 @@
+package sql
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/rocketship-ai/rocketship/internal/plugins"
+	"go.temporal.io/sdk/activity"
+
+	// Database drivers
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	_ "modernc.org/sqlite"
+	_ "github.com/denisenkom/go-mssqldb"
+)
+
+// Auto-register the plugin when the package is imported
+func init() {
+	plugins.RegisterPlugin(&SQLPlugin{})
+}
+
+// GetType returns the plugin type identifier
+func (sp *SQLPlugin) GetType() string {
+	return "sql"
+}
+
+// Activity executes SQL operations and returns results
+func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
+	logger := activity.GetLogger(ctx)
+	
+	// Parse configuration from parameters
+	configData, ok := p["config"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid config format")
+	}
+
+	config := &SQLConfig{}
+	if err := parseConfig(configData, config); err != nil {
+		return nil, fmt.Errorf("failed to parse SQL config: %w", err)
+	}
+
+	// Validate required fields
+	if config.Driver == "" {
+		return nil, fmt.Errorf("driver is required")
+	}
+	if config.DSN == "" {
+		return nil, fmt.Errorf("dsn is required")
+	}
+	if len(config.Commands) == 0 && config.File == "" {
+		return nil, fmt.Errorf("either commands or file must be specified")
+	}
+
+	logger.Info("Executing SQL plugin", "driver", config.Driver, "queries", len(config.Commands))
+
+	// Apply variable replacement to DSN and commands
+	state, _ := p["state"].(map[string]interface{})
+	vars, _ := p["vars"].(map[string]interface{})
+	if err := applyVariableReplacement(config, state, vars); err != nil {
+		return nil, fmt.Errorf("variable replacement failed: %w", err)
+	}
+
+	// Get queries to execute
+	queries, err := getQueries(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get queries: %w", err)
+	}
+
+	// Execute SQL operations
+	response, err := executeQueries(ctx, config, queries)
+	if err != nil {
+		return nil, fmt.Errorf("SQL execution failed: %w", err)
+	}
+
+	// Process save configuration
+	savedValues := make(map[string]string)
+	if saveConfig, ok := p["save"].([]interface{}); ok {
+		savedValues = processSaveConfig(response, saveConfig)
+	}
+
+	logger.Info("SQL execution completed", "queries", response.Stats.TotalQueries, "saved_vars", len(savedValues))
+
+	return &ActivityResponse{
+		Response: response,
+		Saved:    savedValues,
+	}, nil
+}
+
+// parseConfig converts map[string]interface{} to SQLConfig
+func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
+	if driver, ok := configData["driver"].(string); ok {
+		config.Driver = driver
+	}
+	if dsn, ok := configData["dsn"].(string); ok {
+		config.DSN = dsn
+	}
+	if file, ok := configData["file"].(string); ok {
+		config.File = file
+	}
+	if timeout, ok := configData["timeout"].(string); ok {
+		config.Timeout = timeout
+	}
+	
+	// Parse commands array
+	if commandsInterface, ok := configData["commands"]; ok {
+		if commandsSlice, ok := commandsInterface.([]interface{}); ok {
+			for _, cmd := range commandsSlice {
+				if cmdStr, ok := cmd.(string); ok {
+					config.Commands = append(config.Commands, cmdStr)
+				}
+			}
+		}
+	}
+	
+	return nil
+}
+
+// applyVariableReplacement replaces variables in DSN and commands
+func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, vars map[string]interface{}) error {
+	// Create replacement map
+	replacements := make(map[string]string)
+	
+	// Add state variables
+	for k, v := range state {
+		replacements[k] = fmt.Sprintf("%v", v)
+	}
+	
+	// Add vars variables with "vars." prefix
+	for k, v := range vars {
+		replacements[fmt.Sprintf("vars.%s", k)] = fmt.Sprintf("%v", v)
+		replacements[k] = fmt.Sprintf("%v", v) // Also allow direct access
+	}
+	
+	// Replace variables in DSN
+	config.DSN = replaceVariables(config.DSN, replacements)
+	
+	// Replace variables in commands
+	for i, cmd := range config.Commands {
+		config.Commands[i] = replaceVariables(cmd, replacements)
+	}
+	
+	return nil
+}
+
+// replaceVariables replaces {{ var }} patterns with values
+func replaceVariables(text string, replacements map[string]string) string {
+	result := text
+	for key, value := range replacements {
+		placeholder := fmt.Sprintf("{{ %s }}", key)
+		result = strings.ReplaceAll(result, placeholder, value)
+	}
+	return result
+}
+
+// getQueries returns the list of SQL queries to execute
+func getQueries(config *SQLConfig) ([]string, error) {
+	if len(config.Commands) > 0 {
+		return config.Commands, nil
+	}
+	
+	if config.File != "" {
+		content, err := os.ReadFile(config.File)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read SQL file %s: %w", config.File, err)
+		}
+		
+		// Split by semicolon and filter empty queries
+		queries := strings.Split(string(content), ";")
+		var result []string
+		for _, query := range queries {
+			query = strings.TrimSpace(query)
+			if query != "" {
+				result = append(result, query)
+			}
+		}
+		return result, nil
+	}
+	
+	return nil, fmt.Errorf("no queries specified")
+}
+
+// executeQueries executes SQL queries and returns results
+func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*SQLResponse, error) {
+	logger := activity.GetLogger(ctx)
+	startTime := time.Now()
+	
+	// Establish database connection
+	db, err := sqlx.Connect(config.Driver, config.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Warn("Failed to close database connection", "error", err)
+		}
+	}()
+	
+	connectionTime := time.Since(startTime)
+	
+	// Set connection timeout
+	if config.Timeout != "" {
+		timeout, err := time.ParseDuration(config.Timeout)
+		if err != nil {
+			return nil, fmt.Errorf("invalid timeout format: %w", err)
+		}
+		db.SetConnMaxLifetime(timeout)
+	}
+	
+	// Configure connection pool for integration testing
+	db.SetMaxOpenConns(5)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+	
+	response := &SQLResponse{
+		Queries: make([]QueryResult, 0, len(queries)),
+		Stats: ExecutionStats{
+			TotalQueries:   len(queries),
+			ConnectionTime: connectionTime.String(),
+		},
+	}
+	
+	// Execute each query
+	for _, query := range queries {
+		queryResult := executeQuery(ctx, db, query)
+		response.Queries = append(response.Queries, queryResult)
+		
+		if queryResult.Error == "" {
+			response.Stats.SuccessCount++
+		} else {
+			response.Stats.ErrorCount++
+		}
+	}
+	
+	response.Stats.TotalDuration = time.Since(startTime).String()
+	
+	return response, nil
+}
+
+// executeQuery executes a single SQL query
+func executeQuery(ctx context.Context, db *sqlx.DB, query string) QueryResult {
+	startTime := time.Now()
+	
+	result := QueryResult{
+		Query: query,
+		Rows:  make([]map[string]interface{}, 0),
+	}
+	
+	// Determine if this is a SELECT query or a modification query
+	trimmedQuery := strings.TrimSpace(strings.ToUpper(query))
+	isSelect := strings.HasPrefix(trimmedQuery, "SELECT") || 
+		       strings.HasPrefix(trimmedQuery, "WITH") ||
+		       strings.Contains(trimmedQuery, "RETURNING")
+	
+	if isSelect {
+		// Execute SELECT query
+		rows, err := db.QueryxContext(ctx, query)
+		if err != nil {
+			result.Error = err.Error()
+			result.Duration = time.Since(startTime).String()
+			return result
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				activity.GetLogger(ctx).Warn("Failed to close query rows", "error", err)
+			}
+		}()
+		
+		// Process rows
+		for rows.Next() {
+			row := make(map[string]interface{})
+			if err := rows.MapScan(row); err != nil {
+				result.Error = err.Error()
+				break
+			}
+			result.Rows = append(result.Rows, row)
+		}
+		
+		if err := rows.Err(); err != nil && result.Error == "" {
+			result.Error = err.Error()
+		}
+		
+	} else {
+		// Execute modification query (INSERT, UPDATE, DELETE)
+		execResult, err := db.ExecContext(ctx, query)
+		if err != nil {
+			result.Error = err.Error()
+			result.Duration = time.Since(startTime).String()
+			return result
+		}
+		
+		if rowsAffected, err := execResult.RowsAffected(); err == nil {
+			result.RowsAffected = rowsAffected
+		}
+	}
+	
+	result.Duration = time.Since(startTime).String()
+	return result
+}
+
+// processSaveConfig processes save configuration to extract values from results
+func processSaveConfig(response *SQLResponse, saveConfig []interface{}) map[string]string {
+	savedValues := make(map[string]string)
+	
+	for _, saveItem := range saveConfig {
+		saveMap, ok := saveItem.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		
+		asValue, ok := saveMap["as"].(string)
+		if !ok {
+			continue
+		}
+		
+		// Extract value based on sql_result configuration
+		if sqlResult, ok := saveMap["sql_result"].(string); ok {
+			value := extractSQLValue(response, sqlResult)
+			if value != "" {
+				savedValues[asValue] = value
+			}
+		}
+	}
+	
+	return savedValues
+}
+
+// extractSQLValue extracts values from SQL results using path notation
+func extractSQLValue(response *SQLResponse, path string) string {
+	// Support patterns like:
+	// ".queries[0].rows[0].id" - first query, first row, id column
+	// ".queries[0].rows_affected" - first query rows affected count
+	// ".stats.success_count" - overall success count
+	
+	if len(response.Queries) == 0 {
+		return ""
+	}
+	
+	// Simple path parsing for common cases
+	if strings.HasPrefix(path, ".queries[0].rows[0].") {
+		if len(response.Queries[0].Rows) > 0 {
+			columnName := strings.TrimPrefix(path, ".queries[0].rows[0].")
+			if value, ok := response.Queries[0].Rows[0][columnName]; ok {
+				return fmt.Sprintf("%v", value)
+			}
+		}
+	} else if path == ".queries[0].rows_affected" {
+		return fmt.Sprintf("%d", response.Queries[0].RowsAffected)
+	} else if path == ".stats.success_count" {
+		return fmt.Sprintf("%d", response.Stats.SuccessCount)
+	}
+	
+	return ""
+}
