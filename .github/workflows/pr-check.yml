@@ -111,9 +111,11 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_DATABASE: testdb
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
           MYSQL_ROOT_PASSWORD: testpass
         ports:
-          - 3306:3306
+          - 3307:3306
         options: >-
           --health-cmd="mysqladmin ping"
           --health-interval=10s
@@ -147,7 +149,7 @@ jobs:
           # Wait for MySQL to be ready
           echo "Waiting for MySQL..."
           for i in {1..30}; do
-            if mysql -h 127.0.0.1 -P 3306 -u root -ptestpass testdb -e "SELECT 1" > /dev/null 2>&1; then
+            if mysql -h localhost -P 3307 -u testuser -ptestpass testdb -e "SELECT 1" > /dev/null 2>&1; then
               echo "✅ MySQL is ready!"
               break
             fi
@@ -211,7 +213,7 @@ jobs:
           EOF
 
           echo "Setting up MySQL schema..."
-          mysql -h 127.0.0.1 -P 3306 -u root -ptestpass testdb << 'EOF'
+          mysql -h localhost -P 3307 -u testuser -ptestpass testdb << 'EOF'
           -- Users table
           CREATE TABLE IF NOT EXISTS users (
               id INT PRIMARY KEY AUTO_INCREMENT,
@@ -279,7 +281,7 @@ jobs:
           fi
           
           # Verify MySQL setup  
-          MYSQL_COUNT=$(mysql -h 127.0.0.1 -P 3306 -u root -ptestpass testdb -sN -e "SELECT COUNT(*) FROM users;")
+          MYSQL_COUNT=$(mysql -h localhost -P 3307 -u testuser -ptestpass testdb -sN -e "SELECT COUNT(*) FROM users;")
           if [ "$MYSQL_COUNT" -eq 4 ]; then
             echo "✅ MySQL setup verified: $MYSQL_COUNT users"
           else
