@@ -3,8 +3,15 @@ description: "Comprehensive test suite for the SQL plugin demonstrating database
 version: "v1.0.0"
 
 vars:
+  # Database connections
+  # For local Docker Compose development:
+  # postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"
+  # mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
+  # 
+  # For CI environment (GitHub Actions):
   postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"
-  mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
+  mysql_dsn: "root:testpass@tcp(127.0.0.1:3306)/testdb"
+  
   test_user_name: "Test User from Rocketship"
   test_user_email: "rocketship@example.com"
 

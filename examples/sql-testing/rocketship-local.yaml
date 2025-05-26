@@ -1,0 +1,85 @@
+name: "SQL Testing Suite - Local Development"
+description: "Local development version using Docker Compose database ports"
+version: "v1.0.0"
+
+vars:
+  # Database connections for local Docker Compose development
+  postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"
+  mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
+  
+  test_user_name: "Test User from Rocketship - Local"
+  test_user_email: "rocketship-local@example.com"
+
+tests:
+  - name: "PostgreSQL CRUD Operations"
+    steps:
+      - name: "Create new user"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "INSERT INTO users (name, email, age) VALUES ('{{ .vars.test_user_name }}', '{{ .vars.test_user_email }}', 30) RETURNING id;"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: success_count
+            expected: 1
+        save:
+          - sql_result: ".queries[0].rows[0].id"
+            as: "new_user_id"
+
+      - name: "Verify user creation"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "SELECT id, name, email, age FROM users WHERE id = {{ new_user_id }};"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "name"
+            expected: "{{ .vars.test_user_name }}"
+
+      - name: "Clean up test data"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "DELETE FROM users WHERE id = {{ new_user_id }};"
+        assertions:
+          - type: success_count
+            expected: 1
+
+  - name: "MySQL Data Validation"
+    steps:
+      - name: "Check existing data"
+        plugin: sql
+        config:
+          driver: mysql
+          dsn: "{{ .vars.mysql_dsn }}"
+          commands:
+            - "SELECT COUNT(*) as user_count FROM users;"
+            - "SELECT COUNT(*) as product_count FROM products;"
+        assertions:
+          - type: query_count
+            expected: 2
+          - type: success_count
+            expected: 2
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "user_count"
+            expected: 4
+          - type: column_value
+            query_index: 1
+            row_index: 0
+            column: "product_count"
+            expected: 5

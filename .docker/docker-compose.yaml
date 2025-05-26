@@ -158,7 +158,7 @@ services:
       MYSQL_DATABASE: testdb
       MYSQL_USER: testuser
       MYSQL_PASSWORD: testpass
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_ROOT_PASSWORD: testpass
     networks:
       - temporal-network
     ports:
@@ -167,7 +167,7 @@ services:
       - mysql_test_data:/var/lib/mysql
       - ./test-db-init/mysql:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "testuser", "-ptestpass"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ptestpass"]
       interval: 10s
       timeout: 5s
       retries: 5
