@@ -2,7 +2,7 @@
   <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
   <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
-<h3 align="center">Enterprise-Grade Integration Testing for Humans and Agents</h3>
+<h3 align="center">Enterprise-Grade API Testing for Humans and Agents</h3>
 <p align="center">Validate Any Data Resource, API, or Workflow With Declarative Tests</p>
 
 <p align="center">

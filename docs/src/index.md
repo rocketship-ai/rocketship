@@ -1,6 +1,6 @@
 # Rocketship Documentation
 
-Welcome to the Rocketship documentation! Rocketship is an open-source integration testing platform designed for humans and agents.
+Welcome to the Rocketship documentation! Rocketship is an open-source API testing platform designed for humans and agents.
 
 ## What is Rocketship?
 
