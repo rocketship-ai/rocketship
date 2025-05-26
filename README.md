@@ -50,41 +50,64 @@ For detailed installation instructions for other platforms and optional aliases,
 
 ```bash
 cat > simple-test.yaml << 'EOF'
-name: "Simple Test Suite"
-description: "A simple test suite!"
+name: "Multi-Plugin Demo"
+description: "Showcasing HTTP, delay, and scripting capabilities"
 version: "v1.0.0"
+
 tests:
-  - name: "Test 1"
+  - name: "User Workflow with Processing Delay"
     steps:
-      - name: "Create a test user"
-        plugin: "http"
+      - name: "Create a new user"
+        plugin: http
         config:
-          method: "POST"
+          method: POST
           url: "https://tryme.rocketship.sh/users"
           body: |
             {
-              "name": "Test User",
-              "email": "test@example.com"
+              "name": "Rocketship Demo User",
+              "email": "demo@rocketship.sh"
             }
         assertions:
-          - type: "json_path"
-            path: ".name"
-            expected: "Test User"
-  - name: "Test 2"
-    steps:
-      - name: "Create a test order"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "https://tryme.rocketship.sh/orders"
-          body: |
-            {
-              "product": "Test Product",
-              "quantity": 1
-            }
-        assertions:
-          - type: "status_code"
+          - type: status_code
             expected: 200
+          - type: json_path
+            path: ".name"
+            expected: "Rocketship Demo User"
+        save:
+          - json_path: ".id"
+            as: "user_id"
+
+      - name: "Wait for user processing"
+        plugin: delay
+        config:
+          duration: "2s"
+
+      - name: "Validate user creation with script"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            function main() {
+              const userId = state.user_id;
+              console.log(`✅ User created with ID: ${userId}`);
+              
+              // Simulate some business logic validation
+              if (!userId || userId === "") {
+                throw new Error("User ID is missing or empty");
+              }
+              
+              if (parseInt(userId) <= 0) {
+                throw new Error("Invalid user ID format");
+              }
+              
+              return {
+                validation_status: "passed",
+                user_ready: true,
+                message: `User ${userId} is ready for operations`
+              };
+            }
+            
+            main();
 EOF
 ```
 
