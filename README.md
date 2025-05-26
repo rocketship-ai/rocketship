@@ -50,7 +50,7 @@ For detailed installation instructions for other platforms and optional aliases,
 
 ```bash
 cat > simple-test.yaml << 'EOF'
-name: "Multi-Plugin Demo"
+name: "Simple Test Suite"
 description: "Showcasing HTTP, delay, and scripting capabilities"
 version: "v1.0.0"
 
@@ -64,15 +64,15 @@ tests:
           url: "https://tryme.rocketship.sh/users"
           body: |
             {
-              "name": "Rocketship Demo User",
-              "email": "demo@rocketship.sh"
+              "name": "Nick Martin",
+              "email": "nick@rocketship.sh"
             }
         assertions:
           - type: status_code
             expected: 200
           - type: json_path
             path: ".name"
-            expected: "Rocketship Demo User"
+            expected: "Nick Martin"
         save:
           - json_path: ".id"
             as: "user_id"
@@ -90,23 +90,23 @@ tests:
             function main() {
               const userId = state.user_id;
               console.log(`✅ User created with ID: ${userId}`);
-              
+
               // Simulate some business logic validation
               if (!userId || userId === "") {
                 throw new Error("User ID is missing or empty");
               }
-              
+
               if (parseInt(userId) <= 0) {
                 throw new Error("Invalid user ID format");
               }
-              
+
               return {
                 validation_status: "passed",
                 user_ready: true,
                 message: `User ${userId} is ready for operations`
               };
             }
-            
+
             main();
 EOF
 ```
