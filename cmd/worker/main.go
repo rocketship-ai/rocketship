@@ -6,9 +6,12 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/cli"
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
-	"github.com/rocketship-ai/rocketship/internal/plugins/delay"
-	"github.com/rocketship-ai/rocketship/internal/plugins/http"
-	"github.com/rocketship-ai/rocketship/internal/plugins/script"
+	
+	// Import plugins to trigger auto-registration
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
+	
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -40,9 +43,7 @@ func main() {
 	logger.Debug("registering workflow and plugins")
 	w.RegisterWorkflow(interpreter.TestWorkflow)
 
-	plugins.RegisterWithTemporal(w, &delay.DelayPlugin{})
-	plugins.RegisterWithTemporal(w, &http.HTTPPlugin{})
-	plugins.RegisterWithTemporal(w, &script.ScriptPlugin{})
+	plugins.RegisterAllWithTemporal(w)
 
 	logger.Info("starting worker")
 	if err := w.Run(worker.InterruptCh()); err != nil {

@@ -7,9 +7,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/executors"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/runtime"
 )
+
+// Auto-register the plugin when the package is imported
+func init() {
+	plugins.RegisterPlugin(&ScriptPlugin{})
+}
 
 // ScriptPlugin implements the script plugin
 type ScriptPlugin struct{}
