@@ -51,6 +51,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://docs.rocketship.sh/examples/sql-testing/</loc>
+         <lastmod>2025-05-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://docs.rocketship.sh/reference/rocketship/</loc>
          <lastmod>2025-05-26</lastmod>
          <changefreq>daily</changefreq>
