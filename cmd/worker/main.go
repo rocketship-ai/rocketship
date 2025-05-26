@@ -11,6 +11,7 @@ import (
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/sql"
 	
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"

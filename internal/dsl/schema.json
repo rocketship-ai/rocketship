@@ -50,7 +50,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script"]
+                  "enum": ["http", "delay", "script", "sql"]
                 },
                 "config": {
                   "type": "object",
@@ -66,7 +66,7 @@
                       "type": {
                         "type": "string",
                         "description": "Type of assertion",
-                        "enum": ["status_code", "json_path", "header"]
+                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value"]
                       },
                       "expected": {
                         "description": "Expected value for the assertion"
@@ -78,6 +78,20 @@
                       "name": {
                         "type": "string",
                         "description": "Header name for header assertion type"
+                      },
+                      "query_index": {
+                        "type": "integer",
+                        "description": "Index of query to check (for SQL assertions)",
+                        "minimum": 0
+                      },
+                      "row_index": {
+                        "type": "integer", 
+                        "description": "Index of row to check (for column_value assertion)",
+                        "minimum": 0
+                      },
+                      "column": {
+                        "type": "string",
+                        "description": "Column name to check (for column_value assertion)"
                       }
                     },
                     "allOf": [
@@ -95,6 +109,22 @@
                         },
                         "then": {
                           "required": ["name"]
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": { "type": { "enum": ["row_count"] } }
+                        },
+                        "then": {
+                          "required": ["query_index"]
+                        }
+                      },
+                      {
+                        "if": {
+                          "properties": { "type": { "enum": ["column_value"] } }
+                        },
+                        "then": {
+                          "required": ["query_index", "row_index", "column"]
                         }
                       }
                     ]
@@ -115,6 +145,10 @@
                         "type": "string",
                         "description": "Header name to extract from response"
                       },
+                      "sql_result": {
+                        "type": "string",
+                        "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
+                      },
                       "as": {
                         "type": "string",
                         "description": "Variable name to save the extracted value as"
@@ -130,6 +164,9 @@
                       },
                       {
                         "required": ["header"]
+                      },
+                      {
+                        "required": ["sql_result"]
                       }
                     ]
                   }
@@ -169,6 +206,124 @@
                           { "required": ["script"] },
                           { "required": ["file"] }
                         ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": { "plugin": { "const": "sql" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["driver", "dsn"],
+                        "properties": {
+                          "driver": {
+                            "type": "string",
+                            "enum": ["postgres", "mysql", "sqlite", "sqlserver"],
+                            "description": "Database driver to use"
+                          },
+                          "dsn": {
+                            "type": "string",
+                            "description": "Database connection string (Data Source Name)"
+                          },
+                          "commands": {
+                            "type": "array",
+                            "description": "Array of SQL commands to execute",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1
+                          },
+                          "file": {
+                            "type": "string",
+                            "description": "Path to external SQL file"
+                          },
+                          "timeout": {
+                            "type": "string",
+                            "pattern": "^[0-9]+(s|m|h)$",
+                            "description": "Query execution timeout"
+                          }
+                        },
+                        "oneOf": [
+                          { "required": ["commands"] },
+                          { "required": ["file"] }
+                        ]
+                      },
+                      "save": {
+                        "type": "array",
+                        "description": "SQL result values to save for use in later steps",
+                        "items": {
+                          "type": "object",
+                          "required": ["as"],
+                          "properties": {
+                            "sql_result": {
+                              "type": "string",
+                              "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
+                            },
+                            "as": {
+                              "type": "string",
+                              "description": "Variable name to save the extracted value as"
+                            },
+                            "required": {
+                              "type": "boolean",
+                              "description": "Whether the value is required (defaults to true)"
+                            }
+                          },
+                          "required": ["sql_result"]
+                        }
+                      },
+                      "assertions": {
+                        "type": "array",
+                        "description": "Assertions to validate SQL execution results",
+                        "items": {
+                          "type": "object",
+                          "required": ["type", "expected"],
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "description": "Type of SQL assertion",
+                              "enum": ["row_count", "query_count", "success_count", "column_value"]
+                            },
+                            "expected": {
+                              "description": "Expected value for the assertion"
+                            },
+                            "query_index": {
+                              "type": "integer",
+                              "description": "Index of query to check (for row_count and column_value assertions)",
+                              "minimum": 0
+                            },
+                            "row_index": {
+                              "type": "integer", 
+                              "description": "Index of row to check (for column_value assertion)",
+                              "minimum": 0
+                            },
+                            "column": {
+                              "type": "string",
+                              "description": "Column name to check (for column_value assertion)"
+                            }
+                          },
+                          "allOf": [
+                            {
+                              "if": {
+                                "properties": { "type": { "enum": ["row_count"] } }
+                              },
+                              "then": {
+                                "required": ["query_index"]
+                              }
+                            },
+                            {
+                              "if": {
+                                "properties": { "type": { "enum": ["column_value"] } }
+                              },
+                              "then": {
+                                "required": ["query_index", "row_index", "column"]
+                              }
+                            }
+                          ]
+                        }
                       }
                     }
                   }

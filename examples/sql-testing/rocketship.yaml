@@ -1,0 +1,259 @@
+name: "SQL Testing Suite"
+description: "Comprehensive test suite for the SQL plugin demonstrating database operations, assertions, and state management"
+version: "v1.0.0"
+
+vars:
+  postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"
+  mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
+  
+  test_user_name: "Test User from Rocketship"
+  test_user_email: "rocketship@example.com"
+
+tests:
+  - name: "PostgreSQL CRUD Operations"
+    steps:
+      - name: "Create new user"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "INSERT INTO users (name, email, age) VALUES ('{{ .vars.test_user_name }}', '{{ .vars.test_user_email }}', 30) RETURNING id;"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: success_count
+            expected: 1
+        save:
+          - sql_result: ".queries[0].rows[0].id"
+            as: "new_user_id"
+
+      - name: "Verify user creation"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "SELECT id, name, email, age FROM users WHERE id = {{ new_user_id }};"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "name"
+            expected: "{{ .vars.test_user_name }}"
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "email"
+            expected: "{{ .vars.test_user_email }}"
+
+      - name: "Update user age"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "UPDATE users SET age = 35, updated_at = CURRENT_TIMESTAMP WHERE id = {{ new_user_id }};"
+        assertions:
+          - type: success_count
+            expected: 1
+
+      - name: "Create order for user"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "INSERT INTO orders (user_id, product_id, quantity, total_amount, status) VALUES ({{ new_user_id }}, 1, 2, 2599.98, 'processing') RETURNING id;"
+        save:
+          - sql_result: ".queries[0].rows[0].id"
+            as: "order_id"
+
+      - name: "Query user with orders"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "SELECT u.name, u.email, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.id = {{ new_user_id }} GROUP BY u.id, u.name, u.email;"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "order_count"
+            expected: 1
+
+      - name: "Delete test data"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "DELETE FROM orders WHERE id = {{ order_id }};"
+            - "DELETE FROM users WHERE id = {{ new_user_id }};"
+        assertions:
+          - type: query_count
+            expected: 2
+          - type: success_count
+            expected: 2
+
+  - name: "MySQL Data Validation"
+    steps:
+      - name: "Check existing data"
+        plugin: sql
+        config:
+          driver: mysql
+          dsn: "{{ .vars.mysql_dsn }}"
+          commands:
+            - "SELECT COUNT(*) as user_count FROM users;"
+            - "SELECT COUNT(*) as product_count FROM products;"
+            - "SELECT COUNT(*) as order_count FROM orders;"
+        assertions:
+          - type: query_count
+            expected: 3
+          - type: success_count
+            expected: 3
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "user_count"
+            expected: 4
+          - type: column_value
+            query_index: 1
+            row_index: 0
+            column: "product_count"
+            expected: 5
+
+      - name: "Product price analysis"
+        plugin: sql
+        config:
+          driver: mysql
+          dsn: "{{ .vars.mysql_dsn }}"
+          commands:
+            - "SELECT category, AVG(price) as avg_price, COUNT(*) as product_count FROM products GROUP BY category ORDER BY avg_price DESC;"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 2
+        save:
+          - sql_result: ".queries[0].rows[0].category"
+            as: "highest_priced_category"
+
+      - name: "User order statistics"
+        plugin: sql
+        config:
+          driver: mysql
+          dsn: "{{ .vars.mysql_dsn }}"
+          commands:
+            - "SELECT u.name, u.email, COUNT(o.id) as order_count, COALESCE(SUM(o.total_amount), 0) as total_spent FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY total_spent DESC;"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 4
+
+  - name: "Cross-Database Connectivity"
+    steps:
+      - name: "Get PostgreSQL user count"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "SELECT COUNT(*) as pg_user_count FROM users;"
+        save:
+          - sql_result: ".queries[0].rows[0].pg_user_count"
+            as: "pg_users"
+
+      - name: "Get MySQL user count"  
+        plugin: sql
+        config:
+          driver: mysql
+          dsn: "{{ .vars.mysql_dsn }}"
+          commands:
+            - "SELECT COUNT(*) as mysql_user_count FROM users;"
+        save:
+          - sql_result: ".queries[0].rows[0].mysql_user_count"
+            as: "mysql_users"
+
+      - name: "Verify database accessibility"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            function main() {
+              const pgUsers = parseInt(state.pg_users);
+              const mysqlUsers = parseInt(state.mysql_users);
+              
+              console.log(`PostgreSQL users: ${pgUsers}`);
+              console.log(`MySQL users: ${mysqlUsers}`);
+              
+              // Test that both databases are accessible and return reasonable counts
+              // PostgreSQL may have 4 or 5 users due to concurrent test execution
+              // MySQL should have exactly 4 users from the initial data
+              if (pgUsers >= 4 && mysqlUsers >= 4) {
+                console.log("✅ Both databases are accessible and have expected data!");
+                return { status: "success", message: "Databases are accessible and contain expected data" };
+              } else {
+                throw new Error(`Unexpected user counts - PostgreSQL(${pgUsers}) or MySQL(${mysqlUsers}) below expected minimum of 4`);
+              }
+            }
+            
+            main();
+
+  - name: "Error Handling and Edge Cases"
+    steps:
+      - name: "Handle query with no results"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "SELECT * FROM users WHERE email = 'nonexistent@example.com';"
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 0
+          - type: success_count
+            expected: 1
+
+      - name: "Multiple queries with mixed results"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "SELECT COUNT(*) as existing_users FROM users;"
+            - "SELECT * FROM users WHERE age > 100;"
+        assertions:
+          - type: query_count
+            expected: 2
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: row_count
+            query_index: 1
+            expected: 0
+
+  - name: "Performance and Timeout Testing"
+    steps:
+      - name: "Query with timeout"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          timeout: "30s"
+          commands:
+            - "SELECT p.name, p.price, COUNT(o.id) as order_count FROM products p LEFT JOIN orders o ON p.id = o.product_id GROUP BY p.id ORDER BY order_count DESC, p.price DESC;"
+        assertions:
+          - type: success_count
+            expected: 1
+          - type: row_count
+            query_index: 0
+            expected: 5

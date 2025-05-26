@@ -130,6 +130,48 @@ services:
       - temporal-network
     restart: unless-stopped
   ### END OF ROCKETSHIP CORE ###
+  ### START OF TEST DATABASES ###
+  postgres-test:
+    container_name: rocketship-postgres-test
+    image: postgres:13
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    networks:
+      - temporal-network
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./test-db-init/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-test:
+    container_name: rocketship-mysql-test
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
+      MYSQL_ROOT_PASSWORD: testpass
+    networks:
+      - temporal-network
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+      - ./test-db-init/mysql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "testuser", "-ptestpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  ### END OF TEST DATABASES ###
 # .
 # .
 # .
@@ -142,3 +184,11 @@ networks:
     driver: bridge
     name: temporal-network
 ### END OF TEMPORAL NETWORK ###
+
+### START OF VOLUMES ###
+volumes:
+  postgres_test_data:
+    driver: local
+  mysql_test_data:
+    driver: local
+### END OF VOLUMES ###

@@ -91,6 +91,35 @@ jobs:
   cli-integration:
     name: CLI Integration Tests
     runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testdb
+          MYSQL_ROOT_PASSWORD: testpass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
     steps:
       - uses: actions/checkout@v4
 
@@ -99,6 +128,18 @@ jobs:
         with:
           go-version: "1.24"
           check-latest: true
+
+      - name: Wait for databases
+        run: ./.github/scripts/wait-for-databases.sh
+
+      - name: Setup PostgreSQL
+        run: ./.github/scripts/setup-postgres.sh
+
+      - name: Setup MySQL
+        run: ./.github/scripts/setup-mysql.sh
+
+      - name: Verify database setup
+        run: ./.github/scripts/verify-databases.sh
 
       - name: Install Temporal CLI
         run: |
@@ -188,8 +229,18 @@ jobs:
             exit 1
           fi
 
+          echo "Running SQL testing example..."
+          OUTPUT=$(rocketship run -af examples/sql-testing/rocketship.yaml --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ SQL tests passed"
+          else
+            echo "❌ SQL tests had failures"
+            exit 1
+          fi
+
           echo "Testing all examples directory..."
-          OUTPUT=$(rocketship run -ad examples)
+          OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
           echo "$OUTPUT"
           if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
             echo "✅ All example tests passed"

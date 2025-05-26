@@ -60,6 +60,8 @@ nav:
       - Overview: examples.md
       - HTTP Testing:
           - Request Chaining & Delays: examples/request-chaining.md
+      - SQL Testing:
+          - SQL Queries: examples/sql-testing.md
       - Parameterizing Tests:
           - All About Variables: examples/config-variables.md
       - Custom Scripting:
