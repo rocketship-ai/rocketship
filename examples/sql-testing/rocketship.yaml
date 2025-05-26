@@ -15,9 +15,9 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
-            - "INSERT INTO users (name, email, age) VALUES ('{{ vars.test_user_name }}', '{{ vars.test_user_email }}', 30) RETURNING id;"
+            - "INSERT INTO users (name, email, age) VALUES ('{{ .vars.test_user_name }}', '{{ .vars.test_user_email }}', 30) RETURNING id;"
         assertions:
           - type: row_count
             query_index: 0
@@ -32,7 +32,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "SELECT id, name, email, age FROM users WHERE id = {{ new_user_id }};"
         assertions:
@@ -43,18 +43,18 @@ tests:
             query_index: 0
             row_index: 0
             column: "name"
-            expected: "{{ vars.test_user_name }}"
+            expected: "{{ .vars.test_user_name }}"
           - type: column_value
             query_index: 0
             row_index: 0
             column: "email"
-            expected: "{{ vars.test_user_email }}"
+            expected: "{{ .vars.test_user_email }}"
 
       - name: "Update user age"
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "UPDATE users SET age = 35, updated_at = CURRENT_TIMESTAMP WHERE id = {{ new_user_id }};"
         assertions:
@@ -65,7 +65,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "INSERT INTO orders (user_id, product_id, quantity, total_amount, status) VALUES ({{ new_user_id }}, 1, 2, 2599.98, 'processing') RETURNING id;"
         save:
@@ -76,7 +76,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "SELECT u.name, u.email, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.id = {{ new_user_id }} GROUP BY u.id, u.name, u.email;"
         assertions:
@@ -93,7 +93,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "DELETE FROM orders WHERE id = {{ order_id }};"
             - "DELETE FROM users WHERE id = {{ new_user_id }};"
@@ -109,7 +109,7 @@ tests:
         plugin: sql
         config:
           driver: mysql
-          dsn: "{{ vars.mysql_dsn }}"
+          dsn: "{{ .vars.mysql_dsn }}"
           commands:
             - "SELECT COUNT(*) as user_count FROM users;"
             - "SELECT COUNT(*) as product_count FROM products;"
@@ -134,7 +134,7 @@ tests:
         plugin: sql
         config:
           driver: mysql
-          dsn: "{{ vars.mysql_dsn }}"
+          dsn: "{{ .vars.mysql_dsn }}"
           commands:
             - "SELECT category, AVG(price) as avg_price, COUNT(*) as product_count FROM products GROUP BY category ORDER BY avg_price DESC;"
         assertions:
@@ -149,7 +149,7 @@ tests:
         plugin: sql
         config:
           driver: mysql
-          dsn: "{{ vars.mysql_dsn }}"
+          dsn: "{{ .vars.mysql_dsn }}"
           commands:
             - "SELECT u.name, u.email, COUNT(o.id) as order_count, COALESCE(SUM(o.total_amount), 0) as total_spent FROM users u LEFT JOIN orders o ON u.id = o.user_id GROUP BY u.id ORDER BY total_spent DESC;"
         assertions:
@@ -163,7 +163,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "SELECT COUNT(*) as pg_user_count FROM users;"
         save:
@@ -174,7 +174,7 @@ tests:
         plugin: sql
         config:
           driver: mysql
-          dsn: "{{ vars.mysql_dsn }}"
+          dsn: "{{ .vars.mysql_dsn }}"
           commands:
             - "SELECT COUNT(*) as mysql_user_count FROM users;"
         save:
@@ -186,18 +186,22 @@ tests:
         config:
           language: javascript
           script: |
-            const pgUsers = parseInt(state.pg_users);
-            const mysqlUsers = parseInt(state.mysql_users);
-            
-            console.log(`PostgreSQL users: ${pgUsers}`);
-            console.log(`MySQL users: ${mysqlUsers}`);
-            
-            if (pgUsers === mysqlUsers) {
-              console.log("✅ Database user counts match!");
-              return { status: "success", message: "User counts are consistent" };
-            } else {
-              throw new Error(`User count mismatch: PostgreSQL(${pgUsers}) vs MySQL(${mysqlUsers})`);
+            function main() {
+              const pgUsers = parseInt(state.pg_users);
+              const mysqlUsers = parseInt(state.mysql_users);
+              
+              console.log(`PostgreSQL users: ${pgUsers}`);
+              console.log(`MySQL users: ${mysqlUsers}`);
+              
+              if (pgUsers === mysqlUsers) {
+                console.log("✅ Database user counts match!");
+                return { status: "success", message: "User counts are consistent" };
+              } else {
+                throw new Error(`User count mismatch: PostgreSQL(${pgUsers}) vs MySQL(${mysqlUsers})`);
+              }
             }
+            
+            main();
 
   - name: "Error Handling and Edge Cases"
     steps:
@@ -205,7 +209,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "SELECT * FROM users WHERE email = 'nonexistent@example.com';"
         assertions:
@@ -219,7 +223,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - "SELECT COUNT(*) as existing_users FROM users;"
             - "SELECT * FROM users WHERE age > 100;"
@@ -239,7 +243,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.postgres_dsn }}"
+          dsn: "{{ .vars.postgres_dsn }}"
           timeout: "30s"
           commands:
             - "SELECT p.name, p.price, COUNT(o.id) as order_count FROM products p LEFT JOIN orders o ON p.id = o.product_id GROUP BY p.id ORDER BY order_count DESC, p.price DESC;"

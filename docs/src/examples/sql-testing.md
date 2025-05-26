@@ -5,7 +5,7 @@ The SQL plugin enables database operations and testing within Rocketship workflo
 ## Supported Databases
 
 - **PostgreSQL** - `driver: postgres`
-- **MySQL** - `driver: mysql` 
+- **MySQL** - `driver: mysql`
 - **SQLite** - `driver: sqlite`
 - **SQL Server** - `driver: sqlserver`
 
@@ -37,9 +37,9 @@ steps:
     plugin: sql
     config:
       driver: postgres
-      dsn: "postgres://{{ vars.db_user }}:{{ vars.db_password }}@{{ vars.db_host }}/{{ vars.db_name }}?sslmode=disable"
+      dsn: "postgres://{{ .vars.db_user }}:{{ .vars.db_password }}@{{ .vars.db_host }}/{{ .vars.db_name }}?sslmode=disable"
       commands:
-        - "INSERT INTO users (name, email) VALUES ('{{ vars.user_name }}', '{{ vars.user_email }}') RETURNING id;"
+        - "INSERT INTO users (name, email) VALUES ('{{ .vars.user_name }}', '{{ .vars.user_email }}') RETURNING id;"
 ```
 
 ### External SQL Files
@@ -49,7 +49,7 @@ steps:
   plugin: sql
   config:
     driver: postgres
-    dsn: "{{ vars.postgres_dsn }}"
+    dsn: "{{ .vars.postgres_dsn }}"
     file: "./migrations/001_create_tables.sql"
     timeout: "60s"
 ```
@@ -57,21 +57,25 @@ steps:
 ## Database Connection Strings (DSN)
 
 ### PostgreSQL
+
 ```
 postgres://username:password@host:port/database?sslmode=disable
 ```
 
 ### MySQL
+
 ```
 username:password@tcp(host:port)/database
 ```
 
 ### SQLite
+
 ```
 ./path/to/database.db
 ```
 
 ### SQL Server
+
 ```
 sqlserver://username:password@host:port?database=dbname
 ```
@@ -81,6 +85,7 @@ sqlserver://username:password@host:port?database=dbname
 The SQL plugin supports several assertion types for validating query results:
 
 ### Row Count Assertion
+
 Validates the number of rows returned by a specific query:
 
 ```yaml
@@ -91,6 +96,7 @@ assertions:
 ```
 
 ### Query Count Assertion
+
 Validates the total number of queries executed:
 
 ```yaml
@@ -100,6 +106,7 @@ assertions:
 ```
 
 ### Success Count Assertion
+
 Validates the number of successful queries:
 
 ```yaml
@@ -109,6 +116,7 @@ assertions:
 ```
 
 ### Column Value Assertion
+
 Validates specific column values in query results:
 
 ```yaml
@@ -158,9 +166,9 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.db_dsn }}"
+          dsn: "{{ .vars.db_dsn }}"
           commands:
-            - "INSERT INTO users (name, email, active) VALUES ('Test User', '{{ vars.test_email }}', true) RETURNING id;"
+            - "INSERT INTO users (name, email, active) VALUES ('Test User', '{{ .vars.test_email }}', true) RETURNING id;"
         assertions:
           - type: row_count
             query_index: 0
@@ -173,7 +181,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.db_dsn }}"
+          dsn: "{{ .vars.db_dsn }}"
           commands:
             - "SELECT id, name, email, active FROM users WHERE id = {{ user_id }};"
         assertions:
@@ -184,7 +192,7 @@ tests:
             query_index: 0
             row_index: 0
             column: "email"
-            expected: "{{ vars.test_email }}"
+            expected: "{{ .vars.test_email }}"
           - type: column_value
             query_index: 0
             row_index: 0
@@ -195,7 +203,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.db_dsn }}"
+          dsn: "{{ .vars.db_dsn }}"
           commands:
             - "UPDATE users SET active = false WHERE id = {{ user_id }};"
         assertions:
@@ -206,7 +214,7 @@ tests:
         plugin: sql
         config:
           driver: postgres
-          dsn: "{{ vars.db_dsn }}"
+          dsn: "{{ .vars.db_dsn }}"
           commands:
             - "DELETE FROM users WHERE id = {{ user_id }};"
         assertions:
@@ -223,32 +231,37 @@ For local testing, use the provided Docker Compose setup:
 cd .docker && docker-compose up postgres-test mysql-test -d
 
 # Run SQL tests
-rocketship run -f examples/sql-testing/rocketship.yaml -e localhost:7700
+rocketship run -af examples/sql-testing/rocketship.yaml
 ```
 
 The test databases include:
+
 - **PostgreSQL**: `localhost:5433` with sample data
 - **MySQL**: `localhost:3307` with sample data
 
 ## Best Practices
 
 ### Security
+
 - Use variables for connection strings to avoid hardcoding credentials
 - Use least-privilege database users for testing
 - Never commit real database credentials to version control
 
 ### Performance
+
 - Set appropriate timeouts for long-running queries
 - Use connection pooling (handled automatically by the plugin)
 - Test with realistic data volumes
 
 ### Testing Strategy
+
 - Test both successful and error scenarios
 - Validate data integrity with assertions
 - Use transactions when testing modifications
 - Clean up test data to maintain test isolation
 
 ### Error Handling
+
 ```yaml
 - name: "Handle expected errors"
   plugin: sql
@@ -263,18 +276,21 @@ The test databases include:
 ## Troubleshooting
 
 ### Connection Issues
+
 - Verify database service is running
 - Check connection string format for your database type
 - Ensure network connectivity and firewall settings
 - Validate credentials and database permissions
 
 ### Query Errors
+
 - Check SQL syntax for your specific database
 - Verify table and column names exist
 - Ensure proper data types in INSERT/UPDATE operations
 - Review database logs for detailed error messages
 
 ### Assertion Failures
+
 - Verify expected values match actual query results
 - Check query indices and row indices in assertions
 - Ensure column names are spelled correctly

@@ -75,6 +75,13 @@ func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 		return nil, fmt.Errorf("SQL execution failed: %w", err)
 	}
 
+	// Process assertions
+	if assertions, ok := p["assertions"].([]interface{}); ok {
+		if err := processAssertions(response, assertions); err != nil {
+			return nil, fmt.Errorf("assertion failed: %w", err)
+		}
+	}
+
 	// Process save configuration
 	savedValues := make(map[string]string)
 	if saveConfig, ok := p["save"].([]interface{}); ok {
@@ -353,4 +360,103 @@ func extractSQLValue(response *SQLResponse, path string) string {
 	}
 	
 	return ""
+}
+
+// processAssertions validates SQL response against assertions
+func processAssertions(response *SQLResponse, assertions []interface{}) error {
+	for _, assertionInterface := range assertions {
+		assertion, ok := assertionInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		
+		assertionType, ok := assertion["type"].(string)
+		if !ok {
+			return fmt.Errorf("assertion type is required")
+		}
+		
+		expected := assertion["expected"]
+		
+		switch assertionType {
+		case "query_count":
+			expectedCount, ok := expected.(float64) // JSON numbers are float64
+			if !ok {
+				return fmt.Errorf("query_count assertion expected must be a number")
+			}
+			if float64(response.Stats.TotalQueries) != expectedCount {
+				return fmt.Errorf("query count assertion failed: expected %v, got %d", expectedCount, response.Stats.TotalQueries)
+			}
+			
+		case "success_count":
+			expectedCount, ok := expected.(float64)
+			if !ok {
+				return fmt.Errorf("success_count assertion expected must be a number")
+			}
+			if float64(response.Stats.SuccessCount) != expectedCount {
+				return fmt.Errorf("success count assertion failed: expected %v, got %d", expectedCount, response.Stats.SuccessCount)
+			}
+			
+		case "row_count":
+			queryIndex, ok := assertion["query_index"].(float64)
+			if !ok {
+				return fmt.Errorf("row_count assertion requires query_index")
+			}
+			expectedCount, ok := expected.(float64)
+			if !ok {
+				return fmt.Errorf("row_count assertion expected must be a number")
+			}
+			
+			queryIdx := int(queryIndex)
+			if queryIdx >= len(response.Queries) || queryIdx < 0 {
+				return fmt.Errorf("query_index %d is out of range", queryIdx)
+			}
+			
+			actualCount := len(response.Queries[queryIdx].Rows)
+			if float64(actualCount) != expectedCount {
+				return fmt.Errorf("row count assertion failed for query %d: expected %v, got %d", queryIdx, expectedCount, actualCount)
+			}
+			
+		case "column_value":
+			queryIndex, ok := assertion["query_index"].(float64)
+			if !ok {
+				return fmt.Errorf("column_value assertion requires query_index")
+			}
+			rowIndex, ok := assertion["row_index"].(float64)
+			if !ok {
+				return fmt.Errorf("column_value assertion requires row_index")
+			}
+			column, ok := assertion["column"].(string)
+			if !ok {
+				return fmt.Errorf("column_value assertion requires column")
+			}
+			
+			queryIdx := int(queryIndex)
+			rowIdx := int(rowIndex)
+			
+			if queryIdx >= len(response.Queries) || queryIdx < 0 {
+				return fmt.Errorf("query_index %d is out of range", queryIdx)
+			}
+			if rowIdx >= len(response.Queries[queryIdx].Rows) || rowIdx < 0 {
+				return fmt.Errorf("row_index %d is out of range for query %d", rowIdx, queryIdx)
+			}
+			
+			actualValue, exists := response.Queries[queryIdx].Rows[rowIdx][column]
+			if !exists {
+				return fmt.Errorf("column '%s' not found in query %d, row %d", column, queryIdx, rowIdx)
+			}
+			
+			// Convert both values to strings for comparison
+			expectedStr := fmt.Sprintf("%v", expected)
+			actualStr := fmt.Sprintf("%v", actualValue)
+			
+			if actualStr != expectedStr {
+				return fmt.Errorf("column value assertion failed for query %d, row %d, column '%s': expected %v, got %v", queryIdx, rowIdx, column, expected, actualValue)
+			}
+			
+		default:
+			return fmt.Errorf("unsupported assertion type: %s", assertionType)
+		}
+	}
+	
+	return nil
 }
