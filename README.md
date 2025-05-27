@@ -53,6 +53,8 @@ cat > rocketship.yaml << 'EOF'
 name: "Simple Test Suite"
 description: "Showing some of the plugins"
 version: "v1.0.0"
+vars:
+  base_url: "https://tryme.rocketship.sh"
 tests:
   - name: "User Workflow with Processing Delay"
     steps:
@@ -60,7 +62,7 @@ tests:
         plugin: http
         config:
           method: POST
-          url: "https://tryme.rocketship.sh/users"
+          url: "{{ .vars.base_url }}/users"
           body: |
             {
               "name": "Nick Martin",

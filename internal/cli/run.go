@@ -71,7 +71,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		// Ensure we always send a result, even on panic
 		if r := recover(); r != nil {
 			resultChan <- TestSuiteResult{
-				Name:        filepath.Base(filepath.Dir(yamlPath)),
+				Name:        "unknown",
 				TotalTests:  0,
 				PassedTests: 0,
 				FailedTests: 0,
@@ -83,7 +83,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	yamlData, err := os.ReadFile(yamlPath)
 	if err != nil {
 		Logger.Error("failed to read test file", "path", yamlPath, "error", err)
-		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+		resultChan <- TestSuiteResult{Name: "unknown"}
 		return
 	}
 
@@ -91,7 +91,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	config, err := dsl.ParseYAML(yamlData)
 	if err != nil {
 		Logger.Error("failed to parse YAML", "path", yamlPath, "error", err)
-		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+		resultChan <- TestSuiteResult{Name: "unknown"}
 		return
 	}
 
@@ -101,13 +101,13 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		varFileData, err := os.ReadFile(varFile)
 		if err != nil {
 			Logger.Error("failed to read variable file", "path", varFile, "error", err)
-			resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+			resultChan <- TestSuiteResult{Name: config.Name}
 			return
 		}
 		var varFileConfig map[string]interface{}
 		if err := yaml.Unmarshal(varFileData, &varFileConfig); err != nil {
 			Logger.Error("failed to parse variable file", "path", varFile, "error", err)
-			resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+			resultChan <- TestSuiteResult{Name: config.Name}
 			return
 		}
 		varFileVars = varFileConfig
@@ -129,7 +129,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	processedYamlData, err := processConfigTemplates(yamlData, finalVars)
 	if err != nil {
 		Logger.Error("failed to process templates", "path", yamlPath, "error", err)
-		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
 
@@ -140,7 +140,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	runID, err := client.RunTest(runCtx, processedYamlData)
 	if err != nil {
 		Logger.Error("failed to create run", "path", yamlPath, "error", err)
-		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
 
@@ -148,12 +148,12 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	logStream, err := client.StreamLogs(ctx, runID)
 	if err != nil {
 		Logger.Error("failed to stream logs", "path", yamlPath, "error", err)
-		resultChan <- TestSuiteResult{Name: filepath.Base(filepath.Dir(yamlPath))}
+		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
 
 	var result TestSuiteResult
-	result.Name = filepath.Base(filepath.Dir(yamlPath))
+	result.Name = config.Name
 
 	for {
 		select {
@@ -190,8 +190,8 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 				printer.Add(color.Bold)
 			}
 
-			// Print the log with directory prefix
-			fmt.Printf("%s [%s] %s\n", printer.Sprint("["+filepath.Base(filepath.Dir(yamlPath))+"]"), log.Ts, log.Msg)
+			// Print the log with test suite name prefix
+			fmt.Printf("%s [%s] %s\n", printer.Sprint("["+config.Name+"]"), log.Ts, log.Msg)
 
 			// Parse final summary message to extract results
 			if strings.Contains(log.Msg, "Test run:") && strings.Contains(log.Msg, "finished") {
