@@ -5,7 +5,6 @@ version: "v1.0.0"
 vars:
   postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"
   mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
-
   test_user_name: "Test User from Rocketship"
   test_user_email: "rocketship@example.com"
 
