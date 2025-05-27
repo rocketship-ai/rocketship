@@ -5,7 +5,6 @@ version: "v1.0.0"
 vars:
   postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"
   mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
-  
   test_user_name: "Test User from Rocketship"
   test_user_email: "rocketship@example.com"
 
@@ -171,7 +170,7 @@ tests:
           - sql_result: ".queries[0].rows[0].pg_user_count"
             as: "pg_users"
 
-      - name: "Get MySQL user count"  
+      - name: "Get MySQL user count"
         plugin: sql
         config:
           driver: mysql
@@ -198,13 +197,12 @@ tests:
               // PostgreSQL may have 4 or 5 users due to concurrent test execution
               // MySQL should have exactly 4 users from the initial data
               if (pgUsers >= 4 && mysqlUsers >= 4) {
-                console.log("✅ Both databases are accessible and have expected data!");
                 return { status: "success", message: "Databases are accessible and contain expected data" };
               } else {
                 throw new Error(`Unexpected user counts - PostgreSQL(${pgUsers}) or MySQL(${mysqlUsers}) below expected minimum of 4`);
               }
             }
-            
+
             main();
 
   - name: "Error Handling and Edge Cases"
