@@ -4,7 +4,9 @@ Welcome to the Rocketship documentation! Rocketship is an open-source API testin
 
 ## What is Rocketship?
 
-🚀 Rocketship is an **open‑source testing framework** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers an extensible plugin system so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an **open‑source testing framework** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
+
+Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment as deterministic workflows.
 
 ## Key Features
 

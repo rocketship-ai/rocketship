@@ -18,9 +18,9 @@
 
 <br>
 
-🚀 Rocketship is an **open‑source testing framework** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Today's world is filled with event-driven micro-services that can be hard to test. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an **open‑source testing framework** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
 
-Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment.
+Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment as deterministic workflows.
 
 Core features:
 
@@ -49,49 +49,73 @@ For detailed installation instructions for other platforms and optional aliases,
 #### Save a test spec
 
 ```bash
-cat > simple-test.yaml << 'EOF'
+cat > rocketship.yaml << 'EOF'
 name: "Simple Test Suite"
-description: "A simple test suite!"
+description: "Showing some of the plugins"
 version: "v1.0.0"
+vars:
+  base_url: "https://tryme.rocketship.sh"
 tests:
-  - name: "Test 1"
+  - name: "User Workflow with Processing Delay"
     steps:
-      - name: "Create a test user"
-        plugin: "http"
+      - name: "Create a new user"
+        plugin: http
         config:
-          method: "POST"
-          url: "https://tryme.rocketship.sh/users"
+          method: POST
+          url: "{{ .vars.base_url }}/users"
           body: |
             {
-              "name": "Test User",
-              "email": "test@example.com"
+              "name": "Nick Martin",
+              "email": "nick@rocketship.sh"
             }
         assertions:
-          - type: "json_path"
-            path: ".name"
-            expected: "Test User"
-  - name: "Test 2"
-    steps:
-      - name: "Create a test order"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "https://tryme.rocketship.sh/orders"
-          body: |
-            {
-              "product": "Test Product",
-              "quantity": 1
-            }
-        assertions:
-          - type: "status_code"
+          - type: status_code
             expected: 200
+          - type: json_path
+            path: ".name"
+            expected: "Nick Martin"
+        save:
+          - json_path: ".id"
+            as: "user_id"
+
+      - name: "Wait for user processing"
+        plugin: delay
+        config:
+          duration: "2s"
+
+      - name: "Validate user creation with script"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            function main() {
+              const userId = state.user_id;
+              console.log(`✅ User created with ID: ${userId}`);
+
+              // Simulate some business logic validation
+              if (!userId || userId === "") {
+                throw new Error("User ID is missing or empty");
+              }
+
+              if (parseInt(userId) <= 0) {
+                throw new Error("Invalid user ID format");
+              }
+
+              return {
+                validation_status: "passed",
+                user_ready: true,
+                message: `User ${userId} is ready for operations`
+              };
+            }
+
+            main();
 EOF
 ```
 
 #### Run it
 
 ```bash
-rocketship run -af simple-test.yaml # starts the local engine, runs the tests, shuts the engine down
+rocketship run -af rocketship.yaml # starts the local engine, runs the tests, shuts the engine down
 ```
 
 The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
@@ -108,11 +132,11 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 Building the next-gen of integration testing for humans and AI agents. Suggestions and issues are welcomed! Here's what's coming in weeks, not years:
 
-- [ ] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
-- [ ] **Data Resource Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
-- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
-- [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
 - [x] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
+- [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
+- [ ] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
+- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
+- [ ] **More Native Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 
 ## Contribute!!!
 
