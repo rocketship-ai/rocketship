@@ -90,15 +90,10 @@ tests:
           script: |
             function main() {
               const userId = state.user_id;
-              console.log(`✅ User created with ID: ${userId}`);
 
               // Simulate some business logic validation
               if (!userId || userId === "") {
                 throw new Error("User ID is missing or empty");
-              }
-
-              if (parseInt(userId) <= 0) {
-                throw new Error("Invalid user ID format");
               }
 
               return {
