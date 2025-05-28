@@ -9,6 +9,14 @@ import (
 	"text/template"
 )
 
+// Pre-compiled regex patterns for better performance
+var (
+	escapedHandlebarsRegex    = regexp.MustCompile(`(\\+)(\{\{[^}]*\}\})`)
+	placeholderRegex          = regexp.MustCompile(`__ROCKETSHIP_ESCAPED_HANDLEBARS_\d+__`)
+	runtimeVariableRegex      = regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
+	templateVariableRegex     = regexp.MustCompile(`\{\{\s*([^.\s}][^}]*)\s*\}\}`)
+)
+
 // TemplateContext holds both config variables and runtime variables for template processing
 type TemplateContext struct {
 	Vars    map[string]interface{} // Config variables (accessed via {{ .vars.key }})
@@ -335,7 +343,7 @@ func handleAllEscapedHandlebars(input string) string {
 	result := input
 	
 	// Match any number of consecutive backslashes followed by handlebars
-	re := regexp.MustCompile(`(\\+)(\{\{[^}]*\}\})`)
+	re := escapedHandlebarsRegex
 	
 	result = re.ReplaceAllStringFunc(result, func(match string) string {
 		submatch := re.FindStringSubmatch(match)
@@ -366,7 +374,7 @@ func handleAllEscapedHandlebars(input string) string {
 	})
 	
 	// Handle existing placeholders from previous config processing
-	re2 := regexp.MustCompile(`__ROCKETSHIP_ESCAPED_HANDLEBARS_\d+__`)
+	re2 := placeholderRegex
 	result = re2.ReplaceAllString(result, "{_{ESCAPED}_}")
 	
 	return result
@@ -375,24 +383,28 @@ func handleAllEscapedHandlebars(input string) string {
 // restoreSafeEscapedHandlebars converts safe escaped placeholders back to literal handlebars
 func restoreSafeEscapedHandlebars(input string) string {
 	// Convert {_{ content }_} -> {{ content }}
-	re := regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
+	re := runtimeVariableRegex
 	return re.ReplaceAllString(input, "{{$1}}")
 }
 
 // convertRuntimeVariables converts runtime variables from {{ var }} to {{ .var }} for Go template compatibility
 func convertRuntimeVariables(input string, runtime map[string]interface{}) string {
-	result := input
-	
-	// Use regex to handle whitespace around variable names
-	for key := range runtime {
-		// Create pattern that matches {{ key }} with optional whitespace
-		pattern := fmt.Sprintf(`\{\{\s*%s\s*\}\}`, regexp.QuoteMeta(key))
-		replacement := fmt.Sprintf("{{ .%s }}", key)
+	// Use the pre-compiled regex to find all template variables that don't already use dot notation
+	return templateVariableRegex.ReplaceAllStringFunc(input, func(match string) string {
+		// Extract the variable name from the match
+		submatch := templateVariableRegex.FindStringSubmatch(match)
+		if len(submatch) < 2 {
+			return match
+		}
 		
-		// Only replace if it's not already using dot notation
-		re := regexp.MustCompile(pattern)
-		result = re.ReplaceAllString(result, replacement)
-	}
-	
-	return result
+		varName := strings.TrimSpace(submatch[1])
+		
+		// Check if this variable exists in runtime context
+		if _, exists := runtime[varName]; exists {
+			return fmt.Sprintf("{{ .%s }}", varName)
+		}
+		
+		// If not in runtime context, leave as-is (could be a .vars or .env variable)
+		return match
+	})
 }
