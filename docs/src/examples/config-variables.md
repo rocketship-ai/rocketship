@@ -4,12 +4,14 @@ This example demonstrates how to use configuration variables in Rocketship test 
 
 ## Key Features Demonstrated
 
-- **Configuration Variables**: Define reusable variables in the `vars` section
-- **Variable Syntax**: Use `{{ .vars.variable_name }}` to access config variables
+- **Configuration Variables**: Define reusable variables in the `vars` section using `{{ .vars.variable_name }}`
+- **Runtime Variables**: Use variables generated during test execution using `{{ variable_name }}`
 - **Nested Variables**: Support for nested structures like `{{ .vars.auth.token }}`
-- **Mixed Variables**: Combine config variables with runtime variables in the same test
-- **CLI Overrides**: Override variables from the command line
+- **Mixed Variables**: Combine config and runtime variables in the same test
+- **CLI Overrides**: Override config variables from the command line
 - **Variable Files**: Load variables from external files
+
+For information about environment variables, see the [Environment Variables guide](environment-variables.md).
 
 ### Configuration Variables Section
 

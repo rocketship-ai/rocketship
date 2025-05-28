@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"os"
 	"testing"
 )
 
@@ -204,6 +205,271 @@ func TestMultiLevelEscapedHandlebarsConfigOnly(t *testing.T) {
 			
 			if result != tt.expected {
 				t.Errorf("ProcessConfigVariablesOnly result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestEnvironmentVariables(t *testing.T) {
+	// Set up test environment variables
+	originalValues := map[string]string{}
+	testEnvVars := map[string]string{
+		"TEST_API_KEY":     "test_key_12345",
+		"TEST_BASE_URL":    "https://test.example.com",
+		"TEST_DB_HOST":     "localhost:5432",
+		"TEST_DB_USER":     "testuser",
+		"TEST_TIMEOUT":     "30",
+		"TEST_EMPTY_VAR":   "",
+		"TEST_COMPLEX_VAL": "value-with-dashes_and_underscores",
+	}
+
+	// Store original values and set test values
+	for key, value := range testEnvVars {
+		if originalValue, exists := os.LookupEnv(key); exists {
+			originalValues[key] = originalValue
+		}
+		_ = os.Setenv(key, value)
+	}
+
+	// Clean up after test
+	defer func() {
+		for key := range testEnvVars {
+			if originalValue, exists := originalValues[key]; exists {
+				_ = os.Setenv(key, originalValue)
+			} else {
+				_ = os.Unsetenv(key)
+			}
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		input    string
+		vars     map[string]interface{}
+		runtime  map[string]interface{}
+		expected string
+	}{
+		{
+			name:     "basic environment variable",
+			input:    `API Key: {{ .env.TEST_API_KEY }}`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `API Key: test_key_12345`,
+		},
+		{
+			name:     "multiple environment variables",
+			input:    `URL: {{ .env.TEST_BASE_URL }}, DB: {{ .env.TEST_DB_HOST }}`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `URL: https://test.example.com, DB: localhost:5432`,
+		},
+		{
+			name:     "mixed env, config, and runtime variables",
+			input:    `API: {{ .env.TEST_API_KEY }}, Config: {{ .vars.service }}, User: {{ user_id }}`,
+			vars:     map[string]interface{}{"service": "auth_service"},
+			runtime:  map[string]interface{}{"user_id": "12345"},
+			expected: `API: test_key_12345, Config: auth_service, User: 12345`,
+		},
+		{
+			name:     "environment variable in connection string",
+			input:    `postgres://{{ .env.TEST_DB_USER }}:password@{{ .env.TEST_DB_HOST }}/{{ .vars.db_name }}`,
+			vars:     map[string]interface{}{"db_name": "testdb"},
+			runtime:  map[string]interface{}{},
+			expected: `postgres://testuser:password@localhost:5432/testdb`,
+		},
+		{
+			name:     "environment variable with escaping",
+			input:    `Real env: {{ .env.TEST_API_KEY }}, Escaped: \{{ .env.FAKE_VAR }}`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `Real env: test_key_12345, Escaped: {{ .env.FAKE_VAR }}`,
+		},
+		{
+			name:     "numeric environment variable",
+			input:    `Timeout: {{ .env.TEST_TIMEOUT }} seconds`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `Timeout: 30 seconds`,
+		},
+		{
+			name:     "empty environment variable",
+			input:    `Empty: "{{ .env.TEST_EMPTY_VAR }}", Non-empty: "{{ .env.TEST_API_KEY }}"`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `Empty: "", Non-empty: "test_key_12345"`,
+		},
+		{
+			name:     "complex environment variable value",
+			input:    `Complex: {{ .env.TEST_COMPLEX_VAL }}`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `Complex: value-with-dashes_and_underscores`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			context := TemplateContext{
+				Vars:    tt.vars,
+				Runtime: tt.runtime,
+			}
+			
+			result, err := ProcessTemplate(tt.input, context)
+			if err != nil {
+				t.Fatalf("ProcessTemplate failed: %v", err)
+			}
+			
+			if result != tt.expected {
+				t.Errorf("ProcessTemplate result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestEnvironmentVariablesConfigOnly(t *testing.T) {
+	// Set up test environment variables
+	originalValues := map[string]string{}
+	testEnvVars := map[string]string{
+		"TEST_CONFIG_API_KEY": "config_test_key",
+		"TEST_CONFIG_HOST":    "config.example.com",
+	}
+
+	// Store original values and set test values
+	for key, value := range testEnvVars {
+		if originalValue, exists := os.LookupEnv(key); exists {
+			originalValues[key] = originalValue
+		}
+		_ = os.Setenv(key, value)
+	}
+
+	// Clean up after test
+	defer func() {
+		for key := range testEnvVars {
+			if originalValue, exists := originalValues[key]; exists {
+				_ = os.Setenv(key, originalValue)
+			} else {
+				_ = os.Unsetenv(key)
+			}
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		input    string
+		vars     map[string]interface{}
+		expected string
+	}{
+		{
+			name:     "config processing with env vars",
+			input:    `Config: {{ .vars.service }}, Env: {{ .env.TEST_CONFIG_API_KEY }}, Runtime: {{ user_id }}`,
+			vars:     map[string]interface{}{"service": "auth"},
+			expected: `Config: auth, Env: config_test_key, Runtime: {{ user_id }}`,
+		},
+		{
+			name:     "env vars only in config processing",
+			input:    `Host: {{ .env.TEST_CONFIG_HOST }}, Runtime: {{ runtime_var }}`,
+			vars:     map[string]interface{}{},
+			expected: `Host: config.example.com, Runtime: {{ runtime_var }}`,
+		},
+		{
+			name:     "escaped env vars in config processing",
+			input:    `Real: {{ .env.TEST_CONFIG_API_KEY }}, Escaped: \{{ .env.FAKE_ENV }}`,
+			vars:     map[string]interface{}{},
+			expected: `Real: config_test_key, Escaped: {_{ .env.FAKE_ENV }_}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ProcessConfigVariablesOnly(tt.input, tt.vars)
+			if err != nil {
+				t.Fatalf("ProcessConfigVariablesOnly failed: %v", err)
+			}
+			
+			if result != tt.expected {
+				t.Errorf("ProcessConfigVariablesOnly result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestEnvironmentVariablesWithEscaping(t *testing.T) {
+	// Set up test environment variables
+	originalValues := map[string]string{}
+	testEnvVars := map[string]string{
+		"TEST_ESCAPE_VAR": "escape_test_value",
+	}
+
+	// Store original values and set test values
+	for key, value := range testEnvVars {
+		if originalValue, exists := os.LookupEnv(key); exists {
+			originalValues[key] = originalValue
+		}
+		_ = os.Setenv(key, value)
+	}
+
+	// Clean up after test
+	defer func() {
+		for key := range testEnvVars {
+			if originalValue, exists := originalValues[key]; exists {
+				_ = os.Setenv(key, originalValue)
+			} else {
+				_ = os.Unsetenv(key)
+			}
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		input    string
+		vars     map[string]interface{}
+		runtime  map[string]interface{}
+		expected string
+	}{
+		{
+			name:     "single escape with env var",
+			input:    `Escaped: \{{ .env.FAKE_VAR }}, Real: {{ .env.TEST_ESCAPE_VAR }}`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{},
+			expected: `Escaped: {{ .env.FAKE_VAR }}, Real: escape_test_value`,
+		},
+		{
+			name:     "double escape with env var",
+			input:    `Double: \\{{ .env.TEST_ESCAPE_VAR }}, Real: {{ .vars.config }}`,
+			vars:     map[string]interface{}{"config": "config_value"},
+			runtime:  map[string]interface{}{},
+			expected: `Double: \escape_test_value, Real: config_value`,
+		},
+		{
+			name:     "triple escape with env var",
+			input:    `Triple: \\\{{ .env.TEST_ESCAPE_VAR }}, Real: {{ runtime_var }}`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{"runtime_var": "runtime_value"},
+			expected: `Triple: \{{ .env.TEST_ESCAPE_VAR }}, Real: runtime_value`,
+		},
+		{
+			name:     "mixed variable types with escaping",
+			input:    `Env: {{ .env.TEST_ESCAPE_VAR }}, Config: {{ .vars.test }}, Runtime: {{ user }}, Escaped: \{{ .env.LITERAL }}`,
+			vars:     map[string]interface{}{"test": "config_test"},
+			runtime:  map[string]interface{}{"user": "alice"},
+			expected: `Env: escape_test_value, Config: config_test, Runtime: alice, Escaped: {{ .env.LITERAL }}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			context := TemplateContext{
+				Vars:    tt.vars,
+				Runtime: tt.runtime,
+			}
+			
+			result, err := ProcessTemplate(tt.input, context)
+			if err != nil {
+				t.Fatalf("ProcessTemplate failed: %v", err)
+			}
+			
+			if result != tt.expected {
+				t.Errorf("ProcessTemplate result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
 		})
 	}

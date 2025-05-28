@@ -3,6 +3,7 @@ package dsl
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"text/template"
@@ -10,12 +11,24 @@ import (
 
 // TemplateContext holds both config variables and runtime variables for template processing
 type TemplateContext struct {
-	Vars    map[string]interface{} // Config variables (accessed via {{ vars.key }})
+	Vars    map[string]interface{} // Config variables (accessed via {{ .vars.key }})
 	Runtime map[string]interface{} // Runtime variables (accessed via {{ key }})
 }
 
+// getEnvironmentVariables returns all environment variables as a map
+func getEnvironmentVariables() map[string]interface{} {
+	envVars := make(map[string]interface{})
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			envVars[parts[0]] = parts[1]
+		}
+	}
+	return envVars
+}
+
 // ProcessTemplate processes a string containing template variables
-// It supports both config variables ({{ .vars.key }}) and runtime variables ({{ key }})
+// It supports config variables ({{ .vars.key }}), runtime variables ({{ key }}), and environment variables ({{ .env.key }})
 // Escaped handlebars using \{{ }} will be converted to literal {{ }} text
 func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	if input == "" {
@@ -37,6 +50,7 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	// Prepare template data
 	templateData := map[string]interface{}{
 		"vars": context.Vars,
+		"env":  getEnvironmentVariables(),
 	}
 
 	// Add runtime variables to the root level
@@ -55,7 +69,7 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	return result, nil
 }
 
-// ProcessConfigVariablesOnly processes only config variables ({{ .vars.* }}) patterns
+// ProcessConfigVariablesOnly processes only config variables ({{ .vars.* }}) and environment variables ({{ .env.* }}) patterns
 // Leaves runtime variables ({{ variable }}) untouched for later processing
 // Escaped handlebars using \{{ }} will be handled in final processing
 func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (string, error) {
@@ -66,21 +80,22 @@ func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (stri
 	// Handle escaped handlebars first - convert to safe placeholders
 	processed := handleAllEscapedHandlebars(input)
 
-	// Only process if the string contains .vars patterns
-	if !strings.Contains(processed, ".vars.") {
+	// Only process if the string contains .vars or .env patterns
+	if !strings.Contains(processed, ".vars.") && !strings.Contains(processed, ".env.") {
 		return processed, nil
 	}
 
-	// Create template data with only vars
+	// Create template data with vars and env
 	templateData := map[string]interface{}{
 		"vars": vars,
+		"env":  getEnvironmentVariables(),
 	}
 
 	// Create template
 	tmpl, err := template.New("rocketship").Parse(processed)
 	if err != nil {
-		// If parsing fails due to runtime variables, try to process just the config vars
-		result := processConfigVarsWithRegex(processed, vars)
+		// If parsing fails due to runtime variables, try to process just the config vars and env vars
+		result := processConfigAndEnvVarsWithRegex(processed, vars)
 		return result, nil
 	}
 
@@ -88,22 +103,33 @@ func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (stri
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, templateData); err != nil {
 		// If execution fails due to missing runtime variables, try regex approach
-		result := processConfigVarsWithRegex(processed, vars)
+		result := processConfigAndEnvVarsWithRegex(processed, vars)
 		return result, nil
 	}
 
 	return buf.String(), nil
 }
 
-// processConfigVarsWithRegex uses regex to replace only {{ .vars.* }} patterns
-func processConfigVarsWithRegex(input string, vars map[string]interface{}) string {
+// processConfigAndEnvVarsWithRegex uses regex to replace only {{ .vars.* }} and {{ .env.* }} patterns
+func processConfigAndEnvVarsWithRegex(input string, vars map[string]interface{}) string {
 	// This is a fallback when Go templates fail due to mixed variable types
-	// We'll manually replace {{ .vars.* }} patterns
+	// We'll manually replace {{ .vars.* }} and {{ .env.* }} patterns
 	result := input
 	
-	// Simple string replacement for basic cases
+	// Process config vars
 	for key, value := range vars {
 		pattern := fmt.Sprintf("{{ .vars.%s }}", key)
+		if strValue, ok := value.(string); ok {
+			result = strings.ReplaceAll(result, pattern, strValue)
+		} else {
+			result = strings.ReplaceAll(result, pattern, fmt.Sprintf("%v", value))
+		}
+	}
+	
+	// Process environment vars
+	envVars := getEnvironmentVariables()
+	for key, value := range envVars {
+		pattern := fmt.Sprintf("{{ .env.%s }}", key)
 		if strValue, ok := value.(string); ok {
 			result = strings.ReplaceAll(result, pattern, strValue)
 		} else {
@@ -114,8 +140,12 @@ func processConfigVarsWithRegex(input string, vars map[string]interface{}) strin
 	// Handle nested vars like {{ .vars.auth.token }}
 	result = processNestedVars(result, vars, "vars")
 	
+	// Handle nested env vars like {{ .env.auth.token }} (though env vars are typically flat)
+	result = processNestedVars(result, envVars, "env")
+	
 	return result
 }
+
 
 // processNestedVars handles nested variable replacement
 func processNestedVars(input string, vars map[string]interface{}, prefix string) string {

@@ -161,3 +161,34 @@ tests:
           - type: "json_path"
             path: ".mixed_example"
             expected: "Real: staging, Literal: \\{{ placeholder }}"
+
+      - name: "Demo environment variables"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .vars.base_url }}/books"
+          headers:
+            "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+            "X-Test-Session": "config-variables-session"
+            "X-User": "{{ .env.USER }}"
+            "X-Path": "{{ .env.PATH }}"
+            "Content-Type": "application/json"
+          body: |-
+            {
+              "title": "Environment Variables Demo",
+              "author": "System User",
+              "isbn": "978-0000000001",
+              "metadata": {
+                "system_user": "{{ .env.USER }}",
+                "home_directory": "{{ .env.HOME }}",
+                "shell": "{{ .env.SHELL }}",
+                "config_env": "{{ .vars.environment }}",
+                "mixed_description": "Running as {{ .env.USER }} in {{ .vars.environment }} environment"
+              }
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".title"
+            expected: "Environment Variables Demo"

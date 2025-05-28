@@ -2,6 +2,16 @@
 
 When your APIs or databases use handlebars syntax (`{{ }}`) for their own templating, you need a way to include literal handlebars in your test data without Rocketship trying to process them as variables. Rocketship provides unlimited-level handlebars escaping using backslashes.
 
+## Variable Types
+
+Rocketship supports multiple types of variables:
+
+- **Config variables**: `{{ .vars.variable_name }}` - Defined in the `vars` section
+- **Runtime variables**: `{{ variable_name }}` - Generated during test execution (from `save` operations)
+- **Environment variables**: `{{ .env.VARIABLE_NAME }}` - System environment variables
+
+All variable types support escaping using the same backslash syntax. For detailed information about environment variables, see the [Environment Variables guide](environment-variables.md).
+
 ## Basic Escaping Syntax
 
 Use backslashes (`\`) before handlebars to escape them:
@@ -101,6 +111,7 @@ tests:
             path: ".api_docs"
             expected: "Use {{ user_id }} in your requests"
 ```
+
 
 ## SQL Context Example
 
