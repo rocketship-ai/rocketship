@@ -55,7 +55,7 @@ tests:
         config:
           language: "javascript"
           script: |
-            // Access config variables and HTTP data
+            // Access config variables, HTTP data, and environment variables
 
             // Validate HTTP data exists
             assert(state.animal_name, "Animal name should be available from HTTP step");
@@ -67,6 +67,11 @@ tests:
             let maxRetriesDoubled = vars.max_retries * 2;
             let animalNameLength = state.animal_name.length;
             let animalWeight = parseInt(state.animal_weight);
+
+            // Access environment variables
+            let systemUser = "{{ .env.USER }}";
+            let homeDir = "{{ .env.HOME }}";
+            let shell = "{{ .env.SHELL }}";
 
             // Create additional computed values
             let animalSlug = state.animal_name.toLowerCase().replace(/\s+/g, '-');
@@ -80,6 +85,9 @@ tests:
             save("animal_slug", animalSlug);
             save("processing_id", processingId);
             save("weight_category", weightCategory);
+            save("system_user", systemUser);
+            save("home_directory", homeDir);
+            save("user_shell", shell);
             save("step1_completed", "true");
 
             // Inline script completed - data ready for external JS file
@@ -99,6 +107,8 @@ tests:
             Content-Type: "application/json"
             X-Assessment-Category: "{{ animal_category }}"
             X-Processed-By: "{{ processed_user_name }}"
+            X-System-User: "{{ system_user }}"
+            X-Environment-Home: "{{ home_directory }}"
             X-Test-Session: "custom-scripting-session"
           body: |
             {
@@ -116,7 +126,12 @@ tests:
               "metadata": {
                 "processing_timestamp": "{{ processing_timestamp }}",
                 "name_length": {{ animal_name_length }},
-                "slug": "{{ animal_slug }}"
+                "slug": "{{ animal_slug }}",
+                "system_info": {
+                  "processed_by_user": "{{ system_user }}",
+                  "home_directory": "{{ home_directory }}",
+                  "shell": "{{ user_shell }}"
+                }
               }
             }
         assertions:
@@ -154,12 +169,19 @@ tests:
             assert(state.created_assessment_id, "HTTP POST should have created assessment");
             assert(state.assessment_record_id, "Assessment record ID should be returned");
 
+            // Check environment variables were processed correctly
+            assert(state.system_user, "System user should be available from environment variables");
+            assert(state.home_directory, "Home directory should be available from environment variables");
+            assert(state.user_shell, "User shell should be available from environment variables");
+            
             // Validate the complete state contains all expected data
             const requiredFields = [
               // From HTTP Step 1 (Create)
               'animal_id', 'animal_name', 'animal_species', 'animal_habitat', 'animal_weight',
               // From Script Step 1  
               'processed_user_name', 'animal_slug', 'weight_category', 'step1_completed',
+              // From Environment Variables
+              'system_user', 'home_directory', 'user_shell',
               // From External JS File
               'animal_category', 'animal_score', 'animal_profile', 'assessment_complete',
               // From HTTP Step 2 (Assessment)

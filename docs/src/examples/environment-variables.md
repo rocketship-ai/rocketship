@@ -32,6 +32,27 @@ Access system environment variables in your tests using `{{ .env.VARIABLE_NAME }
       - "SELECT * FROM users WHERE created_by = '{{ .env.USER }}';"
 ```
 
+## Script Integration
+
+Environment variables work in JavaScript code:
+
+```yaml
+- name: "Process environment data"
+  plugin: "script"
+  config:
+    language: "javascript"
+    script: |
+      // Access environment variables
+      let systemUser = "{{ .env.USER }}";
+      let homeDir = "{{ .env.HOME }}";
+      let shell = "{{ .env.SHELL }}";
+      
+      // Process and save for later steps
+      save("processed_user", systemUser.toUpperCase());
+      save("user_home", homeDir);
+      save("user_shell", shell);
+```
+
 ## Mixed with Other Variables
 
 ```yaml
@@ -93,3 +114,24 @@ rocketship run -af test.yaml
 ```
 
 Missing environment variables are treated as empty strings.
+
+## Working Examples
+
+See environment variables in action in these examples:
+
+```bash
+# HTTP plugin with environment variables
+rocketship run -af examples/config-variables/rocketship.yaml
+
+# SQL plugin with environment variables
+rocketship run -af examples/sql-testing/rocketship.yaml
+
+# Script plugin with environment variables  
+rocketship run -af examples/custom-scripting/rocketship.yaml
+```
+
+These examples demonstrate:
+- Environment variables in HTTP headers and request bodies
+- Database connection strings using environment variables
+- JavaScript code processing environment variables
+- Mixed usage with config and runtime variables
