@@ -267,7 +267,7 @@ tests:
           dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - |-
-              INSERT INTO users (name, email, age) VALUES ('Normal: {{ .vars.test_user_name }}, Escaped: \{{ placeholder }}', 'sql-escaping@example.com', 30) RETURNING id, name;
+              INSERT INTO users (name, email, age) VALUES ('Normal: {{ .vars.test_user_name }}, Escaped: \{{ placeholder }}', 'sql-escaping-{{ .vars.test_user_name }}@example.com', 30) RETURNING id, name;
         assertions:
           - type: row_count
             query_index: 0
@@ -276,7 +276,7 @@ tests:
             query_index: 0
             row_index: 0
             column: "name"
-            expected: "Normal: Test User from Rocketship, Escaped: \\{{ placeholder }}"
+            expected: "Normal: Test User from Rocketship, Escaped: {{ placeholder }}"
         save:
           - sql_result: ".queries[0].rows[0].id"
             as: "sql_escape_demo_id"
@@ -301,7 +301,7 @@ tests:
           dsn: "postgres://testuser:testpass@{{ .vars.db_host }}:{{ .vars.db_port }}/testdb?sslmode=disable"
           commands:
             - |-
-              INSERT INTO users (name, email, age) VALUES ('System User: {{ .env.USER }}', 'env-demo@example.com', 30) RETURNING id, name;
+              INSERT INTO users (name, email, age) VALUES ('System User: {{ .env.USER }}', 'env-demo-{{ .env.USER }}-{{ .vars.test_user_name }}@example.com', 30) RETURNING id, name;
         assertions:
           - type: row_count
             query_index: 0
@@ -338,7 +338,7 @@ tests:
             query_index: 0
             row_index: 0
             column: "name"
-            expected: "{{ env_demo_user_name }}"
+            expected: "System User: {{ .env.USER }}"
         save:
           - sql_result: ".queries[0].rows[0].mixed_example"
             as: "mixed_variables_result"

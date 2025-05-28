@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"go.temporal.io/sdk/activity"
 
@@ -125,42 +126,35 @@ func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
 	return nil
 }
 
-// applyVariableReplacement replaces variables in DSN and commands
+// applyVariableReplacement replaces variables in DSN and commands using DSL template processing
 func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, vars map[string]interface{}) error {
-	// Create replacement map
-	replacements := make(map[string]string)
-	
-	// Add state variables
-	for k, v := range state {
-		replacements[k] = fmt.Sprintf("%v", v)
+	// Create template context with vars and runtime variables
+	context := dsl.TemplateContext{
+		Vars:    vars,
+		Runtime: state,
 	}
 	
-	// Add vars variables with "vars." prefix
-	for k, v := range vars {
-		replacements[fmt.Sprintf("vars.%s", k)] = fmt.Sprintf("%v", v)
-		replacements[k] = fmt.Sprintf("%v", v) // Also allow direct access
+	// Process DSN
+	if config.DSN != "" {
+		processedDSN, err := dsl.ProcessTemplate(config.DSN, context)
+		if err != nil {
+			return fmt.Errorf("failed to process DSN template: %w", err)
+		}
+		config.DSN = processedDSN
 	}
 	
-	// Replace variables in DSN
-	config.DSN = replaceVariables(config.DSN, replacements)
-	
-	// Replace variables in commands
+	// Process commands
 	for i, cmd := range config.Commands {
-		config.Commands[i] = replaceVariables(cmd, replacements)
+		processedCmd, err := dsl.ProcessTemplate(cmd, context)
+		if err != nil {
+			return fmt.Errorf("failed to process command template at index %d: %w", i, err)
+		}
+		config.Commands[i] = processedCmd
 	}
 	
 	return nil
 }
 
-// replaceVariables replaces {{ var }} patterns with values
-func replaceVariables(text string, replacements map[string]string) string {
-	result := text
-	for key, value := range replacements {
-		placeholder := fmt.Sprintf("{{ %s }}", key)
-		result = strings.ReplaceAll(result, placeholder, value)
-	}
-	return result
-}
 
 // getQueries returns the list of SQL queries to execute
 func getQueries(config *SQLConfig) ([]string, error) {
