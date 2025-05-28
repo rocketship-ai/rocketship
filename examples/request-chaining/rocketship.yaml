@@ -4,6 +4,11 @@ version: "v1.0.0"
 tests:
   - name: "Car Management Flow"
     steps:
+      - name: "Log start of car management flow"
+        plugin: "log"
+        config:
+          message: "🚗 Starting car management flow - demonstrating request chaining"
+
       - name: "Create first car"
         plugin: "http"
         config:
@@ -34,6 +39,11 @@ tests:
           - header: "server"
             as: "server_info"
 
+      - name: "Log first car creation"
+        plugin: "log"
+        config:
+          message: "🚙 Created first car ({{ first_car_model }}) with ID: {{ first_car_id }} on server {{ server_info }}"
+
       - name: "Wait for system processing"
         plugin: "delay"
         config:
@@ -59,6 +69,11 @@ tests:
         save:
           - json_path: ".id"
             as: "second_car_id"
+
+      - name: "Log second car creation"
+        plugin: "log"
+        config:
+          message: "🚙 Created second car (Honda Civic) with ID: {{ second_car_id }}"
 
       - name: "Short delay for consistency"
         plugin: "delay"

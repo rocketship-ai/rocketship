@@ -8,6 +8,11 @@ vars:
 tests:
   - name: "Complete HTTP and Script State Integration"
     steps:
+      - name: "Log start of scripting demo"
+        plugin: "log"
+        config:
+          message: "🔬 Starting custom scripting demo - API: {{ .vars.api_url }}, User: {{ .vars.user_name }}"
+
       - name: "Clear Previous Test Data"
         plugin: "http"
         config:
@@ -91,6 +96,11 @@ tests:
             save("step1_completed", "true");
 
             // Inline script completed - data ready for external JS file
+
+      - name: "Log script processing completion"
+        plugin: "log"
+        config:
+          message: "✅ Completed script processing - Animal: {{ animal_name }}, User: {{ processed_user_name }}, Category: {{ weight_category }}"
 
       - name: "Script Step 2 - External File Processing"
         plugin: "script"

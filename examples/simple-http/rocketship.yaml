@@ -4,6 +4,11 @@ version: "v1.0.0"
 tests:
   - name: "Create and Get User"
     steps:
+      - name: "Log start of user test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting user management test - creating new user"
+
       - name: "Create a new user"
         plugin: "http"
         config:
@@ -25,6 +30,11 @@ tests:
         save:
           - json_path: ".id"
             as: "user_id"
+
+      - name: "Log user creation success"
+        plugin: "log"
+        config:
+          message: "✅ Created user with ID: {{ user_id }}"
 
       - name: "Get the created user"
         plugin: "http"
@@ -53,6 +63,11 @@ tests:
 
   - name: "Create and Get Order"
     steps:
+      - name: "Log start of order test"
+        plugin: "log"
+        config:
+          message: "📦 Starting order management test - creating new order"
+
       - name: "Create a new order"
         plugin: "http"
         config:
@@ -74,6 +89,11 @@ tests:
         save:
           - json_path: ".id"
             as: "order_id"
+
+      - name: "Log order creation success"
+        plugin: "log"
+        config:
+          message: "✅ Created order with ID: {{ order_id }}"
 
       - name: "Get the created order"
         plugin: "http"

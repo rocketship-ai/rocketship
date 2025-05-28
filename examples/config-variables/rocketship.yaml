@@ -19,6 +19,11 @@ vars:
 tests:
   - name: "Config Variables Demo"
     steps:
+      - name: "Log start of config variables demo"
+        plugin: "log"
+        config:
+          message: "📚 Starting config variables demo - Environment: {{ .vars.environment }}, URL: {{ .vars.base_url }}"
+
       - name: "Create book with config variables"
         plugin: "http"
         config:
@@ -49,6 +54,11 @@ tests:
             as: "book_id"
           - json_path: ".title"
             as: "book_title"
+
+      - name: "Log book creation with mixed variables"
+        plugin: "log"
+        config:
+          message: "✅ Created book '{{ book_title }}' (ID: {{ book_id }}) - Author: {{ .vars.book.author }}"
 
       - name: "Get book mixing config and runtime variables"
         plugin: "http"
@@ -161,6 +171,11 @@ tests:
           - type: "json_path"
             path: ".mixed_example"
             expected: "Real: staging, Literal: \\{{ placeholder }}"
+
+      - name: "Log environment variables demo start"
+        plugin: "log"
+        config:
+          message: "🌍 Demonstrating environment variables - User: {{ .env.USER }}, Home: {{ .env.HOME }}"
 
       - name: "Demo environment variables"
         plugin: "http"
