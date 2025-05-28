@@ -27,22 +27,18 @@ Rocketship is an open-source testing framework for E2E API testing that uses Tem
 ### Build and Install
 
 ```bash
-make build          # Build CLI with embedded binaries
-make install        # Install CLI to $GOPATH/bin
-make dev-setup      # Set up development environment with git hooks
+make install        # Build CLI with embedded binaries and install CLI to $GOPATH/bin
 ```
 
 ### Testing and Quality
 
 ```bash
-make test           # Run all tests
-make lint           # Run golangci-lint and workflowcheck
-go test ./...       # Run tests for specific packages
+make lint && make test    # lint and test
 ```
 
 ### Embedded Binaries
 
-The CLI embeds engine and worker binaries. Always run `make build-binaries` after modifying engine/worker code.
+The CLI embeds engine and worker binaries. Always run `make install` after modifying engine/worker code.
 
 ### Protocol Buffers
 
@@ -79,10 +75,9 @@ Debug logging shows:
 ### Development Workflow
 
 1. **Make code changes** to engine/worker/CLI
-2. **Rebuild binaries**: `make build` (includes `make build-binaries`)
+2. **Rebuild binaries**: `make install`
 3. **Test with debug logging**: `ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml`
-4. **Run full test suite**: `make test`
-5. **Check linting**: `make lint`
+4. **Run lint and test suite**: `make lint && make test`
 
 ### Local Development Binary Usage
 
@@ -95,15 +90,12 @@ The system automatically uses local development binaries from `internal/embedded
 ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml
 
 # Background server for iterative testing
-ROCKETSHIP_LOG=DEBUG rocketship start server -lb
-rocketship run test.yaml
+ROCKETSHIP_LOG=DEBUG rocketship start server --local --background
+rocketship run --f test.yaml --engine localhost:7700
 rocketship stop server
 
 # Validate YAML changes
 rocketship validate test.yaml
-
-# Run CI checks locally
-make test && make lint
 ```
 
 ## Test Specifications
@@ -134,4 +126,24 @@ rocketship run -af test.yaml    # Auto-start local engine, run tests, auto-stop 
 rocketship start server -lb     # Start engine in locally, in the background
 rocketship run test.yaml        # Run against existing engine
 rocketship stop server          # Stop local background engine
+```
+
+## Running Tests that have the SQL plugin
+
+Make sure to spin up the sql containers before running the tests.
+
+```bash
+docker-compose -f .docker/docker-compose.yaml up postgres-test mysql-test -d
+```
+
+Run the test(s) with sql plugins
+
+```bash
+rocketship run -af examples/sql-testing/rocketship.yaml
+```
+
+Spin down the containers when you're done
+
+```bash
+docker-compose -f .docker/docker-compose.yaml down
 ```

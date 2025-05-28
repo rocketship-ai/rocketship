@@ -8,13 +8,13 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"regexp"
 	"sort"
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
 	
 	"github.com/rocketship-ai/rocketship/internal/plugins"
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 )
 
 // Auto-register the plugin when the package is imported
@@ -28,43 +28,39 @@ type ActivityResponse struct {
 	Saved    map[string]string `json:"saved"`
 }
 
-var (
-	// Matches {{ variable }} pattern
-	variablePattern = regexp.MustCompile(`{{\s*([^}\s]+)\s*}}`)
-)
-
 // replaceVariables replaces {{ variable }} patterns in the input string with values from the state
+// Now uses DSL template functions to properly handle escaped handlebars
 func replaceVariables(input string, state map[string]string) (string, error) {
 	if state == nil {
 		return input, nil
 	}
 
-	// First check if we have all required variables
-	matches := variablePattern.FindAllStringSubmatch(input, -1)
-	if len(matches) > 0 {
-		missingVars := make([]string, 0)
-		for _, match := range matches {
-			varName := match[1]
-			if _, ok := state[varName]; !ok {
-				missingVars = append(missingVars, varName)
-			}
-		}
-		if len(missingVars) > 0 {
-			return "", fmt.Errorf("undefined variables: %v. Available variables: %v", missingVars, getStateKeys(state))
-		}
+	// Convert state to interface{} map for DSL functions
+	runtime := make(map[string]interface{})
+	for k, v := range state {
+		runtime[k] = v
 	}
 
-	result := variablePattern.ReplaceAllStringFunc(input, func(match string) string {
-		// Extract variable name from {{ name }}
-		varName := variablePattern.FindStringSubmatch(match)[1]
-		if value, ok := state[varName]; ok {
-			return value
-		}
-		// This shouldn't happen due to the check above
-		return match
-	})
+	// Create template context with runtime variables
+	context := dsl.TemplateContext{
+		Vars:    make(map[string]interface{}), // No config vars at runtime
+		Runtime: runtime,
+	}
+
+	// Use DSL template processing which handles escaped handlebars
+	result, err := dsl.ProcessTemplate(input, context)
+	if err != nil {
+		return "", fmt.Errorf("undefined variables: %v. Available variables: %v", extractMissingVars(err), getStateKeys(state))
+	}
 
 	return result, nil
+}
+
+// extractMissingVars extracts variable names from template execution errors
+func extractMissingVars(err error) []string {
+	// For now, just return the error string
+	// TODO: Parse Go template errors more intelligently
+	return []string{err.Error()}
 }
 
 // getStateKeys returns a sorted list of keys from the state map

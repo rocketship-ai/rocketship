@@ -3,6 +3,7 @@ package dsl
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -15,13 +16,20 @@ type TemplateContext struct {
 
 // ProcessTemplate processes a string containing template variables
 // It supports both config variables ({{ .vars.key }}) and runtime variables ({{ key }})
+// Escaped handlebars using \{{ }} will be converted to literal {{ }} text
 func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	if input == "" {
 		return input, nil
 	}
 
+	// Handle escaped handlebars - do this every time to catch any that were preserved from config processing
+	processed := handleAllEscapedHandlebars(input)
+
+	// Convert runtime variables to use dot notation if they don't already have it
+	processed = convertRuntimeVariables(processed, context.Runtime)
+
 	// Create template with custom delimiters to match our syntax
-	tmpl, err := template.New("rocketship").Parse(input)
+	tmpl, err := template.New("rocketship").Parse(processed)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -42,19 +50,25 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return buf.String(), nil
+	// Convert safe escaped format back to literal handlebars
+	result := restoreSafeEscapedHandlebars(buf.String())
+	return result, nil
 }
 
 // ProcessConfigVariablesOnly processes only config variables ({{ .vars.* }}) patterns
 // Leaves runtime variables ({{ variable }}) untouched for later processing
+// Escaped handlebars using \{{ }} will be handled in final processing
 func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (string, error) {
 	if input == "" {
 		return input, nil
 	}
 
+	// Handle escaped handlebars first - convert to safe placeholders
+	processed := handleAllEscapedHandlebars(input)
+
 	// Only process if the string contains .vars patterns
-	if !strings.Contains(input, ".vars.") {
-		return input, nil
+	if !strings.Contains(processed, ".vars.") {
+		return processed, nil
 	}
 
 	// Create template data with only vars
@@ -63,17 +77,19 @@ func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (stri
 	}
 
 	// Create template
-	tmpl, err := template.New("rocketship").Parse(input)
+	tmpl, err := template.New("rocketship").Parse(processed)
 	if err != nil {
 		// If parsing fails due to runtime variables, try to process just the config vars
-		return processConfigVarsWithRegex(input, vars), nil
+		result := processConfigVarsWithRegex(processed, vars)
+		return result, nil
 	}
 
 	// Execute template
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, templateData); err != nil {
 		// If execution fails due to missing runtime variables, try regex approach
-		return processConfigVarsWithRegex(input, vars), nil
+		result := processConfigVarsWithRegex(processed, vars)
+		return result, nil
 	}
 
 	return buf.String(), nil
@@ -126,6 +142,7 @@ func processNestedVars(input string, vars map[string]interface{}, prefix string)
 }
 
 // ProcessConfigVariablesRecursive processes only config variables in any nested data structure
+// This function preserves escaped handlebars across processing phases
 func ProcessConfigVariablesRecursive(data interface{}, vars map[string]interface{}) (interface{}, error) {
 	switch v := data.(type) {
 	case string:
@@ -272,4 +289,53 @@ func setNestedValue(m map[string]interface{}, key string, value interface{}) {
 
 	// Set the final value
 	current[keys[len(keys)-1]] = value
+}
+
+
+// handleAllEscapedHandlebars processes escaped handlebars and existing placeholders, 
+// converting them to a safe format for template processing
+func handleAllEscapedHandlebars(input string) string {
+	result := input
+	
+	// Handle new escaped handlebars: \{{ anything }} -> {_{ anything }_}
+	// Use a format that won't be processed by Go templates but can be restored later
+	re1 := regexp.MustCompile(`\\(\{\{([^}]*)\}\})`)
+	result = re1.ReplaceAllStringFunc(result, func(match string) string {
+		submatch := re1.FindStringSubmatch(match)
+		if len(submatch) >= 3 {
+			// Convert \{{ content }} to {_{content}_} (no extra spaces)
+			return "{_{" + submatch[2] + "}_}"
+		}
+		return match
+	})
+	
+	// Handle existing placeholders from previous config processing
+	re2 := regexp.MustCompile(`__ROCKETSHIP_ESCAPED_HANDLEBARS_\d+__`)
+	result = re2.ReplaceAllString(result, "{_{ESCAPED}_}")
+	
+	return result
+}
+
+// restoreSafeEscapedHandlebars converts {_{...}_} back to {{ ... }}
+func restoreSafeEscapedHandlebars(input string) string {
+	re := regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
+	return re.ReplaceAllString(input, "{{$1}}")
+}
+
+// convertRuntimeVariables converts runtime variables from {{ var }} to {{ .var }} for Go template compatibility
+func convertRuntimeVariables(input string, runtime map[string]interface{}) string {
+	result := input
+	
+	// Use regex to handle whitespace around variable names
+	for key := range runtime {
+		// Create pattern that matches {{ key }} with optional whitespace
+		pattern := fmt.Sprintf(`\{\{\s*%s\s*\}\}`, regexp.QuoteMeta(key))
+		replacement := fmt.Sprintf("{{ .%s }}", key)
+		
+		// Only replace if it's not already using dot notation
+		re := regexp.MustCompile(pattern)
+		result = re.ReplaceAllString(result, replacement)
+	}
+	
+	return result
 }

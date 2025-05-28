@@ -255,3 +255,57 @@ tests:
           - type: row_count
             query_index: 0
             expected: 5
+
+  - name: "Escaped Handlebars in SQL"
+    steps:
+      - name: "Test escaped handlebars in SQL commands"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - |-
+              INSERT INTO users (name, email, age) VALUES ('Test User with escaped template \{{ .vars.secret }}', 'escaped-test@example.com', 25) RETURNING id, name;
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "name"
+            expected: |-
+              Test User with escaped template \{{ .vars.secret }}
+        save:
+          - sql_result: ".queries[0].rows[0].id"
+            as: "escaped_test_user_id"
+
+      - name: "Query with mixed escaped and real variables"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - |-
+              SELECT id, name, email FROM users WHERE id = {{ escaped_test_user_id }} AND name LIKE '%escaped template \{{ .vars.secret }}%';
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "name"
+            expected: |-
+              Test User with escaped template \{{ .vars.secret }}
+
+      - name: "Cleanup escaped test data"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "DELETE FROM users WHERE id = {{ escaped_test_user_id }};"
+        assertions:
+          - type: success_count
+            expected: 1
