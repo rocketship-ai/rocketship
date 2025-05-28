@@ -8,26 +8,28 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/contributing/">
+        <link rel="canonical" href="https://docs.rocketship.sh/examples/log-plugin/">
       
       
-        <link rel="prev" href="../reference/rocketship_version/">
+        <link rel="prev" href="../custom-scripting/">
       
       
+        <link rel="next" href="../../deploy-on-your-cloud/">
       
-      <link rel="icon" href="../assets/transparent.png">
+      
+      <link rel="icon" href="../../assets/transparent.png">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.12">
     
     
       
-        <title>Contributing - Rocketship CLI</title>
+        <title>Log Plugin - Rocketship CLI</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.7e359304.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e359304.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -46,9 +48,9 @@
       
     
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributing-to-rocketship" class="md-skip">
+        <a href="#log-plugin" class="md-skip">
           Skip to content
         </a>
       
@@ -90,9 +92,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../assets/transparent-reverse.png" alt="logo">
+  <img src="../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -109,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contributing
+              Log Plugin
             
           </span>
         </div>
@@ -224,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../assets/transparent-reverse.png" alt="logo">
+  <img src="../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     Rocketship CLI
@@ -253,7 +255,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -321,7 +323,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -342,7 +344,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -367,8 +369,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -392,13 +396,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -412,7 +414,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Examples
@@ -426,7 +428,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/" class="md-nav__link">
+      <a href="../" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -490,7 +492,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/request-chaining/" class="md-nav__link">
+      <a href="../request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -562,7 +564,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/sql-testing/" class="md-nav__link">
+      <a href="../sql-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -638,7 +640,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/config-variables/" class="md-nav__link">
+      <a href="../config-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -659,7 +661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/environment-variables/" class="md-nav__link">
+      <a href="../environment-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -680,7 +682,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/handlebars-escaping/" class="md-nav__link">
+      <a href="../handlebars-escaping/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -752,7 +754,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../examples/custom-scripting/" class="md-nav__link">
+      <a href="../custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -778,8 +780,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -790,13 +794,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" checked>
         
           
           <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
@@ -810,7 +812,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_6">
             <span class="md-nav__icon md-icon"></span>
             Logging
@@ -821,10 +823,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../examples/log-plugin/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Log Plugin
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -833,6 +855,71 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Output
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      Use Cases
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -908,7 +995,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../deploy-on-your-cloud/" class="md-nav__link">
+      <a href="../../deploy-on-your-cloud/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -929,7 +1016,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../deploy-on-kubernetes/" class="md-nav__link">
+      <a href="../../deploy-on-kubernetes/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1013,7 +1100,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship/" class="md-nav__link">
+      <a href="../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1034,7 +1121,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_run/" class="md-nav__link">
+      <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1100,7 +1187,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_start/" class="md-nav__link">
+      <a href="../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1121,7 +1208,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_start_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1195,7 +1282,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_stop/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1216,7 +1303,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_stop_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1245,7 +1332,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_validate/" class="md-nav__link">
+      <a href="../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1266,7 +1353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_version/" class="md-nav__link">
+      <a href="../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1291,30 +1378,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Contributing
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1323,116 +1390,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      Development Workflow
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#creating-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      Creating Plugins
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Documentation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      Code Style
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-tips" class="md-nav__link">
-    <span class="md-ellipsis">
-      Development Tips
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Process
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-artifacts" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Artifacts
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-help" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Help
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      License
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1464,90 +1421,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
-      Getting Started
+      Configuration
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#development-workflow" class="md-nav__link">
+  <a href="#basic-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Development Workflow
+      Basic Usage
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-plugins" class="md-nav__link">
+  <a href="#variable-support" class="md-nav__link">
     <span class="md-ellipsis">
-      Creating Plugins
+      Variable Support
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#example-output" class="md-nav__link">
     <span class="md-ellipsis">
-      Documentation
+      Example Output
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#code-style" class="md-nav__link">
+  <a href="#use-cases" class="md-nav__link">
     <span class="md-ellipsis">
-      Code Style
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-tips" class="md-nav__link">
-    <span class="md-ellipsis">
-      Development Tips
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Process
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-artifacts" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Artifacts
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-help" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Help
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      License
+      Use Cases
     </span>
   </a>
   
@@ -1571,127 +1483,78 @@
   
 
 
-<h1 id="contributing-to-rocketship">Contributing to Rocketship</h1>
-<p>Thank you for your interest in contributing to Rocketship! We're excited to have you join our community. This document provides guidelines and instructions for contributing to the project.</p>
-<h2 id="getting-started">Getting Started</h2>
-<ol>
-<li>Fork the repository on GitHub</li>
-<li>Clone your fork locally:</li>
-</ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USERNAME/rocketship.git
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>rocketship
+<h1 id="log-plugin">Log Plugin</h1>
+<p>The log plugin allows you to add custom logging messages to your test suites for debugging, monitoring, and progress tracking. Log messages appear in the CLI output during test execution.</p>
+<h2 id="configuration">Configuration</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Your</span><span class="nv"> </span><span class="s">log</span><span class="nv"> </span><span class="s">message</span><span class="nv"> </span><span class="s">here&quot;</span>
 </code></pre></div>
-<p>Set up your development environment:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>dev-setup
+<h2 id="basic-usage">Basic Usage</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Basic Logging Example</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test with logging</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Starting</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">execution&quot;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://httpbin.org/get&quot;</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;HTTP</span><span class="nv"> </span><span class="s">request</span><span class="nv"> </span><span class="s">completed&quot;</span>
 </code></pre></div>
-<h2 id="development-workflow">Development Workflow</h2>
-<p>Create a new branch for your feature/fix:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+<h2 id="variable-support">Variable Support</h2>
+<p>The log plugin supports all variable types including configuration variables, environment variables, and runtime variables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Logging with Variables</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-session-123&quot;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Variable logging example</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Starting</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">session:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.vars.session</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://httpbin.org/get&quot;</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="nt">save</span><span class="p">:</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;response_data&quot;</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.response.json</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;User</span><span class="nv"> </span><span class="s">agent:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.runtime.response_data.headers.User-Agent</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Test</span><span class="nv"> </span><span class="s">running</span><span class="nv"> </span><span class="s">on:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.HOSTNAME</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<p>Make your changes and ensure tests pass:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span><span class="nb">test</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span>lint
+<h2 id="example-output">Example Output</h2>
+<p>When running tests:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-log/rocketship.yaml
 </code></pre></div>
-<p>Build and install your local changes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>install<span class="w">    </span><span class="c1"># Removes old executable and go installs the local version</span>
-</code></pre></div>
-<p>Test your changes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># OPTION 1: this will start the local rocketship server, run all tests in the examples directory, and then stop the server</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-ad<span class="w"> </span>examples
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># OPTION 2: run the test server in a separate session and then run the tests</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>rocketship<span class="w"> </span>start<span class="w"> </span>server<span class="w"> </span>--local
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># in another session, run the test(s)</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>&lt;path/to/rocketship.yaml&gt;
-</code></pre></div>
-<p>Test Server for Development:</p>
-<p>Inside <a href="https://github.com/rocketship-ai/rocketship/blob/main/for-contributors">for-contributors/</a>, you'll find a test HTTP server that you can run as an in-memory store to test changes. Make sure your rocketship.yaml files point to this server (localhost:8080):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>./for-contributors/test-server<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>go<span class="w"> </span>run<span class="w"> </span>.
-</code></pre></div>
-<p>This will help you test your changes with an in-memory store that can preserve resources.</p>
-<h2 id="creating-plugins">Creating Plugins</h2>
-<p>Rocketship's plugin system allows you to add support for new APIs and protocols. To create a new plugin:</p>
-<ol>
-<li>Add your plugin in <code>internal/plugins/</code></li>
-<li>Implement the required plugin interface</li>
-<li>Register your plugin in the plugin registry</li>
-<li>Add tests for your plugin</li>
-<li>Document your plugin's usage</li>
-</ol>
-<h2 id="documentation">Documentation</h2>
-<p>If you're updating features or adding new ones, please update the documentation:</p>
+<p>You'll see log messages in the output:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>🚀 Starting user-service tests in staging environment
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Running on user&#39;s machine at /home/user
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Created test data with ID: test_1234567890, Status: active
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>⚠️  Warning: This is a simulated warning during testing
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>✅ Test completed successfully for user-service
+</code></pre></div></p>
+<h2 id="use-cases">Use Cases</h2>
 <ul>
-<li>Documentation is written in Markdown under <code>docs/src/</code></li>
-<li>Run the documentation server locally:</li>
+<li><strong>Progress Tracking</strong>: Log milestones in long-running tests</li>
+<li><strong>Debug Information</strong>: Output variable values and intermediate results</li>
+<li><strong>Test Documentation</strong>: Add context about what each step is doing</li>
+<li><strong>Monitoring</strong>: Track important events during test execution</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>docs-serve
-</code></pre></div>
-<p>View your changes at <code>http://localhost:8000</code></p>
-<h2 id="code-style">Code Style</h2>
-<ul>
-<li>Follow Go best practices and conventions</li>
-<li>Use <code>gofmt</code> to format your code</li>
-<li>Add comments for non-obvious code sections</li>
-<li>Write meaningful commit messages</li>
-</ul>
-<h2 id="development-tips">Development Tips</h2>
-<ul>
-<li>Set the <code>ROCKETSHIP_LOG</code> env var to <code>DEBUG</code> to see more verbose logging</li>
-<li>Pre-commit hooks will automatically run linting and tests</li>
-<li>Always test your changes locally before submitting a PR</li>
-</ul>
-<h2 id="release-process">Release Process</h2>
-<p><strong>Update Default Version</strong></p>
-<p>Before creating a release, update the default version in <code>internal/embedded/binaries.go</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Example: For releasing v1.2.3</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="s1">&#39;s/defaultVersion *= *&quot;.*&quot;/defaultVersion = &quot;v1.2.3&quot;/&#39;</span><span class="w"> </span>internal/embedded/binaries.go
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>add<span class="w"> </span>internal/embedded/binaries.go
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: update default version to v1.2.3&quot;</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>git<span class="w"> </span>push
-</code></pre></div>
-<p><strong>Create a Release</strong></p>
-<p>Once changes are merged to main, a maintainer can create a new release:</p>
-<ul>
-<li>Go to GitHub Releases: https://github.com/rocketship-ai/rocketship/releases</li>
-<li>Click "Draft a new release"</li>
-<li>Create a new tag (e.g., <code>v1.2.3</code>) following semantic versioning</li>
-<li>Write release notes</li>
-<li>Publish release</li>
-</ul>
-<p>This will automatically:</p>
-<ul>
-<li>Create and push a Git tag</li>
-<li>Trigger the release workflow</li>
-<li>Build platform-specific binaries</li>
-<li>Attach binaries to the release</li>
-</ul>
-<p><strong>Test Installation</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Install released version</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/rocketship-ai/rocketship/cmd/rocketship@v1.2.3
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Test basic functionality</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>rocketship<span class="w"> </span>version
-</code></pre></div>
-<h2 id="release-artifacts">Release Artifacts</h2>
-<p>Each release includes platform-specific binaries for:</p>
-<ul>
-<li>CLI (rocketship)</li>
-<li>Worker</li>
-<li>Engine</li>
-</ul>
-<p>Supported platforms:</p>
-<ul>
-<li>Linux (amd64, arm64)</li>
-<li>macOS (amd64, arm64)</li>
-<li>Windows (amd64)</li>
-</ul>
-<h2 id="getting-help">Getting Help</h2>
-<ul>
-<li>Open an issue on GitHub</li>
-<li>Reach out to me on <a href="https://www.linkedin.com/in/magiusdarrigo">LinkedIn</a></li>
-</ul>
-<h2 id="license">License</h2>
-<p>By contributing to Rocketship, you agree that your contributions will be licensed under the MIT License.</p>
+<p>Log messages always appear in the CLI output regardless of the logging level, making them perfect for providing real-time feedback during test execution.</p>
 
 
 
@@ -1738,10 +1601,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c8d2eff1.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
       
     
   </body>

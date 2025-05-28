@@ -386,6 +386,8 @@
       
         
       
+        
+      
     
     
       
@@ -571,6 +573,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#handlebars-escaping-in-request-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Handlebars Escaping in Request Bodies
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -671,6 +682,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -715,6 +730,48 @@
   
   <span class="md-ellipsis">
     All About Variables
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Environment Variables
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../handlebars-escaping/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Handlebars Escaping
   </span>
   
 
@@ -787,6 +844,78 @@
   
   <span class="md-ellipsis">
     JavaScript Integration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Logging
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            Logging
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../log-plugin/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Log Plugin
   </span>
   
 
@@ -1327,6 +1456,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#handlebars-escaping-in-request-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Handlebars Escaping in Request Bodies
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1505,6 +1643,26 @@
 <li>Rate limiting your API requests</li>
 <li>Testing timeout scenarios</li>
 </ul>
+<h2 id="handlebars-escaping-in-request-bodies">Handlebars Escaping in Request Bodies</h2>
+<p>When your APIs return or expect handlebars syntax (<code>{{ }}</code>), use backslash escaping to include literal handlebars:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Send</span><span class="nv"> </span><span class="s">template</span><span class="nv"> </span><span class="s">documentation&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://tryme.rocketship.sh/docs&quot;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|-</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="no">{</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="no">&quot;instructions&quot;: &quot;Use \\{{ user_id }} in your API calls&quot;,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="no">&quot;template_example&quot;: &quot;Welcome \\{{ user_name }}!&quot;,</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="no">&quot;processed_value&quot;: &quot;Current environment: {{ .vars.environment }}&quot;</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="no">}</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">assertions</span><span class="p">:</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json_path&quot;</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.instructions&quot;</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">calls&quot;</span>
+</code></pre></div>
+<p>The backslash (<code>\</code>) escapes the handlebars, making <code>\\{{ user_id }}</code> output literal <code>{{ user_id }}</code> instead of trying to process it as a variable.</p>
+<p>See the <a href="../handlebars-escaping/">Handlebars Escaping guide</a> for complete details and advanced usage.</p>
 
 
 

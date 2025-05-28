@@ -14,7 +14,7 @@
         <link rel="prev" href="../sql-testing/">
       
       
-        <link rel="next" href="../custom-scripting/">
+        <link rel="next" href="../environment-variables/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -386,6 +386,8 @@
       
         
       
+        
+      
     
     
       
@@ -594,6 +596,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -874,6 +880,48 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Environment Variables
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../handlebars-escaping/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Handlebars Escaping
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -937,6 +985,78 @@
   
   <span class="md-ellipsis">
     JavaScript Integration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Logging
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            Logging
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../log-plugin/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Log Plugin
   </span>
   
 
@@ -1649,13 +1769,14 @@
 <p>This example demonstrates how to use configuration variables in Rocketship test suites. Configuration variables allow you to parameterize your tests, making them reusable across different environments and configurations.</p>
 <h2 id="key-features-demonstrated">Key Features Demonstrated</h2>
 <ul>
-<li><strong>Configuration Variables</strong>: Define reusable variables in the <code>vars</code> section</li>
-<li><strong>Variable Syntax</strong>: Use <code>{{ .vars.variable_name }}</code> to access config variables</li>
+<li><strong>Configuration Variables</strong>: Define reusable variables in the <code>vars</code> section using <code>{{ .vars.variable_name }}</code></li>
+<li><strong>Runtime Variables</strong>: Use variables generated during test execution using <code>{{ variable_name }}</code></li>
 <li><strong>Nested Variables</strong>: Support for nested structures like <code>{{ .vars.auth.token }}</code></li>
-<li><strong>Mixed Variables</strong>: Combine config variables with runtime variables in the same test</li>
-<li><strong>CLI Overrides</strong>: Override variables from the command line</li>
+<li><strong>Mixed Variables</strong>: Combine config and runtime variables in the same test</li>
+<li><strong>CLI Overrides</strong>: Override config variables from the command line</li>
 <li><strong>Variable Files</strong>: Load variables from external files</li>
 </ul>
+<p>For information about environment variables, see the <a href="../environment-variables/">Environment Variables guide</a>.</p>
 <h3 id="configuration-variables-section">Configuration Variables Section</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">vars</span><span class="p">:</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://tryme.rocketship.sh&quot;</span>
