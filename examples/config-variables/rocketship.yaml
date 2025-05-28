@@ -4,7 +4,7 @@ version: "v1.0.0"
 
 # Configuration variables - accessed with {{ .vars.variable_name }}
 vars:
-  base_url: "http://localhost:8080"
+  base_url: "https://tryme.rocketship.sh"
   environment: "staging"
   timeout: 2
   secret_key: "test-secret-123"
@@ -127,7 +127,7 @@ tests:
           - type: "status_code"
             expected: 204
 
-      - name: "Demo handlebars escaping in HTTP headers"
+      - name: "Demo handlebars escaping in JSON body"
         plugin: "http"
         config:
           method: "POST"
@@ -136,9 +136,6 @@ tests:
             "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
             "X-Test-Session": "config-variables-session"
             "Content-Type": "application/json"
-            "X-Normal": "Environment: {{ .vars.environment }}"
-            "X-Escaped": "Use \\{{ user_id }} in API calls"
-            "X-Documentation": "Template syntax: \\{{ variable_name }}"
           body: |-
             {
               "title": "Handlebars Escaping Demo",

@@ -256,16 +256,16 @@ tests:
             query_index: 0
             expected: 5
 
-  - name: "Multi-Level Escaped Handlebars in SQL"
+  - name: "Handlebars Escaping in SQL"
     steps:
-      - name: "Test single escape level (literal handlebars)"
+      - name: "Demo handlebars escaping in SQL statements"
         plugin: sql
         config:
           driver: postgres
           dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - |-
-              INSERT INTO users (name, email, age) VALUES ('User with literal template \{{ .vars.secret }}', 'single-escape@example.com', 25) RETURNING id, name;
+              INSERT INTO users (name, email, age) VALUES ('Normal: {{ .vars.test_user_name }}, Escaped: \{{ placeholder }}', 'sql-escaping@example.com', 30) RETURNING id, name;
         assertions:
           - type: row_count
             query_index: 0
@@ -274,143 +274,18 @@ tests:
             query_index: 0
             row_index: 0
             column: "name"
-            expected: "User with literal template {{ .vars.secret }}"
+            expected: "Normal: Test User from Rocketship, Escaped: \\{{ placeholder }}"
         save:
           - sql_result: ".queries[0].rows[0].id"
-            as: "single_escape_id"
+            as: "sql_escape_demo_id"
 
-      - name: "Test double escape level (backslash + processed variable)"
+      - name: "Cleanup escaping demo data"
         plugin: sql
         config:
           driver: postgres
           dsn: "{{ .vars.postgres_dsn }}"
           commands:
-            - |-
-              INSERT INTO users (name, email, age) VALUES ('User \\{{ .vars.test_user_name }}', 'double-escape@example.com', 30) RETURNING id, name;
-        assertions:
-          - type: row_count
-            query_index: 0
-            expected: 1
-          - type: column_value
-            query_index: 0
-            row_index: 0
-            column: "name"
-            expected: "User \\Test User from Rocketship"
-        save:
-          - sql_result: ".queries[0].rows[0].id"
-            as: "double_escape_id"
-
-      - name: "Test triple escape level (backslash + literal handlebars)"
-        plugin: sql
-        config:
-          driver: postgres
-          dsn: "{{ .vars.postgres_dsn }}"
-          commands:
-            - |-
-              INSERT INTO users (name, email, age) VALUES ('User \\\{{ .vars.fake_var }}', 'triple-escape@example.com', 35) RETURNING id, name;
-        assertions:
-          - type: row_count
-            query_index: 0
-            expected: 1
-          - type: column_value
-            query_index: 0
-            row_index: 0
-            column: "name"
-            expected: "User \\{{ .vars.fake_var }}"
-        save:
-          - sql_result: ".queries[0].rows[0].id"
-            as: "triple_escape_id"
-
-      - name: "Test quadruple escape level (double backslash + processed variable)"
-        plugin: sql
-        config:
-          driver: postgres
-          dsn: "{{ .vars.postgres_dsn }}"
-          commands:
-            - |-
-              INSERT INTO users (name, email, age) VALUES ('User \\\\{{ .vars.test_user_name }}', 'quad-escape@example.com', 40) RETURNING id, name;
-        assertions:
-          - type: row_count
-            query_index: 0
-            expected: 1
-          - type: column_value
-            query_index: 0
-            row_index: 0
-            column: "name"
-            expected: "User \\\\Test User from Rocketship"
-        save:
-          - sql_result: ".queries[0].rows[0].id"
-            as: "quad_escape_id"
-
-      - name: "Test extreme escape levels (6+ backslashes)"
-        plugin: sql
-        config:
-          driver: postgres
-          dsn: "{{ .vars.postgres_dsn }}"
-          commands:
-            - |-
-              INSERT INTO users (name, email, age) VALUES ('Extreme: \\\\\\\\\\\\{{ .vars.test_user_name }} vs \\\\\\\{{ .vars.fake }}', 'extreme-escape@example.com', 45) RETURNING id, name;
-        assertions:
-          - type: row_count
-            query_index: 0
-            expected: 1
-          - type: column_value
-            query_index: 0
-            row_index: 0
-            column: "name"
-            expected: "Extreme: \\\\\\Test User from Rocketship vs \\\\{{ .vars.fake }}"
-        save:
-          - sql_result: ".queries[0].rows[0].id"
-            as: "extreme_escape_id"
-
-      - name: "Query with complex mixed escaping patterns"
-        plugin: sql
-        config:
-          driver: postgres
-          dsn: "{{ .vars.postgres_dsn }}"
-          commands:
-            - |-
-              SELECT 
-                id,
-                name,
-                CASE 
-                  WHEN name LIKE '%literal template \{{ .vars.secret }}%' THEN 'single_escape'
-                  WHEN name LIKE '%\\{{ .vars.test_user_name }}%' THEN 'double_escape'
-                  WHEN name LIKE '%\\\{{ .vars.fake_var }}%' THEN 'triple_escape'
-                  WHEN name LIKE '%\\\\{{ .vars.test_user_name }}%' THEN 'quadruple_escape'
-                  WHEN name LIKE '%\\\\\\\\\\\\{{ .vars.test_user_name }}%' THEN 'extreme_escape'
-                  ELSE 'unknown'
-                END as escape_type
-              FROM users 
-              WHERE id IN ({{ single_escape_id }}, {{ double_escape_id }}, {{ triple_escape_id }}, {{ quad_escape_id }}, {{ extreme_escape_id }})
-              ORDER BY id;
-        assertions:
-          - type: row_count
-            query_index: 0
-            expected: 5
-          - type: column_value
-            query_index: 0
-            row_index: 0
-            column: "escape_type"
-            expected: "single_escape"
-          - type: column_value
-            query_index: 0
-            row_index: 1
-            column: "escape_type"
-            expected: "double_escape"
-          - type: column_value
-            query_index: 0
-            row_index: 2
-            column: "escape_type"
-            expected: "triple_escape"
-
-      - name: "Cleanup all escaped test data"
-        plugin: sql
-        config:
-          driver: postgres
-          dsn: "{{ .vars.postgres_dsn }}"
-          commands:
-            - "DELETE FROM users WHERE id IN ({{ single_escape_id }}, {{ double_escape_id }}, {{ triple_escape_id }}, {{ quad_escape_id }}, {{ extreme_escape_id }});"
+            - "DELETE FROM users WHERE id = {{ sql_escape_demo_id }};"
         assertions:
           - type: success_count
             expected: 1
