@@ -8,6 +8,7 @@ on:
       - "go.mod"
       - "go.sum"
       - ".github/workflows/**"
+      - ".github/scripts/**"
       - ".docker/**"
       - "examples/**"
       - "internal/dsl/schema.json"
@@ -238,6 +239,9 @@ jobs:
             echo "❌ SQL tests had failures"
             exit 1
           fi
+
+          ./.github/scripts/test-log-plugin.sh
+          ./.github/scripts/test-log-plugin-validation.sh
 
           echo "Testing all examples directory..."
           OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")

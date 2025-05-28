@@ -50,7 +50,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql"]
+                  "enum": ["http", "delay", "script", "sql", "log"]
                 },
                 "config": {
                   "type": "object",
@@ -323,6 +323,25 @@
                               }
                             }
                           ]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": { "plugin": { "const": "log" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["message"],
+                        "properties": {
+                          "message": {
+                            "type": "string",
+                            "description": "Message to log (supports template variables)"
+                          }
                         }
                       }
                     }

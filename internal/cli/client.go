@@ -77,3 +77,14 @@ func (c *EngineClient) StreamLogs(ctx context.Context, runID string) (generated.
 		RunId: runID,
 	})
 }
+
+func (c *EngineClient) AddLog(ctx context.Context, runID, workflowID, message, color string, bold bool) error {
+	_, err := c.client.AddLog(ctx, &generated.AddLogRequest{
+		RunId:      runID,
+		WorkflowId: workflowID,
+		Message:    message,
+		Color:      color,
+		Bold:       bold,
+	})
+	return err
+}

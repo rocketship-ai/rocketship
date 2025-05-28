@@ -85,7 +85,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			TaskQueue: "test-workflows",
 		}
 
-		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars)
+		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars, runID)
 		if err != nil {
 			log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
 			return nil, fmt.Errorf("failed to start workflow: %w", err)
@@ -357,6 +357,19 @@ func (e *Engine) getTestStatusCounts(runID string) (TestStatusCounts, error) {
 	}
 	
 	return counts, nil
+}
+
+// AddLog implements the add log endpoint for activities to send custom log messages
+func (e *Engine) AddLog(ctx context.Context, req *generated.AddLogRequest) (*generated.AddLogResponse, error) {
+	if req.RunId == "" {
+		return nil, fmt.Errorf("run_id is required")
+	}
+	if req.Message == "" {
+		return nil, fmt.Errorf("message is required")
+	}
+
+	e.addLog(req.RunId, req.Message, req.Color, req.Bold)
+	return &generated.AddLogResponse{}, nil
 }
 
 // Health implements the health check endpoint

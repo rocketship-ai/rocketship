@@ -256,7 +256,7 @@ func TestTestWorkflow(t *testing.T) {
 				tt.setupEnv(env)
 			}
 			
-			env.ExecuteWorkflow(TestWorkflow, tt.test, make(map[string]interface{}))
+			env.ExecuteWorkflow(TestWorkflow, tt.test, make(map[string]interface{}), "test-run-id")
 			
 			if tt.wantErr {
 				if env.IsWorkflowCompleted() {
@@ -351,7 +351,7 @@ func TestWorkflowStatePropagation(t *testing.T) {
 		},
 	}
 	
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}))
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id")
 	
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("Expected workflow to complete successfully")
@@ -434,7 +434,7 @@ func TestWorkflowConcurrency(t *testing.T) {
 				},
 			}
 			
-			env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}))
+			env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id")
 			
 			if !env.IsWorkflowCompleted() {
 				errors <- fmt.Errorf("workflow %d did not complete", workflowID)
@@ -536,7 +536,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 		},
 	}
 	
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}))
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id")
 	
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("Expected workflow to complete successfully")

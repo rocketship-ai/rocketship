@@ -68,6 +68,8 @@ nav:
           - Handlebars Escaping: examples/handlebars-escaping.md
       - Custom Scripting:
           - JavaScript Integration: examples/custom-scripting.md
+      - Logging:
+          - Log Plugin: examples/log-plugin.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
       - Kubernetes: deploy-on-kubernetes.md
