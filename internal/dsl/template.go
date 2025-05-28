@@ -292,19 +292,45 @@ func setNestedValue(m map[string]interface{}, key string, value interface{}) {
 }
 
 
-// handleAllEscapedHandlebars processes escaped handlebars and existing placeholders, 
-// converting them to a safe format for template processing
+// handleAllEscapedHandlebars processes escaped handlebars with support for unlimited escape levels:
+// Algorithm: Count consecutive backslashes before {{ }}
+// - Even number of \: template variable (half backslashes remain)
+// - Odd number of \: literal handlebars (half backslashes remain, rounded down)
+// Examples:
+//   \{{ }} (1) -> {{ }} (0, literal handlebars)
+//   \\{{ }} (2) -> \{{ }} (1, literal text)  
+//   \\\{{ }} (3) -> \{{ }} (1, literal handlebars)
+//   \\\\{{ }} (4) -> \\{{ }} (2, literal text)
 func handleAllEscapedHandlebars(input string) string {
 	result := input
 	
-	// Handle new escaped handlebars: \{{ anything }} -> {_{ anything }_}
-	// Use a format that won't be processed by Go templates but can be restored later
-	re1 := regexp.MustCompile(`\\(\{\{([^}]*)\}\})`)
-	result = re1.ReplaceAllStringFunc(result, func(match string) string {
-		submatch := re1.FindStringSubmatch(match)
+	// Match any number of consecutive backslashes followed by handlebars
+	re := regexp.MustCompile(`(\\+)(\{\{[^}]*\}\})`)
+	
+	result = re.ReplaceAllStringFunc(result, func(match string) string {
+		submatch := re.FindStringSubmatch(match)
 		if len(submatch) >= 3 {
-			// Convert \{{ content }} to {_{content}_} (no extra spaces)
-			return "{_{" + submatch[2] + "}_}"
+			backslashes := submatch[1]  // The backslashes
+			handlebars := submatch[2]   // The {{ content }}
+			
+			backslashCount := len(backslashes)
+			remainingBackslashes := backslashCount / 2
+			isOddEscapes := backslashCount%2 == 1
+			
+			// Build the result with remaining backslashes
+			result := strings.Repeat("\\", remainingBackslashes)
+			
+			if isOddEscapes {
+				// Odd number of backslashes: treat handlebars as literal
+				// Use safe placeholder format that will be restored later
+				content := handlebars[2 : len(handlebars)-2] // Extract content from {{ }}
+				result += fmt.Sprintf("{_{%s}_}", content)
+			} else {
+				// Even number of backslashes: treat as template variable
+				result += handlebars
+			}
+			
+			return result
 		}
 		return match
 	})
@@ -316,8 +342,9 @@ func handleAllEscapedHandlebars(input string) string {
 	return result
 }
 
-// restoreSafeEscapedHandlebars converts {_{...}_} back to {{ ... }}
+// restoreSafeEscapedHandlebars converts safe escaped placeholders back to literal handlebars
 func restoreSafeEscapedHandlebars(input string) string {
+	// Convert {_{ content }_} -> {{ content }}
 	re := regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
 	return re.ReplaceAllString(input, "{{$1}}")
 }

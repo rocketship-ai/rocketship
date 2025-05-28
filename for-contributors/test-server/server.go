@@ -291,6 +291,13 @@ func (s *TestServer) handlePost(store *Store, resourceType string, r *http.Reque
 	}
 	resourceID := resource["id"].(string)
 
+	// Add request headers that start with X- to the response for testing purposes
+	for name, values := range r.Header {
+		if strings.HasPrefix(strings.ToUpper(name), "X-") && len(values) > 0 {
+			resource[strings.ToLower(name)] = values[0]
+		}
+	}
+
 	store.data[resourceType][resourceID] = resource
 
 	return resource, nil
