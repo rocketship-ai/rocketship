@@ -3,25 +3,54 @@ package dsl
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"regexp"
 	"strings"
 	"text/template"
 )
 
+// Pre-compiled regex patterns for better performance
+var (
+	escapedHandlebarsRegex    = regexp.MustCompile(`(\\+)(\{\{[^}]*\}\})`)
+	placeholderRegex          = regexp.MustCompile(`__ROCKETSHIP_ESCAPED_HANDLEBARS_\d+__`)
+	runtimeVariableRegex      = regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
+	templateVariableRegex     = regexp.MustCompile(`\{\{\s*([^.\s}][^}]*)\s*\}\}`)
+)
+
 // TemplateContext holds both config variables and runtime variables for template processing
 type TemplateContext struct {
-	Vars    map[string]interface{} // Config variables (accessed via {{ vars.key }})
+	Vars    map[string]interface{} // Config variables (accessed via {{ .vars.key }})
 	Runtime map[string]interface{} // Runtime variables (accessed via {{ key }})
 }
 
+// getEnvironmentVariables returns all environment variables as a map
+func getEnvironmentVariables() map[string]interface{} {
+	envVars := make(map[string]interface{})
+	for _, env := range os.Environ() {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 {
+			envVars[parts[0]] = parts[1]
+		}
+	}
+	return envVars
+}
+
 // ProcessTemplate processes a string containing template variables
-// It supports both config variables ({{ .vars.key }}) and runtime variables ({{ key }})
+// It supports config variables ({{ .vars.key }}), runtime variables ({{ key }}), and environment variables ({{ .env.key }})
+// Escaped handlebars using \{{ }} will be converted to literal {{ }} text
 func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	if input == "" {
 		return input, nil
 	}
 
+	// Handle escaped handlebars - do this every time to catch any that were preserved from config processing
+	processed := handleAllEscapedHandlebars(input)
+
+	// Convert runtime variables to use dot notation if they don't already have it
+	processed = convertRuntimeVariables(processed, context.Runtime)
+
 	// Create template with custom delimiters to match our syntax
-	tmpl, err := template.New("rocketship").Parse(input)
+	tmpl, err := template.New("rocketship").Parse(processed)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -29,6 +58,7 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	// Prepare template data
 	templateData := map[string]interface{}{
 		"vars": context.Vars,
+		"env":  getEnvironmentVariables(),
 	}
 
 	// Add runtime variables to the root level
@@ -42,52 +72,72 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return buf.String(), nil
+	// Convert safe escaped format back to literal handlebars
+	result := restoreSafeEscapedHandlebars(buf.String())
+	return result, nil
 }
 
-// ProcessConfigVariablesOnly processes only config variables ({{ .vars.* }}) patterns
+// ProcessConfigVariablesOnly processes only config variables ({{ .vars.* }}) and environment variables ({{ .env.* }}) patterns
 // Leaves runtime variables ({{ variable }}) untouched for later processing
+// Escaped handlebars using \{{ }} will be handled in final processing
 func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (string, error) {
 	if input == "" {
 		return input, nil
 	}
 
-	// Only process if the string contains .vars patterns
-	if !strings.Contains(input, ".vars.") {
-		return input, nil
+	// Handle escaped handlebars first - convert to safe placeholders
+	processed := handleAllEscapedHandlebars(input)
+
+	// Only process if the string contains .vars or .env patterns
+	if !strings.Contains(processed, ".vars.") && !strings.Contains(processed, ".env.") {
+		return processed, nil
 	}
 
-	// Create template data with only vars
+	// Create template data with vars and env
 	templateData := map[string]interface{}{
 		"vars": vars,
+		"env":  getEnvironmentVariables(),
 	}
 
 	// Create template
-	tmpl, err := template.New("rocketship").Parse(input)
+	tmpl, err := template.New("rocketship").Parse(processed)
 	if err != nil {
-		// If parsing fails due to runtime variables, try to process just the config vars
-		return processConfigVarsWithRegex(input, vars), nil
+		// If parsing fails due to runtime variables, try to process just the config vars and env vars
+		result := processConfigAndEnvVarsWithRegex(processed, vars)
+		return result, nil
 	}
 
 	// Execute template
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, templateData); err != nil {
 		// If execution fails due to missing runtime variables, try regex approach
-		return processConfigVarsWithRegex(input, vars), nil
+		result := processConfigAndEnvVarsWithRegex(processed, vars)
+		return result, nil
 	}
 
 	return buf.String(), nil
 }
 
-// processConfigVarsWithRegex uses regex to replace only {{ .vars.* }} patterns
-func processConfigVarsWithRegex(input string, vars map[string]interface{}) string {
+// processConfigAndEnvVarsWithRegex uses regex to replace only {{ .vars.* }} and {{ .env.* }} patterns
+func processConfigAndEnvVarsWithRegex(input string, vars map[string]interface{}) string {
 	// This is a fallback when Go templates fail due to mixed variable types
-	// We'll manually replace {{ .vars.* }} patterns
+	// We'll manually replace {{ .vars.* }} and {{ .env.* }} patterns
 	result := input
 	
-	// Simple string replacement for basic cases
+	// Process config vars
 	for key, value := range vars {
 		pattern := fmt.Sprintf("{{ .vars.%s }}", key)
+		if strValue, ok := value.(string); ok {
+			result = strings.ReplaceAll(result, pattern, strValue)
+		} else {
+			result = strings.ReplaceAll(result, pattern, fmt.Sprintf("%v", value))
+		}
+	}
+	
+	// Process environment vars
+	envVars := getEnvironmentVariables()
+	for key, value := range envVars {
+		pattern := fmt.Sprintf("{{ .env.%s }}", key)
 		if strValue, ok := value.(string); ok {
 			result = strings.ReplaceAll(result, pattern, strValue)
 		} else {
@@ -98,8 +148,12 @@ func processConfigVarsWithRegex(input string, vars map[string]interface{}) strin
 	// Handle nested vars like {{ .vars.auth.token }}
 	result = processNestedVars(result, vars, "vars")
 	
+	// Handle nested env vars like {{ .env.auth.token }} (though env vars are typically flat)
+	result = processNestedVars(result, envVars, "env")
+	
 	return result
 }
+
 
 // processNestedVars handles nested variable replacement
 func processNestedVars(input string, vars map[string]interface{}, prefix string) string {
@@ -126,6 +180,7 @@ func processNestedVars(input string, vars map[string]interface{}, prefix string)
 }
 
 // ProcessConfigVariablesRecursive processes only config variables in any nested data structure
+// This function preserves escaped handlebars across processing phases
 func ProcessConfigVariablesRecursive(data interface{}, vars map[string]interface{}) (interface{}, error) {
 	switch v := data.(type) {
 	case string:
@@ -272,4 +327,84 @@ func setNestedValue(m map[string]interface{}, key string, value interface{}) {
 
 	// Set the final value
 	current[keys[len(keys)-1]] = value
+}
+
+
+// handleAllEscapedHandlebars processes escaped handlebars with support for unlimited escape levels:
+// Algorithm: Count consecutive backslashes before {{ }}
+// - Even number of \: template variable (half backslashes remain)
+// - Odd number of \: literal handlebars (half backslashes remain, rounded down)
+// Examples:
+//   \{{ }} (1) -> {{ }} (0, literal handlebars)
+//   \\{{ }} (2) -> \{{ }} (1, literal text)  
+//   \\\{{ }} (3) -> \{{ }} (1, literal handlebars)
+//   \\\\{{ }} (4) -> \\{{ }} (2, literal text)
+func handleAllEscapedHandlebars(input string) string {
+	result := input
+	
+	// Match any number of consecutive backslashes followed by handlebars
+	re := escapedHandlebarsRegex
+	
+	result = re.ReplaceAllStringFunc(result, func(match string) string {
+		submatch := re.FindStringSubmatch(match)
+		if len(submatch) >= 3 {
+			backslashes := submatch[1]  // The backslashes
+			handlebars := submatch[2]   // The {{ content }}
+			
+			backslashCount := len(backslashes)
+			remainingBackslashes := backslashCount / 2
+			isOddEscapes := backslashCount%2 == 1
+			
+			// Build the result with remaining backslashes
+			result := strings.Repeat("\\", remainingBackslashes)
+			
+			if isOddEscapes {
+				// Odd number of backslashes: treat handlebars as literal
+				// Use safe placeholder format that will be restored later
+				content := handlebars[2 : len(handlebars)-2] // Extract content from {{ }}
+				result += fmt.Sprintf("{_{%s}_}", content)
+			} else {
+				// Even number of backslashes: treat as template variable
+				result += handlebars
+			}
+			
+			return result
+		}
+		return match
+	})
+	
+	// Handle existing placeholders from previous config processing
+	re2 := placeholderRegex
+	result = re2.ReplaceAllString(result, "{_{ESCAPED}_}")
+	
+	return result
+}
+
+// restoreSafeEscapedHandlebars converts safe escaped placeholders back to literal handlebars
+func restoreSafeEscapedHandlebars(input string) string {
+	// Convert {_{ content }_} -> {{ content }}
+	re := runtimeVariableRegex
+	return re.ReplaceAllString(input, "{{$1}}")
+}
+
+// convertRuntimeVariables converts runtime variables from {{ var }} to {{ .var }} for Go template compatibility
+func convertRuntimeVariables(input string, runtime map[string]interface{}) string {
+	// Use the pre-compiled regex to find all template variables that don't already use dot notation
+	return templateVariableRegex.ReplaceAllStringFunc(input, func(match string) string {
+		// Extract the variable name from the match
+		submatch := templateVariableRegex.FindStringSubmatch(match)
+		if len(submatch) < 2 {
+			return match
+		}
+		
+		varName := strings.TrimSpace(submatch[1])
+		
+		// Check if this variable exists in runtime context
+		if _, exists := runtime[varName]; exists {
+			return fmt.Sprintf("{{ .%s }}", varName)
+		}
+		
+		// If not in runtime context, leave as-is (could be a .vars or .env variable)
+		return match
+	})
 }

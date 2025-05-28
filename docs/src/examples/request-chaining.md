@@ -168,3 +168,29 @@ The delays in this example are for demonstration purposes. In real-world scenari
 - Ensuring system consistency in distributed systems
 - Rate limiting your API requests
 - Testing timeout scenarios
+
+## Handlebars Escaping in Request Bodies
+
+When your APIs return or expect handlebars syntax (`{{ }}`), use backslash escaping to include literal handlebars:
+
+```yaml
+- name: "Send template documentation"
+  plugin: "http"
+  config:
+    method: "POST"
+    url: "https://tryme.rocketship.sh/docs"
+    body: |-
+      {
+        "instructions": "Use \\{{ user_id }} in your API calls",
+        "template_example": "Welcome \\{{ user_name }}!",
+        "processed_value": "Current environment: {{ .vars.environment }}"
+      }
+  assertions:
+    - type: "json_path"
+      path: ".instructions"
+      expected: "Use {{ user_id }} in your API calls"
+```
+
+The backslash (`\`) escapes the handlebars, making `\\{{ user_id }}` output literal `{{ user_id }}` instead of trying to process it as a variable.
+
+See the [Handlebars Escaping guide](handlebars-escaping.md) for complete details and advanced usage.

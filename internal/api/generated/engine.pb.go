@@ -369,6 +369,118 @@ func (x *RunSummary) GetEndedAt() string {
 	return ""
 }
 
+type AddLogRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	WorkflowId    string                 `protobuf:"bytes,2,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Color         string                 `protobuf:"bytes,4,opt,name=color,proto3" json:"color,omitempty"`
+	Bold          bool                   `protobuf:"varint,5,opt,name=bold,proto3" json:"bold,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddLogRequest) Reset() {
+	*x = AddLogRequest{}
+	mi := &file_engine_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddLogRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddLogRequest) ProtoMessage() {}
+
+func (x *AddLogRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddLogRequest.ProtoReflect.Descriptor instead.
+func (*AddLogRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AddLogRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *AddLogRequest) GetWorkflowId() string {
+	if x != nil {
+		return x.WorkflowId
+	}
+	return ""
+}
+
+func (x *AddLogRequest) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *AddLogRequest) GetColor() string {
+	if x != nil {
+		return x.Color
+	}
+	return ""
+}
+
+func (x *AddLogRequest) GetBold() bool {
+	if x != nil {
+		return x.Bold
+	}
+	return false
+}
+
+type AddLogResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddLogResponse) Reset() {
+	*x = AddLogResponse{}
+	mi := &file_engine_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddLogResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddLogResponse) ProtoMessage() {}
+
+func (x *AddLogResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddLogResponse.ProtoReflect.Descriptor instead.
+func (*AddLogResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{8}
+}
+
 type HealthRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -377,7 +489,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_engine_proto_msgTypes[7]
+	mi := &file_engine_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -389,7 +501,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[7]
+	mi := &file_engine_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -402,7 +514,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{7}
+	return file_engine_proto_rawDescGZIP(), []int{9}
 }
 
 type HealthResponse struct {
@@ -414,7 +526,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_engine_proto_msgTypes[8]
+	mi := &file_engine_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -426,7 +538,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[8]
+	mi := &file_engine_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -439,7 +551,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{8}
+	return file_engine_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *HealthResponse) GetStatus() string {
@@ -474,14 +586,23 @@ const file_engine_proto_rawDesc = "" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
 	"started_at\x18\x03 \x01(\tR\tstartedAt\x12\x19\n" +
-	"\bended_at\x18\x04 \x01(\tR\aendedAt\"\x0f\n" +
+	"\bended_at\x18\x04 \x01(\tR\aendedAt\"\x8b\x01\n" +
+	"\rAddLogRequest\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
+	"\vworkflow_id\x18\x02 \x01(\tR\n" +
+	"workflowId\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12\x14\n" +
+	"\x05color\x18\x04 \x01(\tR\x05color\x12\x12\n" +
+	"\x04bold\x18\x05 \x01(\bR\x04bold\"\x10\n" +
+	"\x0eAddLogResponse\"\x0f\n" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2\xb5\x02\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status2\xfc\x02\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +
-	"StreamLogs\x12\x1f.rocketship.v1.LogStreamRequest\x1a\x16.rocketship.v1.LogLine0\x01\x12K\n" +
+	"StreamLogs\x12\x1f.rocketship.v1.LogStreamRequest\x1a\x16.rocketship.v1.LogLine0\x01\x12E\n" +
+	"\x06AddLog\x12\x1c.rocketship.v1.AddLogRequest\x1a\x1d.rocketship.v1.AddLogResponse\x12K\n" +
 	"\bListRuns\x12\x1e.rocketship.v1.ListRunsRequest\x1a\x1f.rocketship.v1.ListRunsResponse\x12E\n" +
 	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
 
@@ -497,7 +618,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_engine_proto_goTypes = []any{
 	(*CreateRunRequest)(nil),  // 0: rocketship.v1.CreateRunRequest
 	(*CreateRunResponse)(nil), // 1: rocketship.v1.CreateRunResponse
@@ -506,24 +627,28 @@ var file_engine_proto_goTypes = []any{
 	(*ListRunsRequest)(nil),   // 4: rocketship.v1.ListRunsRequest
 	(*ListRunsResponse)(nil),  // 5: rocketship.v1.ListRunsResponse
 	(*RunSummary)(nil),        // 6: rocketship.v1.RunSummary
-	(*HealthRequest)(nil),     // 7: rocketship.v1.HealthRequest
-	(*HealthResponse)(nil),    // 8: rocketship.v1.HealthResponse
+	(*AddLogRequest)(nil),     // 7: rocketship.v1.AddLogRequest
+	(*AddLogResponse)(nil),    // 8: rocketship.v1.AddLogResponse
+	(*HealthRequest)(nil),     // 9: rocketship.v1.HealthRequest
+	(*HealthResponse)(nil),    // 10: rocketship.v1.HealthResponse
 }
 var file_engine_proto_depIdxs = []int32{
-	6, // 0: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
-	0, // 1: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
-	2, // 2: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
-	4, // 3: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
-	7, // 4: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
-	1, // 5: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
-	3, // 6: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
-	5, // 7: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
-	8, // 8: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6,  // 0: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
+	0,  // 1: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
+	2,  // 2: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
+	7,  // 3: rocketship.v1.Engine.AddLog:input_type -> rocketship.v1.AddLogRequest
+	4,  // 4: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
+	9,  // 5: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
+	1,  // 6: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
+	3,  // 7: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
+	8,  // 8: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
+	5,  // 9: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
+	10, // 10: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
+	6,  // [6:11] is the sub-list for method output_type
+	1,  // [1:6] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -537,7 +662,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

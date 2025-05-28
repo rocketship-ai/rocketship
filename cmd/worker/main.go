@@ -10,6 +10,7 @@ import (
 	// Import plugins to trigger auto-registration
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/log"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/sql"
 	
@@ -43,6 +44,7 @@ func main() {
 
 	logger.Debug("registering workflow and plugins")
 	w.RegisterWorkflow(interpreter.TestWorkflow)
+	w.RegisterActivity(interpreter.LogForwarderActivity)
 
 	plugins.RegisterAllWithTemporal(w)
 

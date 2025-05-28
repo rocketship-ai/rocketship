@@ -6,6 +6,7 @@ option go_package = "github.com/rocketship/rocketship/internal/api/generated";
 service Engine {
   rpc CreateRun(CreateRunRequest) returns (CreateRunResponse);
   rpc StreamLogs(LogStreamRequest) returns (stream LogLine);
+  rpc AddLog(AddLogRequest) returns (AddLogResponse);
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
 }
@@ -35,6 +36,15 @@ message RunSummary {
   string started_at = 3;
   string ended_at   = 4;
 }
+
+message AddLogRequest {
+  string run_id = 1;
+  string workflow_id = 2;
+  string message = 3;
+  string color = 4;
+  bool bold = 5;
+}
+message AddLogResponse {}
 
 message HealthRequest {}
 message HealthResponse {

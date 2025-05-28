@@ -10,7 +10,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}) error {
+func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}, runID string) error {
 	logger := workflow.GetLogger(ctx)
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30, // TODO: Make this configurable
@@ -37,7 +37,7 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface
 			}
 		} else {
 			// Execute plugin through registry
-			if err := executePlugin(ctx, step, state, vars); err != nil {
+			if err := executePlugin(ctx, step, state, vars, runID); err != nil {
 				return fmt.Errorf("step %d: %w", i, err)
 			}
 		}
@@ -65,18 +65,18 @@ func handleDelayStep(ctx workflow.Context, step dsl.Step) error {
 }
 
 // executePlugin executes any registered plugin through the plugin registry
-func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}) error {
+func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID string) error {
 	logger := workflow.GetLogger(ctx)
-	
+
 	// Check if plugin is registered
 	_, exists := plugins.GetPlugin(step.Plugin)
 	if !exists {
 		return fmt.Errorf("unknown plugin: %s", step.Plugin)
 	}
-	
+
 	logger.Info(fmt.Sprintf("Executing %s plugin step: %s", step.Plugin, step.Name))
 	logger.Info(fmt.Sprintf("Current state: %v", state))
-	
+
 	// Build plugin parameters
 	pluginParams := map[string]interface{}{
 		"name":   step.Name,
@@ -84,7 +84,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		"config": step.Config,
 		"state":  state,
 	}
-	
+
 	// Add additional parameters based on plugin type
 	if step.Assertions != nil {
 		pluginParams["assertions"] = step.Assertions
@@ -95,7 +95,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	if vars != nil {
 		pluginParams["vars"] = vars
 	}
-	
+
 	// Execute the plugin activity
 	var activityResp interface{}
 	err := workflow.ExecuteActivity(ctx, step.Plugin, pluginParams).Get(ctx, &activityResp)
@@ -103,7 +103,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		logger.Error("Plugin activity failed", "plugin", step.Plugin, "error", err)
 		return fmt.Errorf("%s activity error: %w", step.Plugin, err)
 	}
-	
+
 	// Update workflow state with saved values (if any)
 	if activityResp != nil {
 		savedValues := extractSavedValues(activityResp)
@@ -115,8 +115,16 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 				logger.Info(fmt.Sprintf("Updated state[%s] = %s", key, state[key]))
 			}
 		}
+
+		// Handle log messages from log plugin
+		if step.Plugin == "log" {
+			if err := forwardLogMessage(ctx, activityResp, runID); err != nil {
+				logger.Warn("Failed to forward log message", "error", err)
+				// Don't fail the workflow if log forwarding fails
+			}
+		}
 	}
-	
+
 	logger.Info(fmt.Sprintf("Updated state: %v", state))
 	return nil
 }
@@ -124,7 +132,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 // extractSavedValues extracts saved values from plugin response using deterministic iteration
 func extractSavedValues(response interface{}) map[string]string {
 	savedValues := make(map[string]string)
-	
+
 	// Handle response - it comes back as map[string]interface{} due to JSON serialization
 	if respMap, ok := response.(map[string]interface{}); ok {
 		// Check for saved values in response
@@ -142,7 +150,7 @@ func extractSavedValues(response interface{}) map[string]string {
 				}
 			}
 		}
-		
+
 		// For HTTP plugin compatibility - check for "Saved" field
 		if savedInterface, exists := respMap["Saved"]; exists {
 			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
@@ -159,7 +167,34 @@ func extractSavedValues(response interface{}) map[string]string {
 			}
 		}
 	}
-	
+
 	return savedValues
 }
 
+// forwardLogMessage forwards log messages from log plugin to the engine
+func forwardLogMessage(ctx workflow.Context, activityResp interface{}, runID string) error {
+	if respMap, ok := activityResp.(map[string]interface{}); ok {
+		logMessage, hasMessage := respMap["log_message"].(string)
+		logColor, _ := respMap["log_color"].(string)
+		logBold, _ := respMap["log_bold"].(bool)
+
+		if hasMessage && logMessage != "" {
+			// Get workflow info to extract run ID and workflow ID
+			workflowInfo := workflow.GetInfo(ctx)
+
+			// Prepare parameters for log forwarder activity
+			forwarderParams := map[string]interface{}{
+				"run_id":      runID,
+				"workflow_id": workflowInfo.WorkflowExecution.ID,
+				"message":     logMessage,
+				"color":       logColor,
+				"bold":        logBold,
+			}
+
+			// Execute log forwarder activity
+			var forwarderResp interface{}
+			return workflow.ExecuteActivity(ctx, "LogForwarderActivity", forwarderParams).Get(ctx, &forwarderResp)
+		}
+	}
+	return nil
+}

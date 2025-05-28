@@ -1,0 +1,51 @@
+name: "Simple Log Test Suite"  
+description: "Demonstrates the log plugin for custom logging during test execution"
+version: "v1.0.0"
+
+vars:
+  environment: "staging"
+  service_name: "user-service"
+
+tests:
+  - name: "Log Plugin Demo"
+    steps:
+      - name: "Start test logging"
+        plugin: "log"
+        config:
+          message: "🚀 Starting {{ .vars.service_name }} tests in {{ .vars.environment }} environment"
+
+      - name: "Log environment info"
+        plugin: "log"
+        config:
+          message: "Running on {{ .env.USER }}'s machine at {{ .env.HOME }}"
+
+      - name: "Create test data"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            let testId = "test_" + Date.now();
+            let status = "active";
+            
+            save("test_id", testId);
+            save("test_status", status);
+
+      - name: "Log test data creation"
+        plugin: "log"
+        config:
+          message: "Created test data with ID: {{ test_id }}, Status: {{ test_status }}"
+
+      - name: "Simulate a warning"
+        plugin: "log"
+        config:
+          message: "⚠️  Warning: This is a simulated warning during testing"
+
+      - name: "Add debug information"
+        plugin: "log"
+        config:
+          message: "Debug: Test {{ test_id }} processing in {{ .vars.environment }}"
+
+      - name: "Test completion"
+        plugin: "log"
+        config:
+          message: "✅ Test {{ test_id }} completed successfully for {{ .vars.service_name }}"

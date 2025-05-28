@@ -20,6 +20,10 @@ Rocketship comes with example test suites that demonstrate different features an
 
 - [Custom Scripting](examples/custom-scripting.md) - Learn how to add custom JavaScript logic to your test suites
 
+### Debugging & Logging
+
+- [Log Plugin](examples/log-plugin.md) - Learn how to add custom logging messages to your test suites for debugging and monitoring
+
 ## Running the Examples
 
 The examples use the hosted test server at `tryme.rocketship.sh`. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:
@@ -42,6 +46,9 @@ rocketship run -af examples/config-variables/rocketship.yaml --var environment=p
 
 # Run the custom scripting example
 rocketship run -af examples/custom-scripting/rocketship.yaml
+
+# Run the log plugin example
+rocketship run -af examples/simple-log/rocketship.yaml
 ```
 
 ### Database Examples

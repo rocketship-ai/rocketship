@@ -7,6 +7,8 @@ vars:
   mysql_dsn: "testuser:testpass@tcp(localhost:3307)/testdb"
   test_user_name: "Test User from Rocketship"
   test_user_email: "rocketship@example.com"
+  db_host: "localhost"
+  db_port: "5433"
 
 tests:
   - name: "PostgreSQL CRUD Operations"
@@ -255,3 +257,99 @@ tests:
           - type: row_count
             query_index: 0
             expected: 5
+
+  - name: "Handlebars Escaping in SQL"
+    steps:
+      - name: "Demo handlebars escaping in SQL statements"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - |-
+              INSERT INTO users (name, email, age) VALUES ('Normal: {{ .vars.test_user_name }}, Escaped: \{{ placeholder }}', 'sql-escaping-{{ .vars.test_user_name }}@example.com', 30) RETURNING id, name;
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "name"
+            expected: "Normal: Test User from Rocketship, Escaped: {{ placeholder }}"
+        save:
+          - sql_result: ".queries[0].rows[0].id"
+            as: "sql_escape_demo_id"
+
+      - name: "Cleanup escaping demo data"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "DELETE FROM users WHERE id = {{ sql_escape_demo_id }};"
+        assertions:
+          - type: success_count
+            expected: 1
+
+  - name: "Environment Variables in SQL"
+    steps:
+      - name: "Demo environment variables in SQL connections and queries"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "postgres://testuser:testpass@{{ .vars.db_host }}:{{ .vars.db_port }}/testdb?sslmode=disable"
+          commands:
+            - |-
+              INSERT INTO users (name, email, age) VALUES ('System User: {{ .env.USER }}', 'env-demo-{{ .env.USER }}-{{ .vars.test_user_name }}@example.com', 30) RETURNING id, name;
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: success_count
+            expected: 1
+        save:
+          - sql_result: ".queries[0].rows[0].id"
+            as: "env_demo_user_id"
+          - sql_result: ".queries[0].rows[0].name"
+            as: "env_demo_user_name"
+
+      - name: "Query with environment variables and mixed types"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - |-
+              SELECT 
+                name,
+                email,
+                age,
+                '{{ .env.HOME }}' as user_home,
+                '{{ .env.USER }}' as system_user,
+                '{{ .vars.test_user_name }}' as config_name,
+                'Env: {{ .env.USER }}, Config: {{ .vars.test_user_name }}, Escaped: \{{ literal }}' as mixed_example
+              FROM users WHERE id = {{ env_demo_user_id }};
+        assertions:
+          - type: row_count
+            query_index: 0
+            expected: 1
+          - type: column_value
+            query_index: 0
+            row_index: 0
+            column: "name"
+            expected: "System User: {{ .env.USER }}"
+        save:
+          - sql_result: ".queries[0].rows[0].mixed_example"
+            as: "mixed_variables_result"
+
+      - name: "Cleanup environment variables demo"
+        plugin: sql
+        config:
+          driver: postgres
+          dsn: "{{ .vars.postgres_dsn }}"
+          commands:
+            - "DELETE FROM users WHERE id = {{ env_demo_user_id }};"
+        assertions:
+          - type: success_count
+            expected: 1

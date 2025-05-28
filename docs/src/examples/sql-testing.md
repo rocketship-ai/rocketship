@@ -149,6 +149,31 @@ save:
 - `.stats.success_count` - Total number of successful queries
 - `.stats.total_queries` - Total number of queries executed
 
+## Handlebars Escaping in SQL Queries
+
+When your SQL queries contain literal handlebars syntax (e.g., for stored procedures or database functions that use `{{ }}` syntax), you can escape them using backslashes:
+
+```yaml
+- name: "Query with escaped handlebars"
+  plugin: sql
+  config:
+    driver: postgres
+    dsn: "{{ .vars.db_dsn }}"
+    commands:
+      - "SELECT 'Normal: {{ .vars.test_user_name }}, Escaped: \\{{ placeholder }}' as mixed_example;"
+```
+
+In this example:
+- `{{ .vars.test_user_name }}` will be replaced with the actual variable value
+- `\\{{ placeholder }}` will render as literal `{{ placeholder }}` in the SQL query
+
+For multiple levels of escaping:
+- `\\{{ }}` → `{{ }}` (literal handlebars)
+- `\\\\{{ }}` → `\\{{ }}` (escaped backslash + handlebars variable)
+- `\\\\\\{{ }}` → `\\{{ }}` (literal escaped handlebars)
+
+See the [Handlebars Escaping guide](handlebars-escaping.md) for more detailed examples and use cases.
+
 ## Complete Example
 
 ```yaml

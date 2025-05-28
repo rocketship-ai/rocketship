@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Engine_CreateRun_FullMethodName  = "/rocketship.v1.Engine/CreateRun"
 	Engine_StreamLogs_FullMethodName = "/rocketship.v1.Engine/StreamLogs"
+	Engine_AddLog_FullMethodName     = "/rocketship.v1.Engine/AddLog"
 	Engine_ListRuns_FullMethodName   = "/rocketship.v1.Engine/ListRuns"
 	Engine_Health_FullMethodName     = "/rocketship.v1.Engine/Health"
 )
@@ -31,6 +32,7 @@ const (
 type EngineClient interface {
 	CreateRun(ctx context.Context, in *CreateRunRequest, opts ...grpc.CallOption) (*CreateRunResponse, error)
 	StreamLogs(ctx context.Context, in *LogStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[LogLine], error)
+	AddLog(ctx context.Context, in *AddLogRequest, opts ...grpc.CallOption) (*AddLogResponse, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
 }
@@ -72,6 +74,16 @@ func (c *engineClient) StreamLogs(ctx context.Context, in *LogStreamRequest, opt
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Engine_StreamLogsClient = grpc.ServerStreamingClient[LogLine]
 
+func (c *engineClient) AddLog(ctx context.Context, in *AddLogRequest, opts ...grpc.CallOption) (*AddLogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddLogResponse)
+	err := c.cc.Invoke(ctx, Engine_AddLog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *engineClient) ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListRunsResponse)
@@ -98,6 +110,7 @@ func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...gr
 type EngineServer interface {
 	CreateRun(context.Context, *CreateRunRequest) (*CreateRunResponse, error)
 	StreamLogs(*LogStreamRequest, grpc.ServerStreamingServer[LogLine]) error
+	AddLog(context.Context, *AddLogRequest) (*AddLogResponse, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
 	mustEmbedUnimplementedEngineServer()
@@ -115,6 +128,9 @@ func (UnimplementedEngineServer) CreateRun(context.Context, *CreateRunRequest) (
 }
 func (UnimplementedEngineServer) StreamLogs(*LogStreamRequest, grpc.ServerStreamingServer[LogLine]) error {
 	return status.Errorf(codes.Unimplemented, "method StreamLogs not implemented")
+}
+func (UnimplementedEngineServer) AddLog(context.Context, *AddLogRequest) (*AddLogResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddLog not implemented")
 }
 func (UnimplementedEngineServer) ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListRuns not implemented")
@@ -172,6 +188,24 @@ func _Engine_StreamLogs_Handler(srv interface{}, stream grpc.ServerStream) error
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type Engine_StreamLogsServer = grpc.ServerStreamingServer[LogLine]
 
+func _Engine_AddLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).AddLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_AddLog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).AddLog(ctx, req.(*AddLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Engine_ListRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRunsRequest)
 	if err := dec(in); err != nil {
@@ -218,6 +252,10 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateRun",
 			Handler:    _Engine_CreateRun_Handler,
+		},
+		{
+			MethodName: "AddLog",
+			Handler:    _Engine_AddLog_Handler,
 		},
 		{
 			MethodName: "ListRuns",
