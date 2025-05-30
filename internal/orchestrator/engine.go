@@ -131,10 +131,12 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 	// Send initial logs
 	for _, logMsg := range logs {
 		if err := stream.Send(&generated.LogLine{
-			Ts:    time.Now().Format(time.RFC3339),
-			Msg:   logMsg.Msg,
-			Color: logMsg.Color,
-			Bold:  logMsg.Bold,
+			Ts:       time.Now().Format(time.RFC3339),
+			Msg:      logMsg.Msg,
+			Color:    logMsg.Color,
+			Bold:     logMsg.Bold,
+			TestName: logMsg.TestName,
+			StepName: logMsg.StepName,
 		}); err != nil {
 			return err
 		}
@@ -169,10 +171,12 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 			// Send new logs (outside of lock)
 			for _, logMsg := range newLogs {
 				if err := stream.Send(&generated.LogLine{
-					Ts:    time.Now().Format(time.RFC3339),
-					Msg:   logMsg.Msg,
-					Color: logMsg.Color,
-					Bold:  logMsg.Bold,
+					Ts:       time.Now().Format(time.RFC3339),
+					Msg:      logMsg.Msg,
+					Color:    logMsg.Color,
+					Bold:     logMsg.Bold,
+					TestName: logMsg.TestName,
+					StepName: logMsg.StepName,
 				}); err != nil {
 					return err
 				}
@@ -260,6 +264,10 @@ func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
 }
 
 func (e *Engine) addLog(runID, message, color string, bold bool) {
+	e.addLogWithContext(runID, message, color, bold, "", "")
+}
+
+func (e *Engine) addLogWithContext(runID, message, color string, bold bool, testName, stepName string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -270,9 +278,11 @@ func (e *Engine) addLog(runID, message, color string, bold bool) {
 	}
 
 	runInfo.Logs = append(runInfo.Logs, LogLine{
-		Msg:   message,
-		Color: color,
-		Bold:  bold,
+		Msg:      message,
+		Color:    color,
+		Bold:     bold,
+		TestName: testName,
+		StepName: stepName,
 	})
 }
 
@@ -368,7 +378,7 @@ func (e *Engine) AddLog(ctx context.Context, req *generated.AddLogRequest) (*gen
 		return nil, fmt.Errorf("message is required")
 	}
 
-	e.addLog(req.RunId, req.Message, req.Color, req.Bold)
+	e.addLogWithContext(req.RunId, req.Message, req.Color, req.Bold, req.TestName, req.StepName)
 	return &generated.AddLogResponse{}, nil
 }
 

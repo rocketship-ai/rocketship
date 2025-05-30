@@ -66,7 +66,7 @@ func findRocketshipFiles(dir string) ([]string, error) {
 }
 
 // runSingleTest runs a single test file and streams its logs
-func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, resultChan chan<- TestSuiteResult) {
+func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, showTimestamp bool, resultChan chan<- TestSuiteResult) {
 	defer func() {
 		// Ensure we always send a result, even on panic
 		if r := recover(); r != nil {
@@ -190,8 +190,21 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 				printer.Add(color.Bold)
 			}
 
-			// Print the log with test suite name prefix
-			fmt.Printf("%s [%s] %s\n", printer.Sprint("["+config.Name+"]"), log.Ts, log.Msg)
+			// Build multi-level bracket prefix
+			brackets := "[" + config.Name + "]"
+			if log.TestName != "" {
+				brackets += " [" + log.TestName + "]"
+			}
+			if log.StepName != "" {
+				brackets += " [" + log.StepName + "]"
+			}
+			
+			// Print the log with multi-level bracket prefix and optional timestamp
+			if showTimestamp {
+				fmt.Printf("%s [%s] %s\n", printer.Sprint(brackets), log.Ts, log.Msg)
+			} else {
+				fmt.Printf("%s %s\n", printer.Sprint(brackets), log.Msg)
+			}
 
 			// Parse final summary message to extract results
 			if strings.Contains(log.Msg, "Test run:") && strings.Contains(log.Msg, "finished") {
@@ -313,6 +326,12 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
+			// Get timestamp flag
+			showTimestamp, err := cmd.Flags().GetBool("timestamp")
+			if err != nil {
+				return err
+			}
+
 			// Get test file or directory path
 			testFile, err := cmd.Flags().GetString("file")
 			if err != nil {
@@ -355,7 +374,7 @@ func NewRunCmd() *cobra.Command {
 				wg.Add(1)
 				go func(testFile string) {
 					defer wg.Done()
-					runSingleTest(ctx, client, testFile, cliVars, varFile, resultChan)
+					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, resultChan)
 				}(tf)
 			}
 
@@ -383,5 +402,6 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
+	cmd.Flags().BoolP("timestamp", "t", false, "Show timestamps in log output")
 	return cmd
 }

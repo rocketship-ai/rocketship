@@ -25,9 +25,11 @@ type RunInfo struct {
 }
 
 type LogLine struct {
-	Msg   string
-	Color string
-	Bold  bool
+	Msg      string
+	Color    string
+	Bold     bool
+	TestName string
+	StepName string
 }
 
 type TestInfo struct {

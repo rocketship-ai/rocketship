@@ -30,6 +30,8 @@ func LogForwarderActivity(ctx context.Context, params map[string]interface{}) (i
 	
 	color, _ := params["color"].(string)
 	bold, _ := params["bold"].(bool)
+	testName, _ := params["test_name"].(string)
+	stepName, _ := params["step_name"].(string)
 	
 	// Get engine address from environment or use default
 	engineAddr := "localhost:7700" // TODO: Make this configurable
@@ -43,7 +45,7 @@ func LogForwarderActivity(ctx context.Context, params map[string]interface{}) (i
 	defer func() { _ = client.Close() }()
 	
 	// Send log message to engine
-	if err := client.AddLog(ctx, runID, workflowID, message, color, bold); err != nil {
+	if err := client.AddLogWithContext(ctx, runID, workflowID, message, color, bold, testName, stepName); err != nil {
 		logger.Error("Failed to send log to engine", "error", err)
 		return nil, fmt.Errorf("failed to send log to engine: %w", err)
 	}

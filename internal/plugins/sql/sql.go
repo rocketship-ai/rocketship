@@ -332,7 +332,8 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 	}
 	
 	// Execute each query
-	for _, query := range queries {
+	var queryErrors []string
+	for i, query := range queries {
 		queryResult := executeQuery(ctx, db, query)
 		response.Queries = append(response.Queries, queryResult)
 		
@@ -340,10 +341,17 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 			response.Stats.SuccessCount++
 		} else {
 			response.Stats.ErrorCount++
+			// Collect detailed error information
+			queryErrors = append(queryErrors, fmt.Sprintf("Query %d failed: %s. Query: %s", i+1, queryResult.Error, query))
 		}
 	}
 	
 	response.Stats.TotalDuration = time.Since(startTime).String()
+	
+	// If any queries failed, return an error with detailed information
+	if len(queryErrors) > 0 {
+		return response, fmt.Errorf("SQL execution failed with %d error(s):\n%s", len(queryErrors), strings.Join(queryErrors, "\n"))
+	}
 	
 	return response, nil
 }

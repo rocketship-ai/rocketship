@@ -381,6 +381,14 @@ func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Res
 				return fmt.Errorf("status code assertion expected value must be a number: got type %T", assertionMap["expected"])
 			}
 			if int(expected) != resp.StatusCode {
+				// Include response body in error for better debugging
+				bodyPreview := string(respBody)
+				if len(bodyPreview) > 500 {
+					bodyPreview = bodyPreview[:500] + "..."
+				}
+				if bodyPreview != "" {
+					return fmt.Errorf("status code assertion failed: expected %d, got %d. Response body: %s", int(expected), resp.StatusCode, bodyPreview)
+				}
 				return fmt.Errorf("status code assertion failed: expected %d, got %d", int(expected), resp.StatusCode)
 			}
 
@@ -444,14 +452,24 @@ func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Res
 			// If we're just checking existence
 			if exists, ok := assertionMap["exists"].(bool); ok && exists {
 				if !found {
-					return fmt.Errorf("jq assertion failed: path %q does not exist", path)
+					// Include a preview of the response body for debugging
+					bodyPreview := string(respBody)
+					if len(bodyPreview) > 200 {
+						bodyPreview = bodyPreview[:200] + "..."
+					}
+					return fmt.Errorf("jq assertion failed: path %q does not exist. Response body: %s", path, bodyPreview)
 				}
 				// Skip value comparison if we're only checking existence
 				continue
 			}
 
 			if !found {
-				return fmt.Errorf("no results from jq expression %q", path)
+				// Include a preview of the response body for debugging
+				bodyPreview := string(respBody)
+				if len(bodyPreview) > 200 {
+					bodyPreview = bodyPreview[:200] + "..."
+				}
+				return fmt.Errorf("no results from jq expression %q. Response body: %s", path, bodyPreview)
 			}
 
 			// Only compare values if we have an expected value

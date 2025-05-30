@@ -88,3 +88,16 @@ func (c *EngineClient) AddLog(ctx context.Context, runID, workflowID, message, c
 	})
 	return err
 }
+
+func (c *EngineClient) AddLogWithContext(ctx context.Context, runID, workflowID, message, color string, bold bool, testName, stepName string) error {
+	_, err := c.client.AddLog(ctx, &generated.AddLogRequest{
+		RunId:      runID,
+		WorkflowId: workflowID,
+		Message:    message,
+		Color:      color,
+		Bold:       bold,
+		TestName:   testName,
+		StepName:   stepName,
+	})
+	return err
+}
