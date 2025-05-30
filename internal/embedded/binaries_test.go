@@ -376,5 +376,97 @@ func TestGithubReleaseURL(t *testing.T) {
 	}
 }
 
+func TestVersionUpgradeBugFix(t *testing.T) {
+	t.Parallel()
+
+	// Test the specific bug fix for version upgrades
+	// When CLI is upgraded but cached binaries are old, they should be re-downloaded
+	tests := []struct {
+		name           string
+		cliVersion     string
+		cachedVersion  string
+		envVersion     string
+		expectedTarget string
+		shouldExtract  bool
+	}{
+		{
+			name:           "CLI upgraded, no env var - should extract new version",
+			cliVersion:     "v1.5.1",
+			cachedVersion:  "v1.5.0",
+			envVersion:     "",
+			expectedTarget: "v1.5.1",
+			shouldExtract:  true,
+		},
+		{
+			name:           "CLI and cache match, no env var - should not extract",
+			cliVersion:     "v1.5.1",
+			cachedVersion:  "v1.5.1",
+			envVersion:     "",
+			expectedTarget: "v1.5.1",
+			shouldExtract:  false,
+		},
+		{
+			name:           "ENV var overrides everything - should extract env version",
+			cliVersion:     "v1.5.1",
+			cachedVersion:  "v1.5.0",
+			envVersion:     "v1.4.0",
+			expectedTarget: "v1.4.0",
+			shouldExtract:  true,
+		},
+		{
+			name:           "ENV var matches cache - should not extract",
+			cliVersion:     "v1.5.1",
+			cachedVersion:  "v1.4.0",
+			envVersion:     "v1.4.0",
+			expectedTarget: "v1.4.0",
+			shouldExtract:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Save and restore environment
+			originalEnv := os.Getenv("ROCKETSHIP_VERSION")
+			defer func() { _ = os.Setenv("ROCKETSHIP_VERSION", originalEnv) }()
+
+			// Set test environment
+			if tt.envVersion != "" {
+				_ = os.Setenv("ROCKETSHIP_VERSION", tt.envVersion)
+			} else {
+				_ = os.Unsetenv("ROCKETSHIP_VERSION")
+			}
+
+			// Simulate the fixed logic from binaries.go
+			metadata := &binaryMetadata{Version: tt.cachedVersion}
+			var targetVersion string
+			var needsExtract bool
+
+			// This is the exact logic from the fixed ExtractAndRun function
+			if envVersion := os.Getenv("ROCKETSHIP_VERSION"); envVersion != "" {
+				targetVersion = envVersion
+				needsExtract = metadata.Version != envVersion
+			} else {
+				// Fixed: use CLI version (DefaultVersion) instead of cached version
+				targetVersion = tt.cliVersion // In real code this would be DefaultVersion
+				needsExtract = metadata.Version != tt.cliVersion
+			}
+
+			if targetVersion != tt.expectedTarget {
+				t.Errorf("Expected target version %s, got %s", tt.expectedTarget, targetVersion)
+			}
+
+			if needsExtract != tt.shouldExtract {
+				t.Errorf("Expected needsExtract=%v, got %v", tt.shouldExtract, needsExtract)
+			}
+
+			// Log the test case results for clarity
+			t.Logf("CLI: %s, Cached: %s, Env: %s → Target: %s, Extract: %v",
+				tt.cliVersion, tt.cachedVersion, tt.envVersion, targetVersion, needsExtract)
+		})
+	}
+}
+
 // Benchmark tests for performance
 

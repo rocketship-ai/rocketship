@@ -61,9 +61,9 @@ func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) 
 				targetVersion = envVersion
 				needsExtract = metadata.Version != envVersion
 			} else {
-				// Otherwise use the version that was originally installed
-				targetVersion = metadata.Version
-				needsExtract = false
+				// Otherwise use the current CLI's version and re-extract if cached version differs
+				targetVersion = DefaultVersion
+				needsExtract = metadata.Version != DefaultVersion
 			}
 		}
 	}
