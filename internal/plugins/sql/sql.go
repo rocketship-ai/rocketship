@@ -59,8 +59,7 @@ func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 
 	// Apply variable replacement to DSN and commands
 	state, _ := p["state"].(map[string]interface{})
-	vars, _ := p["vars"].(map[string]interface{})
-	if err := applyVariableReplacement(config, state, vars); err != nil {
+	if err := applyVariableReplacement(config, state); err != nil {
 		return nil, fmt.Errorf("variable replacement failed: %w", err)
 	}
 
@@ -127,10 +126,9 @@ func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
 }
 
 // applyVariableReplacement replaces variables in DSN and commands using DSL template processing
-func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, vars map[string]interface{}) error {
-	// Create template context with vars and runtime variables
+func applyVariableReplacement(config *SQLConfig, state map[string]interface{}) error {
+	// Create template context with only runtime variables (config vars already processed by CLI)
 	context := dsl.TemplateContext{
-		Vars:    vars,
 		Runtime: state,
 	}
 	
@@ -154,7 +152,6 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, v
 	
 	return nil
 }
-
 
 // getQueries returns the list of SQL queries to execute
 func getQueries(config *SQLConfig) ([]string, error) {
