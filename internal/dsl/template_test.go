@@ -14,9 +14,9 @@ func TestEscapedHandlebars(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "escaped handlebars with config var",
-			input:    `API endpoint: {{ .vars.base_url }}, literal handlebars: \{{ not_a_variable }}`,
-			vars:     map[string]interface{}{"base_url": "https://api.example.com"},
+			name:     "escaped handlebars with already processed config var",
+			input:    `API endpoint: https://api.example.com, literal handlebars: \{{ not_a_variable }}`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `API endpoint: https://api.example.com, literal handlebars: {{ not_a_variable }}`,
 		},
@@ -29,15 +29,15 @@ func TestEscapedHandlebars(t *testing.T) {
 		},
 		{
 			name:     "multiple escaped handlebars",
-			input:    `\{{ first }} and \{{ second }} are literals, but {{ .vars.real }} is processed`,
-			vars:     map[string]interface{}{"real": "actual_value"},
-			runtime:  map[string]interface{}{},
+			input:    `\{{ first }} and \{{ second }} are literals, but {{ runtime_var }} is processed`,
+			vars:     map[string]interface{}{},
+			runtime:  map[string]interface{}{"runtime_var": "actual_value"},
 			expected: `{{ first }} and {{ second }} are literals, but actual_value is processed`,
 		},
 		{
-			name:     "config variables only with escaped",
-			input:    `Config: {{ .vars.env }}, escaped: \{{ .vars.secret }}`,
-			vars:     map[string]interface{}{"env": "production"},
+			name:     "already processed config with escaped",
+			input:    `Config: production, escaped: \{{ .vars.secret }}`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `Config: production, escaped: {{ .vars.secret }}`,
 		},
@@ -46,7 +46,7 @@ func TestEscapedHandlebars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				Vars:    tt.vars,
+				
 				Runtime: tt.runtime,
 			}
 			
@@ -107,36 +107,36 @@ func TestMultiLevelEscapedHandlebars(t *testing.T) {
 	}{
 		{
 			name:     "single escape (1 backslash)",
-			input:    `Escaped: \{{ var }} and processed: {{ .vars.value }}`,
-			vars:     map[string]interface{}{"value": "processed_value"},
+			input:    `Escaped: \{{ var }} and processed: processed_value`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `Escaped: {{ var }} and processed: processed_value`,
 		},
 		{
 			name:     "double escape (2 backslashes)",
-			input:    `Literal backslash: \\{{ var }} and processed: {{ .vars.value }}`,
-			vars:     map[string]interface{}{"value": "processed_value"},
+			input:    `Literal backslash: \\{{ var }} and processed: processed_value`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{"var": "runtime_value"},
 			expected: `Literal backslash: \runtime_value and processed: processed_value`,
 		},
 		{
 			name:     "triple escape (3 backslashes)",
-			input:    `Triple: \\\{{ var }} and processed: {{ .vars.value }}`,
-			vars:     map[string]interface{}{"value": "processed_value"},
+			input:    `Triple: \\\{{ var }} and processed: processed_value`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `Triple: \{{ var }} and processed: processed_value`,
 		},
 		{
 			name:     "quadruple escape (4 backslashes)",
-			input:    `Quad: \\\\{{ var }} and processed: {{ .vars.value }}`,
-			vars:     map[string]interface{}{"value": "processed_value"},
+			input:    `Quad: \\\\{{ var }} and processed: processed_value`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{"var": "runtime_value"},
 			expected: `Quad: \\runtime_value and processed: processed_value`,
 		},
 		{
 			name:     "five escapes (5 backslashes)",
-			input:    `Five: \\\\\{{ var }} and processed: {{ .vars.value }}`,
-			vars:     map[string]interface{}{"value": "processed_value"},
+			input:    `Five: \\\\\{{ var }} and processed: processed_value`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `Five: \\{{ var }} and processed: processed_value`,
 		},
@@ -149,8 +149,8 @@ func TestMultiLevelEscapedHandlebars(t *testing.T) {
 		},
 		{
 			name:     "complex mixed scenario",
-			input:    `API: {{ .vars.api_url }}, Escaped: \{{ template }}, Double: \\{{ literal }}, User: {{ user }}`,
-			vars:     map[string]interface{}{"api_url": "https://api.com"},
+			input:    `API: https://api.com, Escaped: \{{ template }}, Double: \\{{ literal }}, User: {{ user }}`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{"user": "alice", "literal": "test_literal"},
 			expected: `API: https://api.com, Escaped: {{ template }}, Double: \test_literal, User: alice`,
 		},
@@ -159,7 +159,7 @@ func TestMultiLevelEscapedHandlebars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				Vars:    tt.vars,
+				
 				Runtime: tt.runtime,
 			}
 			
@@ -264,16 +264,16 @@ func TestEnvironmentVariables(t *testing.T) {
 			expected: `URL: https://test.example.com, DB: localhost:5432`,
 		},
 		{
-			name:     "mixed env, config, and runtime variables",
-			input:    `API: {{ .env.TEST_API_KEY }}, Config: {{ .vars.service }}, User: {{ user_id }}`,
-			vars:     map[string]interface{}{"service": "auth_service"},
+			name:     "mixed env, already processed config, and runtime variables",
+			input:    `API: {{ .env.TEST_API_KEY }}, Config: auth_service, User: {{ user_id }}`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{"user_id": "12345"},
 			expected: `API: test_key_12345, Config: auth_service, User: 12345`,
 		},
 		{
 			name:     "environment variable in connection string",
-			input:    `postgres://{{ .env.TEST_DB_USER }}:password@{{ .env.TEST_DB_HOST }}/{{ .vars.db_name }}`,
-			vars:     map[string]interface{}{"db_name": "testdb"},
+			input:    `postgres://{{ .env.TEST_DB_USER }}:password@{{ .env.TEST_DB_HOST }}/testdb`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `postgres://testuser:password@localhost:5432/testdb`,
 		},
@@ -310,7 +310,7 @@ func TestEnvironmentVariables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				Vars:    tt.vars,
+				
 				Runtime: tt.runtime,
 			}
 			
@@ -435,8 +435,8 @@ func TestEnvironmentVariablesWithEscaping(t *testing.T) {
 		},
 		{
 			name:     "double escape with env var",
-			input:    `Double: \\{{ .env.TEST_ESCAPE_VAR }}, Real: {{ .vars.config }}`,
-			vars:     map[string]interface{}{"config": "config_value"},
+			input:    `Double: \\{{ .env.TEST_ESCAPE_VAR }}, Real: config_value`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{},
 			expected: `Double: \escape_test_value, Real: config_value`,
 		},
@@ -449,8 +449,8 @@ func TestEnvironmentVariablesWithEscaping(t *testing.T) {
 		},
 		{
 			name:     "mixed variable types with escaping",
-			input:    `Env: {{ .env.TEST_ESCAPE_VAR }}, Config: {{ .vars.test }}, Runtime: {{ user }}, Escaped: \{{ .env.LITERAL }}`,
-			vars:     map[string]interface{}{"test": "config_test"},
+			input:    `Env: {{ .env.TEST_ESCAPE_VAR }}, Config: config_test, Runtime: {{ user }}, Escaped: \{{ .env.LITERAL }}`,
+			vars:     map[string]interface{}{},
 			runtime:  map[string]interface{}{"user": "alice"},
 			expected: `Env: escape_test_value, Config: config_test, Runtime: alice, Escaped: {{ .env.LITERAL }}`,
 		},
@@ -459,7 +459,7 @@ func TestEnvironmentVariablesWithEscaping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				Vars:    tt.vars,
+				
 				Runtime: tt.runtime,
 			}
 			

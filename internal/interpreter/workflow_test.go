@@ -86,7 +86,7 @@ func TestHandleDelayStep(t *testing.T) {
 			
 			// Run the handleDelayStep function in a test workflow
 			env.ExecuteWorkflow(func(ctx workflow.Context) error {
-				return handleDelayStep(ctx, tt.step)
+				return handleDelayStep(ctx, tt.step, "test-name", "test-run-id")
 			})
 			
 			if tt.wantErr {
@@ -139,6 +139,13 @@ func TestTestWorkflow(t *testing.T) {
 				},
 			},
 			wantErr: false,
+			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
+				// Register LogForwarderActivity for step logging
+				env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+				// Mock LogForwarderActivity to return success
+				env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+					map[string]interface{}{"forwarded": true}, nil)
+			},
 		},
 		{
 			name: "workflow with HTTP step",
@@ -159,11 +166,15 @@ func TestTestWorkflow(t *testing.T) {
 			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
 				// Register activities
 				env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+				env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
 				env.OnActivity("http", mock.Anything, mock.Anything).Return(
 					&http.ActivityResponse{
 						Response: &http.HTTPResponse{StatusCode: 200},
 						Saved:    map[string]string{},
 					}, nil)
+				// Mock LogForwarderActivity to return success
+				env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+					map[string]interface{}{"forwarded": true}, nil)
 			},
 		},
 		{
@@ -179,6 +190,13 @@ func TestTestWorkflow(t *testing.T) {
 			},
 			wantErr: true,
 			errMsg:  "unknown plugin",
+			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
+				// Register LogForwarderActivity for step logging
+				env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+				// Mock LogForwarderActivity to return success
+				env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+					map[string]interface{}{"forwarded": true}, nil)
+			},
 		},
 		{
 			name: "workflow with multiple steps",
@@ -221,6 +239,10 @@ func TestTestWorkflow(t *testing.T) {
 			setupEnv: func(env *testsuite.TestWorkflowEnvironment) {
 				// Register activities
 				env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+				env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+				// Mock LogForwarderActivity to return success
+				env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+					map[string]interface{}{"forwarded": true}, nil)
 				// First HTTP call returns user creation
 				env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 					config := params["config"].(map[string]interface{})
@@ -291,6 +313,11 @@ func TestWorkflowStatePropagation(t *testing.T) {
 	
 	// Register activities with proper names
 	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+	
+	// Mock LogForwarderActivity to return success
+	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+		map[string]interface{}{"forwarded": true}, nil)
 	
 	// Track the calls to verify state propagation
 	var callOrder []map[string]interface{}
@@ -397,6 +424,11 @@ func TestWorkflowConcurrency(t *testing.T) {
 			
 			// Register activities
 			env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+			env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+			
+			// Mock LogForwarderActivity to return success
+			env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+				map[string]interface{}{"forwarded": true}, nil)
 			
 			// Each workflow should have its own isolated state
 			expectedValue := fmt.Sprintf("value-%d", workflowID)
@@ -462,6 +494,11 @@ func TestWorkflowWithComplexState(t *testing.T) {
 	
 	// Register activities
 	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+	
+	// Mock LogForwarderActivity to return success
+	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+		map[string]interface{}{"forwarded": true}, nil)
 	
 	// Mock responses for different steps
 	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {

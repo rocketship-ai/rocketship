@@ -39,12 +39,7 @@ func (lp *LogPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 		return nil, fmt.Errorf("message is required")
 	}
 
-	// Get state and vars for template processing
-	vars, _ := p["vars"].(map[string]interface{})
-	if vars == nil {
-		vars = make(map[string]interface{})
-	}
-
+	// Get state for template processing
 	// Convert state to map[string]interface{} for template processing
 	stateInterface := make(map[string]interface{})
 	if stateStr, ok := p["state"].(map[string]string); ok {
@@ -57,9 +52,8 @@ func (lp *LogPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 		stateInterface = stateInt
 	}
 
-	// Process templates in the message
+	// Process templates in the message (config vars already processed by CLI)
 	context := dsl.TemplateContext{
-		Vars:    vars,
 		Runtime: stateInterface,
 	}
 	

@@ -25,6 +25,8 @@ message LogLine {
   string msg = 2;
   string color = 3;  // "green" | "red" | "purple" | "" (default)
   bool bold = 4;
+  string test_name = 5;   // Name of the test this log belongs to
+  string step_name = 6;   // Name of the step this log belongs to (if applicable)
 }
 
 message ListRunsRequest {}
@@ -43,6 +45,8 @@ message AddLogRequest {
   string message = 3;
   string color = 4;
   bool bold = 5;
+  string test_name = 6;   // Name of the test this log belongs to
+  string step_name = 7;   // Name of the step this log belongs to (if applicable)
 }
 message AddLogResponse {}
 

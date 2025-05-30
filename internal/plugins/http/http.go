@@ -12,9 +12,9 @@ import (
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
-	
-	"github.com/rocketship-ai/rocketship/internal/plugins"
+
 	"github.com/rocketship-ai/rocketship/internal/dsl"
+	"github.com/rocketship-ai/rocketship/internal/plugins"
 )
 
 // Auto-register the plugin when the package is imported
@@ -31,26 +31,22 @@ type ActivityResponse struct {
 // replaceVariables replaces {{ variable }} patterns in the input string with values from the state
 // Now uses DSL template functions to properly handle escaped handlebars
 func replaceVariables(input string, state map[string]string) (string, error) {
-	if state == nil {
-		return input, nil
-	}
-
 	// Convert state to interface{} map for DSL functions
 	runtime := make(map[string]interface{})
 	for k, v := range state {
 		runtime[k] = v
 	}
 
-	// Create template context with runtime variables
+	// Create template context with only runtime variables (config vars already processed by CLI)
 	context := dsl.TemplateContext{
-		Vars:    make(map[string]interface{}), // No config vars at runtime
 		Runtime: runtime,
 	}
 
 	// Use DSL template processing which handles escaped handlebars
 	result, err := dsl.ProcessTemplate(input, context)
 	if err != nil {
-		return "", fmt.Errorf("undefined variables: %v. Available variables: %v", extractMissingVars(err), getStateKeys(state))
+		availableVars := getStateKeys(state)
+		return "", fmt.Errorf("undefined variables: %v. Available runtime variables: %v", extractMissingVars(err), availableVars)
 	}
 
 	return result, nil
@@ -72,7 +68,6 @@ func getStateKeys(state map[string]string) []string {
 	sort.Strings(keys)
 	return keys
 }
-
 
 func (hp *HTTPPlugin) GetType() string {
 	return "http"
@@ -158,6 +153,32 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		}
 	}
 
+	// Debug: Print the final HTTP request details
+	logger.Info("=== HTTP REQUEST DEBUG ===")
+	logger.Info("Final URL:", "url", req.URL.String())
+	logger.Info("Method:", "method", req.Method)
+
+	// Print all headers
+	for headerName, headerValues := range req.Header {
+		for _, headerValue := range headerValues {
+			logger.Info("Header:", "name", headerName, "value", headerValue)
+		}
+	}
+
+	// Print body if present
+	if req.Body != nil {
+		// Read body for logging (we need to recreate it since it's consumed)
+		if bodyBytes, err := io.ReadAll(req.Body); err == nil {
+			bodyStr := string(bodyBytes)
+			logger.Info("Body:", "content", bodyStr)
+			// Recreate the body reader for the actual request
+			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
+	} else {
+		logger.Info("Body: <empty>")
+	}
+	logger.Info("=== END HTTP REQUEST DEBUG ===")
+
 	// Send request
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -216,7 +237,6 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 		if !ok {
 			return fmt.Errorf("invalid save format: got type %T", save)
 		}
-
 
 		as, ok := saveMap["as"].(string)
 		if !ok {
@@ -361,6 +381,14 @@ func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Res
 				return fmt.Errorf("status code assertion expected value must be a number: got type %T", assertionMap["expected"])
 			}
 			if int(expected) != resp.StatusCode {
+				// Include response body in error for better debugging
+				bodyPreview := string(respBody)
+				if len(bodyPreview) > 500 {
+					bodyPreview = bodyPreview[:500] + "..."
+				}
+				if bodyPreview != "" {
+					return fmt.Errorf("status code assertion failed: expected %d, got %d. Response body: %s", int(expected), resp.StatusCode, bodyPreview)
+				}
 				return fmt.Errorf("status code assertion failed: expected %d, got %d", int(expected), resp.StatusCode)
 			}
 
@@ -424,14 +452,24 @@ func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Res
 			// If we're just checking existence
 			if exists, ok := assertionMap["exists"].(bool); ok && exists {
 				if !found {
-					return fmt.Errorf("jq assertion failed: path %q does not exist", path)
+					// Include a preview of the response body for debugging
+					bodyPreview := string(respBody)
+					if len(bodyPreview) > 200 {
+						bodyPreview = bodyPreview[:200] + "..."
+					}
+					return fmt.Errorf("jq assertion failed: path %q does not exist. Response body: %s", path, bodyPreview)
 				}
 				// Skip value comparison if we're only checking existence
 				continue
 			}
 
 			if !found {
-				return fmt.Errorf("no results from jq expression %q", path)
+				// Include a preview of the response body for debugging
+				bodyPreview := string(respBody)
+				if len(bodyPreview) > 200 {
+					bodyPreview = bodyPreview[:200] + "..."
+				}
+				return fmt.Errorf("no results from jq expression %q. Response body: %s", path, bodyPreview)
 			}
 
 			// Only compare values if we have an expected value

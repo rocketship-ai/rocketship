@@ -159,6 +159,8 @@ type LogLine struct {
 	Msg           string                 `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
 	Color         string                 `protobuf:"bytes,3,opt,name=color,proto3" json:"color,omitempty"` // "green" | "red" | "purple" | "" (default)
 	Bold          bool                   `protobuf:"varint,4,opt,name=bold,proto3" json:"bold,omitempty"`
+	TestName      string                 `protobuf:"bytes,5,opt,name=test_name,json=testName,proto3" json:"test_name,omitempty"` // Name of the test this log belongs to
+	StepName      string                 `protobuf:"bytes,6,opt,name=step_name,json=stepName,proto3" json:"step_name,omitempty"` // Name of the step this log belongs to (if applicable)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -219,6 +221,20 @@ func (x *LogLine) GetBold() bool {
 		return x.Bold
 	}
 	return false
+}
+
+func (x *LogLine) GetTestName() string {
+	if x != nil {
+		return x.TestName
+	}
+	return ""
+}
+
+func (x *LogLine) GetStepName() string {
+	if x != nil {
+		return x.StepName
+	}
+	return ""
 }
 
 type ListRunsRequest struct {
@@ -376,6 +392,8 @@ type AddLogRequest struct {
 	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
 	Color         string                 `protobuf:"bytes,4,opt,name=color,proto3" json:"color,omitempty"`
 	Bold          bool                   `protobuf:"varint,5,opt,name=bold,proto3" json:"bold,omitempty"`
+	TestName      string                 `protobuf:"bytes,6,opt,name=test_name,json=testName,proto3" json:"test_name,omitempty"` // Name of the test this log belongs to
+	StepName      string                 `protobuf:"bytes,7,opt,name=step_name,json=stepName,proto3" json:"step_name,omitempty"` // Name of the step this log belongs to (if applicable)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -443,6 +461,20 @@ func (x *AddLogRequest) GetBold() bool {
 		return x.Bold
 	}
 	return false
+}
+
+func (x *AddLogRequest) GetTestName() string {
+	if x != nil {
+		return x.TestName
+	}
+	return ""
+}
+
+func (x *AddLogRequest) GetStepName() string {
+	if x != nil {
+		return x.StepName
+	}
+	return ""
 }
 
 type AddLogResponse struct {
@@ -571,12 +603,14 @@ const file_engine_proto_rawDesc = "" +
 	"\x11CreateRunResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\")\n" +
 	"\x10LogStreamRequest\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\"U\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\"\x8f\x01\n" +
 	"\aLogLine\x12\x0e\n" +
 	"\x02ts\x18\x01 \x01(\tR\x02ts\x12\x10\n" +
 	"\x03msg\x18\x02 \x01(\tR\x03msg\x12\x14\n" +
 	"\x05color\x18\x03 \x01(\tR\x05color\x12\x12\n" +
-	"\x04bold\x18\x04 \x01(\bR\x04bold\"\x11\n" +
+	"\x04bold\x18\x04 \x01(\bR\x04bold\x12\x1b\n" +
+	"\ttest_name\x18\x05 \x01(\tR\btestName\x12\x1b\n" +
+	"\tstep_name\x18\x06 \x01(\tR\bstepName\"\x11\n" +
 	"\x0fListRunsRequest\"A\n" +
 	"\x10ListRunsResponse\x12-\n" +
 	"\x04runs\x18\x01 \x03(\v2\x19.rocketship.v1.RunSummaryR\x04runs\"u\n" +
@@ -586,14 +620,16 @@ const file_engine_proto_rawDesc = "" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
 	"started_at\x18\x03 \x01(\tR\tstartedAt\x12\x19\n" +
-	"\bended_at\x18\x04 \x01(\tR\aendedAt\"\x8b\x01\n" +
+	"\bended_at\x18\x04 \x01(\tR\aendedAt\"\xc5\x01\n" +
 	"\rAddLogRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
 	"workflowId\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12\x14\n" +
 	"\x05color\x18\x04 \x01(\tR\x05color\x12\x12\n" +
-	"\x04bold\x18\x05 \x01(\bR\x04bold\"\x10\n" +
+	"\x04bold\x18\x05 \x01(\bR\x04bold\x12\x1b\n" +
+	"\ttest_name\x18\x06 \x01(\tR\btestName\x12\x1b\n" +
+	"\tstep_name\x18\a \x01(\tR\bstepName\"\x10\n" +
 	"\x0eAddLogResponse\"\x0f\n" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +

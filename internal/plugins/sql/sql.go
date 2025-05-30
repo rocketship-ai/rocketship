@@ -59,8 +59,7 @@ func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 
 	// Apply variable replacement to DSN and commands
 	state, _ := p["state"].(map[string]interface{})
-	vars, _ := p["vars"].(map[string]interface{})
-	if err := applyVariableReplacement(config, state, vars); err != nil {
+	if err := applyVariableReplacement(config, state); err != nil {
 		return nil, fmt.Errorf("variable replacement failed: %w", err)
 	}
 
@@ -127,10 +126,9 @@ func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
 }
 
 // applyVariableReplacement replaces variables in DSN and commands using DSL template processing
-func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, vars map[string]interface{}) error {
-	// Create template context with vars and runtime variables
+func applyVariableReplacement(config *SQLConfig, state map[string]interface{}) error {
+	// Create template context with only runtime variables (config vars already processed by CLI)
 	context := dsl.TemplateContext{
-		Vars:    vars,
 		Runtime: state,
 	}
 	
@@ -154,7 +152,6 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, v
 	
 	return nil
 }
-
 
 // getQueries returns the list of SQL queries to execute
 func getQueries(config *SQLConfig) ([]string, error) {
@@ -335,7 +332,8 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 	}
 	
 	// Execute each query
-	for _, query := range queries {
+	var queryErrors []string
+	for i, query := range queries {
 		queryResult := executeQuery(ctx, db, query)
 		response.Queries = append(response.Queries, queryResult)
 		
@@ -343,10 +341,17 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 			response.Stats.SuccessCount++
 		} else {
 			response.Stats.ErrorCount++
+			// Collect detailed error information
+			queryErrors = append(queryErrors, fmt.Sprintf("Query %d failed: %s. Query: %s", i+1, queryResult.Error, query))
 		}
 	}
 	
 	response.Stats.TotalDuration = time.Since(startTime).String()
+	
+	// If any queries failed, return an error with detailed information
+	if len(queryErrors) > 0 {
+		return response, fmt.Errorf("SQL execution failed with %d error(s):\n%s", len(queryErrors), strings.Join(queryErrors, "\n"))
+	}
 	
 	return response, nil
 }

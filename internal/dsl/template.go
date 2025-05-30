@@ -17,9 +17,9 @@ var (
 	templateVariableRegex     = regexp.MustCompile(`\{\{\s*([^.\s}][^}]*)\s*\}\}`)
 )
 
-// TemplateContext holds both config variables and runtime variables for template processing
+// TemplateContext holds runtime variables for template processing
+// Config variables are processed earlier by CLI, only runtime variables are needed here
 type TemplateContext struct {
-	Vars    map[string]interface{} // Config variables (accessed via {{ .vars.key }})
 	Runtime map[string]interface{} // Runtime variables (accessed via {{ key }})
 }
 
@@ -36,7 +36,8 @@ func getEnvironmentVariables() map[string]interface{} {
 }
 
 // ProcessTemplate processes a string containing template variables
-// It supports config variables ({{ .vars.key }}), runtime variables ({{ key }}), and environment variables ({{ .env.key }})
+// It supports runtime variables ({{ key }}) and environment variables ({{ .env.key }})
+// Config variables ({{ .vars.key }}) are processed earlier by CLI
 // Escaped handlebars using \{{ }} will be converted to literal {{ }} text
 func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	if input == "" {
@@ -55,10 +56,9 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Prepare template data
+	// Prepare template data with environment variables
 	templateData := map[string]interface{}{
-		"vars": context.Vars,
-		"env":  getEnvironmentVariables(),
+		"env": getEnvironmentVariables(),
 	}
 
 	// Add runtime variables to the root level
@@ -231,56 +231,6 @@ func ProcessConfigVariablesRecursive(data interface{}, vars map[string]interface
 	}
 }
 
-// ProcessTemplateRecursive processes templates in any nested data structure
-func ProcessTemplateRecursive(data interface{}, context TemplateContext) (interface{}, error) {
-	switch v := data.(type) {
-	case string:
-		return ProcessTemplate(v, context)
-	case map[string]interface{}:
-		result := make(map[string]interface{})
-		for key, value := range v {
-			// Process the key itself (in case it contains variables)
-			processedKey, err := ProcessTemplate(key, context)
-			if err != nil {
-				return nil, fmt.Errorf("failed to process template in key '%s': %w", key, err)
-			}
-			// Process the value recursively
-			processedValue, err := ProcessTemplateRecursive(value, context)
-			if err != nil {
-				return nil, fmt.Errorf("failed to process template in value for key '%s': %w", key, err)
-			}
-			result[processedKey] = processedValue
-		}
-		return result, nil
-	case []interface{}:
-		result := make([]interface{}, len(v))
-		for i, item := range v {
-			processedItem, err := ProcessTemplateRecursive(item, context)
-			if err != nil {
-				return nil, fmt.Errorf("failed to process template in array item %d: %w", i, err)
-			}
-			result[i] = processedItem
-		}
-		return result, nil
-	case []map[string]interface{}:
-		result := make([]map[string]interface{}, len(v))
-		for i, item := range v {
-			processedItem, err := ProcessTemplateRecursive(item, context)
-			if err != nil {
-				return nil, fmt.Errorf("failed to process template in array item %d: %w", i, err)
-			}
-			if processedMap, ok := processedItem.(map[string]interface{}); ok {
-				result[i] = processedMap
-			} else {
-				return nil, fmt.Errorf("expected map[string]interface{} after processing, got %T", processedItem)
-			}
-		}
-		return result, nil
-	default:
-		// For non-string types (numbers, booleans, etc.), return as-is
-		return data, nil
-	}
-}
 
 // IsTemplateString checks if a string contains template variables
 func IsTemplateString(s string) bool {

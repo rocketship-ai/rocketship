@@ -30,18 +30,27 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface
 		logger.Info(fmt.Sprintf("Starting step %d: %q", i, step.Name))
 		logger.Info(fmt.Sprintf("State before step %d: %v", i, state))
 
+		// Send step start log to engine
+		sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Starting step: %s", step.Name), "n/a", false)
+
 		// Handle delay plugin with workflow sleep (special case)
 		if step.Plugin == "delay" {
-			if err := handleDelayStep(ctx, step); err != nil {
+			if err := handleDelayStep(ctx, step, test.Name, runID); err != nil {
+				// Send error log to engine
+				sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Step failed: %v", err), "red", true)
 				return fmt.Errorf("step %q: %w", step.Name, err)
 			}
 		} else {
 			// Execute plugin through registry
-			if err := executePlugin(ctx, step, state, vars, runID); err != nil {
+			if err := executePlugin(ctx, step, state, vars, runID, test.Name); err != nil {
+				// Send error log to engine
+				sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Step failed: %v", err), "red", true)
 				return fmt.Errorf("step %d: %w", i, err)
 			}
 		}
 
+		// Send step success log to engine
+		sendStepLog(ctx, runID, test.Name, step.Name, "Step completed successfully", "green", false)
 		logger.Info(fmt.Sprintf("Step %q PASSED", step.Name))
 		logger.Info(fmt.Sprintf("State after step %d: %v", i, state))
 	}
@@ -49,7 +58,7 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface
 	return nil
 }
 
-func handleDelayStep(ctx workflow.Context, step dsl.Step) error {
+func handleDelayStep(ctx workflow.Context, step dsl.Step, testName, runID string) error {
 	// Extract duration directly from step config
 	durationStr, ok := step.Config["duration"].(string)
 	if !ok {
@@ -61,11 +70,14 @@ func handleDelayStep(ctx workflow.Context, step dsl.Step) error {
 		return fmt.Errorf("step %q: invalid duration format: %w", step.Name, err)
 	}
 
+	// Send delay start log
+	sendStepLog(ctx, runID, testName, step.Name, fmt.Sprintf("Delaying for %s", durationStr), "n/a", false)
+
 	return workflow.Sleep(ctx, duration)
 }
 
 // executePlugin executes any registered plugin through the plugin registry
-func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID string) error {
+func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string) error {
 	logger := workflow.GetLogger(ctx)
 
 	// Check if plugin is registered
@@ -92,6 +104,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	if step.Save != nil {
 		pluginParams["save"] = step.Save
 	}
+	// Pass vars for script plugin usage (other plugins ignore them since CLI processes config vars)
 	if vars != nil {
 		pluginParams["vars"] = vars
 	}
@@ -118,7 +131,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 
 		// Handle log messages from log plugin
 		if step.Plugin == "log" {
-			if err := forwardLogMessage(ctx, activityResp, runID); err != nil {
+			if err := forwardLogMessage(ctx, activityResp, runID, testName, step.Name); err != nil {
 				logger.Warn("Failed to forward log message", "error", err)
 				// Don't fail the workflow if log forwarding fails
 			}
@@ -171,8 +184,34 @@ func extractSavedValues(response interface{}) map[string]string {
 	return savedValues
 }
 
+// sendStepLog sends step-level logs to the engine
+func sendStepLog(ctx workflow.Context, runID, testName, stepName, message, color string, bold bool) {
+	// Get workflow info to extract workflow ID
+	workflowInfo := workflow.GetInfo(ctx)
+
+	// Prepare parameters for log forwarder activity
+	forwarderParams := map[string]interface{}{
+		"run_id":      runID,
+		"workflow_id": workflowInfo.WorkflowExecution.ID,
+		"message":     message,
+		"color":       color,
+		"bold":        bold,
+		"test_name":   testName,
+		"step_name":   stepName,
+	}
+
+	// Execute log forwarder activity (ignore errors to not fail workflow)
+	var forwarderResp interface{}
+	err := workflow.ExecuteActivity(ctx, "LogForwarderActivity", forwarderParams).Get(ctx, &forwarderResp)
+	if err != nil {
+		// Log to temporal logger but don't fail the workflow
+		logger := workflow.GetLogger(ctx)
+		logger.Warn("Failed to forward step log", "error", err)
+	}
+}
+
 // forwardLogMessage forwards log messages from log plugin to the engine
-func forwardLogMessage(ctx workflow.Context, activityResp interface{}, runID string) error {
+func forwardLogMessage(ctx workflow.Context, activityResp interface{}, runID, testName, stepName string) error {
 	if respMap, ok := activityResp.(map[string]interface{}); ok {
 		logMessage, hasMessage := respMap["log_message"].(string)
 		logColor, _ := respMap["log_color"].(string)
@@ -189,6 +228,8 @@ func forwardLogMessage(ctx workflow.Context, activityResp interface{}, runID str
 				"message":     logMessage,
 				"color":       logColor,
 				"bold":        logBold,
+				"test_name":   testName,
+				"step_name":   stepName,
 			}
 
 			// Execute log forwarder activity
