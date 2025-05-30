@@ -92,6 +92,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	if step.Save != nil {
 		pluginParams["save"] = step.Save
 	}
+	// Pass vars for script plugin usage (other plugins ignore them since CLI processes config vars)
 	if vars != nil {
 		pluginParams["vars"] = vars
 	}
