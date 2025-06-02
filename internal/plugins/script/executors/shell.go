@@ -50,7 +50,14 @@ func (s *ShellExecutor) Execute(ctx context.Context, script string, rtCtx *runti
 	} else if s.commandExists("sh") {
 		cmd = exec.CommandContext(ctx, "sh", "-c", processedScript)
 	} else {
-		return fmt.Errorf("neither bash nor sh is available on this system")
+		// Debug: Try absolute paths
+		if s.commandExistsAbsolute("/bin/bash") {
+			cmd = exec.CommandContext(ctx, "/bin/bash", "-c", processedScript)
+		} else if s.commandExistsAbsolute("/bin/sh") {
+			cmd = exec.CommandContext(ctx, "/bin/sh", "-c", processedScript)
+		} else {
+			return fmt.Errorf("neither bash nor sh is available on this system")
+		}
 	}
 	
 	// Set up environment with runtime state and current environment
@@ -160,6 +167,12 @@ func (s *ShellExecutor) buildEnvironment(rtCtx *runtime.Context) []string {
 // commandExists checks if a command is available in the system PATH
 func (s *ShellExecutor) commandExists(command string) bool {
 	_, err := exec.LookPath(command)
+	return err == nil
+}
+
+// commandExistsAbsolute checks if a command exists at an absolute path
+func (s *ShellExecutor) commandExistsAbsolute(path string) bool {
+	_, err := os.Stat(path)
 	return err == nil
 }
 

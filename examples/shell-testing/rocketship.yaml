@@ -14,39 +14,30 @@ tests:
         config:
           language: shell
           script: |
-            echo "Hello from shell!"
-            echo "Project: {{ .vars.project_name }}"
-            echo "Target: {{ .vars.build_target }}"
-        # Shell results are automatically saved as: stdout, stderr, exit_code, duration
+            # Basic shell command with variable substitution
+            PROJECT="{{ .vars.project_name }}"
+            TARGET="{{ .vars.build_target }}"
 
       - name: "Environment check"
         plugin: script
         config:
           language: shell
           script: |
-            echo "Current directory: $(pwd)"
-            echo "User: $(whoami)"
-            echo "Shell: $SHELL"
-            echo "PATH: $PATH"
+            # Verify environment access
+            pwd >/dev/null
+            whoami >/dev/null
+            test -n "$SHELL"
 
       - name: "File operations"
         plugin: script
         config:
           language: shell
           script: |
-            # Create a temporary file
+            # Create, verify, and clean up a temporary file
             echo "Test content from Rocketship" > /tmp/rocketship_test.txt
-            
-            # Read it back
-            echo "File contents:"
-            cat /tmp/rocketship_test.txt
-            
-            # Get file info
-            ls -la /tmp/rocketship_test.txt
-            
-            # Clean up
+            test -f /tmp/rocketship_test.txt
+            cat /tmp/rocketship_test.txt >/dev/null
             rm /tmp/rocketship_test.txt
-            echo "File cleaned up"
 
   - name: "Variable Substitution Test"
     steps:
@@ -55,6 +46,7 @@ tests:
         config:
           language: shell
           script: |
+            # Generate config file with variable substitution
             cat > /tmp/config.json << EOF
             {
               "project": "{{ .vars.project_name }}",
@@ -62,21 +54,14 @@ tests:
               "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             }
             EOF
-            
-            echo "Generated config file:"
-            cat /tmp/config.json
-        # Config content will be saved automatically
 
       - name: "Use environment variables from previous step"
         plugin: script
         config:
           language: shell
           script: |
-            echo "Previous steps saved output as environment variables:"
-            echo "Available ROCKETSHIP_ environment variables:"
-            env | grep ROCKETSHIP_ | head -5
-            
-            # Clean up config file
+            # Access environment variables from previous steps
+            env | grep ROCKETSHIP_ >/dev/null
             rm -f /tmp/config.json
 
   - name: "Build Simulation Test"
@@ -86,26 +71,18 @@ tests:
         config:
           language: shell
           script: |
-            echo "Starting build for {{ .vars.project_name }}..."
-            
-            # Simulate compilation steps
+            # Simulate build process for {{ .vars.project_name }}
             for i in {1..3}; do
-              echo "Compiling module $i..."
-              sleep 0.1  # Small delay to simulate work
+              sleep 0.1  # Simulate compilation work
             done
-            
-            echo "Build completed successfully!"
-            echo "Artifacts ready for {{ .vars.build_target }}"
-        # Build results saved automatically
 
       - name: "Verify build"
         plugin: script
         config:
           language: shell
           script: |
-            echo "✅ Build verification step"
-            echo "Previous step exit code: $ROCKETSHIP_EXIT_CODE"
-            echo "Previous build completed successfully"
+            # Verify previous step completed successfully
+            test "$ROCKETSHIP_EXIT_CODE" = "0"
 
   - name: "Error Handling Test"
     steps:
@@ -114,9 +91,25 @@ tests:
         config:
           language: shell
           script: |
-            echo "This command will succeed"
-            echo "Exit code will be 0"
-            true  # This command always returns exit code 0
+            # Simple command that always succeeds
+            true
+
+  - name: "External Script File Test"
+    steps:
+      - name: "Execute external shell script"
+        plugin: script
+        config:
+          language: shell
+          file: "examples/shell-testing/test-script.sh"
+        # External script results saved automatically
+
+      - name: "Verify external script execution"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Verify external script completed successfully
+            test "$ROCKETSHIP_EXIT_CODE" = "0"
 
   - name: "Complex Pipeline Test"
     steps:
@@ -125,28 +118,19 @@ tests:
         config:
           language: shell
           script: |
-            # Stage 1: Setup
-            echo "=== Stage 1: Setup ==="
+            # Multi-stage pipeline with file generation
             PROJECT_DIR="/tmp/rocketship_pipeline"
             mkdir -p "$PROJECT_DIR"
             cd "$PROJECT_DIR"
             
-            # Stage 2: Generate files
-            echo "=== Stage 2: Generate files ==="
+            # Generate project files
             echo "# {{ .vars.project_name }} README" > README.md
             echo "print('Hello from {{ .vars.project_name }}')" > app.py
             
-            # Stage 3: Process files
-            echo "=== Stage 3: Process files ==="
-            echo "Files created:"
-            ls -la
+            # Verify files were created
+            test -f README.md
+            test -f app.py
             
-            echo "README content:"
-            cat README.md
-            
-            # Stage 4: Cleanup
-            echo "=== Stage 4: Cleanup ==="
+            # Cleanup
             cd /tmp
             rm -rf "$PROJECT_DIR"
-            echo "Pipeline completed successfully"
-        # Pipeline results saved automatically as stdout, stderr, exit_code, duration

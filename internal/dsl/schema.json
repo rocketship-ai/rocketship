@@ -185,7 +185,7 @@
                         "properties": {
                           "language": {
                             "type": "string",
-                            "enum": ["javascript"],
+                            "enum": ["javascript", "shell"],
                             "description": "Script language to use"
                           },
                           "script": {
