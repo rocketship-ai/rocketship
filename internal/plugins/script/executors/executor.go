@@ -24,10 +24,10 @@ func NewExecutor(language string) (Executor, error) {
 	switch language {
 	case "javascript":
 		return NewJavaScriptExecutor(), nil
+	case "shell":
+		return NewShellExecutor(), nil
 	case "python":
 		return nil, fmt.Errorf("python executor not yet implemented")
-	case "shell":
-		return nil, fmt.Errorf("shell executor not yet implemented")
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", language)
 	}
@@ -35,5 +35,5 @@ func NewExecutor(language string) (Executor, error) {
 
 // GetSupportedLanguages returns a list of all supported languages
 func GetSupportedLanguages() []string {
-	return []string{"javascript"} // Will expand as we add more languages
+	return []string{"javascript", "shell"} // Will expand as we add more languages
 }

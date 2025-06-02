@@ -1,0 +1,136 @@
+version: "v1.0.0"
+name: "Shell Script Testing"
+description: "Demonstrates shell script execution capabilities"
+
+vars:
+  project_name: "rocketship"
+  build_target: "production"
+
+tests:
+  - name: "Basic Shell Commands"
+    steps:
+      - name: "Simple echo"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Basic shell command with variable substitution
+            PROJECT="{{ .vars.project_name }}"
+            TARGET="{{ .vars.build_target }}"
+
+      - name: "Environment check"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Verify environment access
+            pwd >/dev/null
+            whoami >/dev/null
+            test -n "$SHELL"
+
+      - name: "File operations"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Create, verify, and clean up a temporary file
+            echo "Test content from Rocketship" > /tmp/rocketship_test.txt
+            test -f /tmp/rocketship_test.txt
+            cat /tmp/rocketship_test.txt >/dev/null
+            rm /tmp/rocketship_test.txt
+
+  - name: "Variable Substitution Test"
+    steps:
+      - name: "Create config file"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Generate config file with variable substitution
+            cat > /tmp/config.json << EOF
+            {
+              "project": "{{ .vars.project_name }}",
+              "environment": "{{ .vars.build_target }}",
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            }
+            EOF
+
+      - name: "Use environment variables from previous step"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Access environment variables from previous steps
+            env | grep ROCKETSHIP_ >/dev/null
+            rm -f /tmp/config.json
+
+  - name: "Build Simulation Test"
+    steps:
+      - name: "Simulate make build"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Simulate build process for {{ .vars.project_name }}
+            for i in {1..3}; do
+              sleep 0.1  # Simulate compilation work
+            done
+
+      - name: "Verify build"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Verify previous step completed successfully
+            test "$ROCKETSHIP_EXIT_CODE" = "0"
+
+  - name: "Error Handling Test"
+    steps:
+      - name: "Command that should succeed"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Simple command that always succeeds
+            true
+
+  - name: "External Script File Test"
+    steps:
+      - name: "Execute external shell script"
+        plugin: script
+        config:
+          language: shell
+          file: "examples/shell-testing/test-script.sh"
+        # External script results saved automatically
+
+      - name: "Verify external script execution"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Verify external script completed successfully
+            test "$ROCKETSHIP_EXIT_CODE" = "0"
+
+  - name: "Complex Pipeline Test"
+    steps:
+      - name: "Multi-stage pipeline"
+        plugin: script
+        config:
+          language: shell
+          script: |
+            # Multi-stage pipeline with file generation
+            PROJECT_DIR="/tmp/rocketship_pipeline"
+            mkdir -p "$PROJECT_DIR"
+            cd "$PROJECT_DIR"
+            
+            # Generate project files
+            echo "# {{ .vars.project_name }} README" > README.md
+            echo "print('Hello from {{ .vars.project_name }}')" > app.py
+            
+            # Verify files were created
+            test -f README.md
+            test -f app.py
+            
+            # Cleanup
+            cd /tmp
+            rm -rf "$PROJECT_DIR"
