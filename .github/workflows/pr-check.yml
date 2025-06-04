@@ -164,6 +164,21 @@ jobs:
           # Verify installation
           temporal --version
 
+      - name: Install Claude Code CLI
+        run: |
+          echo "Installing Claude Code CLI..."
+          npm install -g @anthropic-ai/claude-code
+          
+          # Verify installation
+          claude --version
+          
+          # Verify API key is available
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "Warning: ANTHROPIC_API_KEY not set - agent tests may fail"
+          else
+            echo "✅ ANTHROPIC_API_KEY is available"
+          fi
+
       - name: Build and install Rocketship CLI
         run: |
           make install
