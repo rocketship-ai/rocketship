@@ -1,0 +1,47 @@
+name: "Agent Plugin Testing"
+description: "Test suite for the agent plugin with Claude Code integration"
+version: "v1.0.0"
+
+vars:
+  test_endpoint: "https://jsonplaceholder.typicode.com/posts/1"
+
+tests:
+  - name: "Agent analysis workflow"
+    steps:
+      - name: "Get API data"
+        plugin: http
+        config:
+          method: GET
+          url: "{{ .vars.test_endpoint }}"
+        save:
+          - json_path: ".title"
+            as: "post_title"
+          - json_path: ".body"
+            as: "post_body"
+
+      - name: "Analyze API response with agent"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: |
+            Analyze this API response data:
+            Title: {{ post_title }}
+            Body: {{ post_body }}
+
+            Please provide:
+            1. A summary of the content
+            2. The sentiment (positive/negative/neutral)
+            3. Any potential issues or improvements
+
+            Respond in JSON format with keys: summary, sentiment, issues
+          mode: "single"
+          output_format: "json"
+          timeout: "45s"
+        save:
+          - json_path: ".response"
+            as: "analysis_result"
+
+      - name: "Log analysis results"
+        plugin: log
+        config:
+          message: "Agent analysis completed: {{ analysis_result }}"

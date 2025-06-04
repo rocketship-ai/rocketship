@@ -8,6 +8,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	
 	// Import plugins to trigger auto-registration
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/agent"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/log"
