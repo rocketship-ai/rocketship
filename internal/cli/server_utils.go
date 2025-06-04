@@ -123,7 +123,8 @@ func StartServer(config *ServerConfig, pm *processManager) error {
 	// Start the worker from embedded binary if not already running
 	if !pm.IsComponentRunning(Worker) {
 		Logger.Debug("starting Rocketship worker")
-		env := []string{"TEMPORAL_HOST=localhost:7233"}
+		env := os.Environ() // Start with full environment
+		env = append(env, "TEMPORAL_HOST=localhost:7233")
 		if logLevel := os.Getenv("ROCKETSHIP_LOG"); logLevel != "" {
 			env = append(env, "ROCKETSHIP_LOG="+logLevel)
 		}

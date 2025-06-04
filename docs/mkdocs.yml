@@ -69,6 +69,8 @@ nav:
       - Custom Scripting:
           - JavaScript Integration: examples/custom-scripting.md
           - Shell Scripting: examples/shell-scripting.md
+      - AI Testing:
+          - Agent Plugin: examples/agent-testing.md
       - Logging:
           - Log Plugin: examples/log-plugin.md
   - Deploy On Your Cloud:

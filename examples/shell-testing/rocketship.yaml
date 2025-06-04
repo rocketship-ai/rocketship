@@ -122,15 +122,15 @@ tests:
             PROJECT_DIR="/tmp/rocketship_pipeline"
             mkdir -p "$PROJECT_DIR"
             cd "$PROJECT_DIR"
-            
+
             # Generate project files
             echo "# {{ .vars.project_name }} README" > README.md
             echo "print('Hello from {{ .vars.project_name }}')" > app.py
-            
+
             # Verify files were created
             test -f README.md
             test -f app.py
-            
+
             # Cleanup
             cd /tmp
             rm -rf "$PROJECT_DIR"

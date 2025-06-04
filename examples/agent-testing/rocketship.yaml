@@ -1,0 +1,168 @@
+name: "Comprehensive Agent Plugin Testing"
+description: "Test suite covering all agent plugin features with Claude Code integration"
+version: "v1.0.0"
+
+vars:
+  test_endpoint: "https://jsonplaceholder.typicode.com/posts/1"
+  system_message: "You are a helpful assistant that provides concise, accurate responses."
+
+tests:
+  - name: "Agent plugin feature tests"
+    steps:
+      # Get test data for agent processing
+      - name: "Get API data"
+        plugin: http
+        config:
+          method: GET
+          url: "{{ .vars.test_endpoint }}"
+        save:
+          - json_path: ".title"
+            as: "post_title"
+          - json_path: ".body"
+            as: "post_body"
+
+      # Test 1: Basic single mode with JSON output
+      - name: "Test single mode with JSON output"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: |
+            Analyze this title: "{{ post_title }}"
+            Respond with JSON: {"analysis": "your analysis", "word_count": number}
+          mode: "single"
+          output_format: "json"
+          timeout: "30s"
+        save:
+          - json_path: ".response"
+            as: "json_analysis"
+          - json_path: ".cost"
+            as: "cost_1"
+          - json_path: ".session_id"
+            as: "session_1"
+        assertions:
+          - type: "json_path"
+            path: ".success"
+            expected: true
+          - type: "json_path"
+            path: ".cost"
+            expected: 0
+
+      # Test 2: Text output format with system prompt
+      - name: "Test text output with system prompt"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: "What is the sentiment of this text: {{ post_body }}"
+          mode: "single"
+          output_format: "text"
+          system_prompt: "{{ .vars.system_message }}"
+          timeout: "25s"
+        save:
+          - json_path: ".response"
+            as: "text_analysis"
+          - json_path: ".session_id"
+            as: "session_2"
+
+      # Test 3: Multi-turn conversation with continue mode
+      - name: "Test continue mode with max turns"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: "Start analyzing this data: {{ post_title }}. Give me 3 key points."
+          mode: "single"
+          output_format: "text"
+          max_turns: 3
+          timeout: "45s"
+        save:
+          - json_path: ".response"
+            as: "multi_turn_result"
+          - json_path: ".session_id"
+            as: "session_3"
+
+      # Test 4: Resume mode using previous session
+      - name: "Test resume mode"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: "Now expand on point 2 from your previous analysis."
+          mode: "resume"
+          session_id: "{{ session_3 }}"
+          output_format: "json"
+          timeout: "30s"
+        save:
+          - json_path: ".response"
+            as: "resume_result"
+
+      # Test 5: Continue recent conversation
+      - name: "Test continue recent"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: "Summarize our entire conversation in one sentence."
+          mode: "continue"
+          continue_recent: true
+          output_format: "text"
+          timeout: "20s"
+        save:
+          - json_path: ".response"
+            as: "continue_result"
+
+      # Test 6: Save all response fields and metadata
+      - name: "Test complete metadata extraction"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: "Count the words in: {{ post_title }}"
+          mode: "single"
+          output_format: "json"
+          save_full_response: true
+        save:
+          - json_path: ".response"
+            as: "word_count_response"
+          - json_path: ".cost"
+            as: "final_cost"
+          - json_path: ".duration"
+            as: "duration"
+          - json_path: ".success"
+            as: "success_status"
+          - json_path: ".session_id"
+            as: "final_session"
+        assertions:
+          - type: "json_path"
+            path: ".success"
+            expected: true
+          - type: "json_path"
+            path: ".exit_code"
+            expected: 0
+
+      # Test 7: Optional save fields
+      - name: "Test optional saves"
+        plugin: agent
+        config:
+          agent: "claude-code"
+          prompt: "Reply with just 'OK'"
+          mode: "single"
+          output_format: "text"
+        save:
+          - json_path: ".response"
+            as: "ok_response"
+          - json_path: ".nonexistent_field"
+            as: "optional_field"
+            required: false
+
+      # Final verification step
+      - name: "Log all results"
+        plugin: log
+        config:
+          message: |
+            Agent plugin test results:
+            JSON Analysis: {{ json_analysis }}
+            Text Analysis: {{ text_analysis }}
+            Multi-turn: {{ multi_turn_result }}
+            Resume: {{ resume_result }}
+            Continue: {{ continue_result }}
+            Word Count: {{ word_count_response }}
+            Total Cost: {{ final_cost }}
+            Duration: {{ duration }}
+            Success: {{ success_status }}
+            Optional Field: {{ optional_field }}

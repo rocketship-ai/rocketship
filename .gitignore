@@ -7,5 +7,9 @@
 .DS_Store
 **/.DS_Store
 
+# documentation build artifacts
+docs/site/
+docs/.venv/
+
 # custom debugging
 test_stability.sh
