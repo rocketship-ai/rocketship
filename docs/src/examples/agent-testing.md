@@ -38,11 +38,11 @@ claude login
 ```yaml
 plugin: agent
 config:
-  agent: "claude-code"           # Only supported agent type
-  prompt: "Your prompt here"     # Required: instruction for Claude
-  mode: "single"                 # Optional: single, continue, resume
-  output_format: "json"          # Optional: json, text, streaming-json
-  timeout: "30s"                 # Optional: execution timeout
+  agent: "claude-code" # Only supported agent type
+  prompt: "Your prompt here" # Required: instruction for Claude
+  mode: "single" # Optional: single, continue, resume
+  output_format: "json" # Optional: json, text, streaming-json
+  timeout: "30s" # Optional: execution timeout
 ```
 
 ## Simple Example
@@ -71,7 +71,7 @@ tests:
             Analyze this user data:
             Name: {{ user_name }}
             Email: {{ user_email }}
-            
+
             Is this a valid user profile? Respond with JSON:
             {"valid": true/false, "issues": ["list", "of", "issues"]}
           output_format: "json"
@@ -117,7 +117,7 @@ tests:
             Analyze this content:
             Title: {{ post_title }}
             Body: {{ post_body }}
-            
+
             Provide JSON analysis: {
               "sentiment": "positive/negative/neutral",
               "topics": ["array", "of", "topics"],
@@ -186,23 +186,23 @@ tests:
 
 ### Required Fields
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `agent` | Agent type (only "claude-code" supported) | `"claude-code"` |
+| Field    | Description                                 | Example                                   |
+| -------- | ------------------------------------------- | ----------------------------------------- |
+| `agent`  | Agent type (only "claude-code" supported)   | `"claude-code"`                           |
 | `prompt` | Instruction for Claude (supports templates) | `"Analyze this data: {{ api_response }}"` |
 
 ### Optional Fields
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `mode` | string | `"single"` | Execution mode: `single`, `continue`, `resume` |
-| `output_format` | string | `"json"` | Output format: `json`, `text`, `streaming-json` |
-| `timeout` | string | `"30s"` | Execution timeout (e.g., "30s", "2m") |
-| `system_prompt` | string | - | Custom system instructions |
-| `max_turns` | integer | 1 | Maximum conversation turns |
-| `session_id` | string | - | Session ID for resume mode |
-| `continue_recent` | boolean | false | Continue most recent conversation |
-| `save_full_response` | boolean | true | Save complete response to context |
+| Field                | Type    | Default    | Description                                     |
+| -------------------- | ------- | ---------- | ----------------------------------------------- |
+| `mode`               | string  | `"single"` | Execution mode: `single`, `continue`, `resume`  |
+| `output_format`      | string  | `"json"`   | Output format: `json`, `text`, `streaming-json` |
+| `timeout`            | string  | `"30s"`    | Execution timeout (e.g., "30s", "2m")           |
+| `system_prompt`      | string  | -          | Custom system instructions                      |
+| `max_turns`          | integer | 1          | Maximum conversation turns                      |
+| `session_id`         | string  | -          | Session ID for resume mode                      |
+| `continue_recent`    | boolean | false      | Continue most recent conversation               |
+| `save_full_response` | boolean | true       | Save complete response to context               |
 
 ## Output Formats
 
@@ -215,10 +215,11 @@ output_format: "json"
 ```
 
 Response structure:
+
 ```json
 {
   "type": "result",
-  "subtype": "success", 
+  "subtype": "success",
   "result": "Claude's response here",
   "session_id": "unique-session-id",
   "cost_usd": 0.003,
@@ -286,7 +287,7 @@ save:
   - json_path: ".response"
     as: "analysis_content"
   - json_path: ".cost"
-    as: "execution_cost"  
+    as: "execution_cost"
   - json_path: ".duration"
     as: "execution_time"
   - json_path: ".session_id"
@@ -303,7 +304,7 @@ save:
     as: "required_analysis"
   - json_path: ".optional_metadata"
     as: "optional_data"
-    required: false  # Won't fail if field doesn't exist
+    required: false # Won't fail if field doesn't exist
 ```
 
 ## Assertions
@@ -320,7 +321,7 @@ assertions:
     expected: 0
   - type: "json_path"
     path: ".cost"
-    expected: 0  # Cost should be 0 for testing
+    expected: 0 # Cost should be 0 for testing
 ```
 
 ## Template Variables
@@ -341,7 +342,7 @@ prompt: "Based on {{ previous_analysis }}, what are the next steps?"
 prompt: |
   Previous Analysis: {{ step1_result }}
   New Data: {{ step2_data }}
-  
+
   Compare these results and identify:
   1. Key differences
   2. Trending patterns
@@ -362,7 +363,7 @@ prompt: |
       Status: {{ response_status }}
       Time: {{ response_time }}ms
       Size: {{ response_size }} bytes
-      
+
       Rate this API's health (1-10) and explain issues.
     output_format: "json"
 ```
@@ -377,7 +378,7 @@ prompt: |
     prompt: |
       User Data: {{ user_profile }}
       Business Rules: {{ .vars.validation_rules }}
-      
+
       Does this user profile comply with business rules?
       Return: {"compliant": boolean, "violations": []}
 ```
@@ -391,12 +392,12 @@ prompt: |
     agent: "claude-code"
     prompt: |
       Content: {{ page_content }}
-      
+
       Check for:
       - Appropriate language
       - Complete information
       - Professional tone
-      
+
       Score 1-10 with reasoning.
 ```
 
@@ -409,7 +410,7 @@ prompt: |
     agent: "claude-code"
     prompt: |
       Error Logs: {{ error_logs }}
-      
+
       Categorize errors and suggest fixes:
       {"categories": [], "critical_count": 0, "suggestions": []}
 ```
@@ -436,11 +437,11 @@ rocketship run -af examples/agent-testing/comprehensive-test.yaml
 prompt: |
   Analyze this JSON response for data quality:
   {{ api_response }}
-  
+
   Check: completeness, format validity, business logic
   Return: {"score": 1-10, "issues": ["specific", "problems"]}
 
-# Avoid: Vague prompts  
+# Avoid: Vague prompts
 prompt: "Check this data: {{ api_response }}"
 ```
 
@@ -452,7 +453,7 @@ output_format: "json"
 prompt: "Return analysis as: {\"score\": number, \"issues\": []}"
 
 # Use text for explanations and summaries
-output_format: "text"  
+output_format: "text"
 prompt: "Explain the security implications of this configuration"
 ```
 
@@ -462,7 +463,7 @@ prompt: "Explain the security implications of this configuration"
 # Quick analysis
 timeout: "15s"
 
-# Complex analysis  
+# Complex analysis
 timeout: "60s"
 
 # Multi-turn conversations
@@ -477,7 +478,7 @@ save:
     as: "analysis"
   - json_path: ".metadata.extra"
     as: "extra_info"
-    required: false  # Won't fail test if missing
+    required: false # Won't fail test if missing
 ```
 
 ### 5. Use System Prompts for Consistency
@@ -495,25 +496,30 @@ config:
 
 ### Common Issues
 
-1. **"claude command not found"**
-   - Install Claude Code CLI: `npm install -g @anthropic-ai/claude-code`
-   - Verify installation: `which claude`
+**"claude command not found"**
 
-2. **"ANTHROPIC_API_KEY environment variable is required"**
-   - Set your API key: `export ANTHROPIC_API_KEY=sk-ant-your-key`
-   - Get an API key from https://console.anthropic.com/
+- Install Claude Code CLI: `npm install -g @anthropic-ai/claude-code`
+- Verify installation: `which claude`
 
-3. **"Authentication required"**
-   - Login to Claude Code: `claude login`
+**"ANTHROPIC_API_KEY environment variable is required"**
 
-4. **Empty responses**
-   - Check your prompt is clear and specific
-   - Verify template variables are being substituted correctly
-   - Increase timeout for complex analysis
+- Set your API key: `export ANTHROPIC_API_KEY=sk-ant-your-key`
+- Get an API key from https://console.anthropic.com/
 
-5. **JSON parsing errors**
-   - Use `output_format: "text"` for debugging
-   - Check Claude's actual response format
-   - Ensure prompts request valid JSON structure
+**"Authentication required"**
+
+- Login to Claude Code: `claude login`
+
+**Empty responses**
+
+- Check your prompt is clear and specific
+- Verify template variables are being substituted correctly
+- Increase timeout for complex analysis
+
+**JSON parsing errors**
+
+- Use `output_format: "text"` for debugging
+- Check Claude's actual response format
+- Ensure prompts request valid JSON structure
 
 The agent plugin enables powerful AI-driven testing workflows, making your tests more intelligent and capable of handling complex validation scenarios that would be difficult to implement with traditional assertion methods.
