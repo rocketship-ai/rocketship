@@ -15,7 +15,7 @@ tests:
             config:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
           executor_type: "python"
-          headless: true
+          headless: false
           timeout: "2m"
           max_steps: 3
           use_vision: true

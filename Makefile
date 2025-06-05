@@ -23,11 +23,21 @@ install-workflowcheck:
 	fi
 
 # Run linting
-lint: build-binaries install-workflowcheck
-	@echo "Running linter..."
+lint: build-binaries install-workflowcheck lint-python
+	@echo "Running Go linter..."
 	golangci-lint run
 	@echo "Checking workflows..."
 	workflowcheck ./...
+
+# Run Python linting
+lint-python:
+	@echo "Running Python linter..."
+	@if command -v ruff &> /dev/null; then \
+		find . -name "*.py" -type f ! -path "*/venv/*" ! -path "*/.venv/*" ! -path "*/browser-venv/*" ! -path "*/docs/*" -print0 | xargs -0 -r ruff check; \
+	else \
+		echo "Ruff not installed. Install with: pip install ruff"; \
+		exit 1; \
+	fi
 
 # Run tests
 test: build-binaries

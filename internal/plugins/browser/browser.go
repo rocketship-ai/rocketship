@@ -70,8 +70,10 @@ func (bp *BrowserPlugin) Activity(ctx context.Context, p map[string]interface{})
 		config.BrowserType = "chromium"
 	}
 
-	config.UseVision = true // Always enable vision for now
-	config.Headless = true  // Default to headless
+	// Don't override these values - they should come from the YAML config
+	// Only set defaults if they weren't specified
+	// Note: Go's bool zero value is false, so we can't distinguish between
+	// "not set" and "explicitly set to false" without using pointers
 
 	logger.Info("Browser config parsed",
 		"task", config.Task,
@@ -79,7 +81,9 @@ func (bp *BrowserPlugin) Activity(ctx context.Context, p map[string]interface{})
 		"llm_provider", config.LLM.Provider,
 		"llm_model", config.LLM.Model,
 		"timeout", config.Timeout,
-		"max_steps", config.MaxSteps)
+		"max_steps", config.MaxSteps,
+		"headless", config.Headless,
+		"use_vision", config.UseVision)
 
 	// Get state for template processing
 	stateInterface := make(map[string]interface{})

@@ -13,7 +13,7 @@ import (
 
 func TestExtractAndRun_LocalBinary(t *testing.T) {
 	t.Parallel()
-	
+
 	// Create a temporary directory structure
 	tempDir := t.TempDir()
 	binDir := filepath.Join(tempDir, "internal", "embedded", "bin")
@@ -65,7 +65,7 @@ func TestExtractAndRun_DownloadBinary(t *testing.T) {
 	_ = os.MkdirAll(cacheDir, 0755)
 
 	// Set ROCKETSHIP_VERSION for testing
-	_ = os.Setenv("ROCKETSHIP_VERSION", "v1.0.0")
+	_ = os.Setenv("ROCKETSHIP_VERSION", "v0.1.8")
 	defer func() { _ = os.Unsetenv("ROCKETSHIP_VERSION") }()
 
 	// This test is more complex due to the hardcoded GitHub URL
@@ -251,10 +251,10 @@ func TestSaveMetadata_ConcurrentWrites(t *testing.T) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			path := filepath.Join(tempDir, "metadata_%d.json")
 			version := "v1.0.0"
-			
+
 			err := saveMetadata(path, version)
 			if err != nil {
 				errors <- err
@@ -275,9 +275,9 @@ func TestBinaryNameGeneration(t *testing.T) {
 
 	// Test the binary name generation logic
 	testCases := []struct {
-		name string
-		goos string
-		goarch string
+		name     string
+		goos     string
+		goarch   string
 		expected string
 	}{
 		{"engine", "linux", "amd64", "engine-linux-amd64"},
@@ -469,4 +469,3 @@ func TestVersionUpgradeBugFix(t *testing.T) {
 }
 
 // Benchmark tests for performance
-

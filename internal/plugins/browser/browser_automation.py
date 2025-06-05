@@ -10,7 +10,6 @@ import sys
 import os
 import traceback
 import logging
-from datetime import datetime
 
 # Configure logging to go to stderr so it doesn't interfere with JSON output on stdout
 logging.basicConfig(
@@ -95,56 +94,47 @@ async def main():
         # Create browser agent
         print("Creating browser agent...", file=sys.stderr)
         
-        # Create browser config if we have browser-specific settings
-        browser_context = None
+        # Create browser profile for headless mode
+        browser_profile = None
         try:
-            from browser_use import BrowserConfig
-            browser_context = BrowserConfig(
-                headless=headless,
-                browser_type=browser_type,
-            )
-            print(f"Browser config created: headless={headless}, type={browser_type}", file=sys.stderr)
+            from browser_use import BrowserProfile
+            
+            # Create profile with headless setting and browser channel
+            profile_kwargs = {
+                'headless': headless,
+            }
+            
+            # Map browser_type to channel enum value
+            if browser_type == 'chromium':
+                from browser_use.browser.profile import BrowserChannel
+                profile_kwargs['channel'] = BrowserChannel.CHROMIUM
+            
+            browser_profile = BrowserProfile(**profile_kwargs)
+            print(f"Browser profile created: headless={headless}, type={browser_type}", file=sys.stderr)
         except (ImportError, TypeError) as e:
-            print(f"BrowserConfig not available or incorrect parameters: {e}", file=sys.stderr)
+            print(f"BrowserProfile not available or incorrect parameters: {e}", file=sys.stderr)
         
-        # Create agent with basic parameters (start simple and add features later)
+        # Create agent with browser profile
         agent_kwargs = {
             'task': task,
             'llm': llm,
+            'use_vision': use_vision,
+            'max_actions_per_step': max_steps,  # This maps to max_actions_per_step in Agent
         }
         
-        # Add browser context if available (try different parameter names)
-        if browser_context:
-            # Try browser_context first (as suggested by error message)
-            agent_kwargs['browser_context'] = browser_context
+        # Add browser profile if available
+        if browser_profile:
+            agent_kwargs['browser_profile'] = browser_profile
             
-        # Try to create agent with fallback strategies
-        agent = None
-        for attempt in range(3):
-            try:
-                if attempt == 0:
-                    # Try with browser context
-                    print("Attempting to create agent with browser context...", file=sys.stderr)
-                    agent = Agent(**agent_kwargs)
-                elif attempt == 1:
-                    # Try without browser context
-                    print("Retrying without browser context...", file=sys.stderr)
-                    simple_kwargs = {'task': task, 'llm': llm}
-                    agent = Agent(**simple_kwargs)
-                else:
-                    # Last resort - most basic
-                    print("Last resort: most basic agent configuration...", file=sys.stderr)
-                    agent = Agent(task=task, llm=llm)
-                
-                if agent:
-                    print(f"Agent created successfully on attempt {attempt + 1}", file=sys.stderr)
-                    break
-                    
-            except Exception as e:
-                print(f"Attempt {attempt + 1} failed: {e}", file=sys.stderr)
-                if attempt == 2:  # Last attempt
-                    raise e
-                continue
+        # Add allowed domains if specified (as a message context hint)
+        if allowed_domains and allowed_domains[0]:  # Check if not empty
+            domains_str = ', '.join(allowed_domains)
+            agent_kwargs['message_context'] = f"Please only interact with the following domains: {domains_str}"
+            print(f"Restricted to domains: {domains_str}", file=sys.stderr)
+            
+        # Create agent
+        print("Creating agent with configuration...", file=sys.stderr)
+        agent = Agent(**agent_kwargs)
         
         # Execute the task
         print("Starting task execution...", file=sys.stderr)
