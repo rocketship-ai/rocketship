@@ -9,7 +9,15 @@ import json
 import sys
 import os
 import traceback
+import logging
 from datetime import datetime
+
+# Configure logging to go to stderr so it doesn't interfere with JSON output on stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(levelname)s     [%(name)s] %(message)s',
+    stream=sys.stderr
+)
 
 
 async def main():
@@ -20,7 +28,7 @@ async def main():
         # Get configuration from environment variables
         task = os.environ.get('ROCKETSHIP_TASK', '')
         llm_provider = os.environ.get('ROCKETSHIP_LLM_PROVIDER', 'openai')
-        llm_model = os.environ.get('ROCKETSHIP_LLM_MODEL', 'gpt-4')
+        llm_model = os.environ.get('ROCKETSHIP_LLM_MODEL', 'gpt-4o')
         headless = os.environ.get('ROCKETSHIP_HEADLESS', 'true').lower() == 'true'
         browser_type = os.environ.get('ROCKETSHIP_BROWSER_TYPE', 'chromium')
         use_vision = os.environ.get('ROCKETSHIP_USE_VISION', 'true').lower() == 'true'
@@ -43,11 +51,34 @@ async def main():
         if llm_provider == "openai":
             try:
                 from langchain_openai import ChatOpenAI
-                llm = ChatOpenAI(model=llm_model)
+                
+                # Check if API key is available
+                api_key = os.environ.get('OPENAI_API_KEY')
+                if not api_key:
+                    raise ValueError("OPENAI_API_KEY environment variable is required")
+                
+                print(f"Found OpenAI API key: {api_key[:20]}...", file=sys.stderr)
+                
+                # Initialize with explicit API key and better model name
+                llm = ChatOpenAI(
+                    model=llm_model,
+                    openai_api_key=api_key,
+                    timeout=30,
+                    max_retries=2
+                )
                 print(f"OpenAI LLM initialized with model: {llm_model}", file=sys.stderr)
+                
+                # Test the connection
+                print("Testing LLM connection...", file=sys.stderr)
+                test_response = llm.invoke("Hello")
+                print(f"LLM connection test successful: {test_response.content[:50]}...", file=sys.stderr)
+                
             except ImportError as e:
                 print(f"Failed to import OpenAI: {e}", file=sys.stderr)
                 print("Please install: pip install langchain-openai", file=sys.stderr)
+                raise
+            except Exception as e:
+                print(f"Failed to initialize or test OpenAI LLM: {e}", file=sys.stderr)
                 raise
         elif llm_provider == "anthropic":
             try:
@@ -87,14 +118,33 @@ async def main():
             # Try browser_context first (as suggested by error message)
             agent_kwargs['browser_context'] = browser_context
             
-        # Try to add optional parameters one by one
-        try:
-            agent = Agent(**agent_kwargs)
-        except TypeError as e:
-            print(f"Failed to create agent with full config, trying basic: {e}", file=sys.stderr)
-            # Fall back to most basic configuration
-            agent = Agent(task=task, llm=llm)
-        print("Agent created successfully", file=sys.stderr)
+        # Try to create agent with fallback strategies
+        agent = None
+        for attempt in range(3):
+            try:
+                if attempt == 0:
+                    # Try with browser context
+                    print("Attempting to create agent with browser context...", file=sys.stderr)
+                    agent = Agent(**agent_kwargs)
+                elif attempt == 1:
+                    # Try without browser context
+                    print("Retrying without browser context...", file=sys.stderr)
+                    simple_kwargs = {'task': task, 'llm': llm}
+                    agent = Agent(**simple_kwargs)
+                else:
+                    # Last resort - most basic
+                    print("Last resort: most basic agent configuration...", file=sys.stderr)
+                    agent = Agent(task=task, llm=llm)
+                
+                if agent:
+                    print(f"Agent created successfully on attempt {attempt + 1}", file=sys.stderr)
+                    break
+                    
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {e}", file=sys.stderr)
+                if attempt == 2:  # Last attempt
+                    raise e
+                continue
         
         # Execute the task
         print("Starting task execution...", file=sys.stderr)
@@ -113,10 +163,16 @@ async def main():
         }
         
         # Try to extract any data that was found
-        if hasattr(result, 'extracted_content') and result.extracted_content:
-            response["extracted_data"] = result.extracted_content
-            response["result"] = str(result.extracted_content)
-            print(f"Extracted data: {result.extracted_content}", file=sys.stderr)
+        if hasattr(result, 'extracted_content'):
+            try:
+                # Handle if extracted_content is a method or property
+                extracted_content = result.extracted_content() if callable(result.extracted_content) else result.extracted_content
+                if extracted_content:
+                    response["extracted_data"] = extracted_content
+                    response["result"] = str(extracted_content)
+                    print(f"Extracted data: {extracted_content}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error accessing extracted_content: {e}", file=sys.stderr)
         
         # Try to get session information if available
         if hasattr(result, 'session_id'):
@@ -126,8 +182,8 @@ async def main():
         if hasattr(result, 'steps'):
             response["steps"] = result.steps
         
-        # Output the JSON response
-        print(json.dumps(response))
+        # Output the JSON response to stdout (separate from stderr debug logs)
+        print(json.dumps(response), flush=True)
         
     except Exception as e:
         print(f"Error during execution: {e}", file=sys.stderr)

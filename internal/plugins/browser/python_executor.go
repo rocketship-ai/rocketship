@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -97,35 +98,64 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	cmd.Dir = workDir
 	cmd.Env = append(os.Environ(), pe.buildEnvironment(config)...)
 
-	// Capture both stdout and stderr for debugging
-	output, err := cmd.CombinedOutput()
+	// Capture stdout and stderr separately
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
+	err = cmd.Run()
 	duration := time.Since(startTime)
 
 	log.Printf("[DEBUG] Python execution completed in %v", duration)
 
+	// Always log stderr for debugging (contains debug info)
+	if stderr.Len() > 0 {
+		log.Printf("[DEBUG] Python stderr: %s", stderr.String())
+	}
+
 	if err != nil {
 		log.Printf("[ERROR] Python execution failed: %v", err)
-		log.Printf("[ERROR] Python output: %s", string(output))
+		log.Printf("[ERROR] Python stdout: %s", stdout.String())
 		return &BrowserResponse{
 			Success:  false,
-			Error:    fmt.Sprintf("Python execution failed: %v\nOutput: %s", err, string(output)),
+			Error:    fmt.Sprintf("Python execution failed: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String()),
 			Duration: duration,
 		}, nil
 	}
 
 	log.Printf("[DEBUG] Python execution successful, parsing response")
-	log.Printf("[DEBUG] Raw Python output: %s", string(output))
+	log.Printf("[DEBUG] Python stdout (JSON): %s", stdout.String())
 
-	// Parse response from Python script
-	var response BrowserResponse
-	if err := json.Unmarshal(output, &response); err != nil {
-		log.Printf("[ERROR] Failed to parse Python response: %v", err)
+	// Parse response from Python script (stdout contains JSON)
+	// Extract the JSON from stdout - it should be the last valid JSON object
+	stdoutStr := stdout.String()
+	
+	// Find the last occurrence of a JSON object starting with {
+	lastBraceIndex := strings.LastIndex(stdoutStr, "{")
+	if lastBraceIndex == -1 {
+		log.Printf("[ERROR] No JSON found in Python response")
 		return &BrowserResponse{
 			Success:  false,
-			Error:    fmt.Sprintf("Failed to parse response: %v\nOutput: %s", err, string(output)),
+			Error:    fmt.Sprintf("No JSON found in response\nStdout: %s\nStderr: %s", stdoutStr, stderr.String()),
 			Duration: duration,
 		}, nil
 	}
+	
+	jsonStr := stdoutStr[lastBraceIndex:]
+	log.Printf("[DEBUG] Extracted JSON string: %s", jsonStr)
+	
+	var response BrowserResponse
+	if err := json.Unmarshal([]byte(jsonStr), &response); err != nil {
+		log.Printf("[ERROR] Failed to parse Python response: %v", err)
+		log.Printf("[ERROR] JSON string was: %s", jsonStr)
+		return &BrowserResponse{
+			Success:  false,
+			Error:    fmt.Sprintf("Failed to parse response: %v\nStdout: %s\nStderr: %s", err, stdoutStr, stderr.String()),
+			Duration: duration,
+		}, nil
+	}
+	
+	log.Printf("[DEBUG] Parsed response: success=%t, result=%s", response.Success, response.Result)
 
 	response.Duration = duration
 	log.Printf("[DEBUG] Successfully parsed browser response: success=%t, steps=%d",

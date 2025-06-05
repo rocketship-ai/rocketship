@@ -334,4 +334,3 @@ func extractSimpleValue(data map[string]interface{}, path string) (string, error
 	}
 	return "", fmt.Errorf("unsupported path format: %s", path)
 }
-

@@ -5,15 +5,15 @@ version: "v1.0.0"
 tests:
   - name: "Simple browser automation"
     steps:
-      - name: "Visit httpbin"
+      - name: "Visit Rocketship docs"
         plugin: browser
         config:
-          task: "Navigate to https://httpbin.org/html and tell me what you see"
+          task: "Navigate to https://docs.rocketship.sh/ and tell me what you see on the homepage"
           llm:
             provider: "openai"
-            model: "gpt-4"
+            model: "gpt-4o"
             config:
-              OPENAI_API_KEY: "${OPENAI_API_KEY}"
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
           executor_type: "python"
           headless: true
           timeout: "2m"

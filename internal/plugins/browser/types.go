@@ -42,14 +42,14 @@ type ViewportConfig struct {
 
 // BrowserResponse represents the response from browser automation
 type BrowserResponse struct {
-	Success       bool                   `json:"success"`
-	Result        string                 `json:"result"`
-	SessionID     string                 `json:"session_id"`
-	Steps         []BrowserStep          `json:"steps"`
-	Screenshots   []string               `json:"screenshots"`
-	ExtractedData map[string]interface{} `json:"extracted_data"`
-	Error         string                 `json:"error,omitempty"`
-	Duration      time.Duration          `json:"duration"`
+	Success       bool          `json:"success"`
+	Result        string        `json:"result"`
+	SessionID     string        `json:"session_id"`
+	Steps         []BrowserStep `json:"steps"`
+	Screenshots   []string      `json:"screenshots"`
+	ExtractedData interface{}   `json:"extracted_data"`
+	Error         string        `json:"error,omitempty"`
+	Duration      time.Duration `json:"duration"`
 }
 
 // BrowserStep represents a single step in browser automation
@@ -63,4 +63,3 @@ type BrowserStep struct {
 	Error      string `json:"error,omitempty"`
 	Timestamp  string `json:"timestamp"`
 }
-
