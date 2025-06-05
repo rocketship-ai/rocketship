@@ -33,6 +33,8 @@ async def main():
         use_vision = os.environ.get('ROCKETSHIP_USE_VISION', 'true').lower() == 'true'
         max_steps = int(os.environ.get('ROCKETSHIP_MAX_STEPS', '50'))
         allowed_domains = os.environ.get('ROCKETSHIP_ALLOWED_DOMAINS', '').split(',') if os.environ.get('ROCKETSHIP_ALLOWED_DOMAINS') else []
+        viewport_width = int(os.environ.get('ROCKETSHIP_VIEWPORT_WIDTH', '1920'))
+        viewport_height = int(os.environ.get('ROCKETSHIP_VIEWPORT_HEIGHT', '1080'))
         
         if not task:
             raise ValueError("Task is required but not provided")
@@ -98,6 +100,7 @@ async def main():
         browser_profile = None
         try:
             from browser_use import BrowserProfile
+            from playwright._impl._api_structures import ViewportSize
             
             # Create profile with headless setting and browser channel
             profile_kwargs = {
@@ -109,10 +112,24 @@ async def main():
                 from browser_use.browser.profile import BrowserChannel
                 profile_kwargs['channel'] = BrowserChannel.CHROMIUM
             
+            # Add viewport settings - try ViewportSize object which playwright expects
+            profile_kwargs['viewport'] = ViewportSize(width=viewport_width, height=viewport_height)
+            
+            # For non-headless mode, also set window_size to control the browser window
+            if not headless:
+                profile_kwargs['window_size'] = ViewportSize(width=viewport_width, height=viewport_height)
+            
             browser_profile = BrowserProfile(**profile_kwargs)
-            print(f"Browser profile created: headless={headless}, type={browser_type}", file=sys.stderr)
+            print(f"Browser profile created: headless={headless}, type={browser_type}, viewport={viewport_width}x{viewport_height}", file=sys.stderr)
         except (ImportError, TypeError) as e:
             print(f"BrowserProfile not available or incorrect parameters: {e}", file=sys.stderr)
+            # Try fallback with dict format
+            try:
+                profile_kwargs['viewport'] = {'width': viewport_width, 'height': viewport_height}
+                browser_profile = BrowserProfile(**profile_kwargs)
+                print(f"Browser profile created with dict viewport: headless={headless}, type={browser_type}, viewport={viewport_width}x{viewport_height}", file=sys.stderr)
+            except Exception as e2:
+                print(f"Failed with dict viewport too: {e2}", file=sys.stderr)
         
         # Create agent with browser profile
         agent_kwargs = {

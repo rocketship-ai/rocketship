@@ -70,6 +70,14 @@ func (bp *BrowserPlugin) Activity(ctx context.Context, p map[string]interface{})
 		config.BrowserType = "chromium"
 	}
 
+	// Set viewport defaults if not specified
+	if config.Viewport.Width == 0 {
+		config.Viewport.Width = 1920
+	}
+	if config.Viewport.Height == 0 {
+		config.Viewport.Height = 1080
+	}
+
 	// Don't override these values - they should come from the YAML config
 	// Only set defaults if they weren't specified
 	// Note: Go's bool zero value is false, so we can't distinguish between
@@ -83,7 +91,9 @@ func (bp *BrowserPlugin) Activity(ctx context.Context, p map[string]interface{})
 		"timeout", config.Timeout,
 		"max_steps", config.MaxSteps,
 		"headless", config.Headless,
-		"use_vision", config.UseVision)
+		"use_vision", config.UseVision,
+		"viewport_width", config.Viewport.Width,
+		"viewport_height", config.Viewport.Height)
 
 	// Get state for template processing
 	stateInterface := make(map[string]interface{})

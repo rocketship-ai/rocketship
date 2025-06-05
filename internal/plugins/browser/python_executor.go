@@ -209,6 +209,10 @@ func (pe *PythonExecutor) buildEnvironment(config *Config) []string {
 		env = append(env, fmt.Sprintf("ROCKETSHIP_ALLOWED_DOMAINS=%s", strings.Join(config.AllowedDomains, ",")))
 	}
 
+	// Add viewport settings
+	env = append(env, fmt.Sprintf("ROCKETSHIP_VIEWPORT_WIDTH=%d", config.Viewport.Width))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_VIEWPORT_HEIGHT=%d", config.Viewport.Height))
+
 	// Add any other browser-specific environment variables
 	env = append(env, "PYTHONUNBUFFERED=1") // Ensure output is not buffered
 

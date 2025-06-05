@@ -1,14 +1,14 @@
-name: "Basic Browser Test"
-description: "Simple browser test without template variables"
+name: "Honey Runs Test"
+description: "Test browser plugin with honeyruns"
 version: "v1.0.0"
 
 tests:
   - name: "Simple browser automation"
     steps:
-      - name: "Visit Rocketship docs"
+      - name: "Visit Honeyruns"
         plugin: browser
         config:
-          task: "Navigate to https://docs.rocketship.sh/ and tell me what you see on the homepage"
+          task: "Navigate to https://www.honeyruns.com/ and click on pricing. Then tell me about the pricing options"
           llm:
             provider: "openai"
             model: "gpt-4o"
@@ -20,8 +20,8 @@ tests:
           max_steps: 3
           use_vision: true
           viewport:
-            width: 1280
-            height: 720
+            width: 420
+            height: 360
         save:
           - json_path: ".result"
             as: "page_content"
