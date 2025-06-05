@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -82,10 +84,10 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 
 	log.Printf("[DEBUG] Created work directory: %s", workDir)
 
-	// Write Python script
+	// Copy Python script to work directory
 	scriptPath := filepath.Join(workDir, "browser_automation.py")
-	if err := pe.writePythonScript(scriptPath, config); err != nil {
-		return nil, fmt.Errorf("failed to write Python script: %w", err)
+	if err := pe.copyPythonScript(scriptPath); err != nil {
+		return nil, fmt.Errorf("failed to copy Python script: %w", err)
 	}
 
 	log.Printf("[DEBUG] Python script written to: %s", scriptPath)
@@ -132,163 +134,25 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	return &response, nil
 }
 
-// writePythonScript generates the Python script for browser automation
-func (pe *PythonExecutor) writePythonScript(scriptPath string, config *Config) error {
-	log.Printf("[DEBUG] Writing Python script for LLM provider: %s, model: %s",
-		config.LLM.Provider, config.LLM.Model)
-
-	// Generate LLM initialization code based on provider
-	llmCode := pe.generateLLMCode(config.LLM)
-
-	// Generate browser config
-	browserConfigCode := pe.generateBrowserConfigCode(config)
-
-	// Main script template
-	script := fmt.Sprintf(`#!/usr/bin/env python3
-import asyncio
-import json
-import sys
-import os
-import traceback
-from datetime import datetime
-
-# Import browser-use
-try:
-    from browser_use import Agent
-    print("Successfully imported browser_use", file=sys.stderr)
-except ImportError as e:
-    print(f"Failed to import browser_use: {e}", file=sys.stderr)
-    sys.exit(1)
-
-# Import LLM provider
-%s
-
-async def main():
-    try:
-        print("Starting browser automation...", file=sys.stderr)
-        
-        # Initialize LLM
-        %s
-        print(f"LLM initialized successfully", file=sys.stderr)
-        
-        # Create browser agent
-        agent = Agent(
-            task="""%s""",
-            llm=llm,
-            %s
-        )
-        print("Agent created successfully", file=sys.stderr)
-        
-        # Execute the task
-        print("Starting task execution...", file=sys.stderr)
-        result = await agent.run()
-        print("Task execution completed", file=sys.stderr)
-        
-        # Build response
-        response = {
-            "success": True,
-            "result": str(result) if result else "Task completed successfully",
-            "session_id": "",
-            "steps": [],
-            "screenshots": [],
-            "extracted_data": {}
-        }
-        
-        # Try to extract any data that was found
-        if hasattr(result, 'extracted_content') and result.extracted_content:
-            response["extracted_data"] = result.extracted_content
-            response["result"] = str(result.extracted_content)
-        
-        print(json.dumps(response))
-        
-    except Exception as e:
-        print(f"Error during execution: {e}", file=sys.stderr)
-        print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
-        
-        error_response = {
-            "success": False,
-            "error": str(e),
-            "result": "",
-            "session_id": "",
-            "steps": [],
-            "screenshots": [],
-            "extracted_data": {}
-        }
-        print(json.dumps(error_response))
-        sys.exit(1)
-
-if __name__ == "__main__":
-    print("Python script starting...", file=sys.stderr)
-    asyncio.run(main())
-`,
-		pe.generateImports(config.LLM),
-		llmCode,
-		config.Task,
-		browserConfigCode)
-
-	return os.WriteFile(scriptPath, []byte(script), 0755)
-}
-
-// generateImports generates the import statements for the LLM provider
-func (pe *PythonExecutor) generateImports(llm LLMConfig) string {
-	switch llm.Provider {
-	case "openai":
-		return `try:
-    from langchain_openai import ChatOpenAI
-    print("OpenAI imports successful", file=sys.stderr)
-except ImportError as e:
-    print(f"Failed to import OpenAI: {e}", file=sys.stderr)
-    print("Please install: pip install langchain-openai", file=sys.stderr)
-    sys.exit(1)`
-	case "anthropic":
-		return `try:
-    from langchain_anthropic import ChatAnthropic
-    print("Anthropic imports successful", file=sys.stderr)
-except ImportError as e:
-    print(f"Failed to import Anthropic: {e}", file=sys.stderr)
-    print("Please install: pip install langchain-anthropic", file=sys.stderr)
-    sys.exit(1)`
-	default:
-		return `# Unsupported LLM provider
-print(f"Unsupported LLM provider: %s", file=sys.stderr)
-sys.exit(1)` + llm.Provider
+// copyPythonScript copies the Python automation script to the work directory
+func (pe *PythonExecutor) copyPythonScript(scriptPath string) error {
+	// Get the directory of the current Go file
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return fmt.Errorf("failed to get current file path")
 	}
-}
-
-// generateLLMCode generates the LLM initialization code
-func (pe *PythonExecutor) generateLLMCode(llm LLMConfig) string {
-	switch llm.Provider {
-	case "openai":
-		return fmt.Sprintf(`llm = ChatOpenAI(model="%s")`, llm.Model)
-	case "anthropic":
-		return fmt.Sprintf(`llm = ChatAnthropic(model="%s")`, llm.Model)
-	default:
-		return fmt.Sprintf(`raise ValueError("Unsupported LLM provider: %s")`, llm.Provider)
+	
+	// Path to the Python script relative to this Go file
+	sourceScript := filepath.Join(filepath.Dir(currentFile), "browser_automation.py")
+	
+	// Read the source script
+	scriptContent, err := os.ReadFile(sourceScript)
+	if err != nil {
+		return fmt.Errorf("failed to read Python script from %s: %w", sourceScript, err)
 	}
-}
-
-// generateBrowserConfigCode generates the browser configuration code
-func (pe *PythonExecutor) generateBrowserConfigCode(config *Config) string {
-	configParts := []string{}
-
-	if config.Headless {
-		configParts = append(configParts, "headless=True")
-	} else {
-		configParts = append(configParts, "headless=False")
-	}
-
-	if config.UseVision {
-		configParts = append(configParts, "use_vision=True")
-	}
-
-	if config.MaxSteps > 0 {
-		configParts = append(configParts, fmt.Sprintf("max_steps=%d", config.MaxSteps))
-	}
-
-	// For now, keep it simple and don't include complex browser config
-	// We can add more options later as needed
-
-	return strings.Join(configParts, ",\n            ")
+	
+	// Write to destination
+	return os.WriteFile(scriptPath, scriptContent, 0755)
 }
 
 // buildEnvironment builds the environment variables for the Python process
@@ -301,9 +165,22 @@ func (pe *PythonExecutor) buildEnvironment(config *Config) []string {
 		log.Printf("[DEBUG] Added environment variable: %s=***", key) // Don't log the actual value
 	}
 
+	// Add Rocketship-specific configuration
+	env = append(env, fmt.Sprintf("ROCKETSHIP_TASK=%s", config.Task))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_LLM_PROVIDER=%s", config.LLM.Provider))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_LLM_MODEL=%s", config.LLM.Model))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_HEADLESS=%s", strconv.FormatBool(config.Headless)))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_BROWSER_TYPE=%s", config.BrowserType))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_USE_VISION=%s", strconv.FormatBool(config.UseVision)))
+	env = append(env, fmt.Sprintf("ROCKETSHIP_MAX_STEPS=%d", config.MaxSteps))
+	
+	// Add allowed domains as comma-separated string
+	if len(config.AllowedDomains) > 0 {
+		env = append(env, fmt.Sprintf("ROCKETSHIP_ALLOWED_DOMAINS=%s", strings.Join(config.AllowedDomains, ",")))
+	}
+
 	// Add any other browser-specific environment variables
 	env = append(env, "PYTHONUNBUFFERED=1") // Ensure output is not buffered
 
 	return env
 }
-
