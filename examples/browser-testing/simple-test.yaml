@@ -1,0 +1,44 @@
+name: "Simple Browser Test"
+description: "Basic browser automation test using browser-use"
+version: "v1.0.0"
+
+vars:
+  target_url: "https://example.com"
+
+tests:
+  - name: "Basic webpage navigation"
+    steps:
+      - name: "Visit website and extract title"
+        plugin: browser
+        config:
+          task: |
+            Navigate to {{target_url}} and extract the page title.
+            The page title should be visible in the browser's title bar or as an h1 element.
+          llm:
+            provider: "openai"
+            model: "gpt-4"
+            config:
+              OPENAI_API_KEY: "${OPENAI_API_KEY}"
+          executor_type: "python"
+          headless: true
+          timeout: "2m"
+          max_steps: 10
+          use_vision: true
+          allowed_domains: ["example.com"]
+        save:
+          - json_path: ".result"
+            as: "page_content"
+          - json_path: ".success"
+            as: "automation_success"
+        assertions:
+          - type: "json_path"
+            path: ".success"
+            expected: true
+
+      - name: "Log results"
+        plugin: log
+        config:
+          message: |
+            Browser automation completed successfully!
+            Success: {{automation_success}}
+            Content extracted: {{page_content}}

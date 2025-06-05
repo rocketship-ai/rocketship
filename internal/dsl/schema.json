@@ -50,7 +50,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql", "log", "agent"]
+                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser"]
                 },
                 "config": {
                   "type": "object",
@@ -407,6 +407,113 @@
                             "type": "boolean",
                             "description": "Save the complete response to context",
                             "default": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": { "plugin": { "const": "browser" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["task", "llm"],
+                        "properties": {
+                          "task": {
+                            "type": "string",
+                            "description": "Task description for the browser agent to perform (supports template variables)"
+                          },
+                          "llm": {
+                            "type": "object",
+                            "required": ["provider", "model"],
+                            "properties": {
+                              "provider": {
+                                "type": "string",
+                                "enum": ["openai", "anthropic"],
+                                "description": "LLM provider to use"
+                              },
+                              "model": {
+                                "type": "string",
+                                "description": "LLM model to use (e.g., gpt-4, claude-3-sonnet)"
+                              },
+                              "config": {
+                                "type": "object",
+                                "description": "LLM configuration (API keys, etc.)",
+                                "additionalProperties": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "executor_type": {
+                            "type": "string",
+                            "enum": ["python"],
+                            "description": "Browser executor type",
+                            "default": "python"
+                          },
+                          "timeout": {
+                            "type": "string",
+                            "pattern": "^[0-9]+(s|m|h)$",
+                            "description": "Browser automation timeout",
+                            "default": "5m"
+                          },
+                          "max_steps": {
+                            "type": "integer",
+                            "description": "Maximum number of browser automation steps",
+                            "minimum": 1,
+                            "default": 50
+                          },
+                          "browser_type": {
+                            "type": "string",
+                            "enum": ["chromium", "chrome", "edge"],
+                            "description": "Browser type to use",
+                            "default": "chromium"
+                          },
+                          "headless": {
+                            "type": "boolean",
+                            "description": "Run browser in headless mode",
+                            "default": true
+                          },
+                          "use_vision": {
+                            "type": "boolean",
+                            "description": "Enable visual processing",
+                            "default": true
+                          },
+                          "session_id": {
+                            "type": "string",
+                            "description": "Browser session ID for session persistence (supports template variables)"
+                          },
+                          "save_screenshots": {
+                            "type": "boolean",
+                            "description": "Save screenshots during execution",
+                            "default": false
+                          },
+                          "allowed_domains": {
+                            "type": "array",
+                            "description": "List of allowed domains for browser navigation",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "viewport": {
+                            "type": "object",
+                            "description": "Browser viewport configuration",
+                            "properties": {
+                              "width": {
+                                "type": "integer",
+                                "description": "Viewport width in pixels",
+                                "default": 1920
+                              },
+                              "height": {
+                                "type": "integer",
+                                "description": "Viewport height in pixels",
+                                "default": 1080
+                              }
+                            }
                           }
                         }
                       }
