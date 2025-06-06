@@ -139,38 +139,11 @@ jobs:
 
       - name: Install browser dependencies
         run: |
-          echo "Installing Playwright dependencies..."
-          # Install system dependencies for headless Chrome
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwoff1 \
-            libopus0 \
-            libwebp6 \
-            libwebpdemux2 \
-            libenchant-2-2 \
-            libgudev-1.0-0 \
-            libsecret-1-0 \
-            libhyphen0 \
-            libgdk-pixbuf2.0-0 \
-            libegl1 \
-            libnotify4 \
-            libxslt1.1 \
-            libevent-2.1-7 \
-            libgles2 \
-            libgl1 \
-            libvpx7 \
-            libxcomposite1 \
-            libatk1.0-0 \
-            libatk-bridge2.0-0 \
-            libepoxy0 \
-            libgtk-3-0 \
-            libharfbuzz-icu0
-          
           echo "Installing Python packages..."
           pip install browser-use playwright langchain-openai
           
-          echo "Installing Playwright browsers..."
-          playwright install chromium
+          echo "Installing Playwright browsers with system dependencies..."
+          playwright install --with-deps chromium
           
           echo "✅ Browser dependencies installed"
 
