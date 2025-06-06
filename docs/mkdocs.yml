@@ -71,6 +71,7 @@ nav:
           - Shell Scripting: examples/shell-scripting.md
       - AI Testing:
           - Agent Plugin: examples/agent-testing.md
+          - Browser Plugin: examples/browser-testing.md
       - Logging:
           - Log Plugin: examples/log-plugin.md
   - Deploy On Your Cloud:
