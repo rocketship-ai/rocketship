@@ -94,6 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     services:
       postgres:
         image: postgres:13
@@ -130,6 +131,48 @@ jobs:
         with:
           go-version: "1.24"
           check-latest: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install browser dependencies
+        run: |
+          echo "Installing Playwright dependencies..."
+          # Install system dependencies for headless Chrome
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwoff1 \
+            libopus0 \
+            libwebp6 \
+            libwebpdemux2 \
+            libenchant-2-2 \
+            libgudev-1.0-0 \
+            libsecret-1-0 \
+            libhyphen0 \
+            libgdk-pixbuf2.0-0 \
+            libegl1 \
+            libnotify4 \
+            libxslt1.1 \
+            libevent-2.1-7 \
+            libgles2 \
+            libgl1 \
+            libvpx7 \
+            libxcomposite1 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libepoxy0 \
+            libgtk-3-0 \
+            libharfbuzz-icu0
+          
+          echo "Installing Python packages..."
+          pip install browser-use playwright langchain-openai
+          
+          echo "Installing Playwright browsers..."
+          playwright install chromium
+          
+          echo "✅ Browser dependencies installed"
 
       - name: Wait for databases
         run: ./.github/scripts/wait-for-databases.sh
@@ -172,11 +215,19 @@ jobs:
           # Verify installation
           claude --version
           
-          # Verify API key is available
+          # Verify API keys are available
           if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "Warning: ANTHROPIC_API_KEY not set - agent tests may fail"
+            echo "❌ ANTHROPIC_API_KEY not set - agent tests will fail"
+            exit 1
           else
             echo "✅ ANTHROPIC_API_KEY is available"
+          fi
+          
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY not set - browser tests will fail"
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY is available"
           fi
 
       - name: Build and install Rocketship CLI
@@ -258,6 +309,16 @@ jobs:
 
           ./.github/scripts/test-log-plugin.sh
           ./.github/scripts/test-log-plugin-validation.sh
+
+          echo "Running browser testing example..."
+          OUTPUT=$(rocketship run -af examples/browser-testing/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ Browser tests passed"
+          else
+            echo "❌ Browser tests had failures"
+            exit 1
+          fi
 
           echo "Testing all examples directory..."
           OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
