@@ -121,11 +121,13 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 ## Try the MCP Server
 
-Rocketship includes an MCP (Model Context Protocol) server that enables AI coding assistants like Claude to automatically generate and manage your test suites. 
+Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents like Cursor, Windsurf, or Claude to automatically generate and manage your test suites.
 
 #### Quick Setup
 
-Add to your Claude desktop app config:
+**For Claude Code:**
+
+Add to the `.mcp.json` file in your project:
 
 ```json
 {
@@ -137,6 +139,8 @@ Add to your Claude desktop app config:
   }
 }
 ```
+
+**Head to the [Rocketship MCP Server Docs](https://docs.rocketship.sh/mcp-server) to see how to add it for Cursor, Windsurf, and more.**
 
 #### What Can It Do?
 
@@ -150,7 +154,8 @@ The MCP server provides these tools to AI assistants:
 
 #### Example Usage
 
-Just ask Claude:
+Just ask your coding agent:
+
 - "Generate API tests for my authentication endpoints"
 - "Create a test suite for my Supabase database operations"
 - "Update my tests based on the latest PR changes"
@@ -167,9 +172,9 @@ The MCP server intelligently selects the right Rocketship plugins (HTTP, SQL, Su
 Building the next-gen of integration testing for humans and AI agents. Suggestions and issues are welcomed! Here's what's coming in weeks, not years:
 
 - [x] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
-- [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
 - [x] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
-- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
+- [x] **LLM Browser Testing** A plugin powered by [Browser Use](https://github.com/browser-use/browser-use) for browser-based testing.
+- [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
 - [ ] **More Native Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 
 ## Contribute!!!
