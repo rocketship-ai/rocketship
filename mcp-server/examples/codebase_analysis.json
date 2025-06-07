@@ -1,0 +1,69 @@
+{
+  "description": "Example codebase analysis input for scan_and_generate_test_suite",
+  "codebase_analysis": {
+    "api_endpoints": [
+      {
+        "method": "GET",
+        "path": "/api/v1/users",
+        "description": "List all users"
+      },
+      {
+        "method": "POST", 
+        "path": "/api/v1/users",
+        "description": "Create new user"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/users/{id}",
+        "description": "Get user by ID"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/users/{id}",
+        "description": "Update user"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/users/{id}",
+        "description": "Delete user"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "description": "User authentication"
+      }
+    ],
+    "database_schemas": [
+      {
+        "table": "users",
+        "columns": ["id", "email", "name", "created_at", "updated_at"],
+        "primary_key": "id"
+      },
+      {
+        "table": "orders",
+        "columns": ["id", "user_id", "total", "status", "created_at"],
+        "primary_key": "id",
+        "foreign_keys": ["user_id"]
+      }
+    ],
+    "service_configs": [
+      {
+        "name": "redis",
+        "type": "cache",
+        "host": "localhost",
+        "port": 6379
+      },
+      {
+        "name": "postgres",
+        "type": "database", 
+        "host": "localhost",
+        "port": 5432
+      }
+    ],
+    "environment_files": [
+      ".env.example",
+      "docker-compose.yml",
+      "config/staging.yaml"
+    ]
+  }
+}
