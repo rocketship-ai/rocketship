@@ -1,0 +1,55 @@
+{
+  "name": "@rocketshipai/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Rocketship test generation and management",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "rocketship-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "test": "tsx src/test.ts",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "js-yaml": "^4.1.0",
+    "simple-git": "^3.20.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol", 
+    "rocketship",
+    "testing",
+    "ai",
+    "test-generation",
+    "api-testing"
+  ],
+  "author": "Rocketship Team <hello@rocketship.sh>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rocketship-ai/rocketship.git",
+    "directory": "mcp-server"
+  },
+  "homepage": "https://docs.rocketship.sh",
+  "publishConfig": {
+    "access": "public"
+  }
+}
