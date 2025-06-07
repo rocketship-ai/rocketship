@@ -1,0 +1,38 @@
+name: "Basic Browser Test"
+description: "Simple browser test without template variables"
+version: "v1.0.0"
+
+tests:
+  - name: "Simple browser automation"
+    steps:
+      - name: "Visit Rocketship docs"
+        plugin: browser
+        config:
+          task: "Navigate to https://docs.rocketship.sh/ and tell me what you see on the homepage"
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+          executor_type: "python"
+          headless: true
+          timeout: "2m"
+          max_steps: 1
+          use_vision: true
+          # viewport:
+          #   width: 1280
+          #   height: 720
+        save:
+          - json_path: ".result"
+            as: "page_content"
+          - json_path: ".success"
+            as: "success"
+        assertions:
+          - type: "json_path"
+            path: ".success"
+            expected: true
+
+      - name: "Log results"
+        plugin: log
+        config:
+          message: "Success: {{success}}, Content: {{page_content}}"

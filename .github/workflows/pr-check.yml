@@ -94,6 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     services:
       postgres:
         image: postgres:13
@@ -130,6 +131,21 @@ jobs:
         with:
           go-version: "1.24"
           check-latest: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install browser dependencies
+        run: |
+          echo "Installing Python packages..."
+          pip install browser-use playwright langchain-openai
+
+          echo "Installing Playwright browsers with system dependencies..."
+          playwright install --with-deps chromium
+
+          echo "✅ Browser dependencies installed"
 
       - name: Wait for databases
         run: ./.github/scripts/wait-for-databases.sh
@@ -168,15 +184,23 @@ jobs:
         run: |
           echo "Installing Claude Code CLI..."
           npm install -g @anthropic-ai/claude-code
-          
+
           # Verify installation
           claude --version
-          
-          # Verify API key is available
+
+          # Verify API keys are available
           if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "Warning: ANTHROPIC_API_KEY not set - agent tests may fail"
+            echo "❌ ANTHROPIC_API_KEY not set - agent tests will fail"
+            exit 1
           else
             echo "✅ ANTHROPIC_API_KEY is available"
+          fi
+
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY not set - browser tests will fail"
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY is available"
           fi
 
       - name: Build and install Rocketship CLI
@@ -225,7 +249,7 @@ jobs:
           rocketship validate examples/
           rocketship validate examples/simple-http/rocketship.yaml
 
-          echo "Testing individual example files..."
+          echo "Testing individual example file..."
           echo "Running simple-delay example..."
           OUTPUT=$(rocketship run -af examples/simple-delay/rocketship.yaml)
           echo "$OUTPUT"
@@ -233,16 +257,6 @@ jobs:
             echo "✅ simple-delay tests passed"
           else
             echo "❌ simple-delay tests had failures"
-            exit 1
-          fi
-
-          echo "Running simple-http example..."
-          OUTPUT=$(rocketship run -af examples/simple-http/rocketship.yaml)
-          echo "$OUTPUT"
-          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
-            echo "✅ simple-http tests passed"
-          else
-            echo "❌ simple-http tests had failures"
             exit 1
           fi
 

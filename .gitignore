@@ -13,3 +13,6 @@ docs/.venv/
 
 # custom debugging
 test_stability.sh
+
+# working with teams
+honeyruns/
