@@ -62,6 +62,8 @@ nav:
           - Request Chaining & Delays: examples/request-chaining.md
       - SQL Testing:
           - SQL Queries: examples/sql-testing.md
+      - Supabase Testing:
+          - Full-Stack Database Testing: examples/supabase-testing.md
       - Parameterizing Tests:
           - All About Variables: examples/config-variables.md
           - Environment Variables: examples/environment-variables.md

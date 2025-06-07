@@ -50,7 +50,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser"]
+                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase"]
                 },
                 "config": {
                   "type": "object",
@@ -66,7 +66,7 @@
                       "type": {
                         "type": "string",
                         "description": "Type of assertion",
-                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value"]
+                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value", "supabase_count", "supabase_error"]
                       },
                       "expected": {
                         "description": "Expected value for the assertion"
@@ -514,6 +514,193 @@
                                 "default": 1080
                               }
                             }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": { "plugin": { "const": "supabase" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["url", "key", "operation"],
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "Supabase project URL"
+                          },
+                          "key": {
+                            "type": "string",
+                            "description": "Supabase API key (anon or service key)"
+                          },
+                          "operation": {
+                            "type": "string",
+                            "enum": ["select", "insert", "update", "delete", "rpc", "auth_create_user", "auth_delete_user", "auth_sign_up", "auth_sign_in", "storage_create_bucket", "storage_upload", "storage_download", "storage_delete"],
+                            "description": "Supabase operation to perform"
+                          },
+                          "table": {
+                            "type": "string",
+                            "description": "Table name for database operations"
+                          },
+                          "select": {
+                            "type": "object",
+                            "description": "Configuration for select operation",
+                            "properties": {
+                              "columns": {
+                                "type": "array",
+                                "description": "Columns to select",
+                                "items": {"type": "string"},
+                                "default": ["*"]
+                              },
+                              "filters": {
+                                "type": "array",
+                                "description": "Filters to apply",
+                                "items": {
+                                  "type": "object",
+                                  "required": ["column", "operator", "value"],
+                                  "properties": {
+                                    "column": {"type": "string"},
+                                    "operator": {
+                                      "type": "string",
+                                      "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike", "is", "in", "contains", "contained_by", "range_gt", "range_gte", "range_lt", "range_lte"]
+                                    },
+                                    "value": {"description": "Filter value"}
+                                  }
+                                }
+                              },
+                              "order": {
+                                "type": "array",
+                                "description": "Ordering configuration",
+                                "items": {
+                                  "type": "object",
+                                  "required": ["column"],
+                                  "properties": {
+                                    "column": {"type": "string"},
+                                    "ascending": {"type": "boolean", "default": true}
+                                  }
+                                }
+                              },
+                              "limit": {"type": "integer", "minimum": 1},
+                              "offset": {"type": "integer", "minimum": 0},
+                              "count": {
+                                "type": "string",
+                                "enum": ["exact", "planned", "estimated"],
+                                "description": "Count type for query"
+                              }
+                            }
+                          },
+                          "insert": {
+                            "type": "object",
+                            "description": "Configuration for insert operation",
+                            "properties": {
+                              "data": {
+                                "description": "Data to insert (object or array of objects)"
+                              },
+                              "upsert": {
+                                "type": "boolean",
+                                "description": "Use upsert (insert or update)",
+                                "default": false
+                              },
+                              "on_conflict": {
+                                "type": "string",
+                                "description": "Column(s) for conflict resolution"
+                              }
+                            },
+                            "required": ["data"]
+                          },
+                          "update": {
+                            "type": "object",
+                            "description": "Configuration for update operation",
+                            "properties": {
+                              "data": {
+                                "type": "object",
+                                "description": "Data to update"
+                              },
+                              "filters": {
+                                "type": "array",
+                                "description": "Filters to apply for update",
+                                "items": {
+                                  "type": "object",
+                                  "required": ["column", "operator", "value"],
+                                  "properties": {
+                                    "column": {"type": "string"},
+                                    "operator": {"type": "string"},
+                                    "value": {"description": "Filter value"}
+                                  }
+                                }
+                              }
+                            },
+                            "required": ["data"]
+                          },
+                          "delete": {
+                            "type": "object",
+                            "description": "Configuration for delete operation",
+                            "properties": {
+                              "filters": {
+                                "type": "array",
+                                "description": "Filters to apply for delete",
+                                "items": {
+                                  "type": "object",
+                                  "required": ["column", "operator", "value"],
+                                  "properties": {
+                                    "column": {"type": "string"},
+                                    "operator": {"type": "string"},
+                                    "value": {"description": "Filter value"}
+                                  }
+                                }
+                              }
+                            },
+                            "required": ["filters"]
+                          },
+                          "rpc": {
+                            "type": "object",
+                            "description": "Configuration for RPC function call",
+                            "properties": {
+                              "function": {
+                                "type": "string",
+                                "description": "Function name to call"
+                              },
+                              "params": {
+                                "type": "object",
+                                "description": "Function parameters"
+                              }
+                            },
+                            "required": ["function"]
+                          },
+                          "auth": {
+                            "type": "object",
+                            "description": "Configuration for auth operations",
+                            "properties": {
+                              "email": {"type": "string"},
+                              "password": {"type": "string"},
+                              "user_id": {"type": "string"},
+                              "user_metadata": {"type": "object"},
+                              "app_metadata": {"type": "object"}
+                            }
+                          },
+                          "storage": {
+                            "type": "object",
+                            "description": "Configuration for storage operations",
+                            "properties": {
+                              "bucket": {"type": "string"},
+                              "path": {"type": "string"},
+                              "file_content": {"type": "string"},
+                              "file_path": {"type": "string"},
+                              "public": {"type": "boolean", "default": false},
+                              "cache_control": {"type": "string"},
+                              "content_type": {"type": "string"}
+                            }
+                          },
+                          "timeout": {
+                            "type": "string",
+                            "pattern": "^[0-9]+(s|m|h)$",
+                            "description": "Operation timeout",
+                            "default": "30s"
                           }
                         }
                       }

@@ -16,3 +16,6 @@ test_stability.sh
 
 # working with teams
 honeyruns/
+
+# claude code
+.mcp.json
