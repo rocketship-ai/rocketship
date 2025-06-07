@@ -110,7 +110,7 @@ Examines code changes and suggests test updates.
 
 ### With Claude Code
 
-1. Add the configuration to your `.mcp.json` file in your project:
+- Add the configuration to your `.mcp.json` file in your project:
 
 ```json
 {
@@ -123,7 +123,7 @@ Examines code changes and suggests test updates.
 }
 ```
 
-2. Ask Claude to help with your tests!
+- Ask Claude to help with your tests!
 
 ```
 "Generate a comprehensive rocketship test suite for all of my Express.js API endpoints?"
@@ -131,17 +131,17 @@ Examines code changes and suggests test updates.
 
 ### With Cursor
 
-1. Copy and paste either the Rocketship Cursor Web Link or Deep Link into your browser:
+- Copy and paste either the Rocketship Cursor Web Link or Deep Link into your browser:
 
 ```
 https://cursor.com/install-mcp?name=rocketship&config=eyJjb21tYW5kIjoibnB4IC15IEByb2NrZXRzaGlwYWkvbWNwLXNlcnZlckBsYXRlc3QifQ%3D%3D
-```
 
-```
+---- OR ----
+
 cursor://anysphere.cursor-deeplink/mcp/install?name=rocketship&config=eyJjb21tYW5kIjoibnB4IC15IEByb2NrZXRzaGlwYWkvbWNwLXNlcnZlckBsYXRlc3QifQ==
 ```
 
-2. Ask Cursor to create generate a test based off your prompt!
+- Ask Cursor to create generate a test based off your prompt!
 
 ```
 "Can you write a rocketship test for my FastAPI API that includes user authentication?"
@@ -149,7 +149,7 @@ cursor://anysphere.cursor-deeplink/mcp/install?name=rocketship&config=eyJjb21tYW
 
 ### With Windsurf
 
-1. Add the configuration to your Windsurf cascade configuration `~/.codeium/windsurf/mcp_config.json`:
+- Add the configuration to your Windsurf cascade configuration `~/.codeium/windsurf/mcp_config.json`:
 
 ```json
 {
@@ -162,7 +162,7 @@ cursor://anysphere.cursor-deeplink/mcp/install?name=rocketship&config=eyJjb21tYW
 }
 ```
 
-2. Ask Windsurf to write a new test based off your branch!
+- Ask Windsurf to write a new test based off your branch!
 
 ```
 "Can you write a new rocketship test for this feature branch?"
