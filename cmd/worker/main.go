@@ -15,6 +15,7 @@ import (
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/log"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/sql"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/supabase"
 	
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"

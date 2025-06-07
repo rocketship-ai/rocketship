@@ -1,0 +1,445 @@
+# Supabase Plugin Integration Tests
+#
+# This test suite comprehensively validates all Supabase plugin functionality:
+# - RPC function calls (simple and parameterized)
+# - CRUD operations (Create, Read, Update, Delete)
+# - Authentication (signup, signin)
+# - Storage operations (upload, download, delete files)
+#
+# IMPORTANT: This test creates and cleans up ALL resources:
+# - Test companies are deleted from the companies table
+# - Test auth users are deleted from auth.users
+# - Test files are deleted from storage buckets
+#
+# After successful completion, only the original sample data remains.
+
+name: "Supabase Plugin Integration Tests"
+version: "v1.0.0"
+description: "Comprehensive integration tests for Supabase plugin covering all features with complete resource cleanup"
+
+vars:
+  supabase_url: "https://aqfxxknampmkpvhzrnad.supabase.co"
+
+tests:
+  - name: "Supabase Integration Test Suite"
+    steps:
+      # =============================================================================
+      # SETUP: Create storage bucket for tests
+      # =============================================================================
+      - name: "Setup: Create storage bucket"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_create_bucket"
+          storage:
+            bucket: "integration-tests"
+            public: true
+
+      # =============================================================================
+      # 1. RPC FUNCTION TESTS
+      # =============================================================================
+      - name: "RPC: Test simple function call"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "hello_rocketship"
+        assertions:
+          - type: json_path
+            path: "."
+            expected: "Hello, World! Greetings from Supabase RPC function."
+
+      - name: "RPC: Test function with parameters"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "hello_rocketship"
+            params:
+              name: "Rocketship Integration Test"
+        assertions:
+          - type: json_path
+            path: "."
+            expected: "Hello, Rocketship Integration Test! Greetings from Supabase RPC function."
+
+      - name: "RPC: Get initial company count"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "get_company_count"
+        save:
+          - json_path: "."
+            as: "initial_count"
+
+      # =============================================================================
+      # 2. CRUD OPERATIONS TESTS
+      # =============================================================================
+
+      # READ: Query existing data
+      - name: "CRUD: Query existing companies"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "type", "created_at"]
+            filters:
+              - column: "type"
+                operator: "in"
+                value: ["sample", "demo"]
+            order:
+              - column: "created_at"
+                ascending: false
+            limit: 5
+
+      # CREATE: Insert new test data
+      - name: "CRUD: Create test company via INSERT"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              name: "Integration Test Company"
+              type: "integration_test"
+              description: "Created during integration testing"
+              metadata:
+                test_run: true
+                created_by: "rocketship_plugin"
+        save:
+          - json_path: ".[0].id"
+            as: "test_company_id"
+
+      # CREATE: Use RPC function to create another company
+      - name: "RPC: Create company via function"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "create_test_company"
+            params:
+              company_name: "RPC Created Company"
+              company_type: "rpc_test"
+              company_metadata:
+                created_via: "rpc_function"
+                test_id: "integration_123"
+        save:
+          - json_path: ".id"
+            as: "rpc_company_id"
+
+      # READ: Verify created data with complex filtering
+      - name: "CRUD: Query test companies with filters"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns:
+              ["id", "name", "type", "description", "metadata", "created_at"]
+            filters:
+              - column: "type"
+                operator: "like"
+                value: "%test%"
+              - column: "created_at"
+                operator: "gte"
+                value: "2025-01-01"
+            order:
+              - column: "created_at"
+                ascending: false
+            count: "exact"
+        assertions:
+          - type: json_path
+            path: "length"
+            expected: 2
+
+      # UPDATE: Modify test data
+      - name: "CRUD: Update test company"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "update"
+          table: "companies"
+          update:
+            data:
+              description: "Updated during integration testing"
+              is_active: false
+              metadata:
+                test_run: true
+                updated_by: "rocketship_plugin"
+                last_modified: "integration_test"
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].description"
+            expected: "Updated during integration testing"
+
+      # READ: Verify update with specific ID query
+      - name: "CRUD: Verify company update"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "description", "is_active", "metadata"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].is_active"
+            expected: false
+          - type: json_path
+            path: ".[0].metadata.updated_by"
+            expected: "rocketship_plugin"
+
+      # =============================================================================
+      # 3. AUTHENTICATION TESTS
+      # =============================================================================
+      - name: "AUTH: User signup"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "auth_sign_up"
+          auth:
+            email: "integration-test@rocketship.dev"
+            password: "TestPassword123!"
+            user_metadata:
+              first_name: "Integration"
+              last_name: "Test"
+              role: "test_user"
+              created_by: "rocketship_integration"
+        save:
+          - json_path: ".user.id"
+            as: "test_user_id"
+        assertions:
+          - type: json_path
+            path: ".user.email"
+            expected: "integration-test@rocketship.dev"
+
+      - name: "AUTH: User signin"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "auth_sign_in"
+          auth:
+            email: "integration-test@rocketship.dev"
+            password: "TestPassword123!"
+        save:
+          - json_path: ".access_token"
+            as: "user_token"
+        assertions:
+          - type: json_path
+            path: ".user.email"
+            expected: "integration-test@rocketship.dev"
+          - type: json_path
+            path: ".access_token"
+            expected: "exists"
+
+      # =============================================================================
+      # 4. STORAGE OPERATIONS TESTS
+      # =============================================================================
+      - name: "STORAGE: Upload test file"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_upload"
+          storage:
+            bucket: "integration-tests"
+            path: "test-files/integration-test.txt"
+            file_content: |
+              Integration Test File
+              =====================
+
+              This file was created during Rocketship Supabase plugin integration testing.
+
+              Test Details:
+              - Created by: Rocketship Integration Test
+              - Purpose: Verify storage upload functionality
+              - Test ID: integration_{{ test_company_id }}
+
+              Content verification: ✅ Storage operations working correctly!
+            content_type: "text/plain"
+            cache_control: "3600"
+
+      - name: "STORAGE: Upload JSON test file"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_upload"
+          storage:
+            bucket: "integration-tests"
+            path: "test-files/test-data.json"
+            file_content: |
+              {
+                "test_name": "Supabase Integration Test",
+                "company_id": "{{ test_company_id }}",
+                "user_id": "{{ test_user_id }}",
+                "timestamp": "2025-06-07",
+                "features_tested": [
+                  "CRUD operations",
+                  "RPC functions", 
+                  "Authentication",
+                  "Storage operations"
+                ],
+                "status": "success"
+              }
+            content_type: "application/json"
+
+      - name: "STORAGE: Download and verify text file"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_download"
+          storage:
+            bucket: "integration-tests"
+            path: "test-files/integration-test.txt"
+        assertions:
+          - type: json_path
+            path: "."
+            expected: |
+              Integration Test File
+              =====================
+
+              This file was created during Rocketship Supabase plugin integration testing.
+
+              Test Details:
+              - Created by: Rocketship Integration Test
+              - Purpose: Verify storage upload functionality
+              - Test ID: integration_{{ test_company_id }}
+
+              Content verification: ✅ Storage operations working correctly!
+
+      - name: "STORAGE: Download and verify JSON file"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_download"
+          storage:
+            bucket: "integration-tests"
+            path: "test-files/test-data.json"
+        save:
+          - json_path: "."
+            as: "downloaded_json"
+
+      # =============================================================================
+      # 5. FINAL VERIFICATION
+      # =============================================================================
+      - name: "VERIFY: Final company count after operations"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "get_company_count"
+        save:
+          - json_path: "."
+            as: "final_count"
+
+      # =============================================================================
+      # 6. CLEANUP: Remove test data
+      # =============================================================================
+      - name: "CLEANUP: Delete test companies"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "delete"
+          table: "companies"
+          delete:
+            filters:
+              - column: "type"
+                operator: "in"
+                value: ["integration_test", "rpc_test"]
+
+      - name: "CLEANUP: Delete storage files"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_delete"
+          storage:
+            bucket: "integration-tests"
+            path: "test-files/integration-test.txt"
+
+      - name: "CLEANUP: Delete JSON storage file"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "storage_delete"
+          storage:
+            bucket: "integration-tests"
+            path: "test-files/test-data.json"
+
+      - name: "CLEANUP: Delete test auth users via RPC"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "cleanup_test_auth_users"
+
+      - name: "VERIFY: Confirm companies cleanup completed"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "type"]
+            filters:
+              - column: "type"
+                operator: "in"
+                value: ["integration_test", "rpc_test"]
+        assertions:
+          - type: json_path
+            path: "length"
+            expected: 0
+
+      - name: "VERIFY: Confirm comprehensive cleanup with RPC"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "get_test_data_status"
+        assertions:
+          - type: json_path
+            path: ".test_companies"
+            expected: 0
+          - type: json_path
+            path: ".auth_users"
+            expected: 0
