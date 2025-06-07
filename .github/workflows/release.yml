@@ -21,6 +21,12 @@ jobs:
           go-version: "1.24"
           check-latest: true
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Build release artifacts
         run: |
           # Create release artifacts for different platforms
@@ -86,6 +92,24 @@ jobs:
       - name: Extract tag version
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and publish MCP server
+        working-directory: ./mcp-server
+        run: |
+          # Install dependencies
+          npm ci
+          
+          # Build TypeScript
+          npm run build
+          
+          # Set version to match release tag (remove 'v' prefix)
+          VERSION_NUMBER=${GITHUB_REF#refs/tags/v}
+          npm version $VERSION_NUMBER --no-git-tag-version
+          
+          # Publish to npm
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Build and push CLI image
         uses: docker/build-push-action@v5

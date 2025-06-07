@@ -119,6 +119,50 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 - Resources are isolated based off a session header
 - FYI: Resource cleanup is done hourly (every :00)
 
+## Try the MCP Server
+
+Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents like Cursor, Windsurf, or Claude to automatically generate and manage your test suites.
+
+#### Quick Setup
+
+**For Claude Code:**
+
+Add to the `.mcp.json` file in your project:
+
+```json
+{
+  "mcpServers": {
+    "rocketship": {
+      "command": "npx",
+      "args": ["-y", "@rocketshipai/mcp-server@latest"]
+    }
+  }
+}
+```
+
+**Head to the [Rocketship MCP Server Docs](https://docs.rocketship.sh/mcp-server) to see how to add it for Cursor, Windsurf, and more.**
+
+#### What Can It Do?
+
+The MCP server provides these tools to AI assistants:
+
+- **`scan_and_generate_test_suite`** - Analyzes your codebase and generates a complete test structure
+- **`generate_test_from_prompt`** - Creates test files from natural language descriptions
+- **`validate_test_file`** - Validates Rocketship YAML files
+- **`run_and_analyze_tests`** - Executes tests and provides intelligent failure analysis
+- **`analyze_git_diff`** - Suggests test updates based on code changes
+
+#### Example Usage
+
+Just ask your coding agent:
+
+- "Generate API tests for my authentication endpoints"
+- "Create a test suite for my Supabase database operations"
+- "Update my tests based on the latest PR changes"
+- "Run my integration tests and explain any failures"
+
+The MCP server intelligently selects the right Rocketship plugins (HTTP, SQL, Supabase, etc.) based on your request and generates valid test configurations ready to run.
+
 ## Documentation
 
 [https://docs.rocketship.sh](https://docs.rocketship.sh)
@@ -128,9 +172,9 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 Building the next-gen of integration testing for humans and AI agents. Suggestions and issues are welcomed! Here's what's coming in weeks, not years:
 
 - [x] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
+- [x] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
+- [x] **LLM Browser Testing** A plugin powered by [Browser Use](https://github.com/browser-use/browser-use) for browser-based testing.
 - [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
-- [ ] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
-- [ ] **LLM Browser Testing** A plugin powered by [Workflow Use](https://github.com/browser-use/workflow-use) for deterministic browser-based testing.
 - [ ] **More Native Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 
 ## Contribute!!!
