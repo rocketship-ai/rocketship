@@ -8,11 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/contributing/">
+        <link rel="canonical" href="https://docs.rocketship.sh/mcp-server/">
       
       
-        <link rel="prev" href="../reference/rocketship_version/">
+        <link rel="prev" href="../examples/log-plugin/">
       
+      
+        <link rel="next" href="../deploy-on-your-cloud/">
       
       
       <link rel="icon" href="../assets/transparent.png">
@@ -20,7 +22,7 @@
     
     
       
-        <title>Contributing - Rocketship CLI</title>
+        <title>MCP Server - Rocketship CLI</title>
       
     
     
@@ -74,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributing-to-rocketship" class="md-skip">
+        <a href="#mcp-server" class="md-skip">
           Skip to content
         </a>
       
@@ -109,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contributing
+              MCP Server
             
           </span>
         </div>
@@ -1051,10 +1053,30 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../mcp-server/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    MCP Server
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1063,6 +1085,266 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Tools
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-scan_and_generate_test_suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. scan_and_generate_test_suite
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-generate_test_from_prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. generate_test_from_prompt
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-validate_test_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. validate_test_file
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-run_and_analyze_tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. run_and_analyze_tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-analyze_git_diff" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. analyze_git_diff
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#with-claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Claude Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-cursor" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Cursor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-windsurf" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Windsurf
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-other-mcp-clients" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Other MCP Clients
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-provide-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Provide Context
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-review-generated-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Review Generated Tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-iterate-and-refine" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Iterate and Refine
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mcp-server-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      MCP Server Not Found
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-generation-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Generation Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validation Failures
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security Considerations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Future Enhancements
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1505,30 +1787,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Contributing
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1537,116 +1799,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      Development Workflow
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#creating-plugins" class="md-nav__link">
-    <span class="md-ellipsis">
-      Creating Plugins
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Documentation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#code-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      Code Style
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-tips" class="md-nav__link">
-    <span class="md-ellipsis">
-      Development Tips
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Process
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-artifacts" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Artifacts
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-help" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Help
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      License
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1678,90 +1830,240 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
+  <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
-      Getting Started
+      Installation
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#development-workflow" class="md-nav__link">
+  <a href="#available-tools" class="md-nav__link">
     <span class="md-ellipsis">
-      Development Workflow
+      Available Tools
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-scan_and_generate_test_suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. scan_and_generate_test_suite
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-generate_test_from_prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. generate_test_from_prompt
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-validate_test_file" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. validate_test_file
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-run_and_analyze_tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. run_and_analyze_tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-analyze_git_diff" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. analyze_git_diff
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Integration Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#with-claude-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Claude Code
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-cursor" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Cursor
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-windsurf" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Windsurf
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-other-mcp-clients" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Other MCP Clients
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-provide-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Provide Context
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-review-generated-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Review Generated Tests
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-iterate-and-refine" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Iterate and Refine
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Workflow
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-plugins" class="md-nav__link">
+  <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Creating Plugins
+      Environment Variables
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
-      Documentation
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mcp-server-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      MCP Server Not Found
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-generation-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Generation Issues
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Validation Failures
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security Considerations
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#code-style" class="md-nav__link">
+  <a href="#future-enhancements" class="md-nav__link">
     <span class="md-ellipsis">
-      Code Style
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#development-tips" class="md-nav__link">
-    <span class="md-ellipsis">
-      Development Tips
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-process" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Process
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-artifacts" class="md-nav__link">
-    <span class="md-ellipsis">
-      Release Artifacts
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-help" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Help
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      License
+      Future Enhancements
     </span>
   </a>
   
@@ -1785,127 +2087,228 @@
   
 
 
-<h1 id="contributing-to-rocketship">Contributing to Rocketship</h1>
-<p>Thank you for your interest in contributing to Rocketship! We're excited to have you join our community. This document provides guidelines and instructions for contributing to the project.</p>
-<h2 id="getting-started">Getting Started</h2>
+<h1 id="mcp-server">MCP Server</h1>
+<p>Rocketship includes an MCP (Model Context Protocol) server that enables AI coding assistants to automatically generate, run, and maintain your test suites. This integration allows tools like Claude, Cursor, Windsurf, and other MCP-compatible assistants to understand your codebase and create comprehensive test scenarios.</p>
+<h2 id="installation">Installation</h2>
+<p>The MCP server is published as an npm package and can be used with zero installation:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;rocketship&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-y&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;@rocketshipai/mcp-server@latest&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="available-tools">Available Tools</h2>
+<p>The MCP server provides five powerful tools for test automation:</p>
+<h3 id="1-scan_and_generate_test_suite">1. scan_and_generate_test_suite</h3>
+<p>Analyzes your codebase context and generates a comprehensive test suite structure.</p>
+<p><strong>Capabilities:</strong></p>
+<ul>
+<li>Creates organized test directories (api-tests, database-tests, integration-tests)</li>
+<li>Generates environment-specific configuration files</li>
+<li>Produces ready-to-run Rocketship YAML test files</li>
+<li>Automatically configures authentication and variables</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&quot;Analyze my codebase and create a complete test suite for staging and production environments&quot;
+</code></pre></div>
+<h3 id="2-generate_test_from_prompt">2. generate_test_from_prompt</h3>
+<p>Creates test files from natural language descriptions.</p>
+<p><strong>Capabilities:</strong></p>
+<ul>
+<li>Converts plain English into valid Rocketship YAML</li>
+<li>Automatically selects appropriate plugins (HTTP, SQL, Supabase)</li>
+<li>Includes relevant assertions and error handling</li>
+<li>Generates proper variable references</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&quot;Create a test that verifies user login, checks their profile, and validates their subscription status&quot;
+</code></pre></div>
+<h3 id="3-validate_test_file">3. validate_test_file</h3>
+<p>Validates Rocketship test files for syntax and schema compliance.</p>
+<p><strong>Capabilities:</strong></p>
+<ul>
+<li>Checks YAML syntax</li>
+<li>Validates against Rocketship schema</li>
+<li>Reports specific errors with line numbers</li>
+<li>Ensures all required fields are present</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>&quot;Validate all test files in the .rocketship directory&quot;
+</code></pre></div>
+<h3 id="4-run_and_analyze_tests">4. run_and_analyze_tests</h3>
+<p>Executes tests and provides intelligent failure analysis.</p>
+<p><strong>Capabilities:</strong></p>
+<ul>
+<li>Runs tests with specified environment variables</li>
+<li>Analyzes failure patterns</li>
+<li>Suggests fixes for common issues</li>
+<li>Provides detailed error context</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>&quot;Run my API tests against staging and explain any failures&quot;
+</code></pre></div>
+<h3 id="5-analyze_git_diff">5. analyze_git_diff</h3>
+<p>Examines code changes and suggests test updates.</p>
+<p><strong>Capabilities:</strong></p>
+<ul>
+<li>Compares branches to identify changes</li>
+<li>Suggests new tests for added endpoints</li>
+<li>Recommends updates for modified APIs</li>
+<li>Highlights tests that may need attention</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>&quot;What tests should I update based on my latest PR?&quot;
+</code></pre></div>
+<h2 id="integration-examples">Integration Examples</h2>
+<h3 id="with-claude-code">With Claude Code</h3>
+<ul>
+<li>Add the configuration to your <code>.mcp.json</code> file in your project:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&quot;rocketship&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-y&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;@rocketshipai/mcp-server@latest&quot;</span><span class="p">]</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>Ask Claude to help with your tests!</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&quot;Generate a comprehensive rocketship test suite for all of my Express.js API endpoints?&quot;
+</code></pre></div>
+<h3 id="with-cursor">With Cursor</h3>
+<ul>
+<li>Copy and paste either the Rocketship Cursor Web Link or Deep Link into your browser:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>https://cursor.com/install-mcp?name=rocketship&amp;config=eyJjb21tYW5kIjoibnB4IC15IEByb2NrZXRzaGlwYWkvbWNwLXNlcnZlckBsYXRlc3QifQ%3D%3D
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>---- OR ----
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>cursor://anysphere.cursor-deeplink/mcp/install?name=rocketship&amp;config=eyJjb21tYW5kIjoibnB4IC15IEByb2NrZXRzaGlwYWkvbWNwLXNlcnZlckBsYXRlc3QifQ==
+</code></pre></div>
+<ul>
+<li>Ask Cursor to create generate a test based off your prompt!</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>&quot;Can you write a rocketship test for my FastAPI API that includes user authentication?&quot;
+</code></pre></div>
+<h3 id="with-windsurf">With Windsurf</h3>
+<ul>
+<li>Add the configuration to your Windsurf cascade configuration <code>~/.codeium/windsurf/mcp_config.json</code>:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">&quot;rocketship&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;npx&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-y&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;@rocketshipai/mcp-server@latest&quot;</span><span class="p">]</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li>Ask Windsurf to write a new test based off your branch!</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>&quot;Can you write a new rocketship test for this feature branch?&quot;
+</code></pre></div>
+<h3 id="with-other-mcp-clients">With Other MCP Clients</h3>
+<p>Any MCP-compatible client can use the Rocketship server. The server communicates via JSON-RPC over stdio, making it compatible with various AI assistants and development tools.</p>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-provide-context">1. Provide Context</h3>
+<p>When asking for test generation, provide context about:</p>
+<ul>
+<li>Your API structure</li>
+<li>Authentication methods</li>
+<li>Database schemas</li>
+<li>External services you integrate with</li>
+</ul>
+<h3 id="2-review-generated-tests">2. Review Generated Tests</h3>
+<p>While the MCP server generates high-quality tests, always review:</p>
+<ul>
+<li>Environment variables and secrets</li>
+<li>API endpoints and URLs</li>
+<li>Expected response values</li>
+<li>Test data assumptions</li>
+</ul>
+<h3 id="3-iterate-and-refine">3. Iterate and Refine</h3>
+<p>Use the MCP server iteratively:</p>
 <ol>
-<li>Fork the repository on GitHub</li>
-<li>Clone your fork locally:</li>
+<li>Generate initial tests</li>
+<li>Run and analyze failures</li>
+<li>Ask for specific improvements</li>
+<li>Update based on code changes</li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/YOUR_USERNAME/rocketship.git
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>rocketship
+<h2 id="example-workflow">Example Workflow</h2>
+<p>Here's a complete workflow using the MCP server:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>User: &quot;I have a new Node.js API with user management and payment processing.
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>      Generate a complete test suite.&quot;
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>AI: *Uses scan_and_generate_test_suite to create:*
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    - .rocketship/api-tests/rocketship.yaml
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    - .rocketship/integration-tests/rocketship.yaml
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    - .rocketship/staging-vars.yaml
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>    - .rocketship/prod-vars.yaml
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>User: &quot;Now run the tests against my staging environment&quot;
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>AI: *Uses run_and_analyze_tests*
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    &quot;3 tests failed due to missing API_KEY environment variable.
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>     Please set your Stripe API key in staging-vars.yaml&quot;
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>User: &quot;I&#39;ve updated the keys. Also, I just added a new webhook endpoint
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>      for payment confirmations&quot;
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>AI: *Uses analyze_git_diff and generate_test_from_prompt*
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>    &quot;I&#39;ve detected your new /webhooks/stripe endpoint and generated
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>     tests for signature validation and payment confirmation flows&quot;
 </code></pre></div>
-<p>Set up your development environment:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>dev-setup
-</code></pre></div>
-<h2 id="development-workflow">Development Workflow</h2>
-<p>Create a new branch for your feature/fix:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
-</code></pre></div>
-<p>Make your changes and ensure tests pass:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span><span class="nb">test</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span>lint
-</code></pre></div>
-<p>Build and install your local changes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>make<span class="w"> </span>install<span class="w">    </span><span class="c1"># Removes old executable and go installs the local version</span>
-</code></pre></div>
-<p>Test your changes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># OPTION 1: this will start the local rocketship server, run all tests in the examples directory, and then stop the server</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-ad<span class="w"> </span>examples
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># OPTION 2: run the test server in a separate session and then run the tests</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>rocketship<span class="w"> </span>start<span class="w"> </span>server<span class="w"> </span>--local
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># in another session, run the test(s)</span>
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>&lt;path/to/rocketship.yaml&gt;
-</code></pre></div>
-<p>Test Server for Development:</p>
-<p>Inside <a href="https://github.com/rocketship-ai/rocketship/blob/main/for-contributors">for-contributors/</a>, you'll find a test HTTP server that you can run as an in-memory store to test changes. Make sure your rocketship.yaml files point to this server (localhost:8080):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>./for-contributors/test-server<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>go<span class="w"> </span>run<span class="w"> </span>.
-</code></pre></div>
-<p>This will help you test your changes with an in-memory store that can preserve resources.</p>
-<h2 id="creating-plugins">Creating Plugins</h2>
-<p>Rocketship's plugin system allows you to add support for new APIs and protocols. To create a new plugin:</p>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>The MCP server respects these environment variables:</p>
+<ul>
+<li><code>ROCKETSHIP_LOG</code>: Set log level (DEBUG, INFO, ERROR)</li>
+<li><code>ROCKETSHIP_ENGINE_ADDR</code>: Override default engine address</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="mcp-server-not-found">MCP Server Not Found</h3>
+<p>If Claude can't find the MCP server:</p>
 <ol>
-<li>Add your plugin in <code>internal/plugins/</code></li>
-<li>Implement the required plugin interface</li>
-<li>Register your plugin in the plugin registry</li>
-<li>Add tests for your plugin</li>
-<li>Document your plugin's usage</li>
+<li>Ensure you have Node.js 18+ installed</li>
+<li>Check your claude_desktop_config.json syntax</li>
+<li>Restart Claude after configuration changes</li>
 </ol>
-<h2 id="documentation">Documentation</h2>
-<p>If you're updating features or adding new ones, please update the documentation:</p>
+<h3 id="test-generation-issues">Test Generation Issues</h3>
+<p>If generated tests aren't working:</p>
+<ol>
+<li>Provide more context about your API structure</li>
+<li>Specify authentication methods explicitly</li>
+<li>Include example requests/responses</li>
+</ol>
+<h3 id="validation-failures">Validation Failures</h3>
+<p>Common validation issues:</p>
 <ul>
-<li>Documentation is written in Markdown under <code>docs/src/</code></li>
-<li>Run the documentation server locally:</li>
+<li>Missing <code>version</code> field (required, format: "v1.0.0")</li>
+<li>Invalid plugin names</li>
+<li>Malformed assertions</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>make<span class="w"> </span>docs-serve
-</code></pre></div>
-<p>View your changes at <code>http://localhost:8000</code></p>
-<h2 id="code-style">Code Style</h2>
+<h2 id="security-considerations">Security Considerations</h2>
+<p>The MCP server:</p>
 <ul>
-<li>Follow Go best practices and conventions</li>
-<li>Use <code>gofmt</code> to format your code</li>
-<li>Add comments for non-obvious code sections</li>
-<li>Write meaningful commit messages</li>
+<li>Never stores credentials or sensitive data</li>
+<li>Operates in read-only mode for analysis</li>
+<li>Executes tests only when explicitly requested</li>
+<li>Uses your local Rocketship installation</li>
 </ul>
-<h2 id="development-tips">Development Tips</h2>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Planned improvements include:</p>
 <ul>
-<li>Set the <code>ROCKETSHIP_LOG</code> env var to <code>DEBUG</code> to see more verbose logging</li>
-<li>Pre-commit hooks will automatically run linting and tests</li>
-<li>Always test your changes locally before submitting a PR</li>
+<li>Visual test builder interface</li>
+<li>Test coverage analysis</li>
+<li>Performance benchmarking</li>
+<li>Automatic test maintenance based on API changes</li>
 </ul>
-<h2 id="release-process">Release Process</h2>
-<p><strong>Update Default Version</strong></p>
-<p>Before creating a release, update the default version in <code>internal/embedded/binaries.go</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Example: For releasing v1.2.3</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>sed<span class="w"> </span>-i<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="s1">&#39;s/defaultVersion *= *&quot;.*&quot;/defaultVersion = &quot;v1.2.3&quot;/&#39;</span><span class="w"> </span>internal/embedded/binaries.go
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>git<span class="w"> </span>add<span class="w"> </span>internal/embedded/binaries.go
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore: update default version to v1.2.3&quot;</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>git<span class="w"> </span>push
-</code></pre></div>
-<p><strong>Create a Release</strong></p>
-<p>Once changes are merged to main, a maintainer can create a new release:</p>
-<ul>
-<li>Go to GitHub Releases: https://github.com/rocketship-ai/rocketship/releases</li>
-<li>Click "Draft a new release"</li>
-<li>Create a new tag (e.g., <code>v1.2.3</code>) following semantic versioning</li>
-<li>Write release notes</li>
-<li>Publish release</li>
-</ul>
-<p>This will automatically:</p>
-<ul>
-<li>Create and push a Git tag</li>
-<li>Trigger the release workflow</li>
-<li>Build platform-specific binaries</li>
-<li>Attach binaries to the release</li>
-</ul>
-<p><strong>Test Installation</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Install released version</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>go<span class="w"> </span>install<span class="w"> </span>github.com/rocketship-ai/rocketship/cmd/rocketship@v1.2.3
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Test basic functionality</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>rocketship<span class="w"> </span>version
-</code></pre></div>
-<h2 id="release-artifacts">Release Artifacts</h2>
-<p>Each release includes platform-specific binaries for:</p>
-<ul>
-<li>CLI (rocketship)</li>
-<li>Worker</li>
-<li>Engine</li>
-</ul>
-<p>Supported platforms:</p>
-<ul>
-<li>Linux (amd64, arm64)</li>
-<li>macOS (amd64, arm64)</li>
-<li>Windows (amd64)</li>
-</ul>
-<h2 id="getting-help">Getting Help</h2>
-<ul>
-<li>Open an issue on GitHub</li>
-<li>Reach out to me on <a href="https://www.linkedin.com/in/magiusdarrigo">LinkedIn</a></li>
-</ul>
-<h2 id="license">License</h2>
-<p>By contributing to Rocketship, you agree that your contributions will be licensed under the MIT License.</p>
 
 
 

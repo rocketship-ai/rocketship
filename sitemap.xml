@@ -31,6 +31,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://docs.rocketship.sh/mcp-server/</loc>
+         <lastmod>2025-06-07</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://docs.rocketship.sh/quickstart/</loc>
          <lastmod>2025-06-07</lastmod>
          <changefreq>daily</changefreq>
