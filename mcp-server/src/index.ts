@@ -419,6 +419,7 @@ export class RocketshipMCPServer {
 
   private generateAPITestSuite(analysis: CodebaseAnalysis) {
     return {
+      version: 'v1.0.0',
       name: 'API Integration Tests',
       description: 'Comprehensive API endpoint testing',
       vars: {
@@ -452,6 +453,7 @@ export class RocketshipMCPServer {
 
   private generateDatabaseTestSuite(analysis: CodebaseAnalysis) {
     return {
+      version: 'v1.0.0',
       name: 'Database Tests',
       description: 'Database connectivity and schema validation',
       tests: [
@@ -482,6 +484,7 @@ export class RocketshipMCPServer {
 
   private generateIntegrationTestSuite() {
     return {
+      version: 'v1.0.0',
       name: 'Integration Tests',
       description: 'End-to-end workflow testing',
       tests: [
@@ -510,6 +513,7 @@ export class RocketshipMCPServer {
 
   private generateTestFromPrompt(prompt: string, testType: string): string {
     const testConfig = {
+      version: 'v1.0.0',
       name: this.generateTestName(prompt),
       description: `Generated from prompt: ${prompt}`,
       vars: {
