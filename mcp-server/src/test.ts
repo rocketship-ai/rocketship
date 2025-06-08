@@ -46,6 +46,18 @@ async function runTests() {
     } else {
       throw new Error('Schema info retrieval failed');
     }
+
+    console.log('\n⚙️  Testing codebase analysis with suggested flows...');
+    const analysisResponse = await (server as any).handleAnalyzeCodebase({ 
+      codebase_info: 'React healthcare management system with patient records',
+      focus_area: 'user_journeys',
+      suggested_flows: ['authentication', 'patient-management', 'reporting']
+    });
+    if (analysisResponse.content && analysisResponse.content[0].text.includes('Using your suggested flows')) {
+      console.log('✅ Suggested flows functionality works');
+    } else {
+      throw new Error('Suggested flows functionality failed');
+    }
     
     console.log('\n✅ All tests passed! MCP server is ready to use.');
     process.exit(0);
