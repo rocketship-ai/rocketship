@@ -35,6 +35,7 @@ The MCP server provides six assistant tools that provide guidance rather than ge
 Get examples and best practices for specific Rocketship features.
 
 **Features:**
+
 - `api_testing` - HTTP endpoint testing with authentication and validation
 - `step_chaining` - Using data from previous steps in workflows
 - `assertions` - Comprehensive validation patterns
@@ -43,11 +44,13 @@ Get examples and best practices for specific Rocketship features.
 - `customer_journeys` - E2E workflow testing examples
 
 **Example Request:**
+
 ```
 "Show me API testing examples with authentication"
 ```
 
 **What You Get:**
+
 - Real YAML code examples
 - Best practices for the feature
 - Implementation guidance
@@ -58,6 +61,7 @@ Get examples and best practices for specific Rocketship features.
 Returns a test template with TODOs and implementation guidance.
 
 **Test Types:**
+
 - `api` - HTTP endpoint testing
 - `browser` - UI automation testing
 - `sql` - Database testing
@@ -65,11 +69,13 @@ Returns a test template with TODOs and implementation guidance.
 - `e2e` - End-to-end customer journeys
 
 **Example Request:**
+
 ```
 "I need to test user registration and email verification flow"
 ```
 
 **What You Get:**
+
 - YAML template with TODO sections
 - Implementation checklist
 - Suggested structure for your specific use case
@@ -79,6 +85,7 @@ Returns a test template with TODOs and implementation guidance.
 Shows assertion examples for different testing scenarios.
 
 **Response Types:**
+
 - `json` - JSON API response validation
 - `xml` - XML response validation
 - `text` - Plain text response validation
@@ -88,11 +95,13 @@ Shows assertion examples for different testing scenarios.
 - `browser` - UI element validation
 
 **Example Request:**
+
 ```
 "What assertions should I use for user profile API responses?"
 ```
 
 **What You Get:**
+
 - Comprehensive assertion examples
 - JSONPath and XPath patterns
 - Validation tips and best practices
@@ -102,6 +111,7 @@ Shows assertion examples for different testing scenarios.
 Provides configuration examples for Rocketship plugins.
 
 **Available Plugins:**
+
 - `http` - API testing with retry logic and authentication
 - `sql` - Database operations with transaction support
 - `browser` - UI automation with screenshots and interactions
@@ -112,11 +122,13 @@ Provides configuration examples for Rocketship plugins.
 - `log` - Structured logging and debugging
 
 **Example Request:**
+
 ```
 "How do I configure the SQL plugin for PostgreSQL testing?"
 ```
 
 **What You Get:**
+
 - Basic and advanced configuration examples
 - Feature descriptions and capabilities
 - Plugin-specific tips and best practices
@@ -126,6 +138,7 @@ Provides configuration examples for Rocketship plugins.
 Reviews your Rocketship YAML content and suggests improvements.
 
 **Improvement Focus Areas:**
+
 - `performance` - Timeout and retry optimizations
 - `assertions` - Better validation patterns
 - `structure` - YAML organization improvements
@@ -133,11 +146,13 @@ Reviews your Rocketship YAML content and suggests improvements.
 - `best_practices` - General Rocketship recommendations
 
 **Example Request:**
+
 ```
 "Review my test file and suggest improvements"
 ```
 
 **What You Get:**
+
 - Issue identification and fixes
 - Specific improvement suggestions
 - Best practice recommendations
@@ -148,6 +163,7 @@ Reviews your Rocketship YAML content and suggests improvements.
 Provides CLI command examples and usage patterns.
 
 **Command Categories:**
+
 - `run` - Execute tests with various options
 - `validate` - Syntax and schema validation
 - `start` - Start Rocketship engine server
@@ -155,11 +171,13 @@ Provides CLI command examples and usage patterns.
 - `general` - Help, version, and configuration
 
 **Example Request:**
+
 ```
 "How do I run tests with custom variables in CI/CD?"
 ```
 
 **What You Get:**
+
 - Command examples for different scenarios
 - Flag explanations and usage
 - Workflow patterns and best practices
@@ -243,11 +261,13 @@ Any MCP-compatible client can use the Rocketship server. The server communicates
 Instead of asking for complete test generation, ask for guidance on specific aspects:
 
 **Good:**
+
 - "Show me examples of API authentication testing"
 - "What assertions work best for user profile endpoints?"
 - "How should I structure an E2E checkout flow test?"
 
 **Less Effective:**
+
 - "Generate all my tests"
 - "Create a complete test suite"
 
@@ -284,7 +304,7 @@ Use the validation tool to continuously improve:
 Here's how a typical interaction works:
 
 ```
-User: "I need to test a user registration API that creates a user, 
+User: "I need to test a user registration API that creates a user,
        sends an email, and requires email verification"
 
 Agent: *Uses get_rocketship_examples with feature="customer_journeys"*
