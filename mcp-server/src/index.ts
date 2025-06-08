@@ -6,413 +6,188 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import * as fs from "fs";
+import * as path from "path";
 
-// Knowledge base for Rocketship patterns and examples
-const ROCKETSHIP_KNOWLEDGE = {
-  api_testing: {
-    description:
-      "API testing patterns focus on testing HTTP endpoints with proper authentication, status codes, and response validation",
-    examples: [
-      {
-        name: "Basic API Health Check",
-        code: `tests:
-  - name: "Health Check"
-    steps:
-      - name: "Check API health"
-        plugin: http
-        config:
-          method: GET
-          url: "{{.vars.base_url}}/health"
-          timeout: 5s
-        assertions:
-          - type: status_code
-            expected: 200
-          - type: response_json
-            path: "$.status"
-            expected: "healthy"`,
-      },
-      {
-        name: "Authenticated API Request with Response Validation",
-        code: `tests:
-  - name: "Get User Profile"
-    steps:
-      - name: "Fetch user data"
-        plugin: http
-        config:
-          method: GET
-          url: "{{.vars.base_url}}/api/users/{{.vars.user_id}}"
-          headers:
-            Authorization: "Bearer {{.vars.auth_token}}"
-            Content-Type: "application/json"
-        assertions:
-          - type: status_code
-            expected: 200
-          - type: response_json
-            path: "$.data.email"
-            expected: "{{.vars.expected_email}}"
-        save:
-          - name: user_name
-            from: response_json
-            path: "$.data.name"`,
-      },
-    ],
-    best_practices: [
-      "Always use variables for URLs and authentication tokens",
-      "Include timeout configurations for all HTTP requests",
-      "Use response_json assertions for validating API responses",
-      "Save important values for use in subsequent steps",
-    ],
-  },
+// Dynamic schema and examples loader
+class RocketshipKnowledgeLoader {
+  private projectRoot: string;
+  private schema: any = null;
+  private examples: Map<string, any> = new Map();
+  private docs: Map<string, string> = new Map();
 
-  step_chaining: {
-    description:
-      "Step chaining allows you to use data from one step in subsequent steps, essential for testing complex workflows",
-    examples: [
-      {
-        name: "Create and Verify Resource",
-        code: `tests:
-  - name: "Create and Verify User"
-    steps:
-      - name: "Create user"
-        plugin: http
-        config:
-          method: POST
-          url: "{{.vars.base_url}}/api/users"
-          body: |
-            {
-              "email": "test-{{.run.timestamp}}@example.com",
-              "name": "Test User"
-            }
-        assertions:
-          - type: status_code
-            expected: 201
-        save:
-          - name: created_user_id
-            from: response_json
-            path: "$.data.id"
-          - name: created_email
-            from: response_json
-            path: "$.data.email"
-            
-      - name: "Verify user exists"
-        plugin: http
-        config:
-          method: GET
-          url: "{{.vars.base_url}}/api/users/{{.steps.create_user.created_user_id}}"
-        assertions:
-          - type: status_code
-            expected: 200
-          - type: response_json
-            path: "$.data.email"
-            expected: "{{.steps.create_user.created_email}}"`,
-      },
-    ],
-    best_practices: [
-      "Use meaningful names for saved variables",
-      "Reference saved variables with {{.steps.<step_name>.<variable_name>}}",
-      "Always validate that created resources can be retrieved",
-    ],
-  },
+  constructor() {
+    // Find project root by looking for schema.json
+    this.projectRoot = this.findProjectRoot();
+    this.loadSchema();
+    this.loadExamples();
+    this.loadDocumentation();
+  }
 
-  assertions: {
-    description:
-      "Assertions validate that your application behaves correctly. Rocketship supports multiple assertion types",
-    examples: [
-      {
-        name: "Common Assertion Types",
-        code: `assertions:
-  # Status code validation
-  - type: status_code
-    expected: 200
+  private findProjectRoot(): string {
+    let currentDir = process.cwd();
     
-  # JSON response validation
-  - type: response_json
-    path: "$.data.status"
-    expected: "active"
+    // Look for schema.json to identify project root
+    while (currentDir !== path.dirname(currentDir)) {
+      const schemaPath = path.join(currentDir, "internal", "dsl", "schema.json");
+      if (fs.existsSync(schemaPath)) {
+        return currentDir;
+      }
+      currentDir = path.dirname(currentDir);
+    }
     
-  # Response contains text
-  - type: response_body
-    contains: "success"
-    
-  # Response time check
-  - type: response_time
-    max_ms: 2000
-    
-  # Header validation
-  - type: response_header
-    name: "Content-Type"
-    expected: "application/json"
-    
-  # JSON array length
-  - type: response_json
-    path: "$.data.items"
-    length: 5
-    
-  # JSON exists check
-  - type: response_json_exists
-    path: "$.data.id"
-    
-  # JSON type validation
-  - type: response_json
-    path: "$.data.count"
-    type: "number"`,
-      },
-    ],
-    best_practices: [
-      "Use specific assertions rather than just checking status codes",
-      "Validate both structure and content of responses",
-      "Include response time assertions for performance testing",
-      "Use JSONPath for precise JSON validation",
-    ],
-  },
+    // Fallback: assume we're in mcp-server directory
+    return path.join(process.cwd(), "..");
+  }
 
-  customer_journeys: {
-    description:
-      "E2E customer journey tests validate complete user workflows across multiple services and steps",
-    examples: [
-      {
-        name: "E-Commerce Purchase Journey",
-        code: `name: "E-Commerce Customer Purchase Journey"
-description: "Test complete purchase flow from product search to order confirmation"
-version: "v1.0.0"
+  private loadSchema(): void {
+    try {
+      const schemaPath = path.join(this.projectRoot, "internal", "dsl", "schema.json");
+      const schemaContent = fs.readFileSync(schemaPath, "utf-8");
+      this.schema = JSON.parse(schemaContent);
+    } catch (error) {
+      console.error("Failed to load schema:", error);
+      this.schema = this.getFallbackSchema();
+    }
+  }
 
-tests:
-  - name: "Complete Purchase Flow"
-    steps:
-      # Step 1: Search for product
-      - name: "Search for product"
-        plugin: http
-        config:
-          method: GET
-          url: "{{.vars.base_url}}/api/products/search?q=laptop"
-        assertions:
-          - type: status_code
-            expected: 200
-          - type: response_json
-            path: "$.results"
-            min_length: 1
-        save:
-          - name: product_id
-            from: response_json
-            path: "$.results[0].id"
-          - name: product_price
-            from: response_json
-            path: "$.results[0].price"
-            
-      # Step 2: Add to cart
-      - name: "Add product to cart"
-        plugin: http
-        config:
-          method: POST
-          url: "{{.vars.base_url}}/api/cart/items"
-          headers:
-            Authorization: "Bearer {{.vars.customer_token}}"
-          body: |
-            {
-              "product_id": "{{.steps.search_for_product.product_id}}",
-              "quantity": 1
-            }
-        assertions:
-          - type: status_code
-            expected: 201
-        save:
-          - name: cart_id
-            from: response_json
-            path: "$.cart_id"
-            
-      # Step 3: Checkout
-      - name: "Create checkout session"
-        plugin: http
-        config:
-          method: POST
-          url: "{{.vars.base_url}}/api/checkout"
-          headers:
-            Authorization: "Bearer {{.vars.customer_token}}"
-          body: |
-            {
-              "cart_id": "{{.steps.add_product_to_cart.cart_id}}",
-              "payment_method": "test_card"
-            }
-        assertions:
-          - type: status_code
-            expected: 200
-        save:
-          - name: order_id
-            from: response_json
-            path: "$.order_id"
-            
-      # Step 4: Verify order
-      - name: "Verify order created"
-        plugin: http
-        config:
-          method: GET
-          url: "{{.vars.base_url}}/api/orders/{{.steps.create_checkout_session.order_id}}"
-          headers:
-            Authorization: "Bearer {{.vars.customer_token}}"
-        assertions:
-          - type: status_code
-            expected: 200
-          - type: response_json
-            path: "$.status"
-            expected: "confirmed"
-          - type: response_json
-            path: "$.total"
-            expected: "{{.steps.search_for_product.product_price}}"`,
-      },
-    ],
-    best_practices: [
-      "Test complete user journeys, not just individual endpoints",
-      "Validate data consistency across multiple steps",
-      "Use realistic test data that mimics actual user behavior",
-      "Include cleanup steps to reset test data",
-      "Consider edge cases and error scenarios in journeys",
-    ],
-  },
+  private loadExamples(): void {
+    try {
+      const examplesDir = path.join(this.projectRoot, "examples");
+      if (!fs.existsSync(examplesDir)) return;
 
-  environments: {
-    description:
-      "Environment configuration allows tests to run across different stages with appropriate settings",
-    examples: [
-      {
-        name: "Multi-Environment Configuration",
-        code: `# In your main test file:
-version: "v1.0.0"
-name: "Multi-Environment Tests"
+      const subdirs = fs.readdirSync(examplesDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
 
-vars:
-  base_url: "{{.env.BASE_URL}}"
-  api_key: "{{.env.API_KEY}}"
-  db_connection: "{{.env.DATABASE_URL}}"
-
-# In staging-vars.yaml:
-BASE_URL: "https://api-staging.example.com"
-API_KEY: "staging-key-12345"
-DATABASE_URL: "postgresql://user:pass@staging-db:5432/myapp"
-
-# In production-vars.yaml:
-BASE_URL: "https://api.example.com"
-API_KEY: "{{.secrets.PROD_API_KEY}}"  # Reference from secrets
-DATABASE_URL: "{{.secrets.PROD_DB_URL}}"`,
-      },
-    ],
-    best_practices: [
-      "Never hardcode environment-specific values",
-      "Use separate variable files for each environment",
-      "Store sensitive data in secure secret management",
-      "Include environment validation in your tests",
-    ],
-  },
-
-  plugins: {
-    description:
-      "Rocketship plugins extend testing capabilities beyond HTTP requests",
-    examples: [
-      {
-        name: "SQL Plugin for Database Testing",
-        code: `steps:
-  - name: "Verify database state"
-    plugin: sql
-    config:
-      driver: postgres
-      dsn: "{{.vars.db_connection}}"
-      commands:
-        - "SELECT COUNT(*) as user_count FROM users WHERE status = 'active';"
-    assertions:
-      - type: sql_result
-        query_index: 0
-        row_index: 0
-        column: "user_count"
-        expected: 5`,
-      },
-      {
-        name: "Browser Plugin for UI Testing",
-        code: `steps:
-  - name: "Test login flow"
-    plugin: browser
-    config:
-      url: "{{.vars.app_url}}/login"
-      actions:
-        - type: fill
-          selector: "#email"
-          value: "{{.vars.test_email}}"
-        - type: fill
-          selector: "#password"
-          value: "{{.vars.test_password}}"
-        - type: click
-          selector: "#login-button"
-        - type: wait_for_navigation
-    assertions:
-      - type: url
-        contains: "/dashboard"
-      - type: element_visible
-        selector: ".welcome-message"`,
-      },
-      {
-        name: "Script Plugin for Custom Logic",
-        code: `steps:
-  - name: "Custom validation"
-    plugin: script
-    config:
-      language: javascript
-      inline: |
-        // Access previous step data
-        const responseData = context.steps.previous_step.response;
-        
-        // Custom validation logic
-        if (responseData.items.length < 10) {
-          throw new Error("Expected at least 10 items");
+      for (const subdir of subdirs) {
+        const yamlPath = path.join(examplesDir, subdir, "rocketship.yaml");
+        if (fs.existsSync(yamlPath)) {
+          const content = fs.readFileSync(yamlPath, "utf-8");
+          this.examples.set(subdir, { content, path: yamlPath });
         }
-        
-        // Set variables for next steps
-        context.setVariable("item_count", responseData.items.length);
-        context.setVariable("first_item_id", responseData.items[0].id);`,
-      },
-    ],
-    best_practices: [
-      "Choose the right plugin for your testing needs",
-      "Configure plugins with appropriate timeouts and retry logic",
-      "Use variables for plugin configuration values",
-      "Test plugin functionality separately before complex workflows",
-      "Check plugin-specific documentation for advanced features"
-    ]
-  },
-};
+      }
+    } catch (error) {
+      console.error("Failed to load examples:", error);
+    }
+  }
+
+  private loadDocumentation(): void {
+    try {
+      // Load reference docs
+      const refDir = path.join(this.projectRoot, "docs", "src", "reference");
+      if (fs.existsSync(refDir)) {
+        const files = fs.readdirSync(refDir).filter(f => f.endsWith(".md"));
+        for (const file of files) {
+          const content = fs.readFileSync(path.join(refDir, file), "utf-8");
+          this.docs.set(`reference/${file}`, content);
+        }
+      }
+
+      // Load example docs
+      const exampleDocsDir = path.join(this.projectRoot, "docs", "src", "examples");
+      if (fs.existsSync(exampleDocsDir)) {
+        const files = fs.readdirSync(exampleDocsDir).filter(f => f.endsWith(".md"));
+        for (const file of files) {
+          const content = fs.readFileSync(path.join(exampleDocsDir, file), "utf-8");
+          this.docs.set(`examples/${file}`, content);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load documentation:", error);
+    }
+  }
+
+  getSchema(): any {
+    return this.schema;
+  }
+
+  getExample(name: string): any {
+    return this.examples.get(name);
+  }
+
+  getAllExamples(): string[] {
+    return Array.from(this.examples.keys());
+  }
+
+  getDocumentation(path: string): string | undefined {
+    return this.docs.get(path);
+  }
+
+  getAllDocs(): string[] {
+    return Array.from(this.docs.keys());
+  }
+
+  private getFallbackSchema(): any {
+    return {
+      properties: {
+        tests: {
+          type: "array",
+          items: {
+            properties: {
+              steps: {
+                type: "array",
+                items: {
+                  properties: {
+                    plugin: {
+                      enum: ["http", "browser", "sql", "delay", "log", "script", "agent", "supabase"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+  }
+}
+
+// Initialize knowledge loader
+const knowledgeLoader = new RocketshipKnowledgeLoader();
 
 // Tool descriptions that emphasize the assistant nature
 const TOOL_DESCRIPTIONS = {
-  get_rocketship_examples: `Provides examples and best practices for specific Rocketship features. This helps you understand how to write tests properly.
+  get_rocketship_examples: `Provides real examples from the Rocketship codebase for specific features or use cases.
 
-YOU (the coding agent) will create the actual test files based on these examples.`,
+💡 YOU (the coding agent) create the test files based on these examples.
+💡 For frontend projects, consider using the browser plugin for user journey testing.
+💡 Structure: .rocketship/ directory with subdirectories, each containing rocketship.yaml
+💡 Syntax: Use {{ variable_name }} for variables, .field_name for JSON paths (no $ prefix)`,
 
-  suggest_test_structure: `Suggests a test structure with helpful comments and TODOs for the given scenario. Returns a template that you can fill in.
+  suggest_test_structure: `Suggests proper Rocketship file structure and test organization for your project.
 
-YOU (the coding agent) will implement the actual test logic based on this structure.`,
+💡 YOU (the coding agent) create the directory structure and files.
+💡 For frontend projects: Consider browser-based user journey testing.
+💡 For API projects: Focus on user workflows rather than just coverage.`,
 
-  get_assertion_patterns: `Provides assertion examples for different testing scenarios. Shows you what assertions are available and when to use them.
+  get_schema_info: `Provides the current Rocketship schema information for validation and proper syntax.
 
-YOU (the coding agent) will choose and implement the appropriate assertions.`,
+💡 Use this to ensure your YAML follows the correct schema.
+💡 Pay attention to required fields, valid plugin names, and assertion types.`,
 
-  get_plugin_config: `Provides configuration examples for Rocketship plugins (http, sql, browser, etc). Shows available options and usage patterns.
+  get_cli_guidance: `Provides correct Rocketship CLI usage patterns and commands.
 
-YOU (the coding agent) will configure the plugins based on your specific needs.`,
+💡 YOU (the coding agent) will run these commands to execute tests.
+💡 Use rocketship run -af for auto-start, rocketship run -ad for directories.`,
 
-  validate_and_suggest: `Reviews your Rocketship YAML and suggests improvements. Helps ensure your tests follow best practices.
+  analyze_codebase_for_testing: `Analyzes a codebase to suggest meaningful test scenarios based on user journeys.
 
-YOU (the coding agent) will decide which suggestions to implement.`,
-
-  get_cli_commands: `Provides Rocketship CLI command examples and usage patterns. Helps you understand how to run and manage tests.
-
-YOU (the coding agent) will execute these commands as needed.`,
+💡 Focus on customer-facing flows and critical business logic.
+💡 For frontends: Consider browser testing of key user paths.
+💡 For APIs: Test the endpoints that support those user paths.`,
 };
 
 export class RocketshipMCPServer {
   private server: Server;
+  private knowledgeLoader: RocketshipKnowledgeLoader;
 
   constructor() {
+    this.knowledgeLoader = knowledgeLoader;
     this.server = new Server(
       {
         name: "rocketship-mcp",
-        version: "0.2.0",
+        version: "0.4.1",
       },
       {
         capabilities: {
@@ -434,25 +209,17 @@ export class RocketshipMCPServer {
             inputSchema: {
               type: "object",
               properties: {
-                feature: {
+                feature_type: {
                   type: "string",
-                  enum: [
-                    "api_testing",
-                    "step_chaining",
-                    "assertions",
-                    "plugins",
-                    "environments",
-                    "customer_journeys",
-                  ],
-                  description: "The Rocketship feature to get examples for",
+                  enum: ["browser", "http", "sql", "agent", "supabase", "delay", "log", "script"],
+                  description: "The plugin/feature type to get examples for",
                 },
-                context: {
+                use_case: {
                   type: "string",
-                  description:
-                    "Optional context about what you are trying to test",
+                  description: "Specific use case or scenario you're testing",
                 },
               },
-              required: ["feature"],
+              required: ["feature_type"],
             },
           },
           {
@@ -461,125 +228,67 @@ export class RocketshipMCPServer {
             inputSchema: {
               type: "object",
               properties: {
-                test_name: {
+                project_type: {
                   type: "string",
-                  description: "Name of the test suite",
+                  enum: ["frontend", "backend", "fullstack", "api", "mobile"],
+                  description: "Type of project being tested",
                 },
-                test_type: {
-                  type: "string",
-                  enum: ["api", "browser", "sql", "integration", "e2e"],
-                  description: "Type of test to create",
-                },
-                description: {
-                  type: "string",
-                  description: "Description of what needs to be tested",
-                },
-                customer_journey: {
-                  type: "string",
-                  description:
-                    "Description of the customer journey being tested",
+                user_flows: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Key user journeys to test (e.g., 'user registration', 'purchase flow')",
                 },
               },
-              required: ["test_name", "test_type", "description"],
+              required: ["project_type"],
             },
           },
           {
-            name: "get_assertion_patterns",
-            description: TOOL_DESCRIPTIONS.get_assertion_patterns,
+            name: "get_schema_info",
+            description: TOOL_DESCRIPTIONS.get_schema_info,
             inputSchema: {
               type: "object",
               properties: {
-                response_type: {
+                section: {
                   type: "string",
-                  enum: [
-                    "json",
-                    "xml",
-                    "text",
-                    "status",
-                    "headers",
-                    "sql",
-                    "browser",
-                  ],
-                  description: "Type of response to validate",
-                },
-                test_scenario: {
-                  type: "string",
-                  description: "What you are trying to validate",
+                  enum: ["plugins", "assertions", "save", "structure", "full"],
+                  description: "Which part of the schema to focus on",
                 },
               },
-              required: ["response_type", "test_scenario"],
+              required: ["section"],
             },
           },
           {
-            name: "get_plugin_config",
-            description: TOOL_DESCRIPTIONS.get_plugin_config,
-            inputSchema: {
-              type: "object",
-              properties: {
-                plugin: {
-                  type: "string",
-                  enum: [
-                    "http",
-                    "sql",
-                    "browser",
-                    "agent",
-                    "supabase",
-                    "delay",
-                    "script",
-                    "log",
-                  ],
-                  description: "The Rocketship plugin to get configuration for",
-                },
-                use_case: {
-                  type: "string",
-                  description: "What you want to use the plugin for",
-                },
-              },
-              required: ["plugin", "use_case"],
-            },
-          },
-          {
-            name: "validate_and_suggest",
-            description: TOOL_DESCRIPTIONS.validate_and_suggest,
-            inputSchema: {
-              type: "object",
-              properties: {
-                yaml_content: {
-                  type: "string",
-                  description: "The Rocketship YAML content to validate",
-                },
-                improvement_focus: {
-                  type: "string",
-                  enum: [
-                    "performance",
-                    "assertions",
-                    "structure",
-                    "coverage",
-                    "best_practices",
-                  ],
-                  description: "Area to focus improvements on",
-                },
-              },
-              required: ["yaml_content"],
-            },
-          },
-          {
-            name: "get_cli_commands",
-            description: TOOL_DESCRIPTIONS.get_cli_commands,
+            name: "get_cli_guidance",
+            description: TOOL_DESCRIPTIONS.get_cli_guidance,
             inputSchema: {
               type: "object",
               properties: {
                 command: {
                   type: "string",
-                  enum: ["run", "validate", "start", "stop", "general"],
-                  description: "The CLI command to get help for",
-                },
-                context: {
-                  type: "string",
-                  description: "Optional context about what you want to do",
+                  enum: ["run", "validate", "structure"],
+                  description: "CLI command guidance needed",
                 },
               },
               required: ["command"],
+            },
+          },
+          {
+            name: "analyze_codebase_for_testing",
+            description: TOOL_DESCRIPTIONS.analyze_codebase_for_testing,
+            inputSchema: {
+              type: "object",
+              properties: {
+                codebase_info: {
+                  type: "string",
+                  description: "Description of the codebase structure and functionality",
+                },
+                focus_area: {
+                  type: "string",
+                  enum: ["user_journeys", "api_endpoints", "critical_paths", "integration_points"],
+                  description: "What aspect to focus testing on",
+                },
+              },
+              required: ["codebase_info", "focus_area"],
             },
           },
         ],
@@ -595,14 +304,12 @@ export class RocketshipMCPServer {
             return this.handleGetExamples(args);
           case "suggest_test_structure":
             return this.handleSuggestStructure(args);
-          case "get_assertion_patterns":
-            return this.handleGetAssertions(args);
-          case "get_plugin_config":
-            return this.handleGetPluginConfig(args);
-          case "validate_and_suggest":
-            return this.handleValidateAndSuggest(args);
-          case "get_cli_commands":
-            return this.handleGetCLICommands(args);
+          case "get_schema_info":
+            return this.handleGetSchemaInfo(args);
+          case "get_cli_guidance":
+            return this.handleGetCLIGuidance(args);
+          case "analyze_codebase_for_testing":
+            return this.handleAnalyzeCodebase(args);
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -622,48 +329,83 @@ export class RocketshipMCPServer {
   }
 
   private async handleGetExamples(args: any) {
-    const { feature, context } = args;
-    const knowledge =
-      ROCKETSHIP_KNOWLEDGE[feature as keyof typeof ROCKETSHIP_KNOWLEDGE];
+    const { feature_type, use_case } = args;
+    
+    // Get real examples from codebase
+    const allExamples = this.knowledgeLoader.getAllExamples();
+    const relevantExamples = allExamples.filter(name => 
+      name.includes(feature_type) || 
+      (feature_type === "browser" && name.includes("browser")) ||
+      (feature_type === "http" && (name.includes("http") || name.includes("request"))) ||
+      (feature_type === "sql" && name.includes("sql")) ||
+      (feature_type === "agent" && name.includes("agent"))
+    );
 
-    if (!knowledge) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Unknown feature: ${feature}`,
-          },
-        ],
-      };
+    let response = `# Real Rocketship Examples for ${feature_type}\n\n`;
+    
+    if (use_case) {
+      response += `Use case: ${use_case}\n\n`;
     }
 
-    let response = `# Rocketship ${feature
-      .replace("_", " ")
-      .replace(/\b\w/g, (l: string) => l.toUpperCase())} Examples\n\n`;
-    response += `${knowledge.description}\n\n`;
-
-    if (context) {
-      response += `Context: ${context}\n\n`;
+    // Add suggestions for frontend projects
+    if (feature_type === "browser" || use_case?.toLowerCase().includes("frontend")) {
+      response += `💡 **Frontend Testing Considerations:**\n`;
+      response += `- Browser plugin is great for testing user journeys\n`;
+      response += `- Consider testing user flows in addition to API endpoints\n`;
+      response += `- Focus on the most important customer paths\n\n`;
     }
 
-    response += `## Examples:\n\n`;
-    for (const example of knowledge.examples) {
-      response += `### ${example.name}\n\n`;
-      response += "```yaml\n" + example.code + "\n```\n\n";
-    }
+    response += `## File Structure\n`;
+    response += `Create this structure (YOU must create these files):\n`;
+    response += `\`\`\`\n`;
+    response += `.rocketship/\n`;
+    response += `├── login-flow/\n`;
+    response += `│   └── rocketship.yaml\n`;
+    response += `├── purchase-journey/\n`;
+    response += `│   └── rocketship.yaml\n`;
+    response += `└── dashboard-tests/\n`;
+    response += `    └── rocketship.yaml\n`;
+    response += `\`\`\`\n\n`;
 
-    if (knowledge.best_practices) {
-      response += `## Best Practices:\n\n`;
-      for (const practice of knowledge.best_practices) {
-        response += `- ${practice}\n`;
+    // Show real examples
+    response += `## Real Examples from Codebase\n\n`;
+    
+    for (const exampleName of relevantExamples.slice(0, 3)) {
+      const example = this.knowledgeLoader.getExample(exampleName);
+      if (example) {
+        response += `### ${exampleName}\n\n`;
+        response += `\`\`\`yaml\n${example.content}\`\`\`\n\n`;
       }
     }
 
-    response += `\n## Next Steps:\n`;
-    response += `1. Create your test file based on these examples\n`;
-    response += `2. Customize the examples to match your specific API/application\n`;
-    response += `3. Run 'rocketship validate <your-file>.yaml' to check syntax\n`;
-    response += `4. Execute with 'rocketship run -af <your-file>.yaml'\n`;
+    // Add syntax reminders
+    response += `## Critical Syntax Rules\n\n`;
+    response += `- Variables: \`{{ variable_name }}\` (NOT \`{{.vars.variable_name}}\`)\n`;
+    response += `- JSON paths: \`.field_name\` or \`.items_0.id\` (NO $ prefix)\n`;
+    response += `- File names: Always \`rocketship.yaml\` in subdirectories\n`;
+    response += `- Step chaining: Save with \`json_path: ".field"\` and \`as: "var_name"\`\n\n`;
+
+    // Add browser-specific guidance
+    if (feature_type === "browser") {
+      response += `## Browser Plugin Requirements\n\n`;
+      response += `- \`task\`: Natural language description of what to do\n`;
+      response += `- \`llm\`: Configuration with provider and model\n`;
+      response += `- Common tasks: "Navigate to X and Y", "Fill form and submit", "Extract data from page"\n\n`;
+      
+      const browserDoc = this.knowledgeLoader.getDocumentation("examples/browser-testing.md");
+      if (browserDoc) {
+        // Extract key sections from browser documentation
+        const configMatch = browserDoc.match(/## Basic Configuration\n\n```yaml\n([\s\S]*?)\n```/);
+        if (configMatch) {
+          response += `## Browser Plugin Configuration\n\n\`\`\`yaml\n${configMatch[1]}\`\`\`\n\n`;
+        }
+      }
+    }
+
+    response += `## Next Steps\n`;
+    response += `1. YOU create the .rocketship/ directory structure\n`;
+    response += `2. YOU write the rocketship.yaml files based on these examples\n`;
+    response += `3. Run: \`rocketship run -ad .rocketship\` to execute all tests\n`;
 
     return {
       content: [
@@ -676,849 +418,99 @@ export class RocketshipMCPServer {
   }
 
   private async handleSuggestStructure(args: any) {
-    const { test_name, test_type, description, customer_journey } = args;
+    const { project_type, user_flows } = args;
 
-    let structure = `# Rocketship Test Structure for: ${test_name}\n\n`;
-    structure += `# Description: ${description}\n`;
-    if (customer_journey) {
-      structure += `# Customer Journey: ${customer_journey}\n`;
-    }
-    structure += `\n## Suggested Structure:\n\n`;
-    structure += "```yaml\n";
-    structure += `name: "${test_name}"\n`;
-    structure += `description: "${description}"\n`;
-    structure += `version: "v1.0.0"\n\n`;
+    let response = `# Rocketship Test Structure for ${project_type} Project\n\n`;
 
-    structure += `# TODO: Define your environment variables\n`;
-    structure += `vars:\n`;
-    structure += `  base_url: "{{.env.BASE_URL}}"\n`;
-    structure += `  auth_token: "{{.env.AUTH_TOKEN}}"\n`;
-    structure += `  # Add more variables as needed\n\n`;
+    response += `💡 **Note: YOU create all directories and files yourself**\n\n`;
 
-    structure += `tests:\n`;
-
-    if (test_type === "e2e" || customer_journey) {
-      structure += this.generateE2EStructure(customer_journey || description);
-    } else if (test_type === "api") {
-      structure += this.generateAPIStructure();
-    } else if (test_type === "integration") {
-      structure += this.generateIntegrationStructure();
-    } else {
-      structure += this.generateGenericStructure(test_type);
-    }
-
-    structure += "```\n\n";
-    structure += `## Implementation Checklist:\n\n`;
-    structure += `- [ ] Fill in all TODO sections with actual values\n`;
-    structure += `- [ ] Add appropriate assertions for each step\n`;
-    structure += `- [ ] Include error scenarios and edge cases\n`;
-    structure += `- [ ] Add cleanup steps if needed\n`;
-    structure += `- [ ] Create environment-specific variable files\n`;
-    structure += `- [ ] Validate with: rocketship validate <filename>.yaml\n`;
-    structure += `- [ ] Test locally before committing\n`;
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: structure,
-        },
-      ],
-    };
-  }
-
-  private generateE2EStructure(journey: string): string {
-    return `  - name: "${journey} - End to End Flow"
-    steps:
-      # TODO: Step 1 - Initial setup/authentication
-      - name: "Setup and authenticate"
-        plugin: http
-        config:
-          method: POST
-          url: "{{.vars.base_url}}/auth/login"
-          # TODO: Add authentication body
-        assertions:
-          - type: status_code
-            expected: 200
-        save:
-          - name: auth_token
-            from: response_json
-            path: "$.token"
+    // Project-specific guidance
+    if (project_type === "frontend" || project_type === "fullstack") {
+      response += `## 🌐 Frontend Testing Strategy\n\n`;
+      response += `**Recommended: Browser plugin for user journey testing**\n\n`;
       
-      # TODO: Step 2 - Main customer action
-      - name: "Perform main action"
-        plugin: http
-        config:
-          method: # TODO: Add method
-          url: # TODO: Add URL
-          headers:
-            Authorization: "Bearer {{.steps.setup_and_authenticate.auth_token}}"
-        assertions:
-          # TODO: Add assertions
-        save:
-          # TODO: Save important data for next steps
-      
-      # TODO: Step 3 - Verify results
-      - name: "Verify action completed"
-        plugin: http
-        config:
-          # TODO: Add verification request
-        assertions:
-          # TODO: Verify expected state
-      
-      # TODO: Add more steps for complete journey
-`;
-  }
-
-  private generateAPIStructure(): string {
-    return `  - name: "API Endpoint Tests"
-    steps:
-      # TODO: Health check
-      - name: "Health check"
-        plugin: http
-        config:
-          method: GET
-          url: "{{.vars.base_url}}/health"
-        assertions:
-          - type: status_code
-            expected: 200
-      
-      # TODO: Main API endpoint test
-      - name: "Test main endpoint"
-        plugin: http
-        config:
-          method: # TODO: GET/POST/PUT/DELETE
-          url: # TODO: Add endpoint URL
-          headers:
-            Authorization: "Bearer {{.vars.auth_token}}"
-            Content-Type: "application/json"
-          # TODO: Add body if needed
-        assertions:
-          - type: status_code
-            expected: # TODO: Expected status
-          - type: response_json
-            path: # TODO: JSONPath expression
-            expected: # TODO: Expected value
-        save:
-          # TODO: Save response data if needed
-`;
-  }
-
-  private generateIntegrationStructure(): string {
-    return `  - name: "Integration Test Flow"
-    steps:
-      # TODO: Setup test data
-      - name: "Setup test data"
-        plugin: # TODO: sql/http
-        config:
-          # TODO: Setup configuration
-        
-      # TODO: Execute main flow
-      - name: "Execute integration flow"
-        plugin: http
-        config:
-          # TODO: Add request details
-        assertions:
-          # TODO: Add assertions
-        save:
-          # TODO: Save data for verification
-      
-      # TODO: Verify side effects
-      - name: "Verify database state"
-        plugin: sql
-        config:
-          driver: postgres
-          dsn: "{{.vars.db_connection}}"
-          commands:
-            - # TODO: Add SQL query
-        assertions:
-          # TODO: Verify database state
-      
-      # TODO: Cleanup
-      - name: "Cleanup test data"
-        plugin: # TODO: sql/http
-        config:
-          # TODO: Cleanup configuration
-`;
-  }
-
-  private generateGenericStructure(test_type: string): string {
-    return `  - name: "${test_type} Test"
-    steps:
-      # TODO: Implement your ${test_type} test steps
-      - name: "First step"
-        plugin: ${
-          test_type === "sql"
-            ? "sql"
-            : test_type === "browser"
-            ? "browser"
-            : "http"
+      response += `Create this structure:\n\`\`\`\n`;
+      response += `.rocketship/\n`;
+      if (user_flows && user_flows.length > 0) {
+        for (const flow of user_flows.slice(0, 5)) {
+          const cleanName = flow.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+          response += `├── ${cleanName}/\n`;
+          response += `│   └── rocketship.yaml\n`;
         }
-        config:
-          # TODO: Add configuration
-        assertions:
-          # TODO: Add assertions
-`;
-  }
-
-  private async handleGetAssertions(args: any) {
-    const { response_type, test_scenario } = args;
-
-    let response = `# Assertion Patterns for ${response_type.toUpperCase()} Testing\n\n`;
-    response += `Scenario: ${test_scenario}\n\n`;
-
-    const assertionExamples = this.getAssertionExamples(
-      response_type,
-      test_scenario
-    );
-
-    response += `## Available Assertions:\n\n`;
-    response += "```yaml\n";
-    response += assertionExamples;
-    response += "```\n\n";
-
-    response += `## Tips:\n`;
-    response += `- Use multiple assertions to thoroughly validate responses\n`;
-    response += `- JSONPath expressions start with $ for root\n`;
-    response += `- Arrays can be accessed with [index] or [*] for all\n`;
-    response += `- Use exists assertions before value assertions\n`;
-    response += `- Consider both positive and negative test cases\n`;
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: response,
-        },
-      ],
-    };
-  }
-
-  private getAssertionExamples(type: string, scenario: string): string {
-    const examples: Record<string, string> = {
-      json: `assertions:
-  # Check status code first
-  - type: status_code
-    expected: 200
-    
-  # Validate specific JSON field
-  - type: response_json
-    path: "$.data.id"
-    expected: "12345"
-    
-  # Check if field exists
-  - type: response_json_exists
-    path: "$.data.user"
-    
-  # Validate array length
-  - type: response_json
-    path: "$.data.items"
-    length: 10
-    
-  # Check array contains value
-  - type: response_json
-    path: "$.data.tags"
-    contains: "important"
-    
-  # Validate nested object
-  - type: response_json
-    path: "$.data.user.email"
-    matches: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-    
-  # Check field type
-  - type: response_json
-    path: "$.data.count"
-    type: "number"
-    
-  # Complex validation with min/max
-  - type: response_json
-    path: "$.data.items"
-    min_length: 1
-    max_length: 100`,
-
-      status: `assertions:
-  # Basic status check
-  - type: status_code
-    expected: 200
-    
-  # Status code range
-  - type: status_code
-    min: 200
-    max: 299
-    
-  # Multiple acceptable codes
-  - type: status_code
-    one_of: [200, 201, 202]
-    
-  # Not found check
-  - type: status_code
-    expected: 404
-    
-  # Server error check
-  - type: status_code
-    min: 500
-    max: 599`,
-
-      headers: `assertions:
-  # Check specific header
-  - type: response_header
-    name: "Content-Type"
-    expected: "application/json"
-    
-  # Header contains value
-  - type: response_header
-    name: "Cache-Control"
-    contains: "no-cache"
-    
-  # Header exists
-  - type: response_header_exists
-    name: "X-Request-ID"
-    
-  # Multiple headers
-  - type: response_header
-    name: "X-Rate-Limit-Remaining"
-    min: 0
-    max: 1000`,
-
-      sql: `assertions:
-  # Row count check
-  - type: sql_result
-    query_index: 0
-    row_count: 5
-    
-  # Specific value check
-  - type: sql_result
-    query_index: 0
-    row_index: 0
-    column: "user_count"
-    expected: 10
-    
-  # Column exists
-  - type: sql_result
-    query_index: 0
-    column_exists: "email"
-    
-  # No results check
-  - type: sql_result
-    query_index: 0
-    row_count: 0`,
-
-      browser: `assertions:
-  # URL check
-  - type: url
-    expected: "https://example.com/dashboard"
-    
-  # URL contains
-  - type: url
-    contains: "/success"
-    
-  # Element visible
-  - type: element_visible
-    selector: "#welcome-message"
-    
-  # Element text
-  - type: element_text
-    selector: ".user-name"
-    expected: "John Doe"
-    
-  # Element count
-  - type: element_count
-    selector: ".list-item"
-    expected: 5`,
-
-      text: `assertions:
-  # Response contains text
-  - type: response_body
-    contains: "Success"
-    
-  # Response matches regex
-  - type: response_body
-    matches: "Order #[0-9]+ confirmed"
-    
-  # Response does not contain
-  - type: response_body
-    not_contains: "Error"
-    
-  # Exact match
-  - type: response_body
-    expected: "OK"`,
-
-      xml: `assertions:
-  # XPath validation
-  - type: response_xml
-    xpath: "//user/email"
-    expected: "test@example.com"
-    
-  # XML element exists
-  - type: response_xml_exists
-    xpath: "//response/data"
-    
-  # Count elements
-  - type: response_xml
-    xpath: "//items/item"
-    count: 5`,
-    };
-
-    return examples[type] || examples.json;
-  }
-
-  private async handleGetPluginConfig(args: any) {
-    const { plugin, use_case } = args;
-
-    const pluginConfigs: Record<string, any> = {
-      http: {
-        description: "HTTP plugin for API testing",
-        basic: `plugin: http
-config:
-  method: GET
-  url: "{{.vars.base_url}}/api/endpoint"
-  headers:
-    Authorization: "Bearer {{.vars.token}}"
-    Content-Type: "application/json"
-  timeout: 30s`,
-
-        advanced: `plugin: http
-config:
-  method: POST
-  url: "{{.vars.base_url}}/api/users"
-  headers:
-    Authorization: "Bearer {{.vars.token}}"
-    Content-Type: "application/json"
-    X-Request-ID: "{{.run.uuid}}"
-  body: |
-    {
-      "name": "Test User",
-      "email": "test-{{.run.timestamp}}@example.com",
-      "metadata": {
-        "source": "automated_test",
-        "timestamp": "{{.run.timestamp}}"
+      } else {
+        response += `├── user-registration/\n`;
+        response += `│   └── rocketship.yaml\n`;
+        response += `├── login-flow/\n`;
+        response += `│   └── rocketship.yaml\n`;
+        response += `├── main-dashboard/\n`;
+        response += `│   └── rocketship.yaml\n`;
       }
-    }
-  timeout: 30s
-  retry:
-    count: 3
-    delay: 2s
-    exponential: true`,
+      response += `\`\`\`\n\n`;
 
-        features: [
-          "Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH)",
-          "JSON, XML, and form data body types",
-          "Custom headers and authentication",
-          "Retry logic with exponential backoff",
-          "Request/response logging",
-          "Proxy support",
-        ],
-      },
-
-      sql: {
-        description: "SQL plugin for database testing",
-        basic: `plugin: sql
-config:
-  driver: postgres  # postgres, mysql, sqlite
-  dsn: "{{.vars.database_url}}"
-  commands:
-    - "SELECT COUNT(*) as total FROM users WHERE active = true;"`,
-
-        advanced: `plugin: sql
-config:
-  driver: postgres
-  dsn: "{{.vars.database_url}}"
-  transaction: true  # Run all commands in a transaction
-  commands:
-    - "INSERT INTO audit_log (action, user_id, timestamp) VALUES ('test_run', '{{.vars.test_user_id}}', NOW());"
-    - "SELECT * FROM audit_log WHERE user_id = '{{.vars.test_user_id}}' ORDER BY timestamp DESC LIMIT 1;"
-    - "UPDATE test_counters SET value = value + 1 WHERE name = 'test_runs';"
-  timeout: 10s`,
-
-        features: [
-          "Supports PostgreSQL, MySQL, SQLite",
-          "Transaction support",
-          "Multiple command execution",
-          "Parameterized queries",
-          "Result set validation",
-        ],
-      },
-
-      browser: {
-        description: "Browser plugin for UI testing",
-        basic: `plugin: browser
-config:
-  url: "{{.vars.app_url}}/login"
-  actions:
-    - type: fill
-      selector: "#username"
-      value: "{{.vars.test_user}}"
-    - type: fill
-      selector: "#password"
-      value: "{{.vars.test_password}}"
-    - type: click
-      selector: "#login-button"
-    - type: wait_for_navigation`,
-
-        advanced: `plugin: browser
-config:
-  url: "{{.vars.app_url}}"
-  viewport:
-    width: 1920
-    height: 1080
-  actions:
-    - type: wait_for_selector
-      selector: ".cookie-banner"
-      timeout: 5s
-    - type: click
-      selector: ".accept-cookies"
-    - type: fill
-      selector: "input[name='search']"
-      value: "{{.vars.search_term}}"
-    - type: press
-      key: "Enter"
-    - type: wait_for_selector
-      selector: ".search-results"
-    - type: screenshot
-      path: "search-results.png"
-    - type: evaluate
-      script: |
-        return document.querySelectorAll('.result-item').length;
-      save_as: "result_count"`,
-
-        features: [
-          "Headless browser automation",
-          "Form interaction and navigation",
-          "Screenshot capture",
-          "JavaScript execution",
-          "Mobile viewport testing",
-          "Cookie and localStorage management",
-        ],
-      },
-
-      script: {
-        description: "Script plugin for custom logic",
-        basic: `plugin: script
-config:
-  language: javascript
-  inline: |
-    // Access context and previous steps
-    const previousResponse = context.steps.previous_step.response;
-    
-    // Perform custom validation
-    if (previousResponse.total < 100) {
-      throw new Error("Insufficient data");
-    }
-    
-    // Set variables for next steps
-    context.setVariable("processed_count", previousResponse.total);`,
-
-        advanced: `plugin: script
-config:
-  language: javascript
-  file: "./scripts/custom-validation.js"
-  env:
-    - name: API_KEY
-      value: "{{.vars.api_key}}"
-    - name: ENVIRONMENT
-      value: "{{.vars.environment}}"`,
-
-        features: [
-          "JavaScript execution",
-          "Access to test context",
-          "Variable manipulation",
-          "External script files",
-          "Environment variables",
-          "Complex data transformations",
-        ],
-      },
-
-      delay: {
-        description: "Delay plugin for timing control",
-        basic: `plugin: delay
-config:
-  duration: 5s`,
-
-        advanced: `plugin: delay
-config:
-  duration: "{{.vars.wait_time}}"  # Dynamic delay
-  jitter: 2s  # Random jitter ±2 seconds`,
-
-        features: [
-          "Fixed delays",
-          "Variable-based delays",
-          "Random jitter",
-          "Useful for rate limiting",
-          "Simulating real-world timing",
-        ],
-      },
-
-      supabase: {
-        description: "Supabase plugin for database operations",
-        basic: `plugin: supabase
-config:
-  url: "{{.vars.supabase_url}}"
-  key: "{{.vars.supabase_anon_key}}"
-  operation: "select"
-  table: "users"
-  filters:
-    - column: "email"
-      operator: "eq"
-      value: "test@example.com"`,
-
-        advanced: `plugin: supabase
-config:
-  url: "{{.vars.supabase_url}}"
-  key: "{{.vars.supabase_service_key}}"
-  operation: "insert"
-  table: "orders"
-  data:
-    user_id: "{{.steps.create_user.user_id}}"
-    total: 99.99
-    status: "pending"
-    items:
-      - product_id: "123"
-        quantity: 2
-  options:
-    return: "representation"`,
-
-        features: [
-          "Direct Supabase API access",
-          "CRUD operations",
-          "Complex filtering",
-          "RLS bypass with service key",
-          "Batch operations",
-          "Real-time subscriptions",
-        ],
-      },
-
-      agent: {
-        description: "AI Agent plugin for intelligent testing",
-        basic: `plugin: agent
-config:
-  model: "gpt-4"
-  prompt: |
-    Analyze the following API response and verify:
-    1. All required fields are present
-    2. Data types are correct
-    3. Business logic is valid
-    
-    Response: {{.steps.previous_step.response}}`,
-
-        advanced: `plugin: agent
-config:
-  model: "claude-3"
-  temperature: 0.2
-  system_prompt: "You are a QA engineer validating test results."
-  prompt: |
-    Compare these two datasets and identify discrepancies:
-    
-    Expected: {{.vars.expected_data}}
-    Actual: {{.steps.fetch_data.response}}
-    
-    Return a JSON object with:
-    - matches: boolean
-    - discrepancies: array of differences
-    - severity: high/medium/low`,
-
-        features: [
-          "AI-powered test validation",
-          "Natural language assertions",
-          "Complex data comparison",
-          "Pattern recognition",
-          "Anomaly detection",
-          "Dynamic test generation",
-        ],
-      },
-
-      log: {
-        description: "Log plugin for debugging and reporting",
-        basic: `plugin: log
-config:
-  message: "Test checkpoint reached"
-  level: "info"`,
-
-        advanced: `plugin: log
-config:
-  message: |
-    Test Status Report:
-    - User ID: {{.steps.create_user.user_id}}
-    - Order Total: {{.steps.create_order.total}}
-    - Timestamp: {{.run.timestamp}}
-  level: "info"
-  metadata:
-    test_id: "{{.run.uuid}}"
-    environment: "{{.vars.environment}}"`,
-
-        features: [
-          "Structured logging",
-          "Variable interpolation",
-          "Multiple log levels",
-          "Metadata attachment",
-          "Test debugging",
-          "Audit trails",
-        ],
-      },
-    };
-
-    const config = pluginConfigs[plugin];
-    if (!config) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Unknown plugin: ${plugin}`,
-          },
-        ],
-      };
-    }
-
-    let response = `# ${plugin.toUpperCase()} Plugin Configuration\n\n`;
-    response += `${config.description}\n\n`;
-    response += `Use case: ${use_case}\n\n`;
-
-    response += `## Basic Configuration:\n\n`;
-    response += "```yaml\n" + config.basic + "\n```\n\n";
-
-    response += `## Advanced Configuration:\n\n`;
-    response += "```yaml\n" + config.advanced + "\n```\n\n";
-
-    response += `## Features:\n\n`;
-    for (const feature of config.features) {
-      response += `- ${feature}\n`;
-    }
-
-    response += `\n## Tips for ${plugin}:\n`;
-    response += this.getPluginTips(plugin, use_case);
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: response,
-        },
-      ],
-    };
-  }
-
-  private getPluginTips(plugin: string, use_case: string): string {
-    const tips: Record<string, string[]> = {
-      http: [
-        "Always use variables for URLs and credentials",
-        "Include appropriate timeouts for slow endpoints",
-        "Use retry logic for flaky services",
-        "Validate both success and error responses",
-        "Log requests for debugging",
-      ],
-      sql: [
-        "Use transactions for data modifications",
-        "Always clean up test data",
-        "Parameterize queries to prevent SQL injection",
-        "Test both data presence and absence",
-        "Consider database connection pooling",
-      ],
-      browser: [
-        "Wait for elements before interacting",
-        "Use stable selectors (IDs over classes)",
-        "Take screenshots for debugging",
-        "Test multiple viewport sizes",
-        "Handle popups and alerts",
-      ],
-      script: [
-        "Keep scripts focused and testable",
-        "Use error handling for robustness",
-        "Document complex logic",
-        "Avoid hardcoded values",
-        "Return meaningful error messages",
-      ],
-      supabase: [
-        "Use anon key for public operations",
-        "Use service key for admin operations",
-        "Handle RLS policies appropriately",
-        "Test error scenarios",
-        "Clean up test data after runs",
-      ],
-    };
-
-    const pluginTips = tips[plugin] || ["No specific tips available"];
-    return pluginTips.map((tip) => `- ${tip}`).join("\n");
-  }
-
-  private async handleValidateAndSuggest(args: any) {
-    const { yaml_content, improvement_focus } = args;
-
-    // Basic YAML structure validation
-    const issues: string[] = [];
-    const suggestions: string[] = [];
-
-    // Check for required fields
-    if (!yaml_content.includes("version:")) {
-      issues.push("Missing 'version' field");
-      suggestions.push("Add 'version: \"v1.0.0\"' at the top of your file");
-    } else if (!yaml_content.match(/version:\s*["']?v\d+\.\d+\.\d+/)) {
-      issues.push("Version format incorrect");
-      suggestions.push("Use format 'version: \"v1.0.0\"'");
-    }
-
-    if (!yaml_content.includes("name:")) {
-      issues.push("Missing 'name' field");
-      suggestions.push("Add a descriptive name for your test suite");
-    }
-
-    if (!yaml_content.includes("tests:")) {
-      issues.push("Missing 'tests' section");
-      suggestions.push("Add a 'tests:' section with at least one test");
-    }
-
-    // Check for best practices
-    if (!yaml_content.includes("vars:") && !yaml_content.includes(".env.")) {
-      suggestions.push(
-        "Consider using variables for reusable values like URLs and tokens"
-      );
-    }
-
-    if (!yaml_content.includes("assertions:")) {
-      suggestions.push("Add assertions to validate your test results");
-    }
-
-    if (!yaml_content.includes("save:") && yaml_content.includes("steps:")) {
-      suggestions.push("Consider using 'save:' to pass data between steps");
-    }
-
-    // Focus-specific suggestions
-    if (improvement_focus === "performance") {
-      suggestions.push("Add 'timeout' configurations to prevent hanging tests");
-      suggestions.push(
-        "Consider using 'delay' plugin between requests to avoid rate limiting"
-      );
-      suggestions.push("Use concurrent test execution where possible");
-    } else if (improvement_focus === "assertions") {
-      suggestions.push("Add more specific assertions beyond status codes");
-      suggestions.push("Validate response structure with JSON path assertions");
-      suggestions.push("Include negative test cases");
-    } else if (improvement_focus === "coverage") {
-      suggestions.push("Add tests for error scenarios (4xx, 5xx responses)");
-      suggestions.push("Test edge cases and boundary conditions");
-      suggestions.push("Include authentication and authorization tests");
-    }
-
-    let response = `# Rocketship Test Validation Results\n\n`;
-
-    if (issues.length > 0) {
-      response += `## Issues Found:\n\n`;
-      for (const issue of issues) {
-        response += `- ❌ ${issue}\n`;
-      }
+      response += `### Example Frontend Test Structure\n\n`;
+      response += `\`\`\`yaml\n`;
+      response += `name: "User Login Journey"\n`;
+      response += `version: "v1.0.0"\n`;
       response += `\n`;
+      response += `tests:\n`;
+      response += `  - name: "Complete login flow"\n`;
+      response += `    steps:\n`;
+      response += `      - name: "Navigate and login"\n`;
+      response += `        plugin: browser\n`;
+      response += `        config:\n`;
+      response += `          task: |\n`;
+      response += `            1. Navigate to {{ app_url }}/login\n`;
+      response += `            2. Fill in email: test@example.com\n`;
+      response += `            3. Fill in password: testpass123\n`;
+      response += `            4. Click login button\n`;
+      response += `            5. Verify you reach the dashboard\n`;
+      response += `          llm:\n`;
+      response += `            provider: "openai"\n`;
+      response += `            model: "gpt-4o"\n`;
+      response += `            config:\n`;
+      response += `              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"\n`;
+      response += `          headless: true\n`;
+      response += `          timeout: "2m"\n`;
+      response += `        save:\n`;
+      response += `          - json_path: ".success"\n`;
+      response += `            as: "login_success"\n`;
+      response += `        assertions:\n`;
+      response += `          - type: "json_path"\n`;
+      response += `            path: ".success"\n`;
+      response += `            expected: true\n`;
+      response += `\`\`\`\n\n`;
     } else {
-      response += `✅ Basic structure looks good!\n\n`;
+      response += `## 🔌 API Testing Strategy\n\n`;
+      response += `Focus on user journey endpoints (not just coverage)\n\n`;
+      
+      response += `Create this structure:\n\`\`\`\n`;
+      response += `.rocketship/\n`;
+      response += `├── health-checks/\n`;
+      response += `│   └── rocketship.yaml\n`;
+      response += `├── user-authentication/\n`;
+      response += `│   └── rocketship.yaml\n`;
+      response += `├── core-business-flow/\n`;
+      response += `│   └── rocketship.yaml\n`;
+      response += `\`\`\`\n\n`;
     }
 
-    response += `## Suggestions for Improvement:\n\n`;
-    for (const suggestion of suggestions) {
-      response += `- 💡 ${suggestion}\n`;
-    }
+    response += `## CLI Commands YOU Need to Run\n\n`;
+    response += `\`\`\`bash\n`;
+    response += `# Validate your YAML files\n`;
+    response += `rocketship validate .rocketship\n`;
+    response += `\n`;
+    response += `# Run all tests with auto-start/stop\n`;
+    response += `rocketship run -ad .rocketship\n`;
+    response += `\n`;
+    response += `# Run specific test\n`;
+    response += `rocketship run -af .rocketship/login-flow/rocketship.yaml\n`;
+    response += `\`\`\`\n\n`;
 
-    response += `\n## Next Steps:\n`;
-    response += `1. Address any issues found above\n`;
-    response += `2. Run 'rocketship validate <your-file>.yaml' to check syntax\n`;
-    response += `3. Test with a single test first before running the full suite\n`;
-    response += `4. Use 'rocketship run -af <your-file>.yaml --dry-run' to preview execution\n`;
+    response += `## Key Reminders\n`;
+    response += `- File names: Always \`rocketship.yaml\` (exact name)\n`;
+    response += `- Directory structure: \`.rocketship/test-name/rocketship.yaml\`\n`;
+    response += `- Variables: \`{{ variable_name }}\` format\n`;
+    response += `- JSON paths: \`.field_name\` (no $ prefix)\n`;
 
     return {
       content: [
@@ -1530,188 +522,114 @@ config:
     };
   }
 
-  private async handleGetCLICommands(args: any) {
-    const { command, context } = args;
+  private async handleGetSchemaInfo(args: any) {
+    const { section } = args;
+    const schema = this.knowledgeLoader.getSchema();
 
-    const commands: Record<string, any> = {
-      run: {
-        description: "Execute Rocketship tests",
-        basic: `# Run a test file
-rocketship run -f test.yaml
+    let response = `# Rocketship Schema Information\n\n`;
 
-# Auto-start engine and run
-rocketship run -af test.yaml
-
-# Run with specific environment
-rocketship run -af test.yaml --var-file staging-vars.yaml
-
-# Run specific test by name
-rocketship run -af test.yaml --test-name "Login Flow"`,
-
-        advanced: `# Run with custom variables
-rocketship run -af test.yaml --var API_KEY=abc123 --var BASE_URL=https://api.example.com
-
-# Run in CI/CD mode (no interactive output)
-rocketship run -af test.yaml --ci
-
-# Run with specific engine
-rocketship run -f test.yaml --engine localhost:7700
-
-# Dry run (validate without executing)
-rocketship run -af test.yaml --dry-run
-
-# Run with debug logging
-ROCKETSHIP_LOG=DEBUG rocketship run -af test.yaml`,
-
-        flags: [
-          "-f, --file: Test file to run",
-          "-a, --auto: Auto-start local engine",
-          "--var-file: Variable file path",
-          "--var: Set individual variables",
-          "--test-name: Run specific test",
-          "--engine: Engine URL",
-          "--ci: CI mode (non-interactive)",
-          "--dry-run: Validate without running",
-        ],
-      },
-
-      validate: {
-        description: "Validate test file syntax",
-        basic: `# Validate a test file
-rocketship validate test.yaml
-
-# Validate multiple files
-rocketship validate tests/*.yaml`,
-
-        advanced: `# Validate with variable resolution
-rocketship validate test.yaml --var-file prod-vars.yaml
-
-# Validate and show resolved variables
-rocketship validate test.yaml --show-resolved
-
-# Strict validation (fail on warnings)
-rocketship validate test.yaml --strict`,
-
-        flags: [
-          "file: Test file(s) to validate",
-          "--var-file: Variable file for resolution",
-          "--show-resolved: Display resolved variables",
-          "--strict: Treat warnings as errors",
-        ],
-      },
-
-      start: {
-        description: "Start Rocketship engine server",
-        basic: `# Start local engine
-rocketship start server --local
-
-# Start in background
-rocketship start server --local --background
-
-# Start with custom port
-rocketship start server --local --port 8800`,
-
-        advanced: `# Start with custom Temporal
-rocketship start server --local --temporal-address localhost:7233
-
-# Start with debug logging
-ROCKETSHIP_LOG=DEBUG rocketship start server --local
-
-# Start with specific version
-rocketship start server --version v1.2.0`,
-
-        flags: [
-          "--local: Start locally",
-          "--background: Run in background",
-          "--port: Engine port (default 7700)",
-          "--temporal-address: Temporal server",
-          "--version: Specific version",
-        ],
-      },
-
-      stop: {
-        description: "Stop Rocketship engine server",
-        basic: `# Stop local engine
-rocketship stop server
-
-# Force stop
-rocketship stop server --force`,
-
-        advanced: `# Stop specific instance
-rocketship stop server --pid 12345
-
-# Stop all instances
-rocketship stop server --all`,
-
-        flags: [
-          "--force: Force stop",
-          "--pid: Stop specific process",
-          "--all: Stop all instances",
-        ],
-      },
-
-      general: {
-        description: "General Rocketship CLI usage",
-        basic: `# Show help
-rocketship --help
-
-# Show version
-rocketship version
-
-# List available commands
-rocketship help`,
-
-        advanced: `# Enable debug logging globally
-export ROCKETSHIP_LOG=DEBUG
-
-# Set default engine URL
-export ROCKETSHIP_ENGINE_URL=https://engine.example.com
-
-# Use config file
-rocketship --config ~/.rocketship/config.yaml run -f test.yaml`,
-
-        tips: [
-          "Use 'rocketship run -af' for quick local testing",
-          "Always validate files before running in production",
-          "Use variable files to avoid hardcoding values",
-          "Set ROCKETSHIP_LOG=DEBUG for troubleshooting",
-          "Run 'rocketship help <command>' for detailed help",
-        ],
-      },
-    };
-
-    const cmdInfo = commands[command] || commands.general;
-
-    let response = `# Rocketship CLI: ${command.toUpperCase()} Command\n\n`;
-    response += `${cmdInfo.description}\n\n`;
-
-    if (context) {
-      response += `Context: ${context}\n\n`;
-    }
-
-    response += `## Basic Usage:\n\n`;
-    response += "```bash\n" + cmdInfo.basic + "\n```\n\n";
-
-    response += `## Advanced Usage:\n\n`;
-    response += "```bash\n" + cmdInfo.advanced + "\n```\n\n";
-
-    if (cmdInfo.flags) {
-      response += `## Available Flags:\n\n`;
-      for (const flag of cmdInfo.flags) {
-        response += `- ${flag}\n`;
+    if (section === "plugins" || section === "full") {
+      response += `## Available Plugins\n\n`;
+      const pluginEnum = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum;
+      if (pluginEnum) {
+        for (const plugin of pluginEnum) {
+          response += `- **${plugin}**: `;
+          switch (plugin) {
+            case "browser":
+              response += `AI-powered browser automation for frontend testing\n`;
+              break;
+            case "http":
+              response += `HTTP requests for API testing\n`;
+              break;
+            case "sql":
+              response += `Database queries and validation\n`;
+              break;
+            case "agent":
+              response += `AI agent interactions for complex testing\n`;
+              break;
+            case "delay":
+              response += `Wait/pause between test steps\n`;
+              break;
+            case "log":
+              response += `Output messages and debugging\n`;
+              break;
+            case "script":
+              response += `Custom JavaScript or shell scripts\n`;
+              break;
+            case "supabase":
+              response += `Supabase database operations\n`;
+              break;
+            default:
+              response += `Plugin for ${plugin} operations\n`;
+          }
+        }
       }
       response += `\n`;
     }
 
-    if (cmdInfo.tips) {
-      response += `## Tips:\n\n`;
-      for (const tip of cmdInfo.tips) {
-        response += `- ${tip}\n`;
+    if (section === "assertions" || section === "full") {
+      response += `## Valid Assertion Types\n\n`;
+      const assertionTypes = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.assertions?.items?.properties?.type?.enum;
+      if (assertionTypes) {
+        for (const type of assertionTypes) {
+          response += `- **${type}**: `;
+          switch (type) {
+            case "status_code":
+              response += `HTTP status code validation\n`;
+              break;
+            case "json_path":
+              response += `JSON field validation using .field.path syntax\n`;
+              break;
+            case "header":
+              response += `HTTP response header validation\n`;
+              break;
+            default:
+              response += `${type} validation\n`;
+          }
+        }
       }
+      response += `\n`;
     }
 
-    response += `\n## Common Workflows:\n`;
-    response += this.getWorkflowExamples(command);
+    if (section === "save" || section === "full") {
+      response += `## Save Syntax\n\n`;
+      response += `Save data from responses for use in later steps:\n\n`;
+      response += `\`\`\`yaml\n`;
+      response += `save:\n`;
+      response += `  - json_path: ".field_name"  # No $ prefix!\n`;
+      response += `    as: "variable_name"\n`;
+      response += `  - header: "Content-Type"\n`;
+      response += `    as: "content_type"\n`;
+      response += `\`\`\`\n\n`;
+      response += `Use saved variables: \`{{ variable_name }}\`\n\n`;
+    }
+
+    if (section === "structure" || section === "full") {
+      response += `## Required File Structure\n\n`;
+      response += `\`\`\`yaml\n`;
+      response += `name: "Test Suite Name"          # Required\n`;
+      response += `version: "v1.0.0"                # Required: v1.0.0 format\n`;
+      response += `description: "Optional description"\n`;
+      response += `\n`;
+      response += `vars:                            # Optional\n`;
+      response += `  app_url: "{{ .env.APP_URL }}"\n`;
+      response += `\n`;
+      response += `tests:                           # Required: array\n`;
+      response += `  - name: "Test name"            # Required\n`;
+      response += `    steps:                       # Required: array\n`;
+      response += `      - name: "Step name"        # Required\n`;
+      response += `        plugin: "browser"        # Required: valid plugin\n`;
+      response += `        config:                  # Required: plugin config\n`;
+      response += `          # plugin-specific config\n`;
+      response += `        assertions:              # Optional: array\n`;
+      response += `          - type: "json_path"    # Required if assertions\n`;
+      response += `            path: ".success"     # Required for json_path\n`;
+      response += `            expected: true       # Required\n`;
+      response += `        save:                    # Optional: array\n`;
+      response += `          - json_path: ".result" # One of: json_path, header, sql_result\n`;
+      response += `            as: "result_data"    # Required\n`;
+      response += `\`\`\`\n\n`;
+    }
 
     return {
       content: [
@@ -1723,33 +641,275 @@ rocketship --config ~/.rocketship/config.yaml run -f test.yaml`,
     };
   }
 
-  private getWorkflowExamples(command: string): string {
-    if (command === "run") {
-      return `
-### Local Development:
-\`\`\`bash
-# Quick test during development
-rocketship run -af my-test.yaml
+  private async handleGetCLIGuidance(args: any) {
+    const { command } = args;
 
-# Test with staging variables
-rocketship run -af my-test.yaml --var-file staging.yaml
-\`\`\`
+    let response = `# Rocketship CLI Guidance\n\n`;
 
-### CI/CD Pipeline:
-\`\`\`bash
-# In GitHub Actions or similar
-rocketship validate tests/*.yaml
-rocketship run -af tests/smoke-test.yaml --ci --var-file \${ENVIRONMENT}.yaml
-\`\`\`
+    if (command === "run" || command === "structure") {
+      response += `## Running Tests\n\n`;
+      response += `### Auto-start mode (recommended for development)\n`;
+      response += `\`\`\`bash\n`;
+      response += `# Run single test file with auto-start/stop\n`;
+      response += `rocketship run -af .rocketship/login-flow/rocketship.yaml\n`;
+      response += `\n`;
+      response += `# Run all tests in directory with auto-start/stop\n`;
+      response += `rocketship run -ad .rocketship\n`;
+      response += `\n`;
+      response += `# Run with environment variables\n`;
+      response += `rocketship run -ad .rocketship --var APP_URL=http://localhost:3000\n`;
+      response += `\`\`\`\n\n`;
 
-### Production Testing:
-\`\`\`bash
-# Run against production with specific engine
-rocketship run -f prod-test.yaml --engine https://engine.prod.example.com --var-file prod-secure.yaml
-\`\`\``;
+      response += `### Manual engine mode\n`;
+      response += `\`\`\`bash\n`;
+      response += `# Start engine in background\n`;
+      response += `rocketship start server --local --background\n`;
+      response += `\n`;
+      response += `# Run tests against running engine\n`;
+      response += `rocketship run -d .rocketship\n`;
+      response += `\n`;
+      response += `# Stop engine\n`;
+      response += `rocketship stop server\n`;
+      response += `\`\`\`\n\n`;
     }
 
-    return "See documentation for more workflow examples.";
+    if (command === "validate" || command === "structure") {
+      response += `## Validation\n\n`;
+      response += `\`\`\`bash\n`;
+      response += `# Validate single file\n`;
+      response += `rocketship validate .rocketship/login-flow/rocketship.yaml\n`;
+      response += `\n`;
+      response += `# Validate all files in directory\n`;
+      response += `rocketship validate .rocketship\n`;
+      response += `\n`;
+      response += `# Validate with variables\n`;
+      response += `rocketship validate .rocketship --var APP_URL=http://localhost:3000\n`;
+      response += `\`\`\`\n\n`;
+    }
+
+    response += `## Key Flags\n\n`;
+    response += `- \`-a, --auto\`: Auto-start and stop engine\n`;
+    response += `- \`-f, --file\`: Single test file\n`;
+    response += `- \`-d, --dir\`: Directory of tests\n`;
+    response += `- \`--var key=value\`: Set variables\n`;
+    response += `- \`--var-file path\`: Load variables from file\n\n`;
+
+    response += `## File Discovery\n`;
+    response += `Rocketship automatically finds \`rocketship.yaml\` files recursively in directories.\n\n`;
+
+    const runDoc = this.knowledgeLoader.getDocumentation("reference/rocketship_run.md");
+    if (runDoc) {
+      response += `## Complete CLI Reference\n\n`;
+      response += runDoc;
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: response,
+        },
+      ],
+    };
+  }
+
+  private async handleAnalyzeCodebase(args: any) {
+    const { codebase_info, focus_area } = args;
+
+    let response = `# Test Strategy Analysis\n\n`;
+    response += `Codebase: ${codebase_info}\n\n`;
+
+    // Detect if this is a frontend project
+    const isFrontend = codebase_info.toLowerCase().includes("react") || 
+                      codebase_info.toLowerCase().includes("vue") || 
+                      codebase_info.toLowerCase().includes("frontend") ||
+                      codebase_info.toLowerCase().includes("client") ||
+                      codebase_info.toLowerCase().includes("ui");
+
+    if (isFrontend && focus_area === "user_journeys") {
+      response += `💡 **Frontend Detected - Browser Testing Recommended**\n\n`;
+      response += `## Critical User Journeys to Test\n\n`;
+      
+      // Extract potential user flows from description
+      const flows = this.extractUserFlows(codebase_info);
+      
+      for (let i = 0; i < flows.length; i++) {
+        const flow = flows[i];
+        const dirName = flow.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+        
+        response += `### ${i + 1}. ${flow}\n\n`;
+        response += `**Directory:** \`.rocketship/${dirName}/rocketship.yaml\`\n\n`;
+        response += `**Browser Test Strategy:**\n`;
+        response += `\`\`\`yaml\n`;
+        response += `name: "${flow} Journey"\n`;
+        response += `version: "v1.0.0"\n`;
+        response += `\n`;
+        response += `tests:\n`;
+        response += `  - name: "${flow} E2E Test"\n`;
+        response += `    steps:\n`;
+        response += `      - name: "Execute ${flow.toLowerCase()}"\n`;
+        response += `        plugin: browser\n`;
+        response += `        config:\n`;
+        response += `          task: |\n`;
+        response += `            ${this.generateBrowserTask(flow)}\n`;
+        response += `          llm:\n`;
+        response += `            provider: "openai"\n`;
+        response += `            model: "gpt-4o"\n`;
+        response += `            config:\n`;
+        response += `              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"\n`;
+        response += `          headless: true\n`;
+        response += `          timeout: "3m"\n`;
+        response += `        save:\n`;
+        response += `          - json_path: ".success"\n`;
+        response += `            as: "flow_success"\n`;
+        response += `          - json_path: ".result"\n`;
+        response += `            as: "flow_result"\n`;
+        response += `        assertions:\n`;
+        response += `          - type: "json_path"\n`;
+        response += `            path: ".success"\n`;
+        response += `            expected: true\n`;
+        response += `\`\`\`\n\n`;
+      }
+    } else if (focus_area === "api_endpoints") {
+      response += `## API Testing Strategy\n\n`;
+      response += `Focus on endpoints that support user journeys, not just coverage.\n\n`;
+      
+      response += `### Health & Authentication\n`;
+      response += `\`\`\`yaml\n`;
+      response += `- name: "API Health Check"\n`;
+      response += `  plugin: http\n`;
+      response += `  config:\n`;
+      response += `    method: GET\n`;
+      response += `    url: "{{ base_url }}/health"\n`;
+      response += `  assertions:\n`;
+      response += `    - type: status_code\n`;
+      response += `      expected: 200\n`;
+      response += `\`\`\`\n\n`;
+    }
+
+    response += `## Recommended Test Structure\n\n`;
+    response += `\`\`\`\n`;
+    response += `.rocketship/\n`;
+    
+    if (isFrontend) {
+      const flows = this.extractUserFlows(codebase_info);
+      for (const flow of flows.slice(0, 5)) {
+        const dirName = flow.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+        response += `├── ${dirName}/\n`;
+        response += `│   └── rocketship.yaml    # Browser-based E2E test\n`;
+      }
+    } else {
+      response += `├── health-checks/\n`;
+      response += `│   └── rocketship.yaml    # API health validation\n`;
+      response += `├── authentication/\n`;
+      response += `│   └── rocketship.yaml    # Auth flows\n`;
+      response += `├── core-workflows/\n`;
+      response += `│   └── rocketship.yaml    # Main business logic\n`;
+    }
+    
+    response += `\`\`\`\n\n`;
+
+    response += `## Next Steps\n\n`;
+    response += `1. **YOU create the directory structure above**\n`;
+    response += `2. **YOU write the rocketship.yaml files**\n`;
+    response += `3. Run: \`rocketship validate .rocketship\`\n`;
+    response += `4. Run: \`rocketship run -ad .rocketship\`\n\n`;
+
+    if (isFrontend) {
+      response += `💡 **Tip:** Consider using the browser plugin for frontend testing in addition to API calls.\n`;
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: response,
+        },
+      ],
+    };
+  }
+
+  private extractUserFlows(description: string): string[] {
+    const commonFlows = [
+      "User Registration",
+      "Login Flow", 
+      "Dashboard Navigation",
+      "Settings Management",
+      "Search Functionality",
+      "Data Entry",
+      "Purchase Flow",
+      "Profile Management",
+      "Content Creation",
+      "Report Generation"
+    ];
+
+    // Extract flows based on keywords in description
+    const flows: string[] = [];
+    const lowerDesc = description.toLowerCase();
+
+    if (lowerDesc.includes("auth") || lowerDesc.includes("login") || lowerDesc.includes("sign")) {
+      flows.push("User Authentication");
+    }
+    if (lowerDesc.includes("dashboard") || lowerDesc.includes("admin")) {
+      flows.push("Dashboard Navigation");
+    }
+    if (lowerDesc.includes("search")) {
+      flows.push("Search Functionality");
+    }
+    if (lowerDesc.includes("profile") || lowerDesc.includes("user")) {
+      flows.push("Profile Management");
+    }
+    if (lowerDesc.includes("purchase") || lowerDesc.includes("checkout") || lowerDesc.includes("payment")) {
+      flows.push("Purchase Flow");
+    }
+    if (lowerDesc.includes("fleet") || lowerDesc.includes("vehicle") || lowerDesc.includes("management")) {
+      flows.push("Fleet Management");
+    }
+
+    // Add common flows if none detected
+    if (flows.length === 0) {
+      flows.push(...commonFlows.slice(0, 3));
+    }
+
+    return flows.slice(0, 5); // Limit to 5 flows
+  }
+
+  private generateBrowserTask(flow: string): string {
+    const lowerFlow = flow.toLowerCase();
+    
+    if (lowerFlow.includes("login") || lowerFlow.includes("auth")) {
+      return `            1. Navigate to {{ app_url }}/login
+            2. Fill in email: test@example.com
+            3. Fill in password: testpass123
+            4. Click login button
+            5. Verify successful login and dashboard access`;
+    } else if (lowerFlow.includes("registration") || lowerFlow.includes("signup")) {
+      return `            1. Navigate to {{ app_url }}/register
+            2. Fill in registration form with test data
+            3. Submit the form
+            4. Verify account creation success`;
+    } else if (lowerFlow.includes("dashboard")) {
+      return `            1. Navigate to {{ app_url }}/dashboard
+            2. Verify main dashboard elements load
+            3. Check key metrics and data display
+            4. Test navigation to main sections`;
+    } else if (lowerFlow.includes("search")) {
+      return `            1. Navigate to {{ app_url }}
+            2. Use search functionality with test query
+            3. Verify search results display
+            4. Test result filtering and navigation`;
+    } else if (lowerFlow.includes("purchase") || lowerFlow.includes("checkout")) {
+      return `            1. Navigate to {{ app_url }}/products
+            2. Select a product and add to cart
+            3. Go to checkout
+            4. Complete purchase flow with test data
+            5. Verify order confirmation`;
+    } else {
+      return `            1. Navigate to {{ app_url }}
+            2. Test the ${flow.toLowerCase()} functionality
+            3. Verify expected behavior and results
+            4. Check for any errors or issues`;
+    }
   }
 
   async run() {
