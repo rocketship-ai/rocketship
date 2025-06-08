@@ -121,7 +121,7 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 ## Try the MCP Server
 
-Rocketship includes an MCP (Model Context Protocol) server that helps AI coding agents like Cursor, Windsurf, or Claude Code write better Rocketship tests by providing examples, patterns, and guidance.
+Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents like Cursor, Windsurf, or Claude Code write better Rocketship tests by providing examples, patterns, and guidance.
 
 #### Quick Setup
 

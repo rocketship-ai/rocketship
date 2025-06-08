@@ -1,6 +1,6 @@
 # MCP Server
 
-Rocketship includes an MCP (Model Context Protocol) server that assists AI coding agents in writing better Rocketship tests by providing examples, patterns, and guidance rather than generating complete test files.
+Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents to write better Rocketship tests by providing examples, patterns, and guidance.
 
 ## Philosophy
 
