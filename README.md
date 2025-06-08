@@ -2,8 +2,8 @@
   <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
   <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
-<h3 align="center">Enterprise-Grade API Testing for Humans and Agents</h3>
-<p align="center">Validate Any Data Resource, API, or Workflow With Declarative Tests</p>
+<h3 align="center">Enterprise-Grade Testing for Humans and Agents</h3>
+<p align="center">Validate Any Data Resource, API, or Customer Journey With Declarative Tests</p>
 
 <p align="center">
   <a href="https://github.com/rocketship-ai/rocketship/releases"><img src="https://img.shields.io/github/v/release/rocketship-ai/rocketship.svg" alt="Github release"></a>
@@ -18,7 +18,7 @@
 
 <br>
 
-🚀 Rocketship is an **open‑source testing framework** that can verify complex, API-driven scenarios that are made by your customers— or your systems. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an **open‑source testing framework** that can verify complex, user-driven scenarios that are made by your customers— or your systems. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
 
 Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment as deterministic workflows.
 
