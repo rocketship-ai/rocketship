@@ -17,11 +17,23 @@ class RocketshipKnowledgeLoader {
   private docs: Map<string, string> = new Map();
 
   constructor() {
-    // Find project root by looking for schema.json
-    this.projectRoot = this.findProjectRoot();
-    this.loadSchema();
-    this.loadExamples();
-    this.loadDocumentation();
+    try {
+      // Find project root by looking for schema.json
+      this.projectRoot = this.findProjectRoot();
+      console.log(`Initializing Rocketship MCP Server from project root: ${this.projectRoot}`);
+      
+      this.loadSchema();
+      console.log(`✓ Loaded schema from ${this.projectRoot}/internal/dsl/schema.json`);
+      
+      this.loadExamples();
+      console.log(`✓ Loaded ${this.examples.size} examples`);
+      
+      this.loadDocumentation();
+      console.log(`✓ Loaded ${this.docs.size} documentation files`);
+    } catch (error) {
+      console.error(`Failed to initialize RocketshipKnowledgeLoader: ${error}`);
+      throw error;
+    }
   }
 
   private findProjectRoot(): string {
@@ -36,65 +48,76 @@ class RocketshipKnowledgeLoader {
       currentDir = path.dirname(currentDir);
     }
     
-    // Fallback: assume we're in mcp-server directory
-    return path.join(process.cwd(), "..");
+    throw new Error(`Cannot find project root. No schema.json found in any parent directory from ${process.cwd()}`);
   }
 
   private loadSchema(): void {
-    try {
-      const schemaPath = path.join(this.projectRoot, "internal", "dsl", "schema.json");
-      const schemaContent = fs.readFileSync(schemaPath, "utf-8");
-      this.schema = JSON.parse(schemaContent);
-    } catch (error) {
-      console.error("Failed to load schema:", error);
-      this.schema = this.getFallbackSchema();
+    const schemaPath = path.join(this.projectRoot, "internal", "dsl", "schema.json");
+    if (!fs.existsSync(schemaPath)) {
+      throw new Error(`Schema file not found at ${schemaPath}. Cannot initialize MCP server without schema.`);
     }
+    const schemaContent = fs.readFileSync(schemaPath, "utf-8");
+    this.schema = JSON.parse(schemaContent);
   }
 
   private loadExamples(): void {
-    try {
-      const examplesDir = path.join(this.projectRoot, "examples");
-      if (!fs.existsSync(examplesDir)) return;
+    const examplesDir = path.join(this.projectRoot, "examples");
+    if (!fs.existsSync(examplesDir)) {
+      throw new Error(`Examples directory not found at ${examplesDir}. Cannot initialize MCP server without examples.`);
+    }
 
-      const subdirs = fs.readdirSync(examplesDir, { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name);
+    const subdirs = fs.readdirSync(examplesDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
 
-      for (const subdir of subdirs) {
-        const yamlPath = path.join(examplesDir, subdir, "rocketship.yaml");
-        if (fs.existsSync(yamlPath)) {
-          const content = fs.readFileSync(yamlPath, "utf-8");
-          this.examples.set(subdir, { content, path: yamlPath });
-        }
+    if (subdirs.length === 0) {
+      throw new Error(`No example subdirectories found in ${examplesDir}`);
+    }
+
+    for (const subdir of subdirs) {
+      const yamlPath = path.join(examplesDir, subdir, "rocketship.yaml");
+      if (fs.existsSync(yamlPath)) {
+        const content = fs.readFileSync(yamlPath, "utf-8");
+        this.examples.set(subdir, { content, path: yamlPath });
       }
-    } catch (error) {
-      console.error("Failed to load examples:", error);
+    }
+
+    if (this.examples.size === 0) {
+      throw new Error(`No rocketship.yaml files found in example directories`);
     }
   }
 
   private loadDocumentation(): void {
-    try {
-      // Load reference docs
-      const refDir = path.join(this.projectRoot, "docs", "src", "reference");
-      if (fs.existsSync(refDir)) {
-        const files = fs.readdirSync(refDir).filter(f => f.endsWith(".md"));
-        for (const file of files) {
-          const content = fs.readFileSync(path.join(refDir, file), "utf-8");
-          this.docs.set(`reference/${file}`, content);
-        }
-      }
+    // Load reference docs
+    const refDir = path.join(this.projectRoot, "docs", "src", "reference");
+    if (!fs.existsSync(refDir)) {
+      throw new Error(`Reference documentation directory not found at ${refDir}`);
+    }
+    
+    const refFiles = fs.readdirSync(refDir).filter(f => f.endsWith(".md"));
+    if (refFiles.length === 0) {
+      throw new Error(`No reference documentation files found in ${refDir}`);
+    }
+    
+    for (const file of refFiles) {
+      const content = fs.readFileSync(path.join(refDir, file), "utf-8");
+      this.docs.set(`reference/${file}`, content);
+    }
 
-      // Load example docs
-      const exampleDocsDir = path.join(this.projectRoot, "docs", "src", "examples");
-      if (fs.existsSync(exampleDocsDir)) {
-        const files = fs.readdirSync(exampleDocsDir).filter(f => f.endsWith(".md"));
-        for (const file of files) {
-          const content = fs.readFileSync(path.join(exampleDocsDir, file), "utf-8");
-          this.docs.set(`examples/${file}`, content);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load documentation:", error);
+    // Load example docs
+    const exampleDocsDir = path.join(this.projectRoot, "docs", "src", "examples");
+    if (!fs.existsSync(exampleDocsDir)) {
+      throw new Error(`Example documentation directory not found at ${exampleDocsDir}`);
+    }
+    
+    const exampleFiles = fs.readdirSync(exampleDocsDir).filter(f => f.endsWith(".md"));
+    if (exampleFiles.length === 0) {
+      throw new Error(`No example documentation files found in ${exampleDocsDir}`);
+    }
+    
+    for (const file of exampleFiles) {
+      const content = fs.readFileSync(path.join(exampleDocsDir, file), "utf-8");
+      this.docs.set(`examples/${file}`, content);
     }
   }
 
@@ -118,29 +141,6 @@ class RocketshipKnowledgeLoader {
     return Array.from(this.docs.keys());
   }
 
-  private getFallbackSchema(): any {
-    return {
-      properties: {
-        tests: {
-          type: "array",
-          items: {
-            properties: {
-              steps: {
-                type: "array",
-                items: {
-                  properties: {
-                    plugin: {
-                      enum: ["http", "browser", "sql", "delay", "log", "script", "agent", "supabase"]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    };
-  }
 }
 
 // Initialize knowledge loader
