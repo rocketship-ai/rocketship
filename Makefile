@@ -23,7 +23,7 @@ install-workflowcheck:
 	fi
 
 # Run linting
-lint: build-binaries install-workflowcheck lint-python
+lint: build-binaries install-workflowcheck lint-python lint-typescript
 	@echo "Running Go linter..."
 	golangci-lint run
 	@echo "Checking workflows..."
@@ -37,6 +37,26 @@ lint-python:
 	else \
 		echo "Ruff not installed. Install with: pip install ruff"; \
 		exit 1; \
+	fi
+
+# Run TypeScript linting
+lint-typescript:
+	@echo "Running TypeScript linter..."
+	@if [ -d "mcp-server" ]; then \
+		cd mcp-server && \
+		if [ -f "package.json" ]; then \
+			if command -v npm &> /dev/null; then \
+				npm run build 2>/dev/null || (echo "TypeScript compilation failed" && exit 1); \
+				echo "TypeScript compilation successful"; \
+			else \
+				echo "npm not found. Please install Node.js and npm"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "No package.json found in mcp-server directory"; \
+		fi; \
+	else \
+		echo "No mcp-server directory found, skipping TypeScript linting"; \
 	fi
 
 # Run tests

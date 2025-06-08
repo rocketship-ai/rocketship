@@ -1,6 +1,6 @@
 {
   "name": "@rocketshipai/mcp-server",
-  "version": "v0.4.1",
+  "version": "0.4.1",
   "description": "MCP assistant for helping AI coding agents write better Rocketship tests",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
