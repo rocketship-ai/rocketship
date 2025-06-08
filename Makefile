@@ -60,9 +60,44 @@ lint-typescript:
 	fi
 
 # Run tests
-test: build-binaries
-	@echo "Running tests..."
+test: build-binaries test-go test-python test-typescript
+
+# Run Go tests
+test-go:
+	@echo "Running Go tests..."
 	go test ./...
+
+# Run Python tests  
+test-python:
+	@echo "Running Python tests..."
+	@if command -v python3 &> /dev/null; then \
+		find . -name "*_test.py" -type f ! -path "*/venv/*" ! -path "*/.venv/*" ! -path "*/browser-venv/*" ! -path "*/docs/*" | while read -r file; do \
+			echo "Running Python test: $$file"; \
+			python3 "$$file" || exit 1; \
+		done; \
+		echo "All Python tests passed"; \
+	else \
+		echo "Python3 not found, skipping Python tests"; \
+	fi
+
+# Run TypeScript tests
+test-typescript:
+	@echo "Running TypeScript tests..."
+	@if [ -d "mcp-server" ]; then \
+		cd mcp-server && \
+		if [ -f "package.json" ]; then \
+			if command -v npm &> /dev/null; then \
+				npm test 2>/dev/null || (echo "TypeScript tests failed" && exit 1); \
+				echo "TypeScript tests successful"; \
+			else \
+				echo "npm not found, skipping TypeScript tests"; \
+			fi; \
+		else \
+			echo "No package.json found in mcp-server directory, skipping TypeScript tests"; \
+		fi; \
+	else \
+		echo "No mcp-server directory found, skipping TypeScript tests"; \
+	fi
 
 # Generate protobuf code
 proto:
