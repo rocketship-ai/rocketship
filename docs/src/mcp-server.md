@@ -131,14 +131,17 @@ Examines code changes and suggests test updates.
 
 ### With Cursor
 
-- Copy and paste either the Rocketship Cursor Web Link or Deep Link into your browser:
+- Head to Cursor Settings > MCP Servers > Add new MCP Server > Add the following to your mcp.json:
 
-```
-https://cursor.com/install-mcp?name=rocketship&config=eyJjb21tYW5kIjoibnB4IC15IEByb2NrZXRzaGlwYWkvbWNwLXNlcnZlckBsYXRlc3QifQ%3D%3D
-
----- OR ----
-
-cursor://anysphere.cursor-deeplink/mcp/install?name=rocketship&config=eyJjb21tYW5kIjoibnB4IC15IEByb2NrZXRzaGlwYWkvbWNwLXNlcnZlckBsYXRlc3QifQ==
+```json
+{
+  "mcpServers": {
+    "rocketship": {
+      "command": "npx",
+      "args": ["-y", "@rocketshipai/mcp-server@latest"]
+    }
+  }
+}
 ```
 
 - Ask Cursor to create generate a test based off your prompt!
