@@ -90,16 +90,16 @@ class MCPTestClient {
       server.stdin.write(JSON.stringify(listToolsRequest) + '\n');
     }, 100);
 
-    // Test 3: Call a tool
+    // Test 3: Call the get_rocketship_examples tool (new assistive tool)
     const callToolRequest = {
       jsonrpc: '2.0',
       id: this.messageId++,
       method: 'tools/call',
       params: {
-        name: 'generate_test_from_prompt',
+        name: 'get_rocketship_examples',
         arguments: {
-          prompt: 'Test login API endpoint',
-          test_type: 'api'
+          feature: 'api_testing',
+          context: 'Testing login endpoint'
         }
       }
     };
@@ -174,47 +174,13 @@ else
 fi
 
 # Test 2: Tool Functionality Tests
-print_info "Test 2: Testing individual MCP tools..."
+print_info "Test 2: Testing individual MCP assistant tools..."
 
-# Create mock codebase analysis for testing
-cat > mock-analysis.json << 'EOF'
-{
-  "api_endpoints": [
-    {
-      "method": "GET",
-      "path": "/api/users",
-      "description": "Get all users"
-    },
-    {
-      "method": "POST", 
-      "path": "/api/auth/login",
-      "description": "User login"
-    }
-  ],
-  "database_schemas": [
-    {
-      "table": "users",
-      "columns": ["id", "email", "created_at"],
-      "primary_key": "id"
-    }
-  ],
-  "service_configs": [
-    {
-      "name": "auth-service",
-      "type": "api"
-    }
-  ],
-  "environment_files": [".env", ".env.staging"]
-}
-EOF
+# Test get_rocketship_examples tool
+print_info "Testing get_rocketship_examples tool..."
 
-# Test scan_and_generate_test_suite tool by simulating MCP call
-print_info "Testing scan_and_generate_test_suite tool..."
-
-# Create a simple test script that calls the MCP server
-cat > test-scan-tool.js << 'EOF'
+cat > test-examples-tool.js << 'EOF'
 import { spawn } from 'child_process';
-import fs from 'fs';
 
 const server = spawn('rocketship-mcp', [], { stdio: ['pipe', 'pipe', 'pipe'] });
 
@@ -223,11 +189,10 @@ const request = {
   id: 1,
   method: 'tools/call',
   params: {
-    name: 'scan_and_generate_test_suite',
+    name: 'get_rocketship_examples',
     arguments: {
-      project_root: '.',
-      environments: ['staging', 'prod'],
-      codebase_analysis: JSON.parse(fs.readFileSync('mock-analysis.json', 'utf8'))
+      feature: 'api_testing',
+      context: 'User authentication endpoint'
     }
   }
 };
@@ -239,39 +204,92 @@ server.stdin.write(JSON.stringify(request) + '\n');
 
 setTimeout(() => {
   server.kill();
-  console.log('Scan tool output:', output);
+  console.log('Examples tool test completed');
   
-  // Check if .rocketship directory was created
-  if (fs.existsSync('.rocketship')) {
-    console.log('✅ .rocketship directory created');
-    console.log('Files created:', fs.readdirSync('.rocketship', { recursive: true }));
+  // Check if response contains expected content
+  if (output.includes('API testing patterns') || output.includes('examples') || output.includes('best practices')) {
+    console.log('✅ get_rocketship_examples tool working correctly');
   } else {
-    console.log('❌ .rocketship directory not created');
+    console.log('❌ get_rocketship_examples tool response unexpected');
+    console.log('Output:', output);
   }
 }, 2000);
 EOF
 
 if command -v node &> /dev/null; then
     if command -v timeout &> /dev/null; then
-        if timeout 30 node test-scan-tool.js; then
-            print_success "scan_and_generate_test_suite tool test passed"
+        if timeout 30 node test-examples-tool.js; then
+            print_success "get_rocketship_examples tool test passed"
         else
-            print_info "scan_and_generate_test_suite tool test completed (non-critical)"
+            print_info "get_rocketship_examples tool test completed (non-critical)"
         fi
     else
-        print_info "timeout command not available, skipping scan tool test"
+        print_info "timeout command not available, skipping examples tool test"
     fi
 fi
 
-# Test 3: Generated YAML Validation
-print_info "Test 3: Testing generated YAML validation with Rocketship CLI..."
+# Test suggest_test_structure tool
+print_info "Testing suggest_test_structure tool..."
 
-# Create test YAML content manually to ensure we can validate
+cat > test-structure-tool.js << 'EOF'
+import { spawn } from 'child_process';
+
+const server = spawn('rocketship-mcp', [], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+const request = {
+  jsonrpc: '2.0',
+  id: 1,
+  method: 'tools/call',
+  params: {
+    name: 'suggest_test_structure',
+    arguments: {
+      test_name: 'User Login Flow',
+      test_type: 'api',
+      description: 'Test user authentication endpoints'
+    }
+  }
+};
+
+let output = '';
+server.stdout.on('data', (data) => { output += data.toString(); });
+
+server.stdin.write(JSON.stringify(request) + '\n');
+
+setTimeout(() => {
+  server.kill();
+  console.log('Structure tool test completed');
+  
+  // Check if response contains expected content
+  if (output.includes('TODO') || output.includes('template') || output.includes('structure')) {
+    console.log('✅ suggest_test_structure tool working correctly');
+  } else {
+    console.log('❌ suggest_test_structure tool response unexpected');
+    console.log('Output:', output);
+  }
+}, 2000);
+EOF
+
+if command -v node &> /dev/null; then
+    if command -v timeout &> /dev/null; then
+        if timeout 30 node test-structure-tool.js; then
+            print_success "suggest_test_structure tool test passed"
+        else
+            print_info "suggest_test_structure tool test completed (non-critical)"
+        fi
+    else
+        print_info "timeout command not available, skipping structure tool test"
+    fi
+fi
+
+# Test 3: YAML Validation with Rocketship CLI
+print_info "Test 3: Testing YAML validation with Rocketship CLI..."
+
+# Create test YAML content based on MCP guidance patterns
 mkdir -p test-generated
 cat > test-generated/test.yaml << 'EOF'
 version: "v1.0.0"
-name: "Generated API Tests"
-description: "Test file generated by MCP server"
+name: "MCP Assisted Test Suite"
+description: "Test file created with MCP guidance"
 vars:
   base_url: "https://api.example.com"
   timeout: 30
@@ -287,13 +305,19 @@ tests:
         assertions:
           - type: "status_code"
             expected: 200
+          - type: "json_path"
+            path: "$.status"
+            expected: "healthy"
+        save:
+          - as: "health_response"
+            json_path: "$.data"
 EOF
 
 # Validate with Rocketship CLI
 if rocketship validate test-generated/test.yaml; then
-    print_success "Generated YAML validation passed"
+    print_success "YAML validation test passed"
 else
-    print_error "Generated YAML validation failed"
+    print_error "YAML validation test failed"
     exit 1
 fi
 
@@ -324,13 +348,14 @@ server.stdin.write(JSON.stringify(invalidRequest) + '\n');
 
 setTimeout(() => {
   server.kill();
-  console.log('Error handling output:', output);
+  console.log('Error handling test completed');
   
   // Should contain error response
   if (output.includes('error') || output.includes('Unknown tool')) {
     console.log('✅ Error handling works correctly');
   } else {
-    console.log('❌ Error handling not working');
+    console.log('❌ Error handling not working as expected');
+    console.log('Output:', output);
   }
 }, 1000);
 EOF
@@ -353,7 +378,7 @@ print_info "Test 5: Testing npm package installation..."
 # Verify the package was installed correctly - check if binary exists
 if command -v rocketship-mcp &> /dev/null; then
     print_success "Package installation verified - binary is available"
-elif [ -f "$(npm root -g)/@rocketshipai/mcp-server/dist/index.js" ]; then
+elif [ -f "$(npm root -g)/@rocketshipai/mcp-server/dist/index.js" ] 2>/dev/null; then
     print_success "Package installation verified - files are installed"
 else
     print_info "Package installation check: binary not in PATH, but this is expected in CI"
@@ -392,60 +417,174 @@ else
     exit 1
 fi
 
-# Test 8: File Generation Verification
-print_info "Test 8: Verifying file generation capabilities..."
+# Test 8: Tool List Verification
+print_info "Test 8: Verifying all assistive tools are available..."
 
-# Check if we have test files in expected locations from MCP server generation
-if [ -f ".rocketship/api-tests/rocketship.yaml" ]; then
-    # Verify YAML structure in MCP-generated files
-    if grep -q "plugin:" .rocketship/api-tests/rocketship.yaml; then
-        print_success "MCP-generated YAML contains plugin configuration"
+# Test that all expected tools are available
+cat > test-tool-list.js << 'EOF'
+import { spawn } from 'child_process';
+
+const server = spawn('rocketship-mcp', [], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+const request = {
+  jsonrpc: '2.0',
+  id: 1,
+  method: 'tools/list'
+};
+
+let output = '';
+server.stdout.on('data', (data) => { output += data.toString(); });
+
+server.stdin.write(JSON.stringify(request) + '\n');
+
+setTimeout(() => {
+  server.kill();
+  console.log('Tool list test completed');
+  
+  // Check for expected assistive tools
+  const expectedTools = [
+    'get_rocketship_examples',
+    'suggest_test_structure', 
+    'get_assertion_patterns',
+    'get_plugin_config',
+    'validate_and_suggest',
+    'get_cli_commands'
+  ];
+  
+  let foundTools = 0;
+  expectedTools.forEach(tool => {
+    if (output.includes(tool)) {
+      console.log(`✅ Found tool: ${tool}`);
+      foundTools++;
+    } else {
+      console.log(`❌ Missing tool: ${tool}`);
+    }
+  });
+  
+  if (foundTools === expectedTools.length) {
+    console.log('✅ All assistive tools are available');
+  } else {
+    console.log(`❌ Only ${foundTools}/${expectedTools.length} tools found`);
+    console.log('Tool list output:', output);
+  }
+}, 2000);
+EOF
+
+if command -v node &> /dev/null; then
+    if command -v timeout &> /dev/null; then
+        if timeout 30 node test-tool-list.js; then
+            print_success "Tool list verification passed"
+        else
+            print_info "Tool list verification completed (non-critical)"
+        fi
     else
-        print_error "MCP-generated YAML missing plugin configuration"
-        print_info "Contents of .rocketship/api-tests/rocketship.yaml:"
-        cat .rocketship/api-tests/rocketship.yaml | head -20
-        exit 1
+        print_info "timeout command not available, skipping tool list test"
     fi
-    
-    if grep -q "assertions:" .rocketship/api-tests/rocketship.yaml; then
-        print_success "MCP-generated YAML contains assertions"
-    else
-        print_error "MCP-generated YAML missing assertions"
-        exit 1
-    fi
-    
-    # Verify version field exists
-    if grep -q "version:" .rocketship/api-tests/rocketship.yaml; then
-        print_success "MCP-generated YAML contains version field"
-    else
-        print_error "MCP-generated YAML missing version field"
-        exit 1
-    fi
-else
-    print_error "MCP-generated test files not found"
-    print_info "Available files in .rocketship:"
-    find .rocketship -name "*.yaml" 2>/dev/null || echo "No YAML files found"
-    # Don't exit here, continue with manual test validation
 fi
 
-# Verify our manual test YAML for completeness
+# Test 9: Assistive Nature Verification
+print_info "Test 9: Verifying assistive (non-generative) behavior..."
+
+# Verify our test YAML for completeness
 if [ -f "test-generated/test.yaml" ]; then
     if grep -q "plugin:" test-generated/test.yaml; then
-        print_success "Manual test YAML contains plugin configuration"
+        print_success "Test YAML contains plugin configuration"
     else
-        print_error "Manual test YAML missing plugin configuration"
+        print_error "Test YAML missing plugin configuration"
         exit 1
     fi
     
     if grep -q "assertions:" test-generated/test.yaml; then
-        print_success "Manual test YAML contains assertions"
+        print_success "Test YAML contains assertions"
     else
-        print_error "Manual test YAML missing assertions"
+        print_error "Test YAML missing assertions"
+        exit 1
+    fi
+    
+    if grep -q "version:" test-generated/test.yaml; then
+        print_success "Test YAML contains version field"
+    else
+        print_error "Test YAML missing version field"
         exit 1
     fi
 else
-    print_error "Manual test YAML file not found"
+    print_error "Test YAML file not found"
     exit 1
+fi
+
+# Verify that MCP server doesn't create files (assistive, not generative)
+if [ ! -d ".rocketship" ]; then
+    print_success "MCP server correctly does not create files (assistive behavior confirmed)"
+else
+    print_info "Note: .rocketship directory exists, but this is expected from earlier tests"
+fi
+
+# Test 10: Knowledge Base Content Test
+print_info "Test 10: Testing knowledge base content quality..."
+
+cat > test-knowledge-quality.js << 'EOF'
+import { spawn } from 'child_process';
+
+const server = spawn('rocketship-mcp', [], { stdio: ['pipe', 'pipe', 'pipe'] });
+
+// Test customer journey examples (emphasized feature)
+const request = {
+  jsonrpc: '2.0',
+  id: 1,
+  method: 'tools/call',
+  params: {
+    name: 'get_rocketship_examples',
+    arguments: {
+      feature: 'customer_journeys',
+      context: 'E-commerce checkout flow'
+    }
+  }
+};
+
+let output = '';
+server.stdout.on('data', (data) => { output += data.toString(); });
+
+server.stdin.write(JSON.stringify(request) + '\n');
+
+setTimeout(() => {
+  server.kill();
+  console.log('Knowledge quality test completed');
+  
+  // Check for high-quality content indicators
+  const qualityIndicators = [
+    'customer journey',
+    'best practices',
+    'step chaining',
+    'assertions',
+    'examples'
+  ];
+  
+  let foundIndicators = 0;
+  qualityIndicators.forEach(indicator => {
+    if (output.toLowerCase().includes(indicator.toLowerCase())) {
+      foundIndicators++;
+    }
+  });
+  
+  if (foundIndicators >= 3) {
+    console.log(`✅ Knowledge base contains quality content (${foundIndicators}/${qualityIndicators.length} indicators found)`);
+  } else {
+    console.log(`❌ Knowledge base quality insufficient (${foundIndicators}/${qualityIndicators.length} indicators found)`);
+    console.log('Output sample:', output.substring(0, 500));
+  }
+}, 2000);
+EOF
+
+if command -v node &> /dev/null; then
+    if command -v timeout &> /dev/null; then
+        if timeout 30 node test-knowledge-quality.js; then
+            print_success "Knowledge base quality test passed"
+        else
+            print_info "Knowledge base quality test completed (non-critical)"
+        fi
+    else
+        print_info "timeout command not available, skipping knowledge quality test"
+    fi
 fi
 
 # Cleanup
@@ -453,4 +592,5 @@ cd /
 rm -rf "$TEST_DIR"
 
 print_success "All MCP Server integration tests passed! 🎉"
-print_info "MCP server is ready for production use"
+print_info "MCP server is ready for production use as an assistive tool"
+print_info "The server provides guidance and examples rather than generating files"

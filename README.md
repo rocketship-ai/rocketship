@@ -121,7 +121,7 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 
 ## Try the MCP Server
 
-Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents like Cursor, Windsurf, or Claude to automatically generate and manage your test suites.
+Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents like Cursor, Windsurf, or Claude Code write better Rocketship tests by providing examples, patterns, and guidance.
 
 #### Quick Setup
 
@@ -144,24 +144,25 @@ Add to the `.mcp.json` file in your project:
 
 #### What Can It Do?
 
-The MCP server provides these tools to AI assistants:
+The MCP server acts as a knowledgeable assistant, providing:
 
-- **`scan_and_generate_test_suite`** - Analyzes your codebase and generates a complete test structure
-- **`generate_test_from_prompt`** - Creates test files from natural language descriptions
-- **`validate_test_file`** - Validates Rocketship YAML files
-- **`run_and_analyze_tests`** - Executes tests and provides intelligent failure analysis
-- **`analyze_git_diff`** - Suggests test updates based on code changes
+- **`get_rocketship_examples`** - Get examples and best practices for specific Rocketship features
+- **`suggest_test_structure`** - Returns test templates with TODOs for you to implement
+- **`get_assertion_patterns`** - Shows assertion examples for different testing scenarios
+- **`get_plugin_config`** - Provides configuration examples for Rocketship plugins
+- **`validate_and_suggest`** - Reviews your YAML and suggests improvements
+- **`get_cli_commands`** - Provides CLI usage examples and best practices
 
 #### Example Usage
 
-Just ask your coding agent:
+Ask your coding agent for guidance:
 
-- "Generate API tests for my authentication endpoints"
-- "Create a test suite for my Supabase database operations"
-- "Update my tests based on the latest PR changes"
-- "Run my integration tests and explain any failures"
+- "Show me examples of API testing with step chaining"
+- "What assertions should I use for JSON responses?"
+- "How do I configure the Supabase plugin?"
+- "Give me a template for an E2E customer journey test"
 
-The MCP server intelligently selects the right Rocketship plugins (HTTP, SQL, Supabase, etc.) based on your request and generates valid test configurations ready to run.
+The agent will ask the MCP server for relevant examples and patterns, then help you create tests based on that guidance. You maintain full control over what gets written to your files.
 
 ## Documentation
 

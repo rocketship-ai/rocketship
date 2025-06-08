@@ -14,13 +14,13 @@ async function runTests() {
     const server = new RocketshipMCPServer();
     console.log('✅ Server initialized successfully');
     
-    console.log('\n⚙️  Testing test generation...');
-    // Test the private method through a simple call
-    const testYaml = (server as any).generateTestFromPrompt('Test user API', 'api');
-    if (testYaml.includes('name:') && testYaml.includes('tests:')) {
-      console.log('✅ Test generation works');
+    console.log('\n⚙️  Testing knowledge base access...');
+    // Test that the knowledge base is accessible
+    const exampleResponse = await (server as any).handleGetExamples({ feature: 'api_testing' });
+    if (exampleResponse.content && exampleResponse.content[0].text.includes('API testing patterns')) {
+      console.log('✅ Knowledge base access works');
     } else {
-      throw new Error('Generated test YAML is invalid');
+      throw new Error('Knowledge base access failed');
     }
     
     console.log('\n✅ All tests passed! MCP server is ready to use.');
