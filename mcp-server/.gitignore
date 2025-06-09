@@ -36,3 +36,6 @@ logs
 
 # TypeScript
 *.tsbuildinfo
+
+# Auto-generated embedded knowledge
+src/embedded-knowledge.ts

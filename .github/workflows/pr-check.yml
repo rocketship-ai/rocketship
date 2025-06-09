@@ -323,7 +323,7 @@ jobs:
           cd mcp-server
           npm ci
 
-      - name: Build MCP server
+      - name: Build MCP server with embedded knowledge
         run: |
           cd mcp-server
           npm run build
