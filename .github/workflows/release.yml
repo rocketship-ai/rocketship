@@ -99,7 +99,7 @@ jobs:
           # Install dependencies
           npm ci
           
-          # Build TypeScript
+          # Build with embedded knowledge
           npm run build
           
           # Set version to match release tag (remove 'v' prefix)

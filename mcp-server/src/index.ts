@@ -6,153 +6,35 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import * as fs from "fs";
-import * as path from "path";
 
-// Dynamic schema and examples loader
+// Static knowledge loader with embedded content
 class RocketshipKnowledgeLoader {
-  private projectRoot: string;
   private schema: any = null;
   private examples: Map<string, any> = new Map();
   private docs: Map<string, string> = new Map();
 
   constructor() {
-    try {
-      // Find project root by looking for schema.json
-      this.projectRoot = this.findProjectRoot();
-      console.log(
-        `Initializing Rocketship MCP Server from project root: ${this.projectRoot}`
-      );
+    console.log(`Initializing Rocketship MCP Server v0.4.1`);
 
-      this.loadSchema();
-      console.log(
-        `✓ Loaded schema from ${this.projectRoot}/internal/dsl/schema.json`
-      );
-
-      this.loadExamples();
-      console.log(`✓ Loaded ${this.examples.size} examples`);
-
-      this.loadDocumentation();
-      console.log(`✓ Loaded ${this.docs.size} documentation files`);
-    } catch (error) {
-      console.error(`Failed to initialize RocketshipKnowledgeLoader: ${error}`);
-      throw error;
-    }
+    this.loadEmbeddedKnowledge();
+    console.log(`✓ Loaded embedded Rocketship knowledge`);
+    console.log(`✓ Available examples: ${this.examples.size}`);
+    console.log(`✓ Available docs: ${this.docs.size}`);
   }
 
-  private findProjectRoot(): string {
-    let currentDir = process.cwd();
+  private loadEmbeddedKnowledge(): void {
+    // Load embedded knowledge from build step - fail fast if not available
+    const {
+      EMBEDDED_SCHEMA,
+      EMBEDDED_EXAMPLES,
+      EMBEDDED_DOCS,
+    } = require("./embedded-knowledge");
 
-    // Look for schema.json to identify project root
-    while (currentDir !== path.dirname(currentDir)) {
-      const schemaPath = path.join(
-        currentDir,
-        "internal",
-        "dsl",
-        "schema.json"
-      );
-      if (fs.existsSync(schemaPath)) {
-        return currentDir;
-      }
-      currentDir = path.dirname(currentDir);
-    }
+    this.schema = EMBEDDED_SCHEMA;
+    this.examples = EMBEDDED_EXAMPLES;
+    this.docs = EMBEDDED_DOCS;
 
-    throw new Error(
-      `Cannot find project root. No schema.json found in any parent directory from ${process.cwd()}`
-    );
-  }
-
-  private loadSchema(): void {
-    const schemaPath = path.join(
-      this.projectRoot,
-      "internal",
-      "dsl",
-      "schema.json"
-    );
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error(
-        `Schema file not found at ${schemaPath}. Cannot initialize MCP server without schema.`
-      );
-    }
-    const schemaContent = fs.readFileSync(schemaPath, "utf-8");
-    this.schema = JSON.parse(schemaContent);
-  }
-
-  private loadExamples(): void {
-    const examplesDir = path.join(this.projectRoot, "examples");
-    if (!fs.existsSync(examplesDir)) {
-      throw new Error(
-        `Examples directory not found at ${examplesDir}. Cannot initialize MCP server without examples.`
-      );
-    }
-
-    const subdirs = fs
-      .readdirSync(examplesDir, { withFileTypes: true })
-      .filter((dirent) => dirent.isDirectory())
-      .map((dirent) => dirent.name);
-
-    if (subdirs.length === 0) {
-      throw new Error(`No example subdirectories found in ${examplesDir}`);
-    }
-
-    for (const subdir of subdirs) {
-      const yamlPath = path.join(examplesDir, subdir, "rocketship.yaml");
-      if (fs.existsSync(yamlPath)) {
-        const content = fs.readFileSync(yamlPath, "utf-8");
-        this.examples.set(subdir, { content, path: yamlPath });
-      }
-    }
-
-    if (this.examples.size === 0) {
-      throw new Error(`No rocketship.yaml files found in example directories`);
-    }
-  }
-
-  private loadDocumentation(): void {
-    // Load reference docs
-    const refDir = path.join(this.projectRoot, "docs", "src", "reference");
-    if (!fs.existsSync(refDir)) {
-      throw new Error(
-        `Reference documentation directory not found at ${refDir}`
-      );
-    }
-
-    const refFiles = fs.readdirSync(refDir).filter((f) => f.endsWith(".md"));
-    if (refFiles.length === 0) {
-      throw new Error(`No reference documentation files found in ${refDir}`);
-    }
-
-    for (const file of refFiles) {
-      const content = fs.readFileSync(path.join(refDir, file), "utf-8");
-      this.docs.set(`reference/${file}`, content);
-    }
-
-    // Load example docs
-    const exampleDocsDir = path.join(
-      this.projectRoot,
-      "docs",
-      "src",
-      "examples"
-    );
-    if (!fs.existsSync(exampleDocsDir)) {
-      throw new Error(
-        `Example documentation directory not found at ${exampleDocsDir}`
-      );
-    }
-
-    const exampleFiles = fs
-      .readdirSync(exampleDocsDir)
-      .filter((f) => f.endsWith(".md"));
-    if (exampleFiles.length === 0) {
-      throw new Error(
-        `No example documentation files found in ${exampleDocsDir}`
-      );
-    }
-
-    for (const file of exampleFiles) {
-      const content = fs.readFileSync(path.join(exampleDocsDir, file), "utf-8");
-      this.docs.set(`examples/${file}`, content);
-    }
+    console.log(`📦 Loaded real embedded knowledge from build step`);
   }
 
   getSchema(): any {
@@ -349,7 +231,8 @@ export class RocketshipMCPServer {
                 suggested_flows: {
                   type: "array",
                   items: { type: "string" },
-                  description: "Optional: Specific flows you think are most relevant (e.g., 'authentication', 'data-management', 'reporting')",
+                  description:
+                    "Optional: Specific flows you think are most relevant (e.g., 'authentication', 'data-management', 'reporting')",
                 },
               },
               required: ["codebase_info", "focus_area"],
@@ -395,7 +278,7 @@ export class RocketshipMCPServer {
   private async handleGetExamples(args: any) {
     const { feature_type, use_case } = args;
 
-    // Get real examples from codebase
+    // Get embedded examples
     const allExamples = this.knowledgeLoader.getAllExamples();
     const relevantExamples = allExamples.filter(
       (name) =>
@@ -439,11 +322,21 @@ export class RocketshipMCPServer {
     // Show real examples
     response += `## Real Examples from Codebase\n\n`;
 
-    for (const exampleName of relevantExamples.slice(0, 3)) {
+    // Show all relevant examples (we have fewer now)
+    for (const exampleName of relevantExamples) {
       const example = this.knowledgeLoader.getExample(exampleName);
       if (example) {
         response += `### ${exampleName}\n\n`;
         response += `\`\`\`yaml\n${example.content}\`\`\`\n\n`;
+      }
+    }
+
+    // If no specific examples found, show a generic one
+    if (relevantExamples.length === 0) {
+      const firstExample = this.knowledgeLoader.getExample(allExamples[0]);
+      if (firstExample) {
+        response += `### Example (${allExamples[0]})\n\n`;
+        response += `\`\`\`yaml\n${firstExample.content}\`\`\`\n\n`;
       }
     }
 
@@ -834,12 +727,18 @@ export class RocketshipMCPServer {
       response += `## Critical User Journeys to Test\n\n`;
 
       // Use suggested flows if provided, otherwise extract from description
-      const flows = suggested_flows && suggested_flows.length > 0 
-        ? suggested_flows.map((f: string) => f.charAt(0).toUpperCase() + f.slice(1).replace(/-/g, ' '))
-        : this.extractUserFlows(codebase_info);
-      
+      const flows =
+        suggested_flows && suggested_flows.length > 0
+          ? suggested_flows.map(
+              (f: string) =>
+                f.charAt(0).toUpperCase() + f.slice(1).replace(/-/g, " ")
+            )
+          : this.extractUserFlows(codebase_info);
+
       if (suggested_flows && suggested_flows.length > 0) {
-        response += `*Using your suggested flows: ${suggested_flows.join(', ')}*\n\n`;
+        response += `*Using your suggested flows: ${suggested_flows.join(
+          ", "
+        )}*\n\n`;
       }
 
       for (let i = 0; i < flows.length; i++) {
@@ -904,9 +803,13 @@ export class RocketshipMCPServer {
     response += `.rocketship/\n`;
 
     if (isFrontend) {
-      const flows = suggested_flows && suggested_flows.length > 0 
-        ? suggested_flows.map((f: string) => f.charAt(0).toUpperCase() + f.slice(1).replace(/-/g, ' '))
-        : this.extractUserFlows(codebase_info);
+      const flows =
+        suggested_flows && suggested_flows.length > 0
+          ? suggested_flows.map(
+              (f: string) =>
+                f.charAt(0).toUpperCase() + f.slice(1).replace(/-/g, " ")
+            )
+          : this.extractUserFlows(codebase_info);
       for (const flow of flows.slice(0, 5)) {
         const dirName = flow
           .toLowerCase()
@@ -935,7 +838,7 @@ export class RocketshipMCPServer {
     if (isFrontend) {
       response += `💡 **Tip:** Consider using the browser plugin for frontend testing in addition to API calls.\n`;
     }
-    
+
     if (!suggested_flows || suggested_flows.length === 0) {
       response += `\n💡 **Pro Tip:** For more targeted suggestions, you can specify \`suggested_flows\` like:\n`;
       response += `   ["authentication", "data-management", "reporting"] based on your codebase analysis.\n`;
@@ -954,7 +857,7 @@ export class RocketshipMCPServer {
   private extractUserFlows(description: string): string[] {
     const universalFlows = [
       "User Authentication",
-      "Main Dashboard", 
+      "Main Dashboard",
       "Record Management",
       "Search & Filter",
       "Settings & Configuration",
@@ -1092,31 +995,46 @@ export class RocketshipMCPServer {
             3. Enter test search terms or apply filters
             4. Verify results display correctly
             5. Test result navigation and interaction`;
-    } else if (lowerFlow.includes("record") || lowerFlow.includes("management")) {
+    } else if (
+      lowerFlow.includes("record") ||
+      lowerFlow.includes("management")
+    ) {
       return `            1. Navigate to {{ app_url }}/records (or main data section)
             2. Create a new record with test data
             3. Edit the created record
             4. Verify changes are saved correctly
             5. Test record deletion if applicable`;
-    } else if (lowerFlow.includes("settings") || lowerFlow.includes("configuration")) {
+    } else if (
+      lowerFlow.includes("settings") ||
+      lowerFlow.includes("configuration")
+    ) {
       return `            1. Navigate to {{ app_url }}/settings
             2. Review available configuration options
             3. Modify test settings/preferences
             4. Save configuration changes
             5. Verify changes persist after page refresh`;
-    } else if (lowerFlow.includes("process") || lowerFlow.includes("workflow")) {
+    } else if (
+      lowerFlow.includes("process") ||
+      lowerFlow.includes("workflow")
+    ) {
       return `            1. Navigate to {{ app_url }}
             2. Initiate the main process/workflow
             3. Complete required steps and forms
             4. Submit for processing/approval
             5. Verify completion status and notifications`;
-    } else if (lowerFlow.includes("reports") || lowerFlow.includes("analytics")) {
+    } else if (
+      lowerFlow.includes("reports") ||
+      lowerFlow.includes("analytics")
+    ) {
       return `            1. Navigate to {{ app_url }}/reports
             2. Select report parameters or filters
             3. Generate and view report data
             4. Test data visualization elements
             5. Verify export functionality if available`;
-    } else if (lowerFlow.includes("notifications") || lowerFlow.includes("communication")) {
+    } else if (
+      lowerFlow.includes("notifications") ||
+      lowerFlow.includes("communication")
+    ) {
       return `            1. Navigate to {{ app_url }}
             2. Access notifications or messaging section
             3. Review available notifications/messages

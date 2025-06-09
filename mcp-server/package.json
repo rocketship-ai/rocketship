@@ -8,7 +8,8 @@
     "rocketship-mcp": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "embed-knowledge": "tsx scripts/embed-knowledge.js",
+    "build": "npm run embed-knowledge && tsc",
     "dev": "tsx src/index.ts",
     "test": "tsx src/test.ts",
     "prepare": "npm run build",

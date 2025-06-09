@@ -59,6 +59,26 @@ lint-typescript:
 		echo "No mcp-server directory found, skipping TypeScript linting"; \
 	fi
 
+# Build MCP server with embedded knowledge
+build-mcp:
+	@echo "Building MCP server with embedded knowledge..."
+	@if [ -d "mcp-server" ]; then \
+		cd mcp-server && \
+		if [ -f "package.json" ]; then \
+			if command -v npm &> /dev/null; then \
+				npm run build || (echo "MCP server build failed" && exit 1); \
+				echo "MCP server build successful"; \
+			else \
+				echo "npm not found. Please install Node.js and npm"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "No package.json found in mcp-server directory"; \
+		fi; \
+	else \
+		echo "No mcp-server directory found"; \
+	fi
+
 # Run tests
 test: build-binaries test-go test-python test-typescript
 
