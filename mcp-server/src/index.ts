@@ -126,6 +126,10 @@ export class RocketshipMCPServer {
 
   private setupHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      // Dynamically get available plugins from schema
+      const schema = this.knowledgeLoader.getSchema();
+      const availablePlugins = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum || [];
+      
       return {
         tools: [
           {
@@ -136,16 +140,7 @@ export class RocketshipMCPServer {
               properties: {
                 feature_type: {
                   type: "string",
-                  enum: [
-                    "browser",
-                    "http",
-                    "sql",
-                    "agent",
-                    "supabase",
-                    "delay",
-                    "log",
-                    "script",
-                  ],
+                  enum: availablePlugins,
                   description: "The plugin/feature type to get examples for",
                 },
                 use_case: {
@@ -420,50 +415,18 @@ export class RocketshipMCPServer {
       }
       response += `\`\`\`\n\n`;
 
-      response += `### Example Frontend Test Structure\n\n`;
-      response += `\`\`\`yaml\n`;
-      response += `name: "User Login Journey"\n`;
-      response += `version: "v1.0.0"\n`;
-      response += `\n`;
-      response += `tests:\n`;
-      response += `  - name: "Complete login flow"\n`;
-      response += `    steps:\n`;
-      response += `      - name: "Navigate and login"\n`;
-      response += `        plugin: browser\n`;
-      response += `        config:\n`;
-      response += `          task: |\n`;
-      response += `            1. Navigate to {{ app_url }}/login\n`;
-      response += `            2. Fill in email: test@example.com\n`;
-      response += `            3. Fill in password: testpass123\n`;
-      response += `            4. Click login button\n`;
-      response += `            5. Verify you reach the dashboard\n`;
-      response += `          llm:\n`;
-      response += `            provider: "openai"\n`;
-      response += `            model: "gpt-4o"\n`;
-      response += `            config:\n`;
-      response += `              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"  # Environment variable\n`;
-      response += `          headless: true\n`;
-      response += `          timeout: "{{ .vars.browser_timeout }}"     # Config variable\n`;
-      response += `        save:\n`;
-      response += `          - json_path: ".success"\n`;
-      response += `            as: "login_success"                     # Creates runtime variable\n`;
-      response += `        assertions:\n`;
-      response += `          - type: "json_path"\n`;
-      response += `            path: ".success"\n`;
-      response += `            expected: true\n`;
-      response += `\`\`\`\n\n`;
-      response += `### Variable Types Example\n\n`;
-      response += `\`\`\`yaml\n`;
-      response += `vars:\n`;
-      response += `  browser_timeout: "2m"              # Config variable\n`;
-      response += `  app_url: "{{ .env.APP_URL }}"      # Environment variable in config\n`;
-      response += `\n`;
-      response += `# Usage in steps:\n`;
-      response += `task: "Navigate to {{ .vars.app_url }} and login with {{ test_credentials }}"  # Mixed types\n`;
-      response += `timeout: "{{ .vars.browser_timeout }}"    # Config variable\n`;
-      response += `api_key: "{{ .env.OPENAI_API_KEY }}"      # Environment variable\n`;
-      response += `user_id: "{{ saved_user_id }}"            # Runtime variable (from previous save)\n`;
-      response += `\`\`\`\n\n`;
+      response += `### Getting Started\n\n`;
+      
+      // Direct users to use the examples tool
+      response += `For complete working examples, use:\n`;
+      response += `\`\`\`\nget_rocketship_examples feature_type="browser"\n\`\`\`\n\n`;
+      response += `This will show you real browser testing examples from the Rocketship codebase.\n\n`;
+      
+      response += `### Variable Types\n\n`;
+      response += `Rocketship supports three types of variables:\n`;
+      response += `- **Config variables**: \`{{ .vars.variable_name }}\` (from vars section)\n`;
+      response += `- **Environment variables**: \`{{ .env.VARIABLE_NAME }}\` (from system env)\n`;
+      response += `- **Runtime variables**: \`{{ variable_name }}\` (from save operations)\n\n`;
     } else {
       response += `## 🔌 API Testing Strategy\n\n`;
       response += `Focus on user journey endpoints (not just coverage)\n\n`;
@@ -519,37 +482,21 @@ export class RocketshipMCPServer {
         schema?.properties?.tests?.items?.properties?.steps?.items?.properties
           ?.plugin?.enum;
       if (pluginEnum) {
+        response += `The following plugins are available in the current schema:\n\n`;
+        
+        // Just list the plugins - let users explore examples for details
         for (const plugin of pluginEnum) {
-          response += `- **${plugin}**: `;
-          switch (plugin) {
-            case "browser":
-              response += `AI-powered browser automation for frontend testing\n`;
-              break;
-            case "http":
-              response += `HTTP requests for API testing\n`;
-              break;
-            case "sql":
-              response += `Database queries and validation\n`;
-              break;
-            case "agent":
-              response += `AI agent interactions for complex testing\n`;
-              break;
-            case "delay":
-              response += `Wait/pause between test steps\n`;
-              break;
-            case "log":
-              response += `Output messages and debugging\n`;
-              break;
-            case "script":
-              response += `Custom JavaScript or shell scripts\n`;
-              break;
-            case "supabase":
-              response += `Supabase database operations\n`;
-              break;
-            default:
-              response += `Plugin for ${plugin} operations\n`;
+          response += `- **${plugin}**`;
+          
+          // Check if we have examples for this plugin
+          const examples = this.knowledgeLoader.getAllExamples().filter(e => e.includes(plugin));
+          if (examples.length > 0) {
+            response += ` - See examples: ${examples.join(", ")}\n`;
+          } else {
+            response += `\n`;
           }
         }
+        response += `\nFor detailed usage and configuration, use \`get_rocketship_examples feature_type="<plugin>"\`.\n`;
       }
       response += `\n`;
     }
@@ -560,22 +507,11 @@ export class RocketshipMCPServer {
         schema?.properties?.tests?.items?.properties?.steps?.items?.properties
           ?.assertions?.items?.properties?.type?.enum;
       if (assertionTypes) {
+        response += `Available assertion types from the schema:\n\n`;
         for (const type of assertionTypes) {
-          response += `- **${type}**: `;
-          switch (type) {
-            case "status_code":
-              response += `HTTP status code validation\n`;
-              break;
-            case "json_path":
-              response += `JSON field validation using .field.path syntax\n`;
-              break;
-            case "header":
-              response += `HTTP response header validation\n`;
-              break;
-            default:
-              response += `${type} validation\n`;
-          }
+          response += `- **${type}**\n`;
         }
+        response += `\nFor usage examples and syntax, use \`get_rocketship_examples\` to see real test files.\n`;
       }
       response += `\n`;
     }
@@ -597,31 +533,59 @@ export class RocketshipMCPServer {
     }
 
     if (section === "structure" || section === "full") {
-      response += `## Required File Structure\n\n`;
-      response += `\`\`\`yaml\n`;
-      response += `name: "Test Suite Name"          # Required\n`;
-      response += `version: "v1.0.0"                # Required: v1.0.0 format\n`;
-      response += `description: "Optional description"\n`;
+      response += `## File Structure Requirements\n\n`;
+      response += `Based on the current schema:\n\n`;
+      
+      // Dynamically extract all structural information from schema
+      const requiredTopLevel = schema?.required || [];
+      const topLevelProps = schema?.properties || {};
+      
+      response += `### Top-level fields:\n`;
+      for (const [key, prop] of Object.entries(topLevelProps)) {
+        const isRequired = requiredTopLevel.includes(key);
+        response += `- **${key}** (${isRequired ? 'required' : 'optional'})`;
+        if (prop && typeof prop === 'object' && 'type' in prop) {
+          response += `: ${(prop as any).type}`;
+        }
+        response += `\n`;
+      }
       response += `\n`;
-      response += `vars:                            # Optional config variables\n`;
-      response += `  app_url: "{{ .env.APP_URL }}"  # Environment variable in config\n`;
-      response += `  timeout: 30                    # Static config value\n`;
-      response += `\n`;
-      response += `tests:                           # Required: array\n`;
-      response += `  - name: "Test name"            # Required\n`;
-      response += `    steps:                       # Required: array\n`;
-      response += `      - name: "Step name"        # Required\n`;
-      response += `        plugin: "browser"        # Required: valid plugin\n`;
-      response += `        config:                  # Required: plugin config\n`;
-      response += `          # plugin-specific config\n`;
-      response += `        assertions:              # Optional: array\n`;
-      response += `          - type: "json_path"    # Required if assertions\n`;
-      response += `            path: ".success"     # Required for json_path\n`;
-      response += `            expected: true       # Required\n`;
-      response += `        save:                    # Optional: array\n`;
-      response += `          - json_path: ".result" # One of: json_path, header, sql_result\n`;
-      response += `            as: "result_data"    # Required\n`;
-      response += `\`\`\`\n\n`;
+      
+      // Show test structure if available
+      if (topLevelProps.tests?.items?.properties) {
+        const testRequired = topLevelProps.tests.items.required || [];
+        const testProps = topLevelProps.tests.items.properties || {};
+        
+        response += `### Test structure:\n`;
+        for (const [key, prop] of Object.entries(testProps)) {
+          const isRequired = testRequired.includes(key);
+          response += `- **${key}** (${isRequired ? 'required' : 'optional'})`;
+          if (prop && typeof prop === 'object' && 'type' in prop) {
+            response += `: ${(prop as any).type}`;
+          }
+          response += `\n`;
+        }
+        response += `\n`;
+      }
+      
+      // Show step structure if available
+      if (topLevelProps.tests?.items?.properties?.steps?.items?.properties) {
+        const stepRequired = topLevelProps.tests.items.properties.steps.items.required || [];
+        const stepProps = topLevelProps.tests.items.properties.steps.items.properties || {};
+        
+        response += `### Step structure:\n`;
+        for (const [key, prop] of Object.entries(stepProps)) {
+          const isRequired = stepRequired.includes(key);
+          response += `- **${key}** (${isRequired ? 'required' : 'optional'})`;
+          if (prop && typeof prop === 'object' && 'type' in prop) {
+            response += `: ${(prop as any).type}`;
+          }
+          response += `\n`;
+        }
+        response += `\n`;
+      }
+      
+      response += `For complete examples with proper syntax, use \`get_rocketship_examples\`.\n\n`;
     }
 
     return {
@@ -750,52 +714,24 @@ export class RocketshipMCPServer {
 
         response += `### ${i + 1}. ${flow}\n\n`;
         response += `**Directory:** \`.rocketship/${dirName}/rocketship.yaml\`\n\n`;
-        response += `**Browser Test Strategy:**\n`;
-        response += `\`\`\`yaml\n`;
-        response += `name: "${flow} Journey"\n`;
-        response += `version: "v1.0.0"\n`;
-        response += `\n`;
-        response += `tests:\n`;
-        response += `  - name: "${flow} E2E Test"\n`;
-        response += `    steps:\n`;
-        response += `      - name: "Execute ${flow.toLowerCase()}"\n`;
-        response += `        plugin: browser\n`;
-        response += `        config:\n`;
-        response += `          task: |\n`;
-        response += `            ${this.generateBrowserTask(flow)}\n`;
-        response += `          llm:\n`;
-        response += `            provider: "openai"\n`;
-        response += `            model: "gpt-4o"\n`;
-        response += `            config:\n`;
-        response += `              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"  # Environment variable\n`;
-        response += `          headless: true\n`;
-        response += `          timeout: "3m"\n`;
-        response += `        save:\n`;
-        response += `          - json_path: ".success"\n`;
-        response += `            as: "flow_success"\n`;
-        response += `          - json_path: ".result"\n`;
-        response += `            as: "flow_result"\n`;
-        response += `        assertions:\n`;
-        response += `          - type: "json_path"\n`;
-        response += `            path: ".success"\n`;
-        response += `            expected: true\n`;
-        response += `\`\`\`\n\n`;
+        response += `**Test Strategy:**\n`;
+        response += `- Use the browser plugin for E2E testing\n`;
+        response += `- Define natural language tasks for the AI agent\n`;
+        response += `- Add assertions to verify expected outcomes\n\n`;
+        response += `For specific YAML syntax and examples, use:\n`;
+        response += `\`\`\`\nget_rocketship_examples feature_type="browser"\n\`\`\`\n\n`;
       }
     } else if (focus_area === "api_endpoints") {
       response += `## API Testing Strategy\n\n`;
       response += `Focus on endpoints that support user journeys, not just coverage.\n\n`;
 
-      response += `### Health & Authentication\n`;
-      response += `\`\`\`yaml\n`;
-      response += `- name: "API Health Check"\n`;
-      response += `  plugin: http\n`;
-      response += `  config:\n`;
-      response += `    method: GET\n`;
-      response += `    url: "{{ base_url }}/health"\n`;
-      response += `  assertions:\n`;
-      response += `    - type: status_code\n`;
-      response += `      expected: 200\n`;
-      response += `\`\`\`\n\n`;
+      // Try to find HTTP examples from embedded knowledge
+      const httpExamples = this.knowledgeLoader.getAllExamples().filter(e => e.includes("http"));
+      if (httpExamples.length > 0) {
+        response += `See real HTTP testing examples with \`get_rocketship_examples feature_type="http"\`.\n\n`;
+      } else {
+        response += `For API testing examples, use \`get_rocketship_examples\`.\n\n`;
+      }
     }
 
     response += `## Recommended Test Structure\n\n`;
@@ -975,78 +911,8 @@ export class RocketshipMCPServer {
   }
 
   private generateBrowserTask(flow: string): string {
-    const lowerFlow = flow.toLowerCase();
-
-    if (lowerFlow.includes("authentication") || lowerFlow.includes("auth")) {
-      return `            1. Navigate to {{ app_url }}/login
-            2. Enter valid credentials (email/username and password)
-            3. Submit login form
-            4. Verify successful authentication
-            5. Confirm access to authenticated areas`;
-    } else if (lowerFlow.includes("dashboard") || lowerFlow.includes("main")) {
-      return `            1. Navigate to {{ app_url }}/dashboard
-            2. Verify main interface elements load correctly
-            3. Check key data and metrics display
-            4. Test navigation between main sections
-            5. Validate responsive layout`;
-    } else if (lowerFlow.includes("search") || lowerFlow.includes("filter")) {
-      return `            1. Navigate to {{ app_url }}
-            2. Locate and use search/filter functionality
-            3. Enter test search terms or apply filters
-            4. Verify results display correctly
-            5. Test result navigation and interaction`;
-    } else if (
-      lowerFlow.includes("record") ||
-      lowerFlow.includes("management")
-    ) {
-      return `            1. Navigate to {{ app_url }}/records (or main data section)
-            2. Create a new record with test data
-            3. Edit the created record
-            4. Verify changes are saved correctly
-            5. Test record deletion if applicable`;
-    } else if (
-      lowerFlow.includes("settings") ||
-      lowerFlow.includes("configuration")
-    ) {
-      return `            1. Navigate to {{ app_url }}/settings
-            2. Review available configuration options
-            3. Modify test settings/preferences
-            4. Save configuration changes
-            5. Verify changes persist after page refresh`;
-    } else if (
-      lowerFlow.includes("process") ||
-      lowerFlow.includes("workflow")
-    ) {
-      return `            1. Navigate to {{ app_url }}
-            2. Initiate the main process/workflow
-            3. Complete required steps and forms
-            4. Submit for processing/approval
-            5. Verify completion status and notifications`;
-    } else if (
-      lowerFlow.includes("reports") ||
-      lowerFlow.includes("analytics")
-    ) {
-      return `            1. Navigate to {{ app_url }}/reports
-            2. Select report parameters or filters
-            3. Generate and view report data
-            4. Test data visualization elements
-            5. Verify export functionality if available`;
-    } else if (
-      lowerFlow.includes("notifications") ||
-      lowerFlow.includes("communication")
-    ) {
-      return `            1. Navigate to {{ app_url }}
-            2. Access notifications or messaging section
-            3. Review available notifications/messages
-            4. Test interaction with notification items
-            5. Verify communication features work correctly`;
-    } else {
-      return `            1. Navigate to {{ app_url }}
-            2. Test the ${flow.toLowerCase()} functionality
-            3. Complete the main user actions
-            4. Verify expected behavior and results
-            5. Check for any errors or usability issues`;
-    }
+    // Generate generic task description
+    return `Complete the ${flow.toLowerCase()} user journey`;
   }
 
   async run() {
