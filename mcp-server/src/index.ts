@@ -544,7 +544,9 @@ export class RocketshipMCPServer {
       for (const [key, prop] of Object.entries(topLevelProps)) {
         const isRequired = requiredTopLevel.includes(key);
         response += `- **${key}** (${isRequired ? 'required' : 'optional'})`;
-        if (prop.type) response += `: ${prop.type}`;
+        if (prop && typeof prop === 'object' && 'type' in prop) {
+          response += `: ${(prop as any).type}`;
+        }
         response += `\n`;
       }
       response += `\n`;
@@ -558,7 +560,9 @@ export class RocketshipMCPServer {
         for (const [key, prop] of Object.entries(testProps)) {
           const isRequired = testRequired.includes(key);
           response += `- **${key}** (${isRequired ? 'required' : 'optional'})`;
-          if (prop.type) response += `: ${prop.type}`;
+          if (prop && typeof prop === 'object' && 'type' in prop) {
+            response += `: ${(prop as any).type}`;
+          }
           response += `\n`;
         }
         response += `\n`;
@@ -573,7 +577,9 @@ export class RocketshipMCPServer {
         for (const [key, prop] of Object.entries(stepProps)) {
           const isRequired = stepRequired.includes(key);
           response += `- **${key}** (${isRequired ? 'required' : 'optional'})`;
-          if (prop.type) response += `: ${prop.type}`;
+          if (prop && typeof prop === 'object' && 'type' in prop) {
+            response += `: ${(prop as any).type}`;
+          }
           response += `\n`;
         }
         response += `\n`;

@@ -46,8 +46,9 @@ lint-typescript:
 		cd mcp-server && \
 		if [ -f "package.json" ]; then \
 			if command -v npm &> /dev/null; then \
-				npm run build 2>/dev/null || (echo "TypeScript compilation failed" && exit 1); \
-				echo "TypeScript compilation successful"; \
+				echo "Building TypeScript project..."; \
+				npm run build || (echo "❌ TypeScript compilation failed" && exit 1); \
+				echo "✅ TypeScript compilation successful"; \
 			else \
 				echo "npm not found. Please install Node.js and npm"; \
 				exit 1; \
@@ -107,8 +108,9 @@ test-typescript:
 		cd mcp-server && \
 		if [ -f "package.json" ]; then \
 			if command -v npm &> /dev/null; then \
-				npm test 2>/dev/null || (echo "TypeScript tests failed" && exit 1); \
-				echo "TypeScript tests successful"; \
+				echo "Running TypeScript tests..."; \
+				npm test || (echo "❌ TypeScript tests failed" && exit 1); \
+				echo "✅ TypeScript tests successful"; \
 			else \
 				echo "npm not found, skipping TypeScript tests"; \
 			fi; \
