@@ -8,6 +8,7 @@ import (
 	"log"
 	"log/slog"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -537,6 +538,46 @@ func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*gen
 }
 
 // ListRuns implements the list runs endpoint - Phase 1 with in-memory data
+// sortRuns sorts a slice of RunSummary based on the specified field and direction
+func sortRuns(runs []*generated.RunSummary, orderBy string, ascending bool) {
+	sort.Slice(runs, func(i, j int) bool {
+		var result bool
+		
+		switch orderBy {
+		case "duration":
+			result = runs[i].DurationMs < runs[j].DurationMs
+		case "ended_at":
+			// Parse time strings for comparison
+			timeI, errI := time.Parse(time.RFC3339, runs[i].EndedAt)
+			timeJ, errJ := time.Parse(time.RFC3339, runs[j].EndedAt)
+			if errI != nil || errJ != nil {
+				// Fall back to string comparison if parsing fails
+				result = runs[i].EndedAt < runs[j].EndedAt
+			} else {
+				result = timeI.Before(timeJ)
+			}
+		case "started_at":
+		default:
+			// Default to started_at
+			timeI, errI := time.Parse(time.RFC3339, runs[i].StartedAt)
+			timeJ, errJ := time.Parse(time.RFC3339, runs[j].StartedAt)
+			if errI != nil || errJ != nil {
+				// Fall back to string comparison if parsing fails
+				result = runs[i].StartedAt < runs[j].StartedAt
+			} else {
+				result = timeI.Before(timeJ)
+			}
+		}
+		
+		// Reverse the result if not ascending (i.e., descending)
+		if !ascending {
+			result = !result
+		}
+		
+		return result
+	})
+}
+
 func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
 	slog.Debug("ListRuns called", 
 		"project_id", req.ProjectId,
@@ -622,6 +663,9 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 		runs = append(runs, runSummary)
 	}
 
+	// Sort runs based on request parameters
+	sortRuns(runs, req.OrderBy, !req.Descending)
+	
 	// Apply limit
 	limit := req.Limit
 	if limit <= 0 {
