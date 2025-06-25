@@ -24,6 +24,7 @@ const (
 type CreateRunRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	YamlPayload   []byte                 `protobuf:"bytes,1,opt,name=yaml_payload,json=yamlPayload,proto3" json:"yaml_payload,omitempty"`
+	Context       *RunContext            `protobuf:"bytes,2,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -65,6 +66,105 @@ func (x *CreateRunRequest) GetYamlPayload() []byte {
 	return nil
 }
 
+func (x *CreateRunRequest) GetContext() *RunContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type RunContext struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`                                                        // For multi-tenancy
+	Source        string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`                                                                               // "cli-local" | "ci-branch" | "ci-main" | "scheduled"
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`                                                                               // Git branch name
+	CommitSha     string                 `protobuf:"bytes,4,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`                                                        // Git commit SHA
+	Trigger       string                 `protobuf:"bytes,5,opt,name=trigger,proto3" json:"trigger,omitempty"`                                                                             // "manual" | "webhook" | "schedule"
+	ScheduleName  string                 `protobuf:"bytes,6,opt,name=schedule_name,json=scheduleName,proto3" json:"schedule_name,omitempty"`                                               // For scheduled runs
+	Metadata      map[string]string      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Additional context (PR number, etc.)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunContext) Reset() {
+	*x = RunContext{}
+	mi := &file_engine_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunContext) ProtoMessage() {}
+
+func (x *RunContext) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunContext.ProtoReflect.Descriptor instead.
+func (*RunContext) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RunContext) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *RunContext) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *RunContext) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *RunContext) GetCommitSha() string {
+	if x != nil {
+		return x.CommitSha
+	}
+	return ""
+}
+
+func (x *RunContext) GetTrigger() string {
+	if x != nil {
+		return x.Trigger
+	}
+	return ""
+}
+
+func (x *RunContext) GetScheduleName() string {
+	if x != nil {
+		return x.ScheduleName
+	}
+	return ""
+}
+
+func (x *RunContext) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
 type CreateRunResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -74,7 +174,7 @@ type CreateRunResponse struct {
 
 func (x *CreateRunResponse) Reset() {
 	*x = CreateRunResponse{}
-	mi := &file_engine_proto_msgTypes[1]
+	mi := &file_engine_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -86,7 +186,7 @@ func (x *CreateRunResponse) String() string {
 func (*CreateRunResponse) ProtoMessage() {}
 
 func (x *CreateRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[1]
+	mi := &file_engine_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -99,7 +199,7 @@ func (x *CreateRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRunResponse.ProtoReflect.Descriptor instead.
 func (*CreateRunResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{1}
+	return file_engine_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CreateRunResponse) GetRunId() string {
@@ -118,7 +218,7 @@ type LogStreamRequest struct {
 
 func (x *LogStreamRequest) Reset() {
 	*x = LogStreamRequest{}
-	mi := &file_engine_proto_msgTypes[2]
+	mi := &file_engine_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -130,7 +230,7 @@ func (x *LogStreamRequest) String() string {
 func (*LogStreamRequest) ProtoMessage() {}
 
 func (x *LogStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[2]
+	mi := &file_engine_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -143,7 +243,7 @@ func (x *LogStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogStreamRequest.ProtoReflect.Descriptor instead.
 func (*LogStreamRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{2}
+	return file_engine_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *LogStreamRequest) GetRunId() string {
@@ -167,7 +267,7 @@ type LogLine struct {
 
 func (x *LogLine) Reset() {
 	*x = LogLine{}
-	mi := &file_engine_proto_msgTypes[3]
+	mi := &file_engine_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -179,7 +279,7 @@ func (x *LogLine) String() string {
 func (*LogLine) ProtoMessage() {}
 
 func (x *LogLine) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[3]
+	mi := &file_engine_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -192,7 +292,7 @@ func (x *LogLine) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogLine.ProtoReflect.Descriptor instead.
 func (*LogLine) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{3}
+	return file_engine_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LogLine) GetTs() string {
@@ -239,13 +339,22 @@ func (x *LogLine) GetStepName() string {
 
 type ListRunsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Source        string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`                                 // Filter by source
+	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`                                 // Filter by branch
+	Status        string                 `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`                                 // Filter by status
+	ScheduleName  string                 `protobuf:"bytes,5,opt,name=schedule_name,json=scheduleName,proto3" json:"schedule_name,omitempty"` // Filter by schedule
+	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`                                  // Pagination limit (default 50)
+	Cursor        string                 `protobuf:"bytes,7,opt,name=cursor,proto3" json:"cursor,omitempty"`                                 // Pagination cursor
+	OrderBy       string                 `protobuf:"bytes,8,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`                // "started_at" | "ended_at" | "duration"
+	Descending    bool                   `protobuf:"varint,9,opt,name=descending,proto3" json:"descending,omitempty"`                        // Sort order (default true for recent first)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListRunsRequest) Reset() {
 	*x = ListRunsRequest{}
-	mi := &file_engine_proto_msgTypes[4]
+	mi := &file_engine_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -257,7 +366,7 @@ func (x *ListRunsRequest) String() string {
 func (*ListRunsRequest) ProtoMessage() {}
 
 func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[4]
+	mi := &file_engine_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -270,19 +379,84 @@ func (x *ListRunsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{4}
+	return file_engine_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListRunsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetBranch() string {
+	if x != nil {
+		return x.Branch
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetScheduleName() string {
+	if x != nil {
+		return x.ScheduleName
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListRunsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *ListRunsRequest) GetDescending() bool {
+	if x != nil {
+		return x.Descending
+	}
+	return false
 }
 
 type ListRunsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Runs          []*RunSummary          `protobuf:"bytes,1,rep,name=runs,proto3" json:"runs,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`  // For pagination
+	TotalCount    int32                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"` // Total matching runs
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListRunsResponse) Reset() {
 	*x = ListRunsResponse{}
-	mi := &file_engine_proto_msgTypes[5]
+	mi := &file_engine_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -294,7 +468,7 @@ func (x *ListRunsResponse) String() string {
 func (*ListRunsResponse) ProtoMessage() {}
 
 func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[5]
+	mi := &file_engine_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -307,7 +481,7 @@ func (x *ListRunsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunsResponse.ProtoReflect.Descriptor instead.
 func (*ListRunsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{5}
+	return file_engine_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListRunsResponse) GetRuns() []*RunSummary {
@@ -317,19 +491,40 @@ func (x *ListRunsResponse) GetRuns() []*RunSummary {
 	return nil
 }
 
+func (x *ListRunsResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+func (x *ListRunsResponse) GetTotalCount() int32 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
 type RunSummary struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
-	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // PENDING | RUNNING | PASSED | FAILED
-	StartedAt     string                 `protobuf:"bytes,3,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
-	EndedAt       string                 `protobuf:"bytes,4,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
+	SuiteName     string                 `protobuf:"bytes,2,opt,name=suite_name,json=suiteName,proto3" json:"suite_name,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"` // PENDING | RUNNING | PASSED | FAILED | TIMEOUT
+	StartedAt     string                 `protobuf:"bytes,4,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	EndedAt       string                 `protobuf:"bytes,5,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	TotalTests    int32                  `protobuf:"varint,7,opt,name=total_tests,json=totalTests,proto3" json:"total_tests,omitempty"`
+	PassedTests   int32                  `protobuf:"varint,8,opt,name=passed_tests,json=passedTests,proto3" json:"passed_tests,omitempty"`
+	FailedTests   int32                  `protobuf:"varint,9,opt,name=failed_tests,json=failedTests,proto3" json:"failed_tests,omitempty"`
+	TimeoutTests  int32                  `protobuf:"varint,10,opt,name=timeout_tests,json=timeoutTests,proto3" json:"timeout_tests,omitempty"`
+	Context       *RunContext            `protobuf:"bytes,11,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RunSummary) Reset() {
 	*x = RunSummary{}
-	mi := &file_engine_proto_msgTypes[6]
+	mi := &file_engine_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -341,7 +536,7 @@ func (x *RunSummary) String() string {
 func (*RunSummary) ProtoMessage() {}
 
 func (x *RunSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[6]
+	mi := &file_engine_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -354,12 +549,19 @@ func (x *RunSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunSummary.ProtoReflect.Descriptor instead.
 func (*RunSummary) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{6}
+	return file_engine_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RunSummary) GetRunId() string {
 	if x != nil {
 		return x.RunId
+	}
+	return ""
+}
+
+func (x *RunSummary) GetSuiteName() string {
+	if x != nil {
+		return x.SuiteName
 	}
 	return ""
 }
@@ -385,6 +587,328 @@ func (x *RunSummary) GetEndedAt() string {
 	return ""
 }
 
+func (x *RunSummary) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *RunSummary) GetTotalTests() int32 {
+	if x != nil {
+		return x.TotalTests
+	}
+	return 0
+}
+
+func (x *RunSummary) GetPassedTests() int32 {
+	if x != nil {
+		return x.PassedTests
+	}
+	return 0
+}
+
+func (x *RunSummary) GetFailedTests() int32 {
+	if x != nil {
+		return x.FailedTests
+	}
+	return 0
+}
+
+func (x *RunSummary) GetTimeoutTests() int32 {
+	if x != nil {
+		return x.TimeoutTests
+	}
+	return 0
+}
+
+func (x *RunSummary) GetContext() *RunContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+type GetRunRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRunRequest) Reset() {
+	*x = GetRunRequest{}
+	mi := &file_engine_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRunRequest) ProtoMessage() {}
+
+func (x *GetRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRunRequest.ProtoReflect.Descriptor instead.
+func (*GetRunRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetRunRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+type GetRunResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Run           *RunDetails            `protobuf:"bytes,1,opt,name=run,proto3" json:"run,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRunResponse) Reset() {
+	*x = GetRunResponse{}
+	mi := &file_engine_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRunResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRunResponse) ProtoMessage() {}
+
+func (x *GetRunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRunResponse.ProtoReflect.Descriptor instead.
+func (*GetRunResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetRunResponse) GetRun() *RunDetails {
+	if x != nil {
+		return x.Run
+	}
+	return nil
+}
+
+type RunDetails struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	SuiteName     string                 `protobuf:"bytes,2,opt,name=suite_name,json=suiteName,proto3" json:"suite_name,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	StartedAt     string                 `protobuf:"bytes,4,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	EndedAt       string                 `protobuf:"bytes,5,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	Context       *RunContext            `protobuf:"bytes,7,opt,name=context,proto3" json:"context,omitempty"`
+	Tests         []*TestDetails         `protobuf:"bytes,8,rep,name=tests,proto3" json:"tests,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RunDetails) Reset() {
+	*x = RunDetails{}
+	mi := &file_engine_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunDetails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunDetails) ProtoMessage() {}
+
+func (x *RunDetails) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunDetails.ProtoReflect.Descriptor instead.
+func (*RunDetails) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *RunDetails) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+func (x *RunDetails) GetSuiteName() string {
+	if x != nil {
+		return x.SuiteName
+	}
+	return ""
+}
+
+func (x *RunDetails) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *RunDetails) GetStartedAt() string {
+	if x != nil {
+		return x.StartedAt
+	}
+	return ""
+}
+
+func (x *RunDetails) GetEndedAt() string {
+	if x != nil {
+		return x.EndedAt
+	}
+	return ""
+}
+
+func (x *RunDetails) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *RunDetails) GetContext() *RunContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *RunDetails) GetTests() []*TestDetails {
+	if x != nil {
+		return x.Tests
+	}
+	return nil
+}
+
+type TestDetails struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TestId        string                 `protobuf:"bytes,1,opt,name=test_id,json=testId,proto3" json:"test_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	StartedAt     string                 `protobuf:"bytes,4,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	EndedAt       string                 `protobuf:"bytes,5,opt,name=ended_at,json=endedAt,proto3" json:"ended_at,omitempty"`
+	DurationMs    int64                  `protobuf:"varint,6,opt,name=duration_ms,json=durationMs,proto3" json:"duration_ms,omitempty"`
+	ErrorMessage  string                 `protobuf:"bytes,7,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"` // For failed tests
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TestDetails) Reset() {
+	*x = TestDetails{}
+	mi := &file_engine_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TestDetails) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TestDetails) ProtoMessage() {}
+
+func (x *TestDetails) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TestDetails.ProtoReflect.Descriptor instead.
+func (*TestDetails) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *TestDetails) GetTestId() string {
+	if x != nil {
+		return x.TestId
+	}
+	return ""
+}
+
+func (x *TestDetails) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TestDetails) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *TestDetails) GetStartedAt() string {
+	if x != nil {
+		return x.StartedAt
+	}
+	return ""
+}
+
+func (x *TestDetails) GetEndedAt() string {
+	if x != nil {
+		return x.EndedAt
+	}
+	return ""
+}
+
+func (x *TestDetails) GetDurationMs() int64 {
+	if x != nil {
+		return x.DurationMs
+	}
+	return 0
+}
+
+func (x *TestDetails) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
 type AddLogRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
@@ -400,7 +924,7 @@ type AddLogRequest struct {
 
 func (x *AddLogRequest) Reset() {
 	*x = AddLogRequest{}
-	mi := &file_engine_proto_msgTypes[7]
+	mi := &file_engine_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -412,7 +936,7 @@ func (x *AddLogRequest) String() string {
 func (*AddLogRequest) ProtoMessage() {}
 
 func (x *AddLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[7]
+	mi := &file_engine_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -425,7 +949,7 @@ func (x *AddLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddLogRequest.ProtoReflect.Descriptor instead.
 func (*AddLogRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{7}
+	return file_engine_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AddLogRequest) GetRunId() string {
@@ -485,7 +1009,7 @@ type AddLogResponse struct {
 
 func (x *AddLogResponse) Reset() {
 	*x = AddLogResponse{}
-	mi := &file_engine_proto_msgTypes[8]
+	mi := &file_engine_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -497,7 +1021,7 @@ func (x *AddLogResponse) String() string {
 func (*AddLogResponse) ProtoMessage() {}
 
 func (x *AddLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[8]
+	mi := &file_engine_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -510,7 +1034,7 @@ func (x *AddLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddLogResponse.ProtoReflect.Descriptor instead.
 func (*AddLogResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{8}
+	return file_engine_proto_rawDescGZIP(), []int{13}
 }
 
 type HealthRequest struct {
@@ -521,7 +1045,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_engine_proto_msgTypes[9]
+	mi := &file_engine_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -533,7 +1057,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[9]
+	mi := &file_engine_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -546,7 +1070,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{9}
+	return file_engine_proto_rawDescGZIP(), []int{14}
 }
 
 type HealthResponse struct {
@@ -558,7 +1082,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_engine_proto_msgTypes[10]
+	mi := &file_engine_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -570,7 +1094,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[10]
+	mi := &file_engine_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -583,7 +1107,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{10}
+	return file_engine_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *HealthResponse) GetStatus() string {
@@ -597,9 +1121,24 @@ var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
 	"\n" +
-	"\fengine.proto\x12\rrocketship.v1\"5\n" +
+	"\fengine.proto\x12\rrocketship.v1\"j\n" +
 	"\x10CreateRunRequest\x12!\n" +
-	"\fyaml_payload\x18\x01 \x01(\fR\vyamlPayload\"*\n" +
+	"\fyaml_payload\x18\x01 \x01(\fR\vyamlPayload\x123\n" +
+	"\acontext\x18\x02 \x01(\v2\x19.rocketship.v1.RunContextR\acontext\"\xbb\x02\n" +
+	"\n" +
+	"RunContext\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\x12\x16\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x1d\n" +
+	"\n" +
+	"commit_sha\x18\x04 \x01(\tR\tcommitSha\x12\x18\n" +
+	"\atrigger\x18\x05 \x01(\tR\atrigger\x12#\n" +
+	"\rschedule_name\x18\x06 \x01(\tR\fscheduleName\x12C\n" +
+	"\bmetadata\x18\a \x03(\v2'.rocketship.v1.RunContext.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"*\n" +
 	"\x11CreateRunResponse\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\")\n" +
 	"\x10LogStreamRequest\x12\x15\n" +
@@ -610,17 +1149,71 @@ const file_engine_proto_rawDesc = "" +
 	"\x05color\x18\x03 \x01(\tR\x05color\x12\x12\n" +
 	"\x04bold\x18\x04 \x01(\bR\x04bold\x12\x1b\n" +
 	"\ttest_name\x18\x05 \x01(\tR\btestName\x12\x1b\n" +
-	"\tstep_name\x18\x06 \x01(\tR\bstepName\"\x11\n" +
-	"\x0fListRunsRequest\"A\n" +
+	"\tstep_name\x18\x06 \x01(\tR\bstepName\"\x86\x02\n" +
+	"\x0fListRunsRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\x12\x16\n" +
+	"\x06branch\x18\x03 \x01(\tR\x06branch\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12#\n" +
+	"\rschedule_name\x18\x05 \x01(\tR\fscheduleName\x12\x14\n" +
+	"\x05limit\x18\x06 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06cursor\x18\a \x01(\tR\x06cursor\x12\x19\n" +
+	"\border_by\x18\b \x01(\tR\aorderBy\x12\x1e\n" +
+	"\n" +
+	"descending\x18\t \x01(\bR\n" +
+	"descending\"\x83\x01\n" +
 	"\x10ListRunsResponse\x12-\n" +
-	"\x04runs\x18\x01 \x03(\v2\x19.rocketship.v1.RunSummaryR\x04runs\"u\n" +
+	"\x04runs\x18\x01 \x03(\v2\x19.rocketship.v1.RunSummaryR\x04runs\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\tR\n" +
+	"nextCursor\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x05R\n" +
+	"totalCount\"\xf6\x02\n" +
 	"\n" +
 	"RunSummary\x12\x15\n" +
-	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1d\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1d\n" +
 	"\n" +
-	"started_at\x18\x03 \x01(\tR\tstartedAt\x12\x19\n" +
-	"\bended_at\x18\x04 \x01(\tR\aendedAt\"\xc5\x01\n" +
+	"suite_name\x18\x02 \x01(\tR\tsuiteName\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\x04 \x01(\tR\tstartedAt\x12\x19\n" +
+	"\bended_at\x18\x05 \x01(\tR\aendedAt\x12\x1f\n" +
+	"\vduration_ms\x18\x06 \x01(\x03R\n" +
+	"durationMs\x12\x1f\n" +
+	"\vtotal_tests\x18\a \x01(\x05R\n" +
+	"totalTests\x12!\n" +
+	"\fpassed_tests\x18\b \x01(\x05R\vpassedTests\x12!\n" +
+	"\ffailed_tests\x18\t \x01(\x05R\vfailedTests\x12#\n" +
+	"\rtimeout_tests\x18\n" +
+	" \x01(\x05R\ftimeoutTests\x123\n" +
+	"\acontext\x18\v \x01(\v2\x19.rocketship.v1.RunContextR\acontext\"&\n" +
+	"\rGetRunRequest\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\"=\n" +
+	"\x0eGetRunResponse\x12+\n" +
+	"\x03run\x18\x01 \x01(\v2\x19.rocketship.v1.RunDetailsR\x03run\"\x9c\x02\n" +
+	"\n" +
+	"RunDetails\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1d\n" +
+	"\n" +
+	"suite_name\x18\x02 \x01(\tR\tsuiteName\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\x04 \x01(\tR\tstartedAt\x12\x19\n" +
+	"\bended_at\x18\x05 \x01(\tR\aendedAt\x12\x1f\n" +
+	"\vduration_ms\x18\x06 \x01(\x03R\n" +
+	"durationMs\x123\n" +
+	"\acontext\x18\a \x01(\v2\x19.rocketship.v1.RunContextR\acontext\x120\n" +
+	"\x05tests\x18\b \x03(\v2\x1a.rocketship.v1.TestDetailsR\x05tests\"\xd2\x01\n" +
+	"\vTestDetails\x12\x17\n" +
+	"\atest_id\x18\x01 \x01(\tR\x06testId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\x04 \x01(\tR\tstartedAt\x12\x19\n" +
+	"\bended_at\x18\x05 \x01(\tR\aendedAt\x12\x1f\n" +
+	"\vduration_ms\x18\x06 \x01(\x03R\n" +
+	"durationMs\x12#\n" +
+	"\rerror_message\x18\a \x01(\tR\ferrorMessage\"\xc5\x01\n" +
 	"\rAddLogRequest\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -633,13 +1226,14 @@ const file_engine_proto_rawDesc = "" +
 	"\x0eAddLogResponse\"\x0f\n" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2\xfc\x02\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status2\xc3\x03\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +
 	"StreamLogs\x12\x1f.rocketship.v1.LogStreamRequest\x1a\x16.rocketship.v1.LogLine0\x01\x12E\n" +
 	"\x06AddLog\x12\x1c.rocketship.v1.AddLogRequest\x1a\x1d.rocketship.v1.AddLogResponse\x12K\n" +
 	"\bListRuns\x12\x1e.rocketship.v1.ListRunsRequest\x1a\x1f.rocketship.v1.ListRunsResponse\x12E\n" +
+	"\x06GetRun\x12\x1c.rocketship.v1.GetRunRequest\x1a\x1d.rocketship.v1.GetRunResponse\x12E\n" +
 	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
 
 var (
@@ -654,37 +1248,51 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_engine_proto_goTypes = []any{
 	(*CreateRunRequest)(nil),  // 0: rocketship.v1.CreateRunRequest
-	(*CreateRunResponse)(nil), // 1: rocketship.v1.CreateRunResponse
-	(*LogStreamRequest)(nil),  // 2: rocketship.v1.LogStreamRequest
-	(*LogLine)(nil),           // 3: rocketship.v1.LogLine
-	(*ListRunsRequest)(nil),   // 4: rocketship.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),  // 5: rocketship.v1.ListRunsResponse
-	(*RunSummary)(nil),        // 6: rocketship.v1.RunSummary
-	(*AddLogRequest)(nil),     // 7: rocketship.v1.AddLogRequest
-	(*AddLogResponse)(nil),    // 8: rocketship.v1.AddLogResponse
-	(*HealthRequest)(nil),     // 9: rocketship.v1.HealthRequest
-	(*HealthResponse)(nil),    // 10: rocketship.v1.HealthResponse
+	(*RunContext)(nil),        // 1: rocketship.v1.RunContext
+	(*CreateRunResponse)(nil), // 2: rocketship.v1.CreateRunResponse
+	(*LogStreamRequest)(nil),  // 3: rocketship.v1.LogStreamRequest
+	(*LogLine)(nil),           // 4: rocketship.v1.LogLine
+	(*ListRunsRequest)(nil),   // 5: rocketship.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),  // 6: rocketship.v1.ListRunsResponse
+	(*RunSummary)(nil),        // 7: rocketship.v1.RunSummary
+	(*GetRunRequest)(nil),     // 8: rocketship.v1.GetRunRequest
+	(*GetRunResponse)(nil),    // 9: rocketship.v1.GetRunResponse
+	(*RunDetails)(nil),        // 10: rocketship.v1.RunDetails
+	(*TestDetails)(nil),       // 11: rocketship.v1.TestDetails
+	(*AddLogRequest)(nil),     // 12: rocketship.v1.AddLogRequest
+	(*AddLogResponse)(nil),    // 13: rocketship.v1.AddLogResponse
+	(*HealthRequest)(nil),     // 14: rocketship.v1.HealthRequest
+	(*HealthResponse)(nil),    // 15: rocketship.v1.HealthResponse
+	nil,                       // 16: rocketship.v1.RunContext.MetadataEntry
 }
 var file_engine_proto_depIdxs = []int32{
-	6,  // 0: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
-	0,  // 1: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
-	2,  // 2: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
-	7,  // 3: rocketship.v1.Engine.AddLog:input_type -> rocketship.v1.AddLogRequest
-	4,  // 4: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
-	9,  // 5: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
-	1,  // 6: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
-	3,  // 7: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
-	8,  // 8: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
-	5,  // 9: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
-	10, // 10: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
-	6,  // [6:11] is the sub-list for method output_type
-	1,  // [1:6] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	1,  // 0: rocketship.v1.CreateRunRequest.context:type_name -> rocketship.v1.RunContext
+	16, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
+	7,  // 2: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
+	1,  // 3: rocketship.v1.RunSummary.context:type_name -> rocketship.v1.RunContext
+	10, // 4: rocketship.v1.GetRunResponse.run:type_name -> rocketship.v1.RunDetails
+	1,  // 5: rocketship.v1.RunDetails.context:type_name -> rocketship.v1.RunContext
+	11, // 6: rocketship.v1.RunDetails.tests:type_name -> rocketship.v1.TestDetails
+	0,  // 7: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
+	3,  // 8: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
+	12, // 9: rocketship.v1.Engine.AddLog:input_type -> rocketship.v1.AddLogRequest
+	5,  // 10: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
+	8,  // 11: rocketship.v1.Engine.GetRun:input_type -> rocketship.v1.GetRunRequest
+	14, // 12: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
+	2,  // 13: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
+	4,  // 14: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
+	13, // 15: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
+	6,  // 16: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
+	9,  // 17: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
+	15, // 18: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
+	13, // [13:19] is the sub-list for method output_type
+	7,  // [7:13] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -698,7 +1306,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

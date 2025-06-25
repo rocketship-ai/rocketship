@@ -72,6 +72,27 @@ func (c *EngineClient) RunTest(ctx context.Context, yamlData []byte) (string, er
 	return resp.RunId, nil
 }
 
+func (c *EngineClient) RunTestWithContext(ctx context.Context, yamlData []byte, runCtx *generated.RunContext) (string, error) {
+	reqCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	resp, err := c.client.CreateRun(reqCtx, &generated.CreateRunRequest{
+		YamlPayload: yamlData,
+		Context:     runCtx,
+	})
+	if err != nil {
+		if err == context.DeadlineExceeded {
+			return "", fmt.Errorf("timed out waiting for engine to respond")
+		}
+		if s, ok := status.FromError(err); ok {
+			return "", fmt.Errorf("failed to create run: %s", s.Message())
+		}
+		return "", fmt.Errorf("failed to create run: %w", err)
+	}
+
+	return resp.RunId, nil
+}
+
 func (c *EngineClient) StreamLogs(ctx context.Context, runID string) (generated.Engine_StreamLogsClient, error) {
 	return c.client.StreamLogs(ctx, &generated.LogStreamRequest{
 		RunId: runID,

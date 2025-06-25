@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -49,7 +51,15 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		return nil, fmt.Errorf("test run must contain at least one test")
 	}
 	
-	slog.Debug("Starting run", "name", run.Name, "test_count", len(run.Tests))
+	// Extract context from request or auto-detect
+	runContext := extractRunContext(req.Context)
+	
+	slog.Debug("Starting run", 
+		"name", run.Name, 
+		"test_count", len(run.Tests),
+		"project_id", runContext.ProjectID,
+		"source", runContext.Source,
+		"branch", runContext.Branch)
 
 	runInfo := &RunInfo{
 		ID:        runID,
@@ -57,9 +67,10 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		Status:    "PENDING",
 		StartedAt: time.Now(),
 		Tests:     make(map[string]*TestInfo),
+		Context:   runContext,
 		Logs: []LogLine{
 			{
-				Msg:   fmt.Sprintf("Starting test run \"%s\"... 🚀", run.Name),
+				Msg:   fmt.Sprintf("Starting test run \"%s\"... 🚀 [%s/%s]", run.Name, runContext.ProjectID, runContext.Source),
 				Color: "purple",
 				Bold:  true,
 			},
@@ -80,10 +91,33 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			RunID:      runID,
 		}
 
+		// Enhanced workflow options with search attributes (disabled for Phase 1)
 		workflowOptions := client.StartWorkflowOptions{
 			ID:        testID,
 			TaskQueue: "test-workflows",
+			// TODO Phase 2: Add search attributes after registering them in Temporal
+			// SearchAttributes: map[string]interface{}{
+			//     SearchAttrProjectID:    runContext.ProjectID,
+			//     SearchAttrSuiteName:    run.Name,
+			//     SearchAttrSource:       runContext.Source,
+			//     SearchAttrBranch:       runContext.Branch,
+			//     SearchAttrCommitSHA:    runContext.CommitSHA,
+			//     SearchAttrTrigger:      runContext.Trigger,
+			//     SearchAttrScheduleName: runContext.ScheduleName,
+			//     SearchAttrStatus:       "PENDING",
+			//     SearchAttrStartTime:    time.Now(),
+			//     SearchAttrTotalTests:   len(run.Tests),
+			//     SearchAttrPassedTests:  0,
+			//     SearchAttrFailedTests:  0,
+			//     SearchAttrTimeoutTests: 0,
+			// },
 		}
+		
+		slog.Debug("Starting workflow with search attributes",
+			"workflow_id", testID,
+			"project_id", runContext.ProjectID,
+			"suite_name", run.Name,
+			"source", runContext.Source)
 
 		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars, runID)
 		if err != nil {
@@ -295,6 +329,119 @@ func generateID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// Helper function to extract run context from request or detect from environment
+func extractRunContext(reqContext *generated.RunContext) *RunContext {
+	if reqContext == nil {
+		// Auto-detect context from environment
+		slog.Debug("No context provided, auto-detecting from environment")
+		return &RunContext{
+			ProjectID:    detectProjectID(),
+			Source:       detectSource(),
+			Branch:       detectBranch(),
+			CommitSHA:    detectCommitSHA(),
+			Trigger:      detectTrigger(),
+			ScheduleName: "",
+			Metadata:     make(map[string]string),
+		}
+	}
+
+	slog.Debug("Using provided context", 
+		"project_id", reqContext.ProjectId,
+		"source", reqContext.Source,
+		"branch", reqContext.Branch)
+
+	return &RunContext{
+		ProjectID:    reqContext.ProjectId,
+		Source:       reqContext.Source,
+		Branch:       reqContext.Branch,
+		CommitSHA:    reqContext.CommitSha,
+		Trigger:      reqContext.Trigger,
+		ScheduleName: reqContext.ScheduleName,
+		Metadata:     reqContext.Metadata,
+	}
+}
+
+// Auto-detection helper functions
+func detectProjectID() string {
+	// Try to get from git remote origin
+	cmd := exec.Command("git", "config", "--get", "remote.origin.url")
+	output, err := cmd.Output()
+	if err == nil {
+		url := strings.TrimSpace(string(output))
+		// Extract repo name from URL
+		if strings.Contains(url, "/") {
+			parts := strings.Split(url, "/")
+			if len(parts) > 0 {
+				repo := parts[len(parts)-1]
+				repo = strings.TrimSuffix(repo, ".git")
+				if repo != "" {
+					slog.Debug("Detected project ID from git remote", "project_id", repo)
+					return repo
+				}
+			}
+		}
+	}
+	
+	slog.Debug("Using default project ID")
+	return "default"
+}
+
+func detectSource() string {
+	// Check for common CI environment variables
+	ciEnvVars := []string{"CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL", "BUILDKITE"}
+	for _, envVar := range ciEnvVars {
+		if cmd := exec.Command("sh", "-c", fmt.Sprintf("echo $%s", envVar)); cmd != nil {
+			if output, err := cmd.Output(); err == nil && strings.TrimSpace(string(output)) != "" {
+				slog.Debug("Detected CI environment", "source", "ci-branch")
+				return "ci-branch"
+			}
+		}
+	}
+	
+	slog.Debug("Detected local environment", "source", "cli-local")
+	return "cli-local"
+}
+
+func detectBranch() string {
+	// Try git branch --show-current
+	cmd := exec.Command("git", "branch", "--show-current")
+	output, err := cmd.Output()
+	if err == nil {
+		branch := strings.TrimSpace(string(output))
+		if branch != "" {
+			slog.Debug("Detected git branch", "branch", branch)
+			return branch
+		}
+	}
+	
+	slog.Debug("Could not detect git branch")
+	return ""
+}
+
+func detectCommitSHA() string {
+	// Try git rev-parse HEAD
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	output, err := cmd.Output()
+	if err == nil {
+		commit := strings.TrimSpace(string(output))
+		if commit != "" {
+			slog.Debug("Detected git commit", "commit", commit[:8])
+			return commit
+		}
+	}
+	
+	slog.Debug("Could not detect git commit")
+	return ""
+}
+
+func detectTrigger() string {
+	// If it's CI, it's likely webhook triggered, otherwise manual
+	if detectSource() == "ci-branch" {
+		return "webhook"
+	}
+	return "manual"
+}
+
 func (e *Engine) checkIfRunFinished(runID string) {
 	counts, err := e.getTestStatusCounts(runID)
 	if err != nil {
@@ -387,4 +534,192 @@ func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*gen
 	return &generated.HealthResponse{
 		Status: "ok",
 	}, nil
+}
+
+// ListRuns implements the list runs endpoint - Phase 1 with in-memory data
+func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
+	slog.Debug("ListRuns called", 
+		"project_id", req.ProjectId,
+		"source", req.Source,
+		"branch", req.Branch,
+		"status", req.Status,
+		"limit", req.Limit)
+
+	// For Phase 1, return in-memory runs with basic filtering
+	// TODO: Integrate with Temporal search attributes
+	
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	runs := make([]*generated.RunSummary, 0)
+	
+	for _, runInfo := range e.runs {
+		// Basic filtering by status
+		if req.Status != "" && runInfo.Status != req.Status {
+			continue
+		}
+		
+		// Filter by project ID
+		if req.ProjectId != "" && runInfo.Context.ProjectID != req.ProjectId {
+			continue
+		}
+		
+		// Filter by source
+		if req.Source != "" && runInfo.Context.Source != req.Source {
+			continue
+		}
+		
+		// Filter by branch
+		if req.Branch != "" && runInfo.Context.Branch != req.Branch {
+			continue
+		}
+		
+		// Filter by schedule name
+		if req.ScheduleName != "" && runInfo.Context.ScheduleName != req.ScheduleName {
+			continue
+		}
+
+		duration := int64(0)
+		if !runInfo.EndedAt.IsZero() {
+			duration = runInfo.EndedAt.Sub(runInfo.StartedAt).Milliseconds()
+		}
+
+		// Count test statuses
+		var passed, failed, timeout int32
+		for _, test := range runInfo.Tests {
+			switch test.Status {
+			case "PASSED":
+				passed++
+			case "FAILED":
+				failed++
+			case "TIMEOUT":
+				timeout++
+			}
+		}
+
+		runSummary := &generated.RunSummary{
+			RunId:        runInfo.ID,
+			SuiteName:    runInfo.Name,
+			Status:       runInfo.Status,
+			StartedAt:    runInfo.StartedAt.Format(time.RFC3339),
+			EndedAt:      runInfo.EndedAt.Format(time.RFC3339),
+			DurationMs:   duration,
+			TotalTests:   int32(len(runInfo.Tests)),
+			PassedTests:  passed,
+			FailedTests:  failed,
+			TimeoutTests: timeout,
+			Context: &generated.RunContext{
+				ProjectId: runInfo.Context.ProjectID,
+				Source:    runInfo.Context.Source,
+				Branch:    runInfo.Context.Branch,
+				CommitSha: runInfo.Context.CommitSHA,
+				Trigger:   runInfo.Context.Trigger,
+				ScheduleName: runInfo.Context.ScheduleName,
+				Metadata:  runInfo.Context.Metadata,
+			},
+		}
+
+		runs = append(runs, runSummary)
+	}
+
+	// Apply limit
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if len(runs) > int(limit) {
+		runs = runs[:limit]
+	}
+
+	result := &generated.ListRunsResponse{
+		Runs:       runs,
+		TotalCount: int32(len(runs)),
+	}
+
+	slog.Debug("Returning ListRuns response", "runs_count", len(runs))
+	return result, nil
+}
+
+// GetRun implements the get run endpoint
+func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*generated.GetRunResponse, error) {
+	slog.Debug("GetRun called", "run_id", req.RunId)
+
+	if req.RunId == "" {
+		return nil, fmt.Errorf("run_id is required")
+	}
+
+	// First check in-memory runs for active runs
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	
+	// Try exact match first
+	if runInfo, exists := e.runs[req.RunId]; exists {
+		slog.Debug("Found active run in memory", "run_id", req.RunId)
+		return mapRunInfoToRunDetails(runInfo), nil
+	}
+	
+	// If not found and the ID looks like a prefix (12 chars or less), search for prefix match
+	if len(req.RunId) <= 12 {
+		slog.Debug("Searching for run by prefix", "prefix", req.RunId)
+		for fullID, runInfo := range e.runs {
+			if strings.HasPrefix(fullID, req.RunId) {
+				slog.Debug("Found run by prefix match", "prefix", req.RunId, "full_id", fullID)
+				return mapRunInfoToRunDetails(runInfo), nil
+			}
+		}
+	}
+
+	// TODO: Query Temporal for historical run data
+	// For now, return not found
+	slog.Debug("Run not found in memory", "run_id", req.RunId)
+	return nil, fmt.Errorf("run not found: %s", req.RunId)
+}
+
+// TODO: Temporal query helpers will be added in Phase 2
+
+// Map in-memory RunInfo to RunDetails for GetRun response
+func mapRunInfoToRunDetails(runInfo *RunInfo) *generated.GetRunResponse {
+	tests := make([]*generated.TestDetails, 0, len(runInfo.Tests))
+	
+	for _, testInfo := range runInfo.Tests {
+		duration := int64(0)
+		if !testInfo.EndedAt.IsZero() {
+			duration = testInfo.EndedAt.Sub(testInfo.StartedAt).Milliseconds()
+		}
+		
+		tests = append(tests, &generated.TestDetails{
+			TestId:    testInfo.WorkflowID,
+			Name:      testInfo.Name,
+			Status:    testInfo.Status,
+			StartedAt: testInfo.StartedAt.Format(time.RFC3339),
+			EndedAt:   testInfo.EndedAt.Format(time.RFC3339),
+			DurationMs: duration,
+		})
+	}
+
+	duration := int64(0)
+	if !runInfo.EndedAt.IsZero() {
+		duration = runInfo.EndedAt.Sub(runInfo.StartedAt).Milliseconds()
+	}
+
+	return &generated.GetRunResponse{
+		Run: &generated.RunDetails{
+			RunId:      runInfo.ID,
+			SuiteName:  runInfo.Name,
+			Status:     runInfo.Status,
+			StartedAt:  runInfo.StartedAt.Format(time.RFC3339),
+			EndedAt:    runInfo.EndedAt.Format(time.RFC3339),
+			DurationMs: duration,
+			Context: &generated.RunContext{
+				ProjectId: runInfo.Context.ProjectID,
+				Source:    runInfo.Context.Source,
+				Branch:    runInfo.Context.Branch,
+				CommitSha: runInfo.Context.CommitSHA,
+				Trigger:   runInfo.Context.Trigger,
+				ScheduleName: runInfo.Context.ScheduleName,
+				Metadata:  runInfo.Context.Metadata,
+			},
+			Tests: tests,
+		},
+	}
 }

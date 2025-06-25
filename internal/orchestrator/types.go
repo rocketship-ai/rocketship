@@ -22,6 +22,7 @@ type RunInfo struct {
 	EndedAt   time.Time
 	Tests     map[string]*TestInfo // Test's WorkflowID : TestInfo
 	Logs      []LogLine
+	Context   *RunContext
 }
 
 type LogLine struct {
@@ -49,3 +50,39 @@ type TestStatusCounts struct {
 	TimedOut int
 	Pending  int
 }
+
+// Enhanced data structures for persistence
+type EnhancedRunInfo struct {
+	*RunInfo
+	Context   *RunContext
+	SuiteName string
+}
+
+type RunContext struct {
+	ProjectID    string
+	Source       string
+	Branch       string
+	CommitSHA    string
+	Trigger      string
+	ScheduleName string
+	Metadata     map[string]string
+}
+
+// Temporal search attribute keys (must be registered in Temporal cluster)
+const (
+	SearchAttrProjectID    = "ProjectId"
+	SearchAttrSuiteName    = "SuiteName"
+	SearchAttrSource       = "Source"
+	SearchAttrBranch       = "Branch"
+	SearchAttrCommitSHA    = "CommitSHA"
+	SearchAttrTrigger      = "Trigger"
+	SearchAttrScheduleName = "ScheduleName"
+	SearchAttrStatus       = "Status"
+	SearchAttrStartTime    = "StartTime"
+	SearchAttrEndTime      = "EndTime"
+	SearchAttrDurationMs   = "DurationMs"
+	SearchAttrTotalTests   = "TotalTests"
+	SearchAttrPassedTests  = "PassedTests"
+	SearchAttrFailedTests  = "FailedTests"
+	SearchAttrTimeoutTests = "TimeoutTests"
+)

@@ -8,11 +8,23 @@ service Engine {
   rpc StreamLogs(LogStreamRequest) returns (stream LogLine);
   rpc AddLog(AddLogRequest) returns (AddLogResponse);
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
 }
 
 message CreateRunRequest {
   bytes yaml_payload = 1;
+  RunContext context = 2;
+}
+
+message RunContext {
+  string project_id = 1;          // For multi-tenancy
+  string source = 2;              // "cli-local" | "ci-branch" | "ci-main" | "scheduled"
+  string branch = 3;              // Git branch name
+  string commit_sha = 4;          // Git commit SHA
+  string trigger = 5;             // "manual" | "webhook" | "schedule"
+  string schedule_name = 6;       // For scheduled runs
+  map<string, string> metadata = 7; // Additional context (PR number, etc.)
 }
 
 message CreateRunResponse {
@@ -29,14 +41,65 @@ message LogLine {
   string step_name = 6;   // Name of the step this log belongs to (if applicable)
 }
 
-message ListRunsRequest {}
-message ListRunsResponse { repeated RunSummary runs = 1; }
+message ListRunsRequest {
+  string project_id = 1;
+  string source = 2;              // Filter by source
+  string branch = 3;              // Filter by branch  
+  string status = 4;              // Filter by status
+  string schedule_name = 5;       // Filter by schedule
+  int32 limit = 6;                // Pagination limit (default 50)
+  string cursor = 7;              // Pagination cursor
+  string order_by = 8;            // "started_at" | "ended_at" | "duration"
+  bool descending = 9;            // Sort order (default true for recent first)
+}
+
+message ListRunsResponse { 
+  repeated RunSummary runs = 1; 
+  string next_cursor = 2;         // For pagination
+  int32 total_count = 3;          // Total matching runs
+}
 
 message RunSummary {
-  string run_id    = 1;
-  string status    = 2;  // PENDING | RUNNING | PASSED | FAILED
-  string started_at = 3;
-  string ended_at   = 4;
+  string run_id = 1;
+  string suite_name = 2;
+  string status = 3;              // PENDING | RUNNING | PASSED | FAILED | TIMEOUT
+  string started_at = 4;
+  string ended_at = 5;
+  int64 duration_ms = 6;
+  int32 total_tests = 7;
+  int32 passed_tests = 8;
+  int32 failed_tests = 9;
+  int32 timeout_tests = 10;
+  RunContext context = 11;
+}
+
+message GetRunRequest {
+  string run_id = 1;
+}
+
+message GetRunResponse {
+  RunDetails run = 1;
+}
+
+message RunDetails {
+  string run_id = 1;
+  string suite_name = 2;
+  string status = 3;
+  string started_at = 4;
+  string ended_at = 5;
+  int64 duration_ms = 6;
+  RunContext context = 7;
+  repeated TestDetails tests = 8;
+}
+
+message TestDetails {
+  string test_id = 1;
+  string name = 2;
+  string status = 3;
+  string started_at = 4;
+  string ended_at = 5;
+  int64 duration_ms = 6;
+  string error_message = 7;       // For failed tests
 }
 
 message AddLogRequest {

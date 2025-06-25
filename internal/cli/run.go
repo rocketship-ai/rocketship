@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 	yaml "gopkg.in/yaml.v3"
 
+	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 )
 
@@ -66,7 +67,7 @@ func findRocketshipFiles(dir string) ([]string, error) {
 }
 
 // runSingleTest runs a single test file and streams its logs
-func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, showTimestamp bool, resultChan chan<- TestSuiteResult) {
+func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, showTimestamp bool, runContext *generated.RunContext, resultChan chan<- TestSuiteResult) {
 	defer func() {
 		// Ensure we always send a result, even on panic
 		if r := recover(); r != nil {
@@ -137,7 +138,12 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	runCtx, runCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer runCancel()
 
-	runID, err := client.RunTest(runCtx, processedYamlData)
+	var runID string
+	if runContext != nil {
+		runID, err = client.RunTestWithContext(runCtx, processedYamlData, runContext)
+	} else {
+		runID, err = client.RunTest(runCtx, processedYamlData)
+	}
 	if err != nil {
 		Logger.Error("failed to create run", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: config.Name}
@@ -332,6 +338,30 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
+			// Get context flags
+			projectID, _ := cmd.Flags().GetString("project-id")
+			source, _ := cmd.Flags().GetString("source")
+			branch, _ := cmd.Flags().GetString("branch")
+			commit, _ := cmd.Flags().GetString("commit")
+			trigger, _ := cmd.Flags().GetString("trigger")
+			scheduleName, _ := cmd.Flags().GetString("schedule-name")
+			metadata, _ := cmd.Flags().GetStringToString("metadata")
+
+			// Build RunContext if any context flags are set
+			var runContext *generated.RunContext
+			if projectID != "" || source != "" || branch != "" || commit != "" || 
+			   trigger != "" || scheduleName != "" || len(metadata) > 0 {
+				runContext = &generated.RunContext{
+					ProjectId:    projectID,
+					Source:       source,
+					Branch:       branch,
+					CommitSha:    commit,
+					Trigger:      trigger,
+					ScheduleName: scheduleName,
+					Metadata:     metadata,
+				}
+			}
+
 			// Get test file or directory path
 			testFile, err := cmd.Flags().GetString("file")
 			if err != nil {
@@ -374,7 +404,7 @@ func NewRunCmd() *cobra.Command {
 				wg.Add(1)
 				go func(testFile string) {
 					defer wg.Done()
-					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, resultChan)
+					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, runContext, resultChan)
 				}(tf)
 			}
 
@@ -403,5 +433,15 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
 	cmd.Flags().BoolP("timestamp", "t", false, "Show timestamps in log output")
+	
+	// Context flags for enhanced metadata tracking
+	cmd.Flags().String("project-id", "", "Project identifier for test run tracking")
+	cmd.Flags().String("source", "", "Run source: cli-local, ci-branch, ci-main, scheduled")
+	cmd.Flags().String("branch", "", "Git branch name (auto-detected if not specified)")
+	cmd.Flags().String("commit", "", "Git commit SHA (auto-detected if not specified)")
+	cmd.Flags().String("trigger", "", "Trigger type: manual, webhook, schedule")
+	cmd.Flags().String("schedule-name", "", "Schedule name for scheduled runs")
+	cmd.Flags().StringToString("metadata", nil, "Additional metadata key=value pairs")
+	
 	return cmd
 }
