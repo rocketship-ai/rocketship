@@ -49,12 +49,10 @@ func TestNewStartServerCmd(t *testing.T) {
 		t.Errorf("Expected Use to be 'server', got %s", cmd.Use)
 	}
 
-	// Check flags
+	// Check flags - local flag should not exist anymore
 	localFlag := cmd.Flag("local")
-	if localFlag == nil {
-		t.Error("Expected local flag to exist")
-	} else if localFlag.Shorthand != "l" {
-		t.Errorf("Expected local flag shorthand to be 'l', got %s", localFlag.Shorthand)
+	if localFlag != nil {
+		t.Error("Local flag should not exist anymore")
 	}
 
 	backgroundFlag := cmd.Flag("background")
@@ -75,10 +73,10 @@ func TestStartServerCmd_ErrorCases(t *testing.T) {
 		errContains string
 	}{
 		{
-			name:        "remote server not implemented",
+			name:        "local server startup fails",
 			args:        []string{},
 			wantErr:     true,
-			errContains: "remote server connection not yet implemented",
+			errContains: "failed to", // Now it should try to start local server and fail due to missing dependencies
 		},
 	}
 
@@ -156,51 +154,33 @@ func TestStartServerCmd_FlagParsing(t *testing.T) {
 	tests := []struct {
 		name           string
 		args           []string
-		expectedLocal  bool
 		expectedBg     bool
 		expectParseErr bool
 	}{
 		{
-			name:          "no flags",
-			args:          []string{},
-			expectedLocal: false,
-			expectedBg:    false,
+			name:       "no flags",
+			args:       []string{},
+			expectedBg: false,
 		},
 		{
-			name:          "local flag short",
-			args:          []string{"-l"},
-			expectedLocal: true,
-			expectedBg:    false,
+			name:       "background flag short",
+			args:       []string{"-b"},
+			expectedBg: true,
 		},
 		{
-			name:          "local flag long",
-			args:          []string{"--local"},
-			expectedLocal: true,
-			expectedBg:    false,
+			name:       "background flag long",
+			args:       []string{"--background"},
+			expectedBg: true,
 		},
 		{
-			name:          "background flag short",
-			args:          []string{"-b"},
-			expectedLocal: false,
-			expectedBg:    true,
+			name:           "invalid local flag short",
+			args:           []string{"-l"},
+			expectParseErr: true,
 		},
 		{
-			name:          "background flag long",
-			args:          []string{"--background"},
-			expectedLocal: false,
-			expectedBg:    true,
-		},
-		{
-			name:          "both flags",
-			args:          []string{"-l", "-b"},
-			expectedLocal: true,
-			expectedBg:    true,
-		},
-		{
-			name:          "both flags long",
-			args:          []string{"--local", "--background"},
-			expectedLocal: true,
-			expectedBg:    true,
+			name:           "invalid local flag long",
+			args:           []string{"--local"},
+			expectParseErr: true,
 		},
 	}
 
@@ -224,19 +204,10 @@ func TestStartServerCmd_FlagParsing(t *testing.T) {
 				t.Fatalf("Unexpected parse error: %v", err)
 			}
 
-			// Check flag values
-			localFlag, err := cmd.Flags().GetBool("local")
-			if err != nil {
-				t.Fatalf("Failed to get local flag: %v", err)
-			}
-
+			// Check background flag value
 			bgFlag, err := cmd.Flags().GetBool("background")
 			if err != nil {
 				t.Fatalf("Failed to get background flag: %v", err)
-			}
-
-			if localFlag != tt.expectedLocal {
-				t.Errorf("Expected local flag to be %v, got %v", tt.expectedLocal, localFlag)
 			}
 
 			if bgFlag != tt.expectedBg {
@@ -257,9 +228,9 @@ func TestStartServerCmd_Help(t *testing.T) {
 		t.Error("Expected non-empty help string")
 	}
 
-	// Check that help contains flag descriptions
-	if !contains(help, "local") {
-		t.Error("Help should contain local flag description")
+	// Check that help does not contain local flag (it's been removed)
+	if contains(help, "local") {
+		t.Error("Help should not contain local flag description")
 	}
 
 	if !contains(help, "background") {
@@ -296,9 +267,9 @@ func TestStartCmd_Structure(t *testing.T) {
 		t.Error("Start command should have a server subcommand")
 	}
 
-	// Test that server command has the expected flags
-	if serverCmd.Flag("local") == nil {
-		t.Error("Server command should have local flag")
+	// Test that server command does not have local flag (it's been removed)
+	if serverCmd.Flag("local") != nil {
+		t.Error("Server command should not have local flag")
 	}
 
 	if serverCmd.Flag("background") == nil {

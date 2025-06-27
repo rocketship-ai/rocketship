@@ -49,6 +49,21 @@ rocketship run -f test.yaml \
   --metadata "version=1.2.3"
 ```
 
+### Auto Run Mode
+
+When using the `--auto` flag, Rocketship automatically displays recent test runs after your tests complete:
+
+```bash
+# Run tests with auto mode
+rocketship run --auto -f test.yaml
+
+# After tests complete, you'll see:
+# 1. Final test summary
+# 2. Recent test runs table (all runs)
+```
+
+This provides immediate visibility into your test history without needing to run a separate `list` command.
+
 ## Listing Test Runs
 
 The `rocketship list` command provides powerful filtering and sorting capabilities:

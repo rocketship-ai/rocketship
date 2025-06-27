@@ -28,40 +28,30 @@ func newStartServerCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server",
 		Short: "Start the rocketship server",
-		Long:  `Start the rocketship server either locally or connect to a remote instance.`,
+		Long:  `Start a local rocketship server.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			isLocal, err := cmd.Flags().GetBool("local")
-			if err != nil {
-				return err
-			}
-
 			isBackground, err := cmd.Flags().GetBool("background")
 			if err != nil {
 				return err
 			}
 
-			if isLocal {
-				// Check if server is already running
-				if running, components := IsServerRunning(); running {
-					componentNames := make([]string, len(components))
-					for i, c := range components {
-						componentNames[i] = c.String()
-					}
-					return fmt.Errorf("server components already running: %s", strings.Join(componentNames, ", "))
+			// Check if server is already running
+			if running, components := IsServerRunning(); running {
+				componentNames := make([]string, len(components))
+				for i, c := range components {
+					componentNames[i] = c.String()
 				}
-
-				if isBackground {
-					// Start processes and return immediately
-					return setupLocalServerBackground()
-				}
-				return setupLocalServer()
+				return fmt.Errorf("server components already running: %s", strings.Join(componentNames, ", "))
 			}
 
-			return fmt.Errorf("remote server connection not yet implemented")
+			if isBackground {
+				// Start processes and return immediately
+				return setupLocalServerBackground()
+			}
+			return setupLocalServer()
 		},
 	}
 
-	cmd.Flags().BoolP("local", "l", false, "Start a local rocketship server")
 	cmd.Flags().BoolP("background", "b", false, "Start server in background mode")
 	return cmd
 }

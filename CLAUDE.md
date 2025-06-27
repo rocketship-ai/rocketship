@@ -90,8 +90,8 @@ The system automatically uses local development binaries from `internal/embedded
 ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml
 
 # Background server for iterative testing
-ROCKETSHIP_LOG=DEBUG rocketship start server --local --background
-rocketship run --f test.yaml --engine localhost:7700
+ROCKETSHIP_LOG=DEBUG rocketship start server --background
+rocketship run --f test.yaml
 rocketship stop server
 
 # Validate YAML changes
@@ -123,8 +123,8 @@ Current plugins: HTTP, delay, AWS (S3, SQS, DynamoDB)
 
 ```bash
 rocketship run -af test.yaml    # Auto-start local engine, run tests, auto-stop engine
-rocketship start server -lb     # Start engine in locally, in the background
-rocketship run test.yaml        # Run against existing engine
+rocketship start server -b      # Start engine locally in the background
+rocketship run test.yaml        # Run against existing engine (defaults to localhost:7700)
 rocketship stop server          # Stop local background engine
 ```
 

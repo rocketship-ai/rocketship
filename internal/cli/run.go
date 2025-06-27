@@ -261,6 +261,30 @@ func printFinalSummary(results []TestSuiteResult) {
 	fmt.Printf("%s Failed Tests: %d\n", color.RedString("✗"), failedTests)
 }
 
+// displayRecentRuns shows recent test runs after an auto run completes
+func displayRecentRuns(client *EngineClient) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Request all recent runs
+	req := &generated.ListRunsRequest{
+		OrderBy:    "started_at",
+		Descending: true,
+	}
+
+	resp, err := client.client.ListRuns(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to list recent runs: %w", err)
+	}
+
+	if len(resp.Runs) == 0 {
+		return nil
+	}
+
+	fmt.Println("\n=== Recent Test Runs ===")
+	return displayRunsTable(resp.Runs)
+}
+
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -422,13 +446,21 @@ func NewRunCmd() *cobra.Command {
 
 			// Print final summary
 			printFinalSummary(results)
+			
+			// If this was an auto run, also display recent test runs
+			if isAuto {
+				if err := displayRecentRuns(client); err != nil {
+					Logger.Debug("failed to display recent runs", "error", err)
+				}
+			}
+			
 			return nil
 		},
 	}
 
 	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
 	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
-	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (default: localhost:7700)")
+	cmd.Flags().StringP("engine", "e", "localhost:7700", "Address of the rocketship engine")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
