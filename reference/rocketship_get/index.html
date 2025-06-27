@@ -8,28 +8,28 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/examples/">
+        <link rel="canonical" href="https://docs.rocketship.sh/reference/rocketship_get/">
       
       
-        <link rel="prev" href="../test-run-management/">
+        <link rel="prev" href="../rocketship_list/">
       
       
-        <link rel="next" href="request-chaining/">
+        <link rel="next" href="../rocketship_start/">
       
       
-      <link rel="icon" href="../assets/transparent.png">
+      <link rel="icon" href="../../assets/transparent.png">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.12">
     
     
       
-        <title>Overview - Rocketship CLI</title>
+        <title>get - Rocketship CLI</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.7e359304.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.7e359304.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +48,9 @@
       
     
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#examples" class="md-skip">
+        <a href="#rocketship-get" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +92,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../assets/transparent-reverse.png" alt="logo">
+  <img src="../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              get
             
           </span>
         </div>
@@ -226,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../assets/transparent-reverse.png" alt="logo">
+  <img src="../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     Rocketship CLI
@@ -255,7 +255,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -325,7 +325,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -346,7 +346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -367,7 +367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../test-run-management/" class="md-nav__link">
+      <a href="../../test-run-management/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -392,10 +392,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -423,11 +421,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -441,7 +441,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Examples
@@ -452,30 +452,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Overview
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../examples/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -484,110 +464,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#available-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Available Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#http-testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      HTTP Testing
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configuration-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      Configuration &amp; Variables
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#database-testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Database Testing
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scripting-custom-logic" class="md-nav__link">
-    <span class="md-ellipsis">
-      Scripting &amp; Custom Logic
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#debugging-logging" class="md-nav__link">
-    <span class="md-ellipsis">
-      Debugging &amp; Logging
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#running-the-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Running the Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Running the Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#database-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Database Examples
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -643,7 +519,7 @@
   
   
     <li class="md-nav__item">
-      <a href="request-chaining/" class="md-nav__link">
+      <a href="../../examples/request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -715,7 +591,7 @@
   
   
     <li class="md-nav__item">
-      <a href="sql-testing/" class="md-nav__link">
+      <a href="../../examples/sql-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -787,7 +663,7 @@
   
   
     <li class="md-nav__item">
-      <a href="supabase-testing/" class="md-nav__link">
+      <a href="../../examples/supabase-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -863,7 +739,7 @@
   
   
     <li class="md-nav__item">
-      <a href="config-variables/" class="md-nav__link">
+      <a href="../../examples/config-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -884,7 +760,7 @@
   
   
     <li class="md-nav__item">
-      <a href="environment-variables/" class="md-nav__link">
+      <a href="../../examples/environment-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -905,7 +781,7 @@
   
   
     <li class="md-nav__item">
-      <a href="handlebars-escaping/" class="md-nav__link">
+      <a href="../../examples/handlebars-escaping/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -979,7 +855,7 @@
   
   
     <li class="md-nav__item">
-      <a href="custom-scripting/" class="md-nav__link">
+      <a href="../../examples/custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1000,7 +876,7 @@
   
   
     <li class="md-nav__item">
-      <a href="shell-scripting/" class="md-nav__link">
+      <a href="../../examples/shell-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1074,7 +950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="agent-testing/" class="md-nav__link">
+      <a href="../../examples/agent-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1095,7 +971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="browser-testing/" class="md-nav__link">
+      <a href="../../examples/browser-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1167,7 +1043,7 @@
   
   
     <li class="md-nav__item">
-      <a href="log-plugin/" class="md-nav__link">
+      <a href="../../examples/log-plugin/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1203,7 +1079,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../mcp-server/" class="md-nav__link">
+      <a href="../../mcp-server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1271,7 +1147,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../deploy-on-your-cloud/" class="md-nav__link">
+      <a href="../../deploy-on-your-cloud/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1292,7 +1168,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../deploy-on-kubernetes/" class="md-nav__link">
+      <a href="../../deploy-on-kubernetes/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1317,8 +1193,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1346,13 +1224,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -1366,7 +1242,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Command Reference
@@ -1380,7 +1256,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship/" class="md-nav__link">
+      <a href="../rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1401,7 +1277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_run/" class="md-nav__link">
+      <a href="../rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1422,7 +1298,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_list/" class="md-nav__link">
+      <a href="../rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1440,10 +1316,28 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../reference/rocketship_get/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    get
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1452,6 +1346,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rocketship-get" class="md-nav__link">
+    <span class="md-ellipsis">
+      rocketship get
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="rocketship get">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#synopsis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Synopsis
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      SEE ALSO
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SEE ALSO">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-generated-by-spf13cobra-on-27-jun-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Auto generated by spf13/cobra on 27-Jun-2025
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1509,7 +1478,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_start/" class="md-nav__link">
+      <a href="../rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1530,7 +1499,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_start_server/" class="md-nav__link">
+      <a href="../rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1604,7 +1573,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_stop/" class="md-nav__link">
+      <a href="../rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1625,7 +1594,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_stop_server/" class="md-nav__link">
+      <a href="../rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1654,7 +1623,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_validate/" class="md-nav__link">
+      <a href="../rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1675,7 +1644,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/rocketship_version/" class="md-nav__link">
+      <a href="../rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1703,7 +1672,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/" class="md-nav__link">
+      <a href="../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1733,8 +1702,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -1743,55 +1710,47 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#available-examples" class="md-nav__link">
+  <a href="#rocketship-get" class="md-nav__link">
     <span class="md-ellipsis">
-      Available Examples
+      rocketship get
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Available Examples">
+    <nav class="md-nav" aria-label="rocketship get">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#http-testing" class="md-nav__link">
+  <a href="#synopsis" class="md-nav__link">
     <span class="md-ellipsis">
-      HTTP Testing
+      Synopsis
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration-variables" class="md-nav__link">
+  <a href="#options" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration &amp; Variables
+      Options
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#database-testing" class="md-nav__link">
+  <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
-      Database Testing
+      SEE ALSO
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="SEE ALSO">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#scripting-custom-logic" class="md-nav__link">
+  <a href="#auto-generated-by-spf13cobra-on-27-jun-2025" class="md-nav__link">
     <span class="md-ellipsis">
-      Scripting &amp; Custom Logic
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#debugging-logging" class="md-nav__link">
-    <span class="md-ellipsis">
-      Debugging &amp; Logging
+      Auto generated by spf13/cobra on 27-Jun-2025
     </span>
   </a>
   
@@ -1799,25 +1758,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#running-the-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Running the Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Running the Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#database-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Database Examples
-    </span>
-  </a>
   
 </li>
         
@@ -1844,64 +1784,32 @@
   
 
 
-<h1 id="examples">Examples</h1>
-<p>Rocketship comes with example test suites that demonstrate different features and use cases. Each example includes detailed explanations and ready-to-use test specifications.</p>
-<h2 id="available-examples">Available Examples</h2>
-<h3 id="http-testing">HTTP Testing</h3>
-<ul>
-<li><a href="request-chaining/">Request Chaining &amp; Delays</a> - Learn how to chain HTTP requests, handle responses, and use delays in your test suites</li>
-</ul>
-<h3 id="configuration-variables">Configuration &amp; Variables</h3>
-<ul>
-<li><a href="config-variables/">Configuration Variables</a> - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files</li>
-</ul>
-<h3 id="database-testing">Database Testing</h3>
-<ul>
-<li><a href="sql-testing/">SQL Testing</a> - Learn how to test database operations with PostgreSQL, MySQL, SQLite, and SQL Server</li>
-</ul>
-<h3 id="scripting-custom-logic">Scripting &amp; Custom Logic</h3>
-<ul>
-<li><a href="custom-scripting/">Custom Scripting</a> - Learn how to add custom JavaScript logic to your test suites</li>
-</ul>
-<h3 id="debugging-logging">Debugging &amp; Logging</h3>
-<ul>
-<li><a href="log-plugin/">Log Plugin</a> - Learn how to add custom logging messages to your test suites for debugging and monitoring</li>
-</ul>
-<h2 id="running-the-examples">Running the Examples</h2>
-<p>The examples use the hosted test server at <code>tryme.rocketship.sh</code>. This server provides a simple HTTP API that you can use to experiment with Rocketship's features. Details:</p>
-<ul>
-<li>Test CRUD operations for a resource type</li>
-<li>Resources are isolated based off a session header</li>
-<li>FYI: Resource cleanup is done hourly (every :00)</li>
-</ul>
-<p>Then, run an example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Run the request chaining example</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/request-chaining/rocketship.yaml
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Run the configuration variables example</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/config-variables/rocketship.yaml
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Run with variable overrides</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/config-variables/rocketship.yaml<span class="w"> </span>--var<span class="w"> </span><span class="nv">environment</span><span class="o">=</span>production
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Run the custom scripting example</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/custom-scripting/rocketship.yaml
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Run the log plugin example</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-log/rocketship.yaml
+  <h1>get</h1>
+
+<h2 id="rocketship-get">rocketship get</h2>
+<p>Get details of a specific test run</p>
+<h3 id="synopsis">Synopsis</h3>
+<p>Get detailed information about a specific test run.</p>
+<p>Examples:
+  # Get run details
+  rocketship get abc123def456</p>
+<p># Get run details with logs
+  rocketship get abc123def456 --logs</p>
+<p># Get run details in JSON format
+  rocketship get abc123def456 --format json</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rocketship get &lt;run-id&gt; [flags]
 </code></pre></div>
-<h3 id="database-examples">Database Examples</h3>
-<p>For SQL testing examples, you'll need to start the test databases first:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Start test databases with Docker Compose</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>.docker<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>docker-compose<span class="w"> </span>up<span class="w"> </span>postgres-test<span class="w"> </span>mysql-test<span class="w"> </span>-d
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Wait for databases to be ready, then run SQL tests</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>examples/sql-testing/rocketship.yaml<span class="w"> </span>-e<span class="w"> </span>localhost:7700
+<h3 id="options">Options</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  -e, --engine string   Address of the rocketship engine (default &quot;localhost:7700&quot;)
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>      --format string   Output format (table, json, yaml) (default &quot;table&quot;)
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  -h, --help            help for get
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>      --logs            Include logs from the test run
 </code></pre></div>
-<p>The SQL examples use local test databases with pre-populated sample data:
-- <strong>PostgreSQL</strong>: Available at <code>localhost:5433</code> 
-- <strong>MySQL</strong>: Available at <code>localhost:3307</code></p>
-<p>You can find the test server's source code in the <code>for-contributors/test-server</code> directory.</p>
+<h3 id="see-also">SEE ALSO</h3>
+<ul>
+<li><a href="../rocketship/">rocketship</a>    - Rocketship CLI</li>
+</ul>
+<h6 id="auto-generated-by-spf13cobra-on-27-jun-2025">Auto generated by spf13/cobra on 27-Jun-2025</h6>
 
 
 
@@ -1948,10 +1856,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c8d2eff1.min.js"></script>
+      <script src="../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
       
     
   </body>
