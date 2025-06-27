@@ -308,8 +308,9 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
-			// Validate flags - cannot use both --auto and --engine
-			if isAuto && engineAddr != "" {
+			// Validate flags - cannot use both --auto and --engine (when explicitly set)
+			engineFlagSet := cmd.Flags().Changed("engine")
+			if isAuto && engineFlagSet {
 				return fmt.Errorf("cannot use both --auto and --engine flags together. Use --auto to automatically manage a local server, or --engine to connect to an existing server")
 			}
 
@@ -334,8 +335,6 @@ func NewRunCmd() *cobra.Command {
 					pm.Cleanup()
 				}
 				defer cleanup()
-			} else if engineAddr == "" {
-				return fmt.Errorf("no engine address provided - use --engine flag to specify an address or --auto to start a local server")
 			}
 
 			// Create engine client using the engine address
