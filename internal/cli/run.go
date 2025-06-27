@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 	yaml "gopkg.in/yaml.v3"
 
+	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 )
 
@@ -66,7 +67,7 @@ func findRocketshipFiles(dir string) ([]string, error) {
 }
 
 // runSingleTest runs a single test file and streams its logs
-func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, showTimestamp bool, resultChan chan<- TestSuiteResult) {
+func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, showTimestamp bool, runContext *generated.RunContext, resultChan chan<- TestSuiteResult) {
 	defer func() {
 		// Ensure we always send a result, even on panic
 		if r := recover(); r != nil {
@@ -137,7 +138,12 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	runCtx, runCancel := context.WithTimeout(ctx, 30*time.Second)
 	defer runCancel()
 
-	runID, err := client.RunTest(runCtx, processedYamlData)
+	var runID string
+	if runContext != nil {
+		runID, err = client.RunTestWithContext(runCtx, processedYamlData, runContext)
+	} else {
+		runID, err = client.RunTest(runCtx, processedYamlData)
+	}
 	if err != nil {
 		Logger.Error("failed to create run", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: config.Name}
@@ -255,6 +261,30 @@ func printFinalSummary(results []TestSuiteResult) {
 	fmt.Printf("%s Failed Tests: %d\n", color.RedString("✗"), failedTests)
 }
 
+// displayRecentRuns shows recent test runs after an auto run completes
+func displayRecentRuns(client *EngineClient) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Request all recent runs
+	req := &generated.ListRunsRequest{
+		OrderBy:    "started_at",
+		Descending: true,
+	}
+
+	resp, err := client.client.ListRuns(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to list recent runs: %w", err)
+	}
+
+	if len(resp.Runs) == 0 {
+		return nil
+	}
+
+	fmt.Println("\n=== Recent Test Runs ===")
+	return displayRunsTable(resp.Runs)
+}
+
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -278,8 +308,9 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
-			// Validate flags - cannot use both --auto and --engine
-			if isAuto && engineAddr != "" {
+			// Validate flags - cannot use both --auto and --engine (when explicitly set)
+			engineFlagSet := cmd.Flags().Changed("engine")
+			if isAuto && engineFlagSet {
 				return fmt.Errorf("cannot use both --auto and --engine flags together. Use --auto to automatically manage a local server, or --engine to connect to an existing server")
 			}
 
@@ -304,8 +335,6 @@ func NewRunCmd() *cobra.Command {
 					pm.Cleanup()
 				}
 				defer cleanup()
-			} else if engineAddr == "" {
-				return fmt.Errorf("no engine address provided - use --engine flag to specify an address or --auto to start a local server")
 			}
 
 			// Create engine client using the engine address
@@ -330,6 +359,30 @@ func NewRunCmd() *cobra.Command {
 			showTimestamp, err := cmd.Flags().GetBool("timestamp")
 			if err != nil {
 				return err
+			}
+
+			// Get context flags
+			projectID, _ := cmd.Flags().GetString("project-id")
+			source, _ := cmd.Flags().GetString("source")
+			branch, _ := cmd.Flags().GetString("branch")
+			commit, _ := cmd.Flags().GetString("commit")
+			trigger, _ := cmd.Flags().GetString("trigger")
+			scheduleName, _ := cmd.Flags().GetString("schedule-name")
+			metadata, _ := cmd.Flags().GetStringToString("metadata")
+
+			// Build RunContext if any context flags are set
+			var runContext *generated.RunContext
+			if projectID != "" || source != "" || branch != "" || commit != "" || 
+			   trigger != "" || scheduleName != "" || len(metadata) > 0 {
+				runContext = &generated.RunContext{
+					ProjectId:    projectID,
+					Source:       source,
+					Branch:       branch,
+					CommitSha:    commit,
+					Trigger:      trigger,
+					ScheduleName: scheduleName,
+					Metadata:     metadata,
+				}
 			}
 
 			// Get test file or directory path
@@ -374,7 +427,7 @@ func NewRunCmd() *cobra.Command {
 				wg.Add(1)
 				go func(testFile string) {
 					defer wg.Done()
-					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, resultChan)
+					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, runContext, resultChan)
 				}(tf)
 			}
 
@@ -392,16 +445,34 @@ func NewRunCmd() *cobra.Command {
 
 			// Print final summary
 			printFinalSummary(results)
+			
+			// If this was an auto run, also display recent test runs
+			if isAuto {
+				if err := displayRecentRuns(client); err != nil {
+					Logger.Debug("failed to display recent runs", "error", err)
+				}
+			}
+			
 			return nil
 		},
 	}
 
 	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
 	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
-	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (default: localhost:7700)")
+	cmd.Flags().StringP("engine", "e", "localhost:7700", "Address of the rocketship engine")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
 	cmd.Flags().BoolP("timestamp", "t", false, "Show timestamps in log output")
+	
+	// Context flags for enhanced metadata tracking
+	cmd.Flags().String("project-id", "", "Project identifier for test run tracking")
+	cmd.Flags().String("source", "", "Run source: cli-local, ci-branch, ci-main, scheduled")
+	cmd.Flags().String("branch", "", "Git branch name (auto-detected if not specified)")
+	cmd.Flags().String("commit", "", "Git commit SHA (auto-detected if not specified)")
+	cmd.Flags().String("trigger", "", "Trigger type: manual, webhook, schedule")
+	cmd.Flags().String("schedule-name", "", "Schedule name for scheduled runs")
+	cmd.Flags().StringToString("metadata", nil, "Additional metadata key=value pairs")
+	
 	return cmd
 }

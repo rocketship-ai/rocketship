@@ -56,6 +56,7 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Quick Start: quickstart.md
+      - Test Run Management: test-run-management.md
   - Examples:
       - Overview: examples.md
       - HTTP Testing:
@@ -83,6 +84,8 @@ nav:
   - Command Reference:
       - Overview: reference/rocketship.md
       - run: reference/rocketship_run.md
+      - list: reference/rocketship_list.md
+      - get: reference/rocketship_get.md
       - start:
           - Overview: reference/rocketship_start.md
           - start server: reference/rocketship_start_server.md

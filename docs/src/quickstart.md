@@ -51,7 +51,49 @@ rocketship run -af simple-test.yaml
 
 The `-a` flag tells Rocketship to automatically start and stop the local server, and `-f` specifies the test file to run.
 
+## Test Run Management
+
+Rocketship automatically tracks your test runs with context information, making it easy to organize and find results.
+
+### Adding Context to Your Runs
+
+You can add context to your test runs for better organization:
+
+```bash
+# Run with project context
+rocketship run -af simple-test.yaml \
+  --project-id "my-app" \
+  --source "cli-local" \
+  --branch "main" \
+  --trigger "manual"
+
+# Add custom metadata
+rocketship run -af simple-test.yaml \
+  --project-id "my-app" \
+  --metadata "env=staging" \
+  --metadata "team=backend"
+```
+
+### Viewing Test History
+
+List your recent test runs:
+
+```bash
+# List all recent runs
+rocketship list
+
+# Filter by project
+rocketship list --project-id "my-app"
+
+# Filter by status
+rocketship list --status FAILED
+
+# Get detailed information about a specific run
+rocketship get <run-id>
+```
+
 ## Next Steps
 
 - Explore the [CLI reference](reference/rocketship.md)
 - Check out [example tests](examples.md)
+- Learn about [run management](reference/rocketship_list.md)

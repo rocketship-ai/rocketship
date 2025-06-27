@@ -14,6 +14,7 @@ on:
       - "internal/dsl/schema.json"
       - "mcp-server/**"
       - "package*.json"
+      - "proto/**"
 
 jobs:
   test-build:
@@ -288,9 +289,13 @@ jobs:
           fi
 
           echo "Testing start/stop commands..."
-          rocketship start server --local --background &
+          rocketship start server --background &
           sleep 5
           rocketship stop server
+
+      - name: Test run persistence and management
+        run: |
+          ./.github/scripts/test-run-persistence.sh
 
       - name: Test CLI error handling
         run: |
@@ -298,6 +303,19 @@ jobs:
           ! rocketship validate nonexistent.yaml
           ! rocketship run -f nonexistent.yaml
           ! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
+          
+          echo "Testing run persistence error scenarios..."
+          # Test list without server running
+          ! rocketship list -e localhost:7700
+          
+          # Test get without server running  
+          ! rocketship get abc123 -e localhost:7700
+          
+          # Test get with invalid run ID (when server is running)
+          rocketship start server --background
+          sleep 3
+          ! rocketship get invalid-run-id -e localhost:7700
+          rocketship stop server
 
   mcp-integration:
     name: MCP Server Integration Tests
