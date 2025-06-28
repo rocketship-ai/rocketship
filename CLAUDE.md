@@ -117,7 +117,11 @@ Plugins implement the `Plugin` interface in `internal/plugins/plugin.go`. Each p
 - `Parse()`: Configuration parsing
 - Plugin-specific types in separate files
 
-Current plugins: HTTP, delay, AWS (S3, SQS, DynamoDB)
+Current plugins: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, browser, supabase
+
+### Browser Plugin Notes
+
+The browser plugin uses AI-driven web automation via the `browser-use` Python library. The Python script (`browser_automation.py`) is embedded into the binary using `go:embed` to ensure it's available at runtime.
 
 ## Running Tests
 
@@ -146,4 +150,19 @@ Spin down the containers when you're done
 
 ```bash
 docker-compose -f .docker/docker-compose.yaml down
+```
+
+## Running Tests with Browser Plugin
+
+The browser plugin requires Python 3.11+ and browser-use installed:
+
+```bash
+# Install browser-use and its dependencies
+pip install browser-use playwright langchain-openai langchain-anthropic
+
+# Install Playwright browsers
+playwright install chromium
+
+# Run browser tests
+rocketship run -af examples/browser-automation/rocketship.yaml
 ```
