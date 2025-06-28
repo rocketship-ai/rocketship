@@ -3,17 +3,20 @@ package browser
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
+
+//go:embed browser_automation.py
+var embeddedPythonScript []byte
 
 // PythonExecutor implements browser automation using Python and browser-use
 type PythonExecutor struct{}
@@ -166,23 +169,8 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 
 // copyPythonScript copies the Python automation script to the work directory
 func (pe *PythonExecutor) copyPythonScript(scriptPath string) error {
-	// Get the directory of the current Go file
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return fmt.Errorf("failed to get current file path")
-	}
-	
-	// Path to the Python script relative to this Go file
-	sourceScript := filepath.Join(filepath.Dir(currentFile), "browser_automation.py")
-	
-	// Read the source script
-	scriptContent, err := os.ReadFile(sourceScript)
-	if err != nil {
-		return fmt.Errorf("failed to read Python script from %s: %w", sourceScript, err)
-	}
-	
-	// Write to destination
-	return os.WriteFile(scriptPath, scriptContent, 0755)
+	// Write the embedded Python script to destination
+	return os.WriteFile(scriptPath, embeddedPythonScript, 0755)
 }
 
 // buildEnvironment builds the environment variables for the Python process
