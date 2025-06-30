@@ -157,12 +157,6 @@ tests:
           - json_path: ".id"
             as: "rpc_company_id"
 
-      # Add brief delay to ensure database consistency
-      - name: "Wait for database consistency"
-        plugin: delay
-        config:
-          duration: "1s"
-
       # READ: Verify created data with complex filtering
       - name: "CRUD: Query test companies with filters"
         plugin: supabase
