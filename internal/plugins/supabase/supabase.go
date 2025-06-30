@@ -236,10 +236,7 @@ func executeSelect(ctx context.Context, client *http.Client, config *SupabaseCon
 			query.Set("offset", strconv.Itoa(*config.Select.Offset))
 		}
 
-		// Handle count
-		if config.Select.Count != "" {
-			query.Set("count", config.Select.Count)
-		}
+		// Count is handled in the Prefer header, not as a query parameter
 	}
 
 	u.RawQuery = query.Encode()

@@ -24,6 +24,22 @@ tests:
   - name: "Supabase Integration Test Suite"
     steps:
       # =============================================================================
+      # CLEANUP: Remove any leftover test data from previous runs
+      # =============================================================================
+      - name: "Pre-cleanup: Remove leftover test data"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "delete"
+          table: "companies"
+          delete:
+            filters:
+              - column: "type"
+                operator: "in"
+                value: ["integration_test", "rpc_test"]
+
+      # =============================================================================
       # SETUP: Create storage bucket for tests
       # =============================================================================
       - name: "Setup: Create storage bucket"
