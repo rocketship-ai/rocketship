@@ -132,6 +132,32 @@ rocketship run test.yaml        # Run against existing engine (defaults to local
 rocketship stop server          # Stop local background engine
 ```
 
+### Engine Dependencies for Commands
+
+**Important**: Some commands require a running engine to communicate with:
+
+- `rocketship get` - Requires running engine to fetch run details
+- `rocketship list` - Requires running engine to list test runs  
+- `rocketship validate` - Works offline (no engine required)
+
+**Workflow for using get/list commands:**
+```bash
+# Start server in background
+rocketship start server -b
+
+# Run tests (keeps engine running)
+rocketship run test.yaml
+
+# Now you can use get/list commands
+rocketship list runs
+rocketship get run <run-id>
+
+# Stop server when done
+rocketship stop server
+```
+
+**Auto mode (-a flag)**: Starts engine, runs tests, then shuts down engine automatically. Use this for simple test execution, but you won't be able to use get/list commands afterward since the engine stops.
+
 ## Running Tests that have the SQL plugin
 
 Make sure to spin up the sql containers before running the tests.

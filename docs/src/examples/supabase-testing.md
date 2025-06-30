@@ -206,7 +206,7 @@ Execute PostgreSQL functions and stored procedures:
     rpc:
       function: "create_user_profile"
       params:
-        user_id: "{{ new_user_id }}"
+        user_id: "{{ new_user_id }}"  # Dynamic parameter from saved variable
         profile_data:
           bio: "Test user profile"
           preferences: { "notifications": true }
