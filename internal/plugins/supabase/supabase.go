@@ -64,6 +64,30 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 		config.RPC.Params = processVariablesInMap(config.RPC.Params, state)
 	}
 	
+	// Process runtime variables in other operation types
+	if config.Insert != nil {
+		if config.Insert.Data != nil {
+			if dataMap, ok := config.Insert.Data.(map[string]interface{}); ok {
+				config.Insert.Data = processVariablesInMap(dataMap, state)
+			}
+		}
+	}
+	
+	if config.Update != nil {
+		if config.Update.Data != nil {
+			config.Update.Data = processVariablesInMap(config.Update.Data, state)
+		}
+		config.Update.Filters = processFilters(config.Update.Filters, state)
+	}
+	
+	if config.Select != nil {
+		config.Select.Filters = processFilters(config.Select.Filters, state)
+	}
+	
+	if config.Delete != nil {
+		config.Delete.Filters = processFilters(config.Delete.Filters, state)
+	}
+	
 	// Log parsed config for debugging
 	logger.Info("Parsed Supabase config",
 		"operation", config.Operation,
@@ -1452,4 +1476,41 @@ func processVariablesInMap(data map[string]interface{}, state map[string]string)
 		}
 	}
 	return result
+}
+
+// processFilters processes variables in filter configurations
+func processFilters(filters []FilterConfig, state map[string]string) []FilterConfig {
+	if filters == nil {
+		return nil
+	}
+	
+	result := make([]FilterConfig, len(filters))
+	for i, filter := range filters {
+		result[i] = FilterConfig{
+			Column:   replaceVariables(filter.Column, state),
+			Operator: filter.Operator,
+			Value:    processFilterValue(filter.Value, state),
+		}
+	}
+	return result
+}
+
+// processFilterValue processes variables in filter values
+func processFilterValue(value interface{}, state map[string]string) interface{} {
+	switch v := value.(type) {
+	case string:
+		return replaceVariables(v, state)
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			if str, ok := item.(string); ok {
+				result[i] = replaceVariables(str, state)
+			} else {
+				result[i] = item
+			}
+		}
+		return result
+	default:
+		return value
+	}
 }
