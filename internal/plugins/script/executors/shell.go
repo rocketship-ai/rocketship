@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/runtime"
 )
 
@@ -125,23 +126,38 @@ func (s *ShellExecutor) Execute(ctx context.Context, script string, rtCtx *runti
 	return nil
 }
 
-// processVariables replaces template variables in the script
+// processVariables replaces template variables in the script using the central DSL template system
 func (s *ShellExecutor) processVariables(script string, rtCtx *runtime.Context) (string, error) {
-	processed := script
-	
-	// Replace state variables: {{ variable_name }}
-	for key, value := range rtCtx.State {
-		placeholder := fmt.Sprintf("{{ %s }}", key)
-		processed = strings.ReplaceAll(processed, placeholder, value)
+	// First, process config variables if they exist in the script
+	// In some cases (like tests), config vars may not be processed by CLI yet
+	if strings.Contains(script, ".vars.") {
+		processed, err := dsl.ProcessConfigVariablesOnly(script, rtCtx.Vars)
+		if err != nil {
+			return "", fmt.Errorf("config variable processing failed: %w", err)
+		}
+		script = processed
 	}
 	
-	// Replace config variables: {{ .vars.variable_name }}
-	for key, value := range rtCtx.Vars {
-		placeholder := fmt.Sprintf("{{ .vars.%s }}", key)
-		processed = strings.ReplaceAll(processed, placeholder, fmt.Sprintf("%v", value))
+	// Convert runtime state to interface{} map for DSL compatibility
+	runtime := make(map[string]interface{})
+	for k, v := range rtCtx.State {
+		runtime[k] = v
 	}
 	
-	return processed, nil
+	// Create template context with runtime variables
+	// Environment variables ({{ .env.* }}) are handled by DSL template system
+	context := dsl.TemplateContext{
+		Runtime: runtime,
+	}
+	
+	// Use centralized template processing for consistent variable handling
+	// This supports runtime vars, environment vars, and escaped handlebars
+	result, err := dsl.ProcessTemplate(script, context)
+	if err != nil {
+		return "", fmt.Errorf("template processing failed: %w", err)
+	}
+	
+	return result, nil
 }
 
 // buildEnvironment creates the environment for the shell command
