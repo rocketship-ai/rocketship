@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/itchyny/gojq"
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"go.temporal.io/sdk/activity"
 )
@@ -37,10 +38,74 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 		return nil, fmt.Errorf("invalid config format")
 	}
 
+	// Get state for variable replacement
+	state := make(map[string]string)
+	if stateInterface, ok := p["state"]; ok {
+		if stateMap, ok := stateInterface.(map[string]interface{}); ok {
+			for k, v := range stateMap {
+				state[k] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+
 	config := &SupabaseConfig{}
 	if err := parseConfig(configData, config); err != nil {
 		return nil, fmt.Errorf("failed to parse Supabase config: %w", err)
 	}
+	
+	// Process runtime variables in string fields
+	config.URL = replaceVariables(config.URL, state)
+	config.Key = replaceVariables(config.Key, state)
+	if config.Table != "" {
+		config.Table = replaceVariables(config.Table, state)
+	}
+	
+	// Process runtime variables in RPC parameters
+	if config.RPC != nil && config.RPC.Params != nil {
+		config.RPC.Params = processVariablesInMap(config.RPC.Params, state)
+	}
+	
+	// Process runtime variables in other operation types
+	if config.Insert != nil {
+		if config.Insert.Data != nil {
+			if dataMap, ok := config.Insert.Data.(map[string]interface{}); ok {
+				config.Insert.Data = processVariablesInMap(dataMap, state)
+			}
+		}
+	}
+	
+	if config.Update != nil {
+		if config.Update.Data != nil {
+			config.Update.Data = processVariablesInMap(config.Update.Data, state)
+		}
+		config.Update.Filters = processFilters(config.Update.Filters, state)
+	}
+	
+	if config.Select != nil {
+		config.Select.Filters = processFilters(config.Select.Filters, state)
+	}
+	
+	if config.Delete != nil {
+		config.Delete.Filters = processFilters(config.Delete.Filters, state)
+	}
+	
+	// Log parsed config for debugging
+	logger.Info("Parsed Supabase config",
+		"operation", config.Operation,
+		"hasRPC", config.RPC != nil,
+		"rpcFunction", func() string {
+			if config.RPC != nil {
+				return config.RPC.Function
+			}
+			return "nil"
+		}(),
+		"rpcParams", func() string {
+			if config.RPC != nil && config.RPC.Params != nil {
+				paramsJSON, _ := json.Marshal(config.RPC.Params)
+				return string(paramsJSON)
+			}
+			return "nil"
+		}())
 
 	// Validate required fields
 	if config.URL == "" {
@@ -84,6 +149,14 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 	response.Metadata.Duration = duration.String()
 
 	logger.Info("Supabase operation completed", "operation", config.Operation, "duration", duration)
+
+	// Process assertions
+	if assertions, ok := p["assertions"].([]interface{}); ok {
+		if err := processAssertions(response, assertions, p); err != nil {
+			logger.Error("Assertion failed", "error", err)
+			return nil, fmt.Errorf("assertion failed: %w", err)
+		}
+	}
 
 	// Handle save operations
 	saved := make(map[string]string)
@@ -188,10 +261,7 @@ func executeSelect(ctx context.Context, client *http.Client, config *SupabaseCon
 			query.Set("offset", strconv.Itoa(*config.Select.Offset))
 		}
 
-		// Handle count
-		if config.Select.Count != "" {
-			query.Set("count", config.Select.Count)
-		}
+		// Count is handled in the Prefer header, not as a query parameter
 	}
 
 	u.RawQuery = query.Encode()
@@ -440,6 +510,13 @@ func executeRPC(ctx context.Context, client *http.Client, config *SupabaseConfig
 	} else {
 		jsonData = []byte("{}")
 	}
+
+	// Log the RPC request details for debugging
+	logger := activity.GetLogger(ctx)
+	logger.Info("Executing RPC request",
+		"endpoint", endpoint,
+		"function", config.RPC.Function,
+		"params", string(jsonData))
 
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonData))
@@ -1164,4 +1241,311 @@ func processSave(response *SupabaseResponse, saveConfig map[string]interface{}, 
 	}
 
 	return nil
+}
+
+// processAssertions validates assertions against the Supabase response
+func processAssertions(response *SupabaseResponse, assertions []interface{}, params map[string]interface{}) error {
+	// Rebuild state from parameters for variable replacement
+	state := make(map[string]string)
+	if stateInterface, ok := params["state"]; ok {
+		if stateMap, ok := stateInterface.(map[string]interface{}); ok {
+			for k, v := range stateMap {
+				state[k] = fmt.Sprintf("%v", v)
+			}
+		}
+	}
+
+	for _, assertionInterface := range assertions {
+		assertion, ok := assertionInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		assertionType, ok := assertion["type"].(string)
+		if !ok {
+			return fmt.Errorf("assertion type is required")
+		}
+
+		switch assertionType {
+		case "status_code":
+			if err := processStatusCodeAssertion(response, assertion, state); err != nil {
+				return err
+			}
+		case "json_path":
+			if err := processJSONPathAssertion(response, assertion, state); err != nil {
+				return err
+			}
+		case "row_count":
+			if err := processRowCountAssertion(response, assertion, state); err != nil {
+				return err
+			}
+		case "error_code":
+			if err := processErrorCodeAssertion(response, assertion, state); err != nil {
+				return err
+			}
+		case "error_message":
+			if err := processErrorMessageAssertion(response, assertion, state); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported assertion type: %s", assertionType)
+		}
+	}
+
+	return nil
+}
+
+// processStatusCodeAssertion validates HTTP status code
+func processStatusCodeAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+	expected, ok := assertion["expected"]
+	if !ok {
+		return fmt.Errorf("expected value is required for status_code assertion")
+	}
+
+	// Replace variables in expected value
+	expectedStr := replaceVariables(fmt.Sprintf("%v", expected), state)
+	expectedCode, err := strconv.Atoi(expectedStr)
+	if err != nil {
+		return fmt.Errorf("expected status code must be an integer: %s", expectedStr)
+	}
+
+	actualCode := response.Metadata.StatusCode
+	if actualCode != expectedCode {
+		return fmt.Errorf("status code assertion failed: expected %d, got %d", expectedCode, actualCode)
+	}
+
+	return nil
+}
+
+// processJSONPathAssertion validates JSON path expressions
+func processJSONPathAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+	path, ok := assertion["path"].(string)
+	if !ok {
+		return fmt.Errorf("path is required for json_path assertion")
+	}
+
+	// Parse the JSON path using gojq
+	query, err := gojq.Parse(path)
+	if err != nil {
+		return fmt.Errorf("failed to parse JSON path %s: %w", path, err)
+	}
+
+	// Run the query on the response data
+	iter := query.Run(response.Data)
+	actualValue, ok := iter.Next()
+	if !ok {
+		return fmt.Errorf("no results from JSON path %s", path)
+	}
+	if err, ok := actualValue.(error); ok {
+		return fmt.Errorf("error evaluating JSON path %s: %w", path, err)
+	}
+
+	// Check if we just need to verify existence
+	if _, hasExpected := assertion["expected"]; !hasExpected {
+		// Just checking for existence - if we got here, it exists
+		return nil
+	}
+
+	// Compare with expected value
+	expected := assertion["expected"]
+	expectedStr := replaceVariables(fmt.Sprintf("%v", expected), state)
+
+	// Convert actual value to string for comparison
+	actualStr := fmt.Sprintf("%v", actualValue)
+
+	if actualStr != expectedStr {
+		return fmt.Errorf("json_path assertion failed at %s: expected %s, got %s", path, expectedStr, actualStr)
+	}
+
+	return nil
+}
+
+// processRowCountAssertion validates row count for select operations
+func processRowCountAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+	expected, ok := assertion["expected"]
+	if !ok {
+		return fmt.Errorf("expected value is required for row_count assertion")
+	}
+
+	// Replace variables in expected value
+	expectedStr := replaceVariables(fmt.Sprintf("%v", expected), state)
+	expectedCount, err := strconv.Atoi(expectedStr)
+	if err != nil {
+		return fmt.Errorf("expected row count must be an integer: %s", expectedStr)
+	}
+
+	// Count rows in response data
+	var actualCount int
+	if response.Data != nil {
+		if dataArray, ok := response.Data.([]interface{}); ok {
+			actualCount = len(dataArray)
+		} else {
+			// Single object response counts as 1
+			actualCount = 1
+		}
+	} else {
+		actualCount = 0
+	}
+
+	if actualCount != expectedCount {
+		return fmt.Errorf("row_count assertion failed: expected %d, got %d", expectedCount, actualCount)
+	}
+
+	return nil
+}
+
+// processErrorCodeAssertion validates error code in error responses
+func processErrorCodeAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+	expected, ok := assertion["expected"]
+	if !ok {
+		return fmt.Errorf("expected value is required for error_code assertion")
+	}
+
+	if response.Error == nil {
+		return fmt.Errorf("error_code assertion failed: no error in response")
+	}
+
+	// Replace variables in expected value
+	expectedStr := replaceVariables(fmt.Sprintf("%v", expected), state)
+	actualCode := response.Error.Code
+
+	if actualCode != expectedStr {
+		return fmt.Errorf("error_code assertion failed: expected %s, got %s", expectedStr, actualCode)
+	}
+
+	return nil
+}
+
+// processErrorMessageAssertion validates error message in error responses
+func processErrorMessageAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+	expected, ok := assertion["expected"]
+	if !ok {
+		return fmt.Errorf("expected value is required for error_message assertion")
+	}
+
+	if response.Error == nil {
+		return fmt.Errorf("error_message assertion failed: no error in response")
+	}
+
+	// Replace variables in expected value
+	expectedStr := replaceVariables(fmt.Sprintf("%v", expected), state)
+	actualMessage := response.Error.Message
+
+	if actualMessage != expectedStr {
+		return fmt.Errorf("error_message assertion failed: expected %s, got %s", expectedStr, actualMessage)
+	}
+
+	return nil
+}
+
+// replaceVariables replaces template variables using the central DSL template system
+func replaceVariables(input string, state map[string]string) string {
+	// Convert state to interface{} map for DSL compatibility
+	runtime := make(map[string]interface{})
+	for k, v := range state {
+		runtime[k] = v
+	}
+	
+	// Create template context with runtime variables
+	// Config variables ({{ .vars.* }}) are processed earlier by CLI
+	// Environment variables ({{ .env.* }}) are handled by DSL template system
+	context := dsl.TemplateContext{
+		Runtime: runtime,
+	}
+	
+	// Use centralized template processing for consistent variable handling
+	// This supports runtime vars, environment vars, and escaped handlebars
+	result, err := dsl.ProcessTemplate(input, context)
+	if err != nil {
+		// If template processing fails, return original input to maintain backward compatibility
+		// This can happen if the input contains invalid template syntax
+		return input
+	}
+	
+	return result
+}
+
+// processVariablesInMap recursively processes variables in a map structure using DSL template system
+func processVariablesInMap(data map[string]interface{}, state map[string]string) map[string]interface{} {
+	// Convert state to interface{} map for DSL compatibility
+	runtime := make(map[string]interface{})
+	for k, v := range state {
+		runtime[k] = v
+	}
+	
+	// Create template context with runtime variables
+	context := dsl.TemplateContext{
+		Runtime: runtime,
+	}
+	
+	// Use DSL recursive processing which handles all data types consistently
+	// This leverages the same logic as ProcessConfigVariablesRecursive but for runtime vars
+	result := processRuntimeVariablesRecursive(data, context)
+	if resultMap, ok := result.(map[string]interface{}); ok {
+		return resultMap
+	}
+	
+	// Fallback to original data if processing fails
+	return data
+}
+
+// processRuntimeVariablesRecursive processes runtime variables in any nested data structure
+func processRuntimeVariablesRecursive(data interface{}, context dsl.TemplateContext) interface{} {
+	switch v := data.(type) {
+	case string:
+		result, err := dsl.ProcessTemplate(v, context)
+		if err != nil {
+			return v // Return original on error
+		}
+		return result
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range v {
+			// Process the key itself (in case it contains variables)
+			processedKey, err := dsl.ProcessTemplate(key, context)
+			if err != nil {
+				processedKey = key // Use original key on error
+			}
+			// Process the value recursively
+			result[processedKey] = processRuntimeVariablesRecursive(value, context)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			result[i] = processRuntimeVariablesRecursive(item, context)
+		}
+		return result
+	default:
+		// For non-string types (numbers, booleans, etc.), return as-is
+		return data
+	}
+}
+
+// processFilters processes variables in filter configurations using DSL template system
+func processFilters(filters []FilterConfig, state map[string]string) []FilterConfig {
+	if filters == nil {
+		return nil
+	}
+	
+	// Convert state to interface{} map for DSL compatibility
+	runtime := make(map[string]interface{})
+	for k, v := range state {
+		runtime[k] = v
+	}
+	
+	// Create template context with runtime variables
+	context := dsl.TemplateContext{
+		Runtime: runtime,
+	}
+	
+	result := make([]FilterConfig, len(filters))
+	for i, filter := range filters {
+		result[i] = FilterConfig{
+			Column:   replaceVariables(filter.Column, state),
+			Operator: filter.Operator,
+			Value:    processRuntimeVariablesRecursive(filter.Value, context),
+		}
+	}
+	return result
 }
