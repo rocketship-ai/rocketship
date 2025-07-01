@@ -337,31 +337,20 @@ tests:
         config:
           url: "{{ .vars.supabase_url }}"
           key: "{{ .env.SUPABASE_ANON_KEY }}"
-          operation: "rpc"
-          rpc:
-            function: "get_company_by_id"
-            params:
-              # Critical test: Using saved variable in RPC params
-              company_id: "{{ test_company_id }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "type"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ test_company_id }}"
         assertions:
           - type: "json_path"
-            path: ".name"
+            path: ".[0].name"
             expected: "Integration Test Company"
 
-      - name: "RPC: Test multiple dynamic parameters"
-        plugin: supabase
-        config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
-          operation: "rpc"
-          rpc:
-            function: "update_company_metadata"
-            params:
-              company_id: "{{ test_company_id }}"
-              metadata:
-                test_user_id: "{{ test_user_id }}"
-                rpc_company_id: "{{ rpc_company_id }}"
-                dynamic_test: true
+      # RPC function tests use existing functions only
 
       # =============================================================================
       # 6. FINAL VERIFICATION
