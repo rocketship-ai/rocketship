@@ -12,6 +12,14 @@ brew install temporal  # macOS
 
 For other platforms, please follow the [Temporal installation guide](https://docs.temporal.io/cli#install).
 
+
+```bash
+# Add Temporal CLI to your PATH (Linux, Bash shell)
+echo 'export PATH="$HOME/.temporalio/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+💡 Note: If you're using a different shell (e.g., zsh), replace .bashrc with .zshrc or the appropriate config file.
+
 ## macOS
 
 ### Apple Silicon
@@ -33,15 +41,15 @@ chmod +x /usr/local/bin/rocketship
 ### AMD64
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64
-chmod +x /usr/local/bin/rocketship
+sudo curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64
+sudo chmod +x /usr/local/bin/rocketship
 ```
 
 ### ARM64
 
 ```bash
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64
-chmod +x /usr/local/bin/rocketship
+sudo curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64
+sudo chmod +x /usr/local/bin/rocketship
 ```
 
 ## Windows
