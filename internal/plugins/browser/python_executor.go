@@ -106,6 +106,17 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	
+	// Ensure the process is killed if context is cancelled
+	go func() {
+		<-ctx.Done()
+		if cmd.Process != nil {
+			log.Printf("[DEBUG] Context cancelled, terminating Python process")
+			if err := cmd.Process.Kill(); err != nil {
+				log.Printf("[DEBUG] Failed to kill Python process: %v", err)
+			}
+		}
+	}()
+	
 	err = cmd.Run()
 	duration := time.Since(startTime)
 

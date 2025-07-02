@@ -29,6 +29,23 @@ export OPENAI_API_KEY=sk-your-key-here
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
+### Updating browser-use
+
+To update browser-use to the latest version (e.g., 0.4.2), run:
+
+```bash
+# Update browser-use
+pip install --upgrade browser-use
+
+# Or install a specific version
+pip install browser-use==0.4.2
+
+# Verify the installation
+python3 -c "import browser_use; print(f'browser-use version: {browser_use.__version__}')"
+```
+
+Note: The browser plugin uses the Python `browser-use` library installed on your system. Updates to browser-use may introduce new features or breaking changes - check the [browser-use releases](https://github.com/browser-use/browser-use/releases) for details.
+
 ## Basic Configuration
 
 ```yaml

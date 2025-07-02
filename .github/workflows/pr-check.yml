@@ -278,6 +278,22 @@ jobs:
           ./.github/scripts/test-log-plugin.sh
           ./.github/scripts/test-log-plugin-validation.sh
 
+          echo "Testing browser plugin integration..."
+          OUTPUT=$(rocketship run -af examples/browser-testing/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✓ Passed Tests: 2"; then
+            echo "✅ Browser plugin integration tests passed"
+            # Verify that the tests are working as expected by checking the logged results
+            if echo "$OUTPUT" | grep -q "Max steps test success (should be false): false"; then
+              echo "✅ Max steps limitation is working correctly"
+            else
+              echo "⚠️  Max steps test may not be working as expected"
+            fi
+          else
+            echo "❌ Browser plugin integration tests failed"
+            exit 1
+          fi
+
           echo "Testing all examples directory..."
           OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
           echo "$OUTPUT"

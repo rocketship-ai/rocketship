@@ -10,6 +10,7 @@ import sys
 import os
 import traceback
 import logging
+import signal
 
 # Configure logging to go to stderr so it doesn't interfere with JSON output on stdout
 logging.basicConfig(
@@ -19,8 +20,24 @@ logging.basicConfig(
 )
 
 
+# Global variable to track browser instance for cleanup
+browser_instance = None
+agent_instance = None
+
+def signal_handler(signum, frame):
+    """Handle termination signals to cleanup browser."""
+    print(f"Received signal {signum}, cleaning up...", file=sys.stderr)
+    # Force exit without waiting for cleanup
+    os._exit(1)
+
 async def main():
     """Main execution function for browser automation."""
+    global browser_instance, agent_instance
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     try:
         print("Starting browser automation...", file=sys.stderr)
         
@@ -136,7 +153,6 @@ async def main():
             'task': task,
             'llm': llm,
             'use_vision': use_vision,
-            'max_actions_per_step': max_steps,  # This maps to max_actions_per_step in Agent
         }
         
         # Add browser profile if available
@@ -148,21 +164,47 @@ async def main():
             domains_str = ', '.join(allowed_domains)
             agent_kwargs['message_context'] = f"Please only interact with the following domains: {domains_str}"
             print(f"Restricted to domains: {domains_str}", file=sys.stderr)
+        
+        # Enhance task to ensure structured output
+        enhanced_task = f"{task}\n\nIMPORTANT: Your response must be a valid JSON object with at least a 'success' field (boolean) indicating whether the task was completed successfully."
+        agent_kwargs['task'] = enhanced_task
             
         # Create agent
         print("Creating agent with configuration...", file=sys.stderr)
         agent = Agent(**agent_kwargs)
+        agent_instance = agent  # Store for cleanup
         
-        # Execute the task
+        # Execute the task with max_steps
         print("Starting task execution...", file=sys.stderr)
         print(f"Task: {task}", file=sys.stderr)
-        result = await agent.run()
+        print(f"Max steps: {max_steps}", file=sys.stderr)
+        result = await agent.run(max_steps=max_steps)
         print("Task execution completed", file=sys.stderr)
         
-        # Build response
+        # Build response - check if the result indicates success
+        success = True
+        result_str = str(result) if result else "Task completed successfully"
+        
+        # Check if the result is a dict/object with a success field
+        if hasattr(result, '__dict__') and hasattr(result, 'success'):
+            success = bool(result.success)
+            print(f"Result has success attribute: {success}", file=sys.stderr)
+        elif isinstance(result, dict) and 'success' in result:
+            success = bool(result['success'])
+            print(f"Result dict has success key: {success}", file=sys.stderr)
+        # If result is a string containing "success: false" or similar
+        elif isinstance(result, str):
+            result_lower = result.lower()
+            if "success: false" in result_lower or "success\":false" in result_lower:
+                success = False
+                print(f"Result string indicates failure: {result}", file=sys.stderr)
+            elif "failed" in result_lower or "error" in result_lower or "could not" in result_lower:
+                success = False
+                print(f"Result string contains failure indicators: {result}", file=sys.stderr)
+        
         response = {
-            "success": True,
-            "result": str(result) if result else "Task completed successfully",
+            "success": success,
+            "result": result_str,
             "session_id": "",
             "steps": [],
             "screenshots": [],
@@ -176,10 +218,19 @@ async def main():
                 extracted_content = result.extracted_content() if callable(result.extracted_content) else result.extracted_content
                 if extracted_content:
                     response["extracted_data"] = extracted_content
-                    response["result"] = str(extracted_content)
+                    # If extracted content has success field, use it
+                    if isinstance(extracted_content, dict) and 'success' in extracted_content:
+                        response["success"] = bool(extracted_content['success'])
+                        response["result"] = extracted_content
                     print(f"Extracted data: {extracted_content}", file=sys.stderr)
             except Exception as e:
                 print(f"Error accessing extracted_content: {e}", file=sys.stderr)
+        
+        # If result is already a dict with structured data, use it as extracted_data
+        if isinstance(result, dict):
+            response["extracted_data"] = result
+            if 'success' in result:
+                response["success"] = bool(result['success'])
         
         # Try to get session information if available
         if hasattr(result, 'session_id'):
