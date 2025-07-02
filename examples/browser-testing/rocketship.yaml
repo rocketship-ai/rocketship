@@ -1,38 +1,77 @@
-name: "Basic Browser Test"
-description: "Simple browser test without template variables"
+name: "Browser Plugin Integration Tests"
+description: "Test browser plugin fixes: max_steps, success/failure detection, and proper configuration"
 version: "v1.0.0"
 
 tests:
-  - name: "Simple browser automation"
+  - name: "Test max_steps limitation"
     steps:
-      - name: "Visit Rocketship docs"
+      - name: "Complex task with max_steps=1"
         plugin: browser
         config:
-          task: "Navigate to https://docs.rocketship.sh/ and tell me what you see on the homepage"
+          task: |
+            This task requires multiple steps but max_steps=1 should limit it:
+            1. Navigate to https://example.com
+            2. Click "More information" link
+            3. Navigate to another page
+            Since max_steps=1, this should fail to complete all steps.
           llm:
             provider: "openai"
             model: "gpt-4o"
             config:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-          executor_type: "python"
           headless: true
-          timeout: "2m"
+          timeout: "30s"
           max_steps: 1
-          use_vision: true
-          # viewport:
-          #   width: 1280
-          #   height: 720
+          use_vision: false
         save:
-          - json_path: ".result"
-            as: "page_content"
           - json_path: ".success"
-            as: "success"
+            as: "max_steps_success"
+          - json_path: ".result"
+            as: "max_steps_result"
+        # Expect failure due to max_steps limit
+        assertions:
+          - type: "json_path"
+            path: ".success"
+            expected: false
+
+      - name: "Log max_steps test results"
+        plugin: log
+        config:
+          message: |
+            Browser Plugin Max Steps Test Results:
+            - Max steps test success (should be false): {{ max_steps_success }}
+            - Max steps result: {{ max_steps_result }}
+
+  - name: "Test success detection with achievable task"
+    steps:
+      - name: "Simple navigation task"
+        plugin: browser
+        config:
+          task: "Navigate to https://example.com and confirm the page loaded successfully"
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+          headless: true
+          timeout: "30s"
+          max_steps: 5
+          use_vision: false
+        save:
+          - json_path: ".success"
+            as: "navigation_success"
+          - json_path: ".result"
+            as: "navigation_result"
+        # Expect success for simple navigation
         assertions:
           - type: "json_path"
             path: ".success"
             expected: true
 
-      - name: "Log results"
+      - name: "Log navigation test results"
         plugin: log
         config:
-          message: "Success: {{success}}, Content: {{page_content}}"
+          message: |
+            Browser Plugin Navigation Test Results:
+            - Simple navigation test success: {{ navigation_success }}
+            - Navigation result: {{ navigation_result }}
