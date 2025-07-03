@@ -43,6 +43,7 @@ chmod +x /usr/local/bin/rocketship
 curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-arm64
 chmod +x /usr/local/bin/rocketship
 ```
+> **Note:** If you encounter a permission error, try running the command with `sudo` as a prefix.
 
 ## Windows
 
