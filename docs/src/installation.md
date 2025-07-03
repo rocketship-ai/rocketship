@@ -45,8 +45,6 @@ chmod +x /usr/local/bin/rocketship
 ```
 > **Note:** If you encounter a permission error, try running the command with `sudo` as a prefix.
 
-
-
 ## Windows
 
 1. Download the latest Windows executable from our [releases page](https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-windows-amd64.exe)
