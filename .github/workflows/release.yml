@@ -146,3 +146,8 @@ jobs:
           tags: |
             rocketshipai/rocketship-worker:${{ steps.get_version.outputs.VERSION }}
             rocketshipai/rocketship-worker:latest
+
+      - name: Trigger Go proxy to index new version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          curl -X POST "https://proxy.golang.org/github.com/rocketship-ai/rocketship/@v/${VERSION}.info" || true
