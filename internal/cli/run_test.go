@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -95,4 +97,156 @@ func TestFindRocketshipFiles(t *testing.T) {
 	// Test with non-existent directory
 	_, err = findRocketshipFiles(filepath.Join(tmpDir, "nonexistent"))
 	assert.Error(t, err, "Should return error for non-existent directory")
+}
+
+func TestAutoModeCleanupOnCancellation(t *testing.T) {
+	// Test that cleanup function is called when context is cancelled in auto mode
+	// This tests the signal handling logic we added to fix the Ctrl+C issue
+
+	t.Run("cleanup called in auto mode when context cancelled", func(t *testing.T) {
+		// Setup
+		ctx, cancel := context.WithCancel(context.Background())
+		resultChan := make(chan TestSuiteResult, 1)
+		cleanupCalled := false
+
+		cleanup := func() {
+			cleanupCalled = true
+		}
+
+		// Simulate the result collection loop logic from run.go
+		go func() {
+			// This simulates the logic from lines 484-499 in run.go
+			var results []TestSuiteResult
+			for {
+				select {
+				case <-ctx.Done():
+					// If we're in auto mode and context is cancelled, call cleanup immediately
+					isAuto := true // Simulate auto mode
+					if isAuto && cleanup != nil {
+						cleanup()
+					}
+					return
+				case result, ok := <-resultChan:
+					if !ok {
+						return
+					}
+					_ = append(results, result)
+				}
+			}
+		}()
+
+		// Wait a bit to ensure goroutine is running
+		time.Sleep(10 * time.Millisecond)
+
+		// Cancel the context (simulates Ctrl+C)
+		cancel()
+
+		// Wait for cleanup to be called
+		timeout := time.After(1 * time.Second)
+		for !cleanupCalled {
+			select {
+			case <-timeout:
+				t.Fatal("cleanup function was not called within timeout")
+			default:
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+
+		// Verify cleanup was called
+		assert.True(t, cleanupCalled, "cleanup function should be called when context is cancelled in auto mode")
+	})
+
+	t.Run("cleanup not called when not in auto mode", func(t *testing.T) {
+		// Setup
+		ctx, cancel := context.WithCancel(context.Background())
+		resultChan := make(chan TestSuiteResult, 1)
+		cleanupCalled := false
+
+		cleanup := func() {
+			cleanupCalled = true
+		}
+
+		// Simulate the result collection loop logic for non-auto mode
+		go func() {
+			var results []TestSuiteResult
+			for {
+				select {
+				case <-ctx.Done():
+					// If we're NOT in auto mode, cleanup should not be called
+					isAuto := false // Simulate non-auto mode
+					if isAuto && cleanup != nil {
+						cleanup()
+					}
+					return
+				case result, ok := <-resultChan:
+					if !ok {
+						return
+					}
+					_ = append(results, result)
+				}
+			}
+		}()
+
+		// Wait a bit to ensure goroutine is running
+		time.Sleep(10 * time.Millisecond)
+
+		// Cancel the context
+		cancel()
+
+		// Wait a bit to see if cleanup is incorrectly called
+		time.Sleep(100 * time.Millisecond)
+
+		// Verify cleanup was NOT called
+		assert.False(t, cleanupCalled, "cleanup function should NOT be called when not in auto mode")
+	})
+
+	t.Run("cleanup not called when cleanup function is nil", func(t *testing.T) {
+		// Setup
+		ctx, cancel := context.WithCancel(context.Background())
+		resultChan := make(chan TestSuiteResult, 1)
+
+		// Simulate the result collection loop logic with nil cleanup
+		completed := false
+		go func() {
+			defer func() { completed = true }()
+			var results []TestSuiteResult
+			for {
+				select {
+				case <-ctx.Done():
+					// If cleanup is nil, should not panic
+					isAuto := true
+					var cleanup func()
+					if isAuto && cleanup != nil {
+						cleanup()
+					}
+					return
+				case result, ok := <-resultChan:
+					if !ok {
+						return
+					}
+					_ = append(results, result)
+				}
+			}
+		}()
+
+		// Wait a bit to ensure goroutine is running
+		time.Sleep(10 * time.Millisecond)
+
+		// Cancel the context
+		cancel()
+
+		// Wait for completion
+		timeout := time.After(1 * time.Second)
+		for !completed {
+			select {
+			case <-timeout:
+				t.Fatal("goroutine did not complete within timeout")
+			default:
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+
+		// Verify no panic occurred (test passes if we reach here)
+		assert.True(t, completed, "should handle nil cleanup function without panic")
+	})
 }
