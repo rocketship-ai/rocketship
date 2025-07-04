@@ -26,9 +26,62 @@ agent_instance = None
 
 def signal_handler(signum, frame):
     """Handle termination signals to cleanup browser."""
-    print(f"Received signal {signum}, cleaning up...", file=sys.stderr)
+    print(f"[DEBUG] Python signal handler received signal {signum} ({signal.Signals(signum).name})", file=sys.stderr)
+    print(f"[DEBUG] Browser instance exists: {browser_instance is not None}", file=sys.stderr)
+    print(f"[DEBUG] Agent instance exists: {agent_instance is not None}", file=sys.stderr)
+    
+    # Try to cleanup browser instance gracefully
+    if browser_instance:
+        try:
+            print("[DEBUG] Attempting to cleanup browser using event loop", file=sys.stderr)
+            # Use asyncio to run cleanup in the current event loop
+            loop = asyncio.get_running_loop()
+            loop.create_task(cleanup_browser())
+            print("[DEBUG] Cleanup task created", file=sys.stderr)
+        except RuntimeError as e:
+            print(f"[DEBUG] No event loop running, cannot cleanup gracefully: {e}", file=sys.stderr)
+            # If no event loop is running, just exit
+            pass
+    else:
+        print("[DEBUG] No browser instance to cleanup", file=sys.stderr)
+    
+    print("[DEBUG] Exiting Python process with os._exit(1)", file=sys.stderr)
     # Force exit without waiting for cleanup
     os._exit(1)
+
+async def cleanup_browser():
+    """Cleanup browser instance."""
+    global browser_instance, agent_instance
+    
+    print(f"[DEBUG] cleanup_browser() called - browser_instance: {browser_instance is not None}, agent_instance: {agent_instance is not None}", file=sys.stderr)
+    
+    # Try to cleanup browser through agent first
+    if agent_instance:
+        try:
+            print("[DEBUG] Attempting to cleanup browser through agent...", file=sys.stderr)
+            if hasattr(agent_instance, 'browser') and agent_instance.browser:
+                print(f"[DEBUG] Found browser in agent: {type(agent_instance.browser)}", file=sys.stderr)
+                await agent_instance.browser.close()
+                print("[DEBUG] Browser closed through agent successfully.", file=sys.stderr)
+            elif hasattr(agent_instance, '_browser') and agent_instance._browser:
+                print(f"[DEBUG] Found _browser in agent: {type(agent_instance._browser)}", file=sys.stderr)
+                await agent_instance._browser.close()
+                print("[DEBUG] Browser closed through agent._browser successfully.", file=sys.stderr)
+            else:
+                print("[DEBUG] No browser attribute found in agent", file=sys.stderr)
+        except Exception as e:
+            print(f"[DEBUG] Error closing browser through agent: {e}", file=sys.stderr)
+    
+    # Fallback to global browser_instance
+    if browser_instance:
+        try:
+            print(f"[DEBUG] Closing global browser instance: {type(browser_instance)}", file=sys.stderr)
+            await browser_instance.close()
+            print("[DEBUG] Global browser instance closed successfully.", file=sys.stderr)
+        except Exception as e:
+            print(f"[DEBUG] Error closing global browser: {e}", file=sys.stderr)
+    else:
+        print("[DEBUG] No global browser instance to close", file=sys.stderr)
 
 async def main():
     """Main execution function for browser automation."""
@@ -38,8 +91,11 @@ async def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
+    print(f"[DEBUG] Python script starting, PID: {os.getpid()}", file=sys.stderr)
+    print("[DEBUG] Registered signal handlers for SIGINT and SIGTERM", file=sys.stderr)
+    
     try:
-        print("Starting browser automation...", file=sys.stderr)
+        print("[DEBUG] Starting browser automation...", file=sys.stderr)
         
         # Get configuration from environment variables
         task = os.environ.get('ROCKETSHIP_TASK', '')
@@ -171,14 +227,47 @@ async def main():
             
         # Create agent
         print("Creating agent with configuration...", file=sys.stderr)
+        print(f"[DEBUG] Agent configuration: {agent_kwargs}", file=sys.stderr)
+        print(f"[DEBUG] Browser profile: {browser_profile}", file=sys.stderr)
+        print("[DEBUG] About to create Agent instance - this will prepare browser setup", file=sys.stderr)
+        
         agent = Agent(**agent_kwargs)
         agent_instance = agent  # Store for cleanup
+        
+        print("[DEBUG] Agent instance created successfully", file=sys.stderr)
         
         # Execute the task with max_steps
         print("Starting task execution...", file=sys.stderr)
         print(f"Task: {task}", file=sys.stderr)
         print(f"Max steps: {max_steps}", file=sys.stderr)
+        
+        # Add debug logging before running the agent
+        print("[DEBUG] About to start agent.run() - browser will be created internally", file=sys.stderr)
+        
         result = await agent.run(max_steps=max_steps)
+        
+        # Add debug logging after agent run completes
+        print("[DEBUG] Agent.run() completed - browser should now be active", file=sys.stderr)
+        
+        # Try to access browser instance from the agent for debugging
+        try:
+            if hasattr(agent, 'browser') and agent.browser:
+                browser_instance = agent.browser
+                print(f"[DEBUG] Browser instance accessed from agent: {type(browser_instance)}", file=sys.stderr)
+                print("[DEBUG] Browser instance created successfully", file=sys.stderr)
+            elif hasattr(agent, '_browser') and agent._browser:
+                browser_instance = agent._browser
+                print(f"[DEBUG] Browser instance accessed from agent._browser: {type(browser_instance)}", file=sys.stderr)
+                print("[DEBUG] Browser instance created successfully", file=sys.stderr)
+            else:
+                print("[DEBUG] Could not access browser instance from agent - may be managed internally", file=sys.stderr)
+                # Check for other possible browser attributes
+                browser_attrs = [attr for attr in dir(agent) if 'browser' in attr.lower()]
+                if browser_attrs:
+                    print(f"[DEBUG] Available browser-related attributes on agent: {browser_attrs}", file=sys.stderr)
+        except Exception as e:
+            print(f"[DEBUG] Error accessing browser instance: {e}", file=sys.stderr)
+            
         print("Task execution completed", file=sys.stderr)
         
         # Build response - check if the result indicates success
@@ -242,6 +331,11 @@ async def main():
         
         # Output the JSON response to stdout (separate from stderr debug logs)
         print(json.dumps(response), flush=True)
+        
+        # Final cleanup and debug logging
+        print("[DEBUG] About to cleanup browser before exit", file=sys.stderr)
+        await cleanup_browser()
+        print("[DEBUG] Browser cleanup completed", file=sys.stderr)
         
     except Exception as e:
         print(f"Error during execution: {e}", file=sys.stderr)

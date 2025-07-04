@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -150,6 +152,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		return
 	}
 
+	Logger.Info("Starting log streaming", "run_id", runID)
 	// Stream logs and track results
 	logStream, err := client.StreamLogs(ctx, runID)
 	if err != nil {
@@ -157,27 +160,44 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
+	Logger.Info("Log stream established, entering monitoring loop", "run_id", runID)
 
 	var result TestSuiteResult
 	result.Name = config.Name
 
+	// Create a channel to receive logs
+	logChan := make(chan *generated.LogLine)
+	errChan := make(chan error)
+	
+	// Start goroutine to receive logs
+	go func() {
+		defer close(logChan)
+		defer close(errChan)
+		for {
+			log, err := logStream.Recv()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			logChan <- log
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			Logger.Info("Context cancelled, attempting to cancel run", "run_id", runID)
+			// Try to cancel the run on the server side
+			if err := client.CancelRun(context.Background(), runID); err != nil {
+				Logger.Error("Failed to cancel run", "run_id", runID, "error", err)
+			} else {
+				Logger.Info("Successfully requested run cancellation", "run_id", runID)
+			}
 			resultChan <- result
 			return
-		default:
-			log, err := logStream.Recv()
-			if err == io.EOF {
-				resultChan <- result
-				return
-			}
-			if err != nil {
-				if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
-					resultChan <- result
-					return
-				}
-				Logger.Error("error receiving log", "path", yamlPath, "error", err)
+		case log := <-logChan:
+			if log == nil {
+				// Channel closed, stream ended
 				resultChan <- result
 				return
 			}
@@ -230,6 +250,21 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 						Logger.Error("failed to parse test results", "message", log.Msg, "error", err)
 					}
 				}
+			}
+		case err := <-errChan:
+			if err == io.EOF {
+				resultChan <- result
+				return
+			}
+			if err != nil {
+				if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
+					Logger.Info("Log stream cancelled", "run_id", runID)
+					resultChan <- result
+					return
+				}
+				Logger.Error("error receiving log", "path", yamlPath, "error", err)
+				resultChan <- result
+				return
 			}
 		}
 	}
@@ -287,14 +322,32 @@ func displayRecentRuns(client *EngineClient) error {
 
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
+	fmt.Println("DEBUG: NewRunCmd called")
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run rocketship tests",
 		Long:  `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("DEBUG: RunE function called")
+			Logger.Info("=== RUN COMMAND STARTING ===")
+			
 			// Create a context that we can cancel
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+			
+			Logger.Info("=== SETTING UP SIGNAL HANDLER ===")
+			// Set up signal handling for graceful shutdown
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+			Logger.Info("Signal handler setup complete, waiting for signals...")
+			go func() {
+				Logger.Info("Signal handler goroutine started")
+				sig := <-sigChan
+				Logger.Info("Received interrupt signal", "signal", sig.String(), "action", "cancelling operations")
+				cancel()
+				Logger.Info("Context cancelled due to signal", "signal", sig.String())
+			}()
+			Logger.Info("=== SIGNAL HANDLER SETUP COMPLETE ===")
 
 			// Check if we're in auto mode
 			isAuto, err := cmd.Flags().GetBool("auto")

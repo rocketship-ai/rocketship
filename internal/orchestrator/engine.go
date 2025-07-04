@@ -767,3 +767,48 @@ func mapRunInfoToRunDetails(runInfo *RunInfo) *generated.GetRunResponse {
 		},
 	}
 }
+
+// CancelRun cancels all workflows associated with a run
+func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest) (*generated.CancelRunResponse, error) {
+	runID := req.RunId
+	log.Printf("[DEBUG] Cancelling run: %s", runID)
+	
+	e.mu.Lock()
+	runInfo, exists := e.runs[runID]
+	if !exists {
+		e.mu.Unlock()
+		log.Printf("[DEBUG] Run not found for cancellation: %s", runID)
+		return &generated.CancelRunResponse{
+			Success: false,
+			Message: fmt.Sprintf("run not found: %s", runID),
+		}, nil
+	}
+	
+	// Mark run as cancelled
+	runInfo.Status = "CANCELLED"
+	
+	// Cancel all workflows in this run
+	cancelledCount := 0
+	errorCount := 0
+	for testID, testInfo := range runInfo.Tests {
+		log.Printf("[DEBUG] Cancelling workflow: %s for test: %s", testInfo.WorkflowID, testID)
+		err := e.temporal.CancelWorkflow(context.Background(), testInfo.WorkflowID, "")
+		if err != nil {
+			log.Printf("[DEBUG] Failed to cancel workflow %s: %v", testInfo.WorkflowID, err)
+			errorCount++
+		} else {
+			log.Printf("[DEBUG] Successfully cancelled workflow: %s", testInfo.WorkflowID)
+			cancelledCount++
+		}
+	}
+	
+	e.mu.Unlock()
+	
+	message := fmt.Sprintf("Cancelled %d workflows, %d errors", cancelledCount, errorCount)
+	log.Printf("[DEBUG] %s", message)
+	
+	return &generated.CancelRunResponse{
+		Success: true,
+		Message: message,
+	}, nil
+}

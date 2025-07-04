@@ -19,3 +19,6 @@ honeyruns/
 
 # claude code
 .mcp.json
+
+# testing directories with secrets
+testing-browser-plugin/

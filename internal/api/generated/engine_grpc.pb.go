@@ -24,6 +24,7 @@ const (
 	Engine_AddLog_FullMethodName     = "/rocketship.v1.Engine/AddLog"
 	Engine_ListRuns_FullMethodName   = "/rocketship.v1.Engine/ListRuns"
 	Engine_GetRun_FullMethodName     = "/rocketship.v1.Engine/GetRun"
+	Engine_CancelRun_FullMethodName  = "/rocketship.v1.Engine/CancelRun"
 	Engine_Health_FullMethodName     = "/rocketship.v1.Engine/Health"
 )
 
@@ -36,6 +37,7 @@ type EngineClient interface {
 	AddLog(ctx context.Context, in *AddLogRequest, opts ...grpc.CallOption) (*AddLogResponse, error)
 	ListRuns(ctx context.Context, in *ListRunsRequest, opts ...grpc.CallOption) (*ListRunsResponse, error)
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error)
+	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
 }
 
@@ -106,6 +108,16 @@ func (c *engineClient) GetRun(ctx context.Context, in *GetRunRequest, opts ...gr
 	return out, nil
 }
 
+func (c *engineClient) CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelRunResponse)
+	err := c.cc.Invoke(ctx, Engine_CancelRun_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(HealthResponse)
@@ -125,6 +137,7 @@ type EngineServer interface {
 	AddLog(context.Context, *AddLogRequest) (*AddLogResponse, error)
 	ListRuns(context.Context, *ListRunsRequest) (*ListRunsResponse, error)
 	GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error)
+	CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
 	mustEmbedUnimplementedEngineServer()
 }
@@ -150,6 +163,9 @@ func (UnimplementedEngineServer) ListRuns(context.Context, *ListRunsRequest) (*L
 }
 func (UnimplementedEngineServer) GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRun not implemented")
+}
+func (UnimplementedEngineServer) CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelRun not implemented")
 }
 func (UnimplementedEngineServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
@@ -258,6 +274,24 @@ func _Engine_GetRun_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Engine_CancelRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelRunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).CancelRun(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_CancelRun_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).CancelRun(ctx, req.(*CancelRunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Engine_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HealthRequest)
 	if err := dec(in); err != nil {
@@ -298,6 +332,10 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRun",
 			Handler:    _Engine_GetRun_Handler,
+		},
+		{
+			MethodName: "CancelRun",
+			Handler:    _Engine_CancelRun_Handler,
 		},
 		{
 			MethodName: "Health",

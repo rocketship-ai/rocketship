@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -100,27 +101,78 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	cmd := exec.CommandContext(ctx, "python3", scriptPath)
 	cmd.Dir = workDir
 	cmd.Env = append(os.Environ(), pe.buildEnvironment(config)...)
+	
+	// Set process group ID so we can kill the entire process group
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
+	
+	log.Printf("[DEBUG] Starting Python process with PID tracking enabled")
 
 	// Capture stdout and stderr separately
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	
-	// Ensure the process is killed if context is cancelled
+	// Ensure the process and its children are killed if context is cancelled
 	go func() {
+		log.Printf("[DEBUG] Setting up context cancellation handler")
 		<-ctx.Done()
+		log.Printf("[DEBUG] Context cancelled! Reason: %v", ctx.Err())
 		if cmd.Process != nil {
-			log.Printf("[DEBUG] Context cancelled, terminating Python process")
-			if err := cmd.Process.Kill(); err != nil {
-				log.Printf("[DEBUG] Failed to kill Python process: %v", err)
+			log.Printf("[DEBUG] Python process PID: %d", cmd.Process.Pid)
+			log.Printf("[DEBUG] Starting process group termination")
+			// Kill the entire process group to ensure child processes (browsers) are also killed
+			pgid, err := syscall.Getpgid(cmd.Process.Pid)
+			if err != nil {
+				log.Printf("[DEBUG] Failed to get process group ID for PID %d: %v", cmd.Process.Pid, err)
+				// Fallback to killing just the process
+				log.Printf("[DEBUG] Falling back to killing just the Python process")
+				if err := cmd.Process.Kill(); err != nil {
+					log.Printf("[DEBUG] Failed to kill Python process: %v", err)
+				} else {
+					log.Printf("[DEBUG] Successfully killed Python process")
+				}
+				return
 			}
+			
+			log.Printf("[DEBUG] Process group ID: %d", pgid)
+			
+			// Send SIGTERM to the process group first (graceful)
+			log.Printf("[DEBUG] Sending SIGTERM to process group -%d", pgid)
+			if err := syscall.Kill(-pgid, syscall.SIGTERM); err != nil {
+				log.Printf("[DEBUG] Failed to send SIGTERM to process group -%d: %v", pgid, err)
+			} else {
+				log.Printf("[DEBUG] Successfully sent SIGTERM to process group -%d", pgid)
+			}
+			
+			// Wait a bit, then send SIGKILL if needed
+			go func() {
+				log.Printf("[DEBUG] Waiting 2 seconds before sending SIGKILL")
+				time.Sleep(2 * time.Second)
+				log.Printf("[DEBUG] Sending SIGKILL to process group -%d", pgid)
+				if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+					log.Printf("[DEBUG] Failed to send SIGKILL to process group -%d: %v", pgid, err)
+				} else {
+					log.Printf("[DEBUG] Successfully sent SIGKILL to process group -%d", pgid)
+				}
+			}()
+		} else {
+			log.Printf("[DEBUG] No Python process to kill (cmd.Process is nil)")
 		}
 	}()
 	
-	err = cmd.Run()
+	err = cmd.Start()
+	if err != nil {
+		return nil, fmt.Errorf("failed to start Python process: %w", err)
+	}
+	
+	log.Printf("[DEBUG] Python process started with PID: %d", cmd.Process.Pid)
+	
+	err = cmd.Wait()
 	duration := time.Since(startTime)
 
-	log.Printf("[DEBUG] Python execution completed in %v", duration)
+	log.Printf("[DEBUG] Python execution completed in %v, exit status: %v", duration, err)
 
 	// Always log stderr for debugging (contains debug info)
 	if stderr.Len() > 0 {
