@@ -9,6 +9,7 @@ service Engine {
   rpc AddLog(AddLogRequest) returns (AddLogResponse);
   rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
   rpc GetRun(GetRunRequest) returns (GetRunResponse);
+  rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
 }
 
@@ -112,6 +113,15 @@ message AddLogRequest {
   string step_name = 7;   // Name of the step this log belongs to (if applicable)
 }
 message AddLogResponse {}
+
+message CancelRunRequest {
+  string run_id = 1;
+}
+
+message CancelRunResponse {
+  bool success = 1;
+  string message = 2;
+}
 
 message HealthRequest {}
 message HealthResponse {

@@ -26,9 +26,40 @@ agent_instance = None
 
 def signal_handler(signum, frame):
     """Handle termination signals to cleanup browser."""
-    print(f"Received signal {signum}, cleaning up...", file=sys.stderr)
+    
+    # Try to cleanup browser instance gracefully
+    if browser_instance:
+        try:
+            # Use asyncio to run cleanup in the current event loop
+            loop = asyncio.get_running_loop()
+            loop.create_task(cleanup_browser())
+        except RuntimeError:
+            # If no event loop is running, just exit
+            pass
+    
     # Force exit without waiting for cleanup
     os._exit(1)
+
+async def cleanup_browser():
+    """Cleanup browser instance."""
+    global browser_instance, agent_instance
+    
+    # Try to cleanup browser through agent first
+    if agent_instance:
+        try:
+            if hasattr(agent_instance, 'browser') and agent_instance.browser:
+                await agent_instance.browser.close()
+            elif hasattr(agent_instance, '_browser') and agent_instance._browser:
+                await agent_instance._browser.close()
+        except Exception:
+            pass
+    
+    # Fallback to global browser_instance
+    if browser_instance:
+        try:
+            await browser_instance.close()
+        except Exception:
+            pass
 
 async def main():
     """Main execution function for browser automation."""
@@ -39,7 +70,6 @@ async def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     try:
-        print("Starting browser automation...", file=sys.stderr)
         
         # Get configuration from environment variables
         task = os.environ.get('ROCKETSHIP_TASK', '')
@@ -171,6 +201,7 @@ async def main():
             
         # Create agent
         print("Creating agent with configuration...", file=sys.stderr)
+        
         agent = Agent(**agent_kwargs)
         agent_instance = agent  # Store for cleanup
         
@@ -178,7 +209,18 @@ async def main():
         print("Starting task execution...", file=sys.stderr)
         print(f"Task: {task}", file=sys.stderr)
         print(f"Max steps: {max_steps}", file=sys.stderr)
+        
         result = await agent.run(max_steps=max_steps)
+        
+        # Try to access browser instance from the agent for cleanup
+        try:
+            if hasattr(agent, 'browser') and agent.browser:
+                browser_instance = agent.browser
+            elif hasattr(agent, '_browser') and agent._browser:
+                browser_instance = agent._browser
+        except Exception:
+            pass
+            
         print("Task execution completed", file=sys.stderr)
         
         # Build response - check if the result indicates success
@@ -188,19 +230,15 @@ async def main():
         # Check if the result is a dict/object with a success field
         if hasattr(result, '__dict__') and hasattr(result, 'success'):
             success = bool(result.success)
-            print(f"Result has success attribute: {success}", file=sys.stderr)
         elif isinstance(result, dict) and 'success' in result:
             success = bool(result['success'])
-            print(f"Result dict has success key: {success}", file=sys.stderr)
         # If result is a string containing "success: false" or similar
         elif isinstance(result, str):
             result_lower = result.lower()
             if "success: false" in result_lower or "success\":false" in result_lower:
                 success = False
-                print(f"Result string indicates failure: {result}", file=sys.stderr)
             elif "failed" in result_lower or "error" in result_lower or "could not" in result_lower:
                 success = False
-                print(f"Result string contains failure indicators: {result}", file=sys.stderr)
         
         response = {
             "success": success,
@@ -222,7 +260,6 @@ async def main():
                     if isinstance(extracted_content, dict) and 'success' in extracted_content:
                         response["success"] = bool(extracted_content['success'])
                         response["result"] = extracted_content
-                    print(f"Extracted data: {extracted_content}", file=sys.stderr)
             except Exception as e:
                 print(f"Error accessing extracted_content: {e}", file=sys.stderr)
         
@@ -243,6 +280,9 @@ async def main():
         # Output the JSON response to stdout (separate from stderr debug logs)
         print(json.dumps(response), flush=True)
         
+        # Final cleanup
+        await cleanup_browser()
+        
     except Exception as e:
         print(f"Error during execution: {e}", file=sys.stderr)
         print(f"Traceback: {traceback.format_exc()}", file=sys.stderr)
@@ -261,6 +301,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    print("Python script starting...", file=sys.stderr)
     asyncio.run(main())
 

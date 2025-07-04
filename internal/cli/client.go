@@ -122,3 +122,28 @@ func (c *EngineClient) AddLogWithContext(ctx context.Context, runID, workflowID,
 	})
 	return err
 }
+
+func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
+	cancelCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	
+	resp, err := c.client.CancelRun(cancelCtx, &generated.CancelRunRequest{
+		RunId: runID,
+	})
+	if err != nil {
+		if err == context.DeadlineExceeded {
+			return fmt.Errorf("timed out waiting for engine to cancel run")
+		}
+		if s, ok := status.FromError(err); ok {
+			return fmt.Errorf("failed to cancel run: %s", s.Message())
+		}
+		return fmt.Errorf("failed to cancel run: %w", err)
+	}
+	
+	if !resp.Success {
+		return fmt.Errorf("failed to cancel run: %s", resp.Message)
+	}
+	
+	Logger.Info("Run cancelled successfully", "run_id", runID, "message", resp.Message)
+	return nil
+}

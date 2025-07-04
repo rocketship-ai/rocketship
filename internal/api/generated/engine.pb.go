@@ -1037,6 +1037,102 @@ func (*AddLogResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{13}
 }
 
+type CancelRunRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RunId         string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelRunRequest) Reset() {
+	*x = CancelRunRequest{}
+	mi := &file_engine_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelRunRequest) ProtoMessage() {}
+
+func (x *CancelRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelRunRequest.ProtoReflect.Descriptor instead.
+func (*CancelRunRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CancelRunRequest) GetRunId() string {
+	if x != nil {
+		return x.RunId
+	}
+	return ""
+}
+
+type CancelRunResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelRunResponse) Reset() {
+	*x = CancelRunResponse{}
+	mi := &file_engine_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelRunResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelRunResponse) ProtoMessage() {}
+
+func (x *CancelRunResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelRunResponse.ProtoReflect.Descriptor instead.
+func (*CancelRunResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CancelRunResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *CancelRunResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 type HealthRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1045,7 +1141,7 @@ type HealthRequest struct {
 
 func (x *HealthRequest) Reset() {
 	*x = HealthRequest{}
-	mi := &file_engine_proto_msgTypes[14]
+	mi := &file_engine_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1057,7 +1153,7 @@ func (x *HealthRequest) String() string {
 func (*HealthRequest) ProtoMessage() {}
 
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[14]
+	mi := &file_engine_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1070,7 +1166,7 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
 func (*HealthRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{14}
+	return file_engine_proto_rawDescGZIP(), []int{16}
 }
 
 type HealthResponse struct {
@@ -1082,7 +1178,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_engine_proto_msgTypes[15]
+	mi := &file_engine_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1094,7 +1190,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[15]
+	mi := &file_engine_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1107,7 +1203,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{15}
+	return file_engine_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HealthResponse) GetStatus() string {
@@ -1223,17 +1319,23 @@ const file_engine_proto_rawDesc = "" +
 	"\x04bold\x18\x05 \x01(\bR\x04bold\x12\x1b\n" +
 	"\ttest_name\x18\x06 \x01(\tR\btestName\x12\x1b\n" +
 	"\tstep_name\x18\a \x01(\tR\bstepName\"\x10\n" +
-	"\x0eAddLogResponse\"\x0f\n" +
+	"\x0eAddLogResponse\")\n" +
+	"\x10CancelRunRequest\x12\x15\n" +
+	"\x06run_id\x18\x01 \x01(\tR\x05runId\"G\n" +
+	"\x11CancelRunResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x0f\n" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2\xc3\x03\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status2\x93\x04\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +
 	"StreamLogs\x12\x1f.rocketship.v1.LogStreamRequest\x1a\x16.rocketship.v1.LogLine0\x01\x12E\n" +
 	"\x06AddLog\x12\x1c.rocketship.v1.AddLogRequest\x1a\x1d.rocketship.v1.AddLogResponse\x12K\n" +
 	"\bListRuns\x12\x1e.rocketship.v1.ListRunsRequest\x1a\x1f.rocketship.v1.ListRunsResponse\x12E\n" +
-	"\x06GetRun\x12\x1c.rocketship.v1.GetRunRequest\x1a\x1d.rocketship.v1.GetRunResponse\x12E\n" +
+	"\x06GetRun\x12\x1c.rocketship.v1.GetRunRequest\x1a\x1d.rocketship.v1.GetRunResponse\x12N\n" +
+	"\tCancelRun\x12\x1f.rocketship.v1.CancelRunRequest\x1a .rocketship.v1.CancelRunResponse\x12E\n" +
 	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
 
 var (
@@ -1248,7 +1350,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_engine_proto_goTypes = []any{
 	(*CreateRunRequest)(nil),  // 0: rocketship.v1.CreateRunRequest
 	(*RunContext)(nil),        // 1: rocketship.v1.RunContext
@@ -1264,13 +1366,15 @@ var file_engine_proto_goTypes = []any{
 	(*TestDetails)(nil),       // 11: rocketship.v1.TestDetails
 	(*AddLogRequest)(nil),     // 12: rocketship.v1.AddLogRequest
 	(*AddLogResponse)(nil),    // 13: rocketship.v1.AddLogResponse
-	(*HealthRequest)(nil),     // 14: rocketship.v1.HealthRequest
-	(*HealthResponse)(nil),    // 15: rocketship.v1.HealthResponse
-	nil,                       // 16: rocketship.v1.RunContext.MetadataEntry
+	(*CancelRunRequest)(nil),  // 14: rocketship.v1.CancelRunRequest
+	(*CancelRunResponse)(nil), // 15: rocketship.v1.CancelRunResponse
+	(*HealthRequest)(nil),     // 16: rocketship.v1.HealthRequest
+	(*HealthResponse)(nil),    // 17: rocketship.v1.HealthResponse
+	nil,                       // 18: rocketship.v1.RunContext.MetadataEntry
 }
 var file_engine_proto_depIdxs = []int32{
 	1,  // 0: rocketship.v1.CreateRunRequest.context:type_name -> rocketship.v1.RunContext
-	16, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
+	18, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
 	7,  // 2: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
 	1,  // 3: rocketship.v1.RunSummary.context:type_name -> rocketship.v1.RunContext
 	10, // 4: rocketship.v1.GetRunResponse.run:type_name -> rocketship.v1.RunDetails
@@ -1281,15 +1385,17 @@ var file_engine_proto_depIdxs = []int32{
 	12, // 9: rocketship.v1.Engine.AddLog:input_type -> rocketship.v1.AddLogRequest
 	5,  // 10: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
 	8,  // 11: rocketship.v1.Engine.GetRun:input_type -> rocketship.v1.GetRunRequest
-	14, // 12: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
-	2,  // 13: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
-	4,  // 14: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
-	13, // 15: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
-	6,  // 16: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
-	9,  // 17: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
-	15, // 18: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
-	13, // [13:19] is the sub-list for method output_type
-	7,  // [7:13] is the sub-list for method input_type
+	14, // 12: rocketship.v1.Engine.CancelRun:input_type -> rocketship.v1.CancelRunRequest
+	16, // 13: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
+	2,  // 14: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
+	4,  // 15: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
+	13, // 16: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
+	6,  // 17: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
+	9,  // 18: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
+	15, // 19: rocketship.v1.Engine.CancelRun:output_type -> rocketship.v1.CancelRunResponse
+	17, // 20: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
+	14, // [14:21] is the sub-list for method output_type
+	7,  // [7:14] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -1306,7 +1412,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

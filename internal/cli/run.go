@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -150,6 +152,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		return
 	}
 
+	Logger.Debug("Starting log streaming", "run_id", runID)
 	// Stream logs and track results
 	logStream, err := client.StreamLogs(ctx, runID)
 	if err != nil {
@@ -157,27 +160,44 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
+	Logger.Debug("Log stream established, entering monitoring loop", "run_id", runID)
 
 	var result TestSuiteResult
 	result.Name = config.Name
 
+	// Create a channel to receive logs
+	logChan := make(chan *generated.LogLine)
+	errChan := make(chan error)
+
+	// Start goroutine to receive logs
+	go func() {
+		defer close(logChan)
+		defer close(errChan)
+		for {
+			log, err := logStream.Recv()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			logChan <- log
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
+			Logger.Info("Context cancelled, attempting to cancel run", "run_id", runID)
+			// Try to cancel the run on the server side
+			if err := client.CancelRun(context.Background(), runID); err != nil {
+				Logger.Error("Failed to cancel run", "run_id", runID, "error", err)
+			} else {
+				Logger.Info("Successfully requested run cancellation", "run_id", runID)
+			}
 			resultChan <- result
 			return
-		default:
-			log, err := logStream.Recv()
-			if err == io.EOF {
-				resultChan <- result
-				return
-			}
-			if err != nil {
-				if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
-					resultChan <- result
-					return
-				}
-				Logger.Error("error receiving log", "path", yamlPath, "error", err)
+		case log := <-logChan:
+			if log == nil {
+				// Channel closed, stream ended
 				resultChan <- result
 				return
 			}
@@ -204,7 +224,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 			if log.StepName != "" {
 				brackets += " [" + log.StepName + "]"
 			}
-			
+
 			// Print the log with multi-level bracket prefix and optional timestamp
 			if showTimestamp {
 				fmt.Printf("%s [%s] %s\n", printer.Sprint(brackets), log.Ts, log.Msg)
@@ -230,6 +250,21 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 						Logger.Error("failed to parse test results", "message", log.Msg, "error", err)
 					}
 				}
+			}
+		case err := <-errChan:
+			if err == io.EOF {
+				resultChan <- result
+				return
+			}
+			if err != nil {
+				if s, ok := status.FromError(err); ok && s.Code() == codes.Canceled {
+					Logger.Info("Log stream cancelled", "run_id", runID)
+					resultChan <- result
+					return
+				}
+				Logger.Error("error receiving log", "path", yamlPath, "error", err)
+				resultChan <- result
+				return
 			}
 		}
 	}
@@ -295,6 +330,15 @@ func NewRunCmd() *cobra.Command {
 			// Create a context that we can cancel
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			// Set up signal handling for graceful shutdown
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				sig := <-sigChan
+				cancel()
+				Logger.Debug("Context cancelled due to signal", "signal", sig.String())
+			}()
 
 			// Check if we're in auto mode
 			isAuto, err := cmd.Flags().GetBool("auto")
@@ -372,8 +416,8 @@ func NewRunCmd() *cobra.Command {
 
 			// Build RunContext if any context flags are set
 			var runContext *generated.RunContext
-			if projectID != "" || source != "" || branch != "" || commit != "" || 
-			   trigger != "" || scheduleName != "" || len(metadata) > 0 {
+			if projectID != "" || source != "" || branch != "" || commit != "" ||
+				trigger != "" || scheduleName != "" || len(metadata) > 0 {
 				runContext = &generated.RunContext{
 					ProjectId:    projectID,
 					Source:       source,
@@ -437,22 +481,38 @@ func NewRunCmd() *cobra.Command {
 				close(resultChan)
 			}()
 
-			// Collect results
+			// Collect results with context cancellation handling
 			var results []TestSuiteResult
-			for result := range resultChan {
-				results = append(results, result)
+			for {
+				select {
+				case <-ctx.Done():
+					Logger.Debug("Context cancelled during result collection, cleaning up auto mode server if needed")
+					// If we're in auto mode and context is cancelled, call cleanup immediately
+					if isAuto && cleanup != nil {
+						Logger.Debug("Calling cleanup function for auto mode server")
+						cleanup()
+					}
+					return fmt.Errorf("operation cancelled")
+				case result, ok := <-resultChan:
+					if !ok {
+						// Channel closed, all results collected
+						goto collectComplete
+					}
+					results = append(results, result)
+				}
 			}
+		collectComplete:
 
 			// Print final summary
 			printFinalSummary(results)
-			
+
 			// If this was an auto run, also display recent test runs
 			if isAuto {
 				if err := displayRecentRuns(client); err != nil {
 					Logger.Debug("failed to display recent runs", "error", err)
 				}
 			}
-			
+
 			return nil
 		},
 	}
@@ -464,7 +524,7 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
 	cmd.Flags().BoolP("timestamp", "t", false, "Show timestamps in log output")
-	
+
 	// Context flags for enhanced metadata tracking
 	cmd.Flags().String("project-id", "", "Project identifier for test run tracking")
 	cmd.Flags().String("source", "", "Run source: cli-local, ci-branch, ci-main, scheduled")
@@ -473,6 +533,6 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().String("trigger", "", "Trigger type: manual, webhook, schedule")
 	cmd.Flags().String("schedule-name", "", "Schedule name for scheduled runs")
 	cmd.Flags().StringToString("metadata", nil, "Additional metadata key=value pairs")
-	
+
 	return cmd
 }

@@ -313,6 +313,10 @@ jobs:
         run: |
           ./.github/scripts/test-run-persistence.sh
 
+      - name: Test auto mode cancellation
+        run: |
+          ./.github/scripts/test-auto-mode-cancellation.sh
+
       - name: Test CLI error handling
         run: |
           echo "Testing error scenarios..."

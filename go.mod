@@ -2,6 +2,9 @@ module github.com/rocketship-ai/rocketship
 
 go 1.24
 
+// Retract old major version 1.x releases
+retract [v1.0.0, v1.7.1]
+
 require (
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c
