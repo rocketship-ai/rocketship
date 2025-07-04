@@ -32,7 +32,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	if len(req.YamlPayload) == 0 {
 		return nil, fmt.Errorf("YAML payload cannot be empty")
 	}
-	
+
 	slog.Debug("CreateRun called", "payload_size", len(req.YamlPayload))
 
 	runID, err := generateID()
@@ -46,17 +46,17 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		slog.Error("Failed to parse YAML", "error", err)
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
-	
+
 	// Validate parsed run has tests
 	if len(run.Tests) == 0 {
 		return nil, fmt.Errorf("test run must contain at least one test")
 	}
-	
+
 	// Extract context from request or auto-detect
 	runContext := extractRunContext(req.Context)
-	
-	slog.Debug("Starting run", 
-		"name", run.Name, 
+
+	slog.Debug("Starting run",
+		"name", run.Name,
 		"test_count", len(run.Tests),
 		"project_id", runContext.ProjectID,
 		"source", runContext.Source,
@@ -113,7 +113,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			//     SearchAttrTimeoutTests: 0,
 			// },
 		}
-		
+
 		slog.Debug("Starting workflow with search attributes",
 			"workflow_id", testID,
 			"project_id", runContext.ProjectID,
@@ -158,7 +158,7 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 		e.mu.RUnlock()
 		return fmt.Errorf("run not found: %s", runID)
 	}
-	
+
 	logs := make([]LogLine, len(runInfo.Logs))
 	copy(logs, runInfo.Logs)
 	e.mu.RUnlock()
@@ -195,7 +195,7 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 
 			var newLogs []LogLine
 			status := runInfo.Status
-			
+
 			if len(runInfo.Logs) > lastLogIndex {
 				newLogs = make([]LogLine, len(runInfo.Logs)-lastLogIndex)
 				copy(newLogs, runInfo.Logs[lastLogIndex:])
@@ -231,7 +231,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
-	log.Printf("[DEBUG] Starting to monitor workflow %s for run %s", workflowID, runID)
+	slog.Debug("Starting to monitor workflow", "workflow_id", workflowID, "run_id", runID)
 	workflowRun := e.temporal.GetWorkflow(ctx, workflowID, workflowRunID)
 
 	resultChan := make(chan error, 1)
@@ -242,7 +242,7 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 				resultChan <- fmt.Errorf("workflow monitoring panic: %v", r)
 			}
 		}()
-		
+
 		var result interface{}
 		err := workflowRun.Get(ctx, &result)
 		resultChan <- err
@@ -275,7 +275,7 @@ func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
 	}
 
 	testInfo.EndedAt = time.Now()
-	
+
 	if workflowErr != nil {
 		if workflowErr.Error() == "workflow monitoring timeout" {
 			testInfo.Status = "TIMEOUT"
@@ -294,7 +294,7 @@ func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
 		log.Printf("[INFO] Test passed: %s", testInfo.Name)
 		e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name), "green", true)
 	}
-	
+
 	e.checkIfRunFinished(runID)
 }
 
@@ -346,7 +346,7 @@ func extractRunContext(reqContext *generated.RunContext) *RunContext {
 		}
 	}
 
-	slog.Debug("Using provided context", 
+	slog.Debug("Using provided context",
 		"project_id", reqContext.ProjectId,
 		"source", reqContext.Source,
 		"branch", reqContext.Branch)
@@ -382,7 +382,7 @@ func detectProjectID() string {
 			}
 		}
 	}
-	
+
 	slog.Debug("Using default project ID")
 	return "default"
 }
@@ -398,7 +398,7 @@ func detectSource() string {
 			}
 		}
 	}
-	
+
 	slog.Debug("Detected local environment", "source", "cli-local")
 	return "cli-local"
 }
@@ -414,7 +414,7 @@ func detectBranch() string {
 			return branch
 		}
 	}
-	
+
 	slog.Debug("Could not detect git branch")
 	return ""
 }
@@ -430,7 +430,7 @@ func detectCommitSHA() string {
 			return commit
 		}
 	}
-	
+
 	slog.Debug("Could not detect git commit")
 	return ""
 }
@@ -449,12 +449,12 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		log.Printf("[ERROR] Failed to get test status counts for run %s: %v", runID, err)
 		return
 	}
-	
+
 	// Only proceed if all tests are finished (no pending tests)
 	if counts.Pending > 0 {
 		return
 	}
-	
+
 	// Get run name and update status atomically
 	e.mu.Lock()
 	runInfo, exists := e.runs[runID]
@@ -463,9 +463,9 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		log.Printf("[ERROR] Run not found when checking if finished: %s", runID)
 		return
 	}
-	
+
 	runName := runInfo.Name
-	
+
 	// Determine final status and update
 	if counts.Failed == 0 && counts.TimedOut == 0 {
 		// All tests passed
@@ -478,7 +478,7 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		runInfo.Status = "FAILED"
 		runInfo.EndedAt = time.Now()
 		e.mu.Unlock()
-		
+
 		if counts.TimedOut == 0 {
 			e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, counts.Passed, counts.Total, counts.Failed, counts.Total), "n/a", true)
 		} else {
@@ -491,16 +491,16 @@ func (e *Engine) checkIfRunFinished(runID string) {
 func (e *Engine) getTestStatusCounts(runID string) (TestStatusCounts, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	runInfo, exists := e.runs[runID]
 	if !exists {
 		return TestStatusCounts{}, fmt.Errorf("run not found: %s", runID)
 	}
-	
+
 	counts := TestStatusCounts{
 		Total: len(runInfo.Tests),
 	}
-	
+
 	for _, testInfo := range runInfo.Tests {
 		switch testInfo.Status {
 		case "PASSED":
@@ -513,7 +513,7 @@ func (e *Engine) getTestStatusCounts(runID string) (TestStatusCounts, error) {
 			counts.Pending++
 		}
 	}
-	
+
 	return counts, nil
 }
 
@@ -542,7 +542,7 @@ func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*gen
 func sortRuns(runs []*generated.RunSummary, orderBy string, ascending bool) {
 	sort.Slice(runs, func(i, j int) bool {
 		var result bool
-		
+
 		switch orderBy {
 		case "duration":
 			result = runs[i].DurationMs < runs[j].DurationMs
@@ -568,18 +568,18 @@ func sortRuns(runs []*generated.RunSummary, orderBy string, ascending bool) {
 				result = timeI.Before(timeJ)
 			}
 		}
-		
+
 		// Reverse the result if not ascending (i.e., descending)
 		if !ascending {
 			result = !result
 		}
-		
+
 		return result
 	})
 }
 
 func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
-	slog.Debug("ListRuns called", 
+	slog.Debug("ListRuns called",
 		"project_id", req.ProjectId,
 		"source", req.Source,
 		"branch", req.Branch,
@@ -588,33 +588,33 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 
 	// For Phase 1, return in-memory runs with basic filtering
 	// TODO: Integrate with Temporal search attributes
-	
+
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 
 	runs := make([]*generated.RunSummary, 0)
-	
+
 	for _, runInfo := range e.runs {
 		// Basic filtering by status
 		if req.Status != "" && runInfo.Status != req.Status {
 			continue
 		}
-		
+
 		// Filter by project ID
 		if req.ProjectId != "" && runInfo.Context.ProjectID != req.ProjectId {
 			continue
 		}
-		
+
 		// Filter by source
 		if req.Source != "" && runInfo.Context.Source != req.Source {
 			continue
 		}
-		
+
 		// Filter by branch
 		if req.Branch != "" && runInfo.Context.Branch != req.Branch {
 			continue
 		}
-		
+
 		// Filter by schedule name
 		if req.ScheduleName != "" && runInfo.Context.ScheduleName != req.ScheduleName {
 			continue
@@ -650,13 +650,13 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 			FailedTests:  failed,
 			TimeoutTests: timeout,
 			Context: &generated.RunContext{
-				ProjectId: runInfo.Context.ProjectID,
-				Source:    runInfo.Context.Source,
-				Branch:    runInfo.Context.Branch,
-				CommitSha: runInfo.Context.CommitSHA,
-				Trigger:   runInfo.Context.Trigger,
+				ProjectId:    runInfo.Context.ProjectID,
+				Source:       runInfo.Context.Source,
+				Branch:       runInfo.Context.Branch,
+				CommitSha:    runInfo.Context.CommitSHA,
+				Trigger:      runInfo.Context.Trigger,
 				ScheduleName: runInfo.Context.ScheduleName,
-				Metadata:  runInfo.Context.Metadata,
+				Metadata:     runInfo.Context.Metadata,
 			},
 		}
 
@@ -665,7 +665,7 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 
 	// Sort runs based on request parameters
 	sortRuns(runs, req.OrderBy, !req.Descending)
-	
+
 	// Apply limit
 	limit := req.Limit
 	if limit <= 0 {
@@ -695,13 +695,13 @@ func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*gen
 	// First check in-memory runs for active runs
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	
+
 	// Try exact match first
 	if runInfo, exists := e.runs[req.RunId]; exists {
 		slog.Debug("Found active run in memory", "run_id", req.RunId)
 		return mapRunInfoToRunDetails(runInfo), nil
 	}
-	
+
 	// If not found and the ID looks like a prefix (12 chars or less), search for prefix match
 	if len(req.RunId) <= 12 {
 		slog.Debug("Searching for run by prefix", "prefix", req.RunId)
@@ -724,19 +724,19 @@ func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*gen
 // Map in-memory RunInfo to RunDetails for GetRun response
 func mapRunInfoToRunDetails(runInfo *RunInfo) *generated.GetRunResponse {
 	tests := make([]*generated.TestDetails, 0, len(runInfo.Tests))
-	
+
 	for _, testInfo := range runInfo.Tests {
 		duration := int64(0)
 		if !testInfo.EndedAt.IsZero() {
 			duration = testInfo.EndedAt.Sub(testInfo.StartedAt).Milliseconds()
 		}
-		
+
 		tests = append(tests, &generated.TestDetails{
-			TestId:    testInfo.WorkflowID,
-			Name:      testInfo.Name,
-			Status:    testInfo.Status,
-			StartedAt: testInfo.StartedAt.Format(time.RFC3339),
-			EndedAt:   testInfo.EndedAt.Format(time.RFC3339),
+			TestId:     testInfo.WorkflowID,
+			Name:       testInfo.Name,
+			Status:     testInfo.Status,
+			StartedAt:  testInfo.StartedAt.Format(time.RFC3339),
+			EndedAt:    testInfo.EndedAt.Format(time.RFC3339),
 			DurationMs: duration,
 		})
 	}
@@ -755,13 +755,13 @@ func mapRunInfoToRunDetails(runInfo *RunInfo) *generated.GetRunResponse {
 			EndedAt:    runInfo.EndedAt.Format(time.RFC3339),
 			DurationMs: duration,
 			Context: &generated.RunContext{
-				ProjectId: runInfo.Context.ProjectID,
-				Source:    runInfo.Context.Source,
-				Branch:    runInfo.Context.Branch,
-				CommitSha: runInfo.Context.CommitSHA,
-				Trigger:   runInfo.Context.Trigger,
+				ProjectId:    runInfo.Context.ProjectID,
+				Source:       runInfo.Context.Source,
+				Branch:       runInfo.Context.Branch,
+				CommitSha:    runInfo.Context.CommitSHA,
+				Trigger:      runInfo.Context.Trigger,
 				ScheduleName: runInfo.Context.ScheduleName,
-				Metadata:  runInfo.Context.Metadata,
+				Metadata:     runInfo.Context.Metadata,
 			},
 			Tests: tests,
 		},
@@ -771,42 +771,39 @@ func mapRunInfoToRunDetails(runInfo *RunInfo) *generated.GetRunResponse {
 // CancelRun cancels all workflows associated with a run
 func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest) (*generated.CancelRunResponse, error) {
 	runID := req.RunId
-	log.Printf("[DEBUG] Cancelling run: %s", runID)
-	
+
 	e.mu.Lock()
 	runInfo, exists := e.runs[runID]
 	if !exists {
 		e.mu.Unlock()
-		log.Printf("[DEBUG] Run not found for cancellation: %s", runID)
 		return &generated.CancelRunResponse{
 			Success: false,
 			Message: fmt.Sprintf("run not found: %s", runID),
 		}, nil
 	}
-	
+
 	// Mark run as cancelled
 	runInfo.Status = "CANCELLED"
-	
+
 	// Cancel all workflows in this run
 	cancelledCount := 0
 	errorCount := 0
 	for testID, testInfo := range runInfo.Tests {
-		log.Printf("[DEBUG] Cancelling workflow: %s for test: %s", testInfo.WorkflowID, testID)
+		slog.Debug("Cancelling workflow", "workflow_id", testInfo.WorkflowID, "test_id", testID)
 		err := e.temporal.CancelWorkflow(context.Background(), testInfo.WorkflowID, "")
 		if err != nil {
-			log.Printf("[DEBUG] Failed to cancel workflow %s: %v", testInfo.WorkflowID, err)
+			slog.Debug("Failed to cancel workflow", "workflow_id", testInfo.WorkflowID, "error", err)
 			errorCount++
 		} else {
-			log.Printf("[DEBUG] Successfully cancelled workflow: %s", testInfo.WorkflowID)
+			slog.Debug("Successfully cancelled workflow", "workflow_id", testInfo.WorkflowID)
 			cancelledCount++
 		}
 	}
-	
+
 	e.mu.Unlock()
-	
+
 	message := fmt.Sprintf("Cancelled %d workflows, %d errors", cancelledCount, errorCount)
-	log.Printf("[DEBUG] %s", message)
-	
+
 	return &generated.CancelRunResponse{
 		Success: true,
 		Message: message,

@@ -152,7 +152,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		return
 	}
 
-	Logger.Info("Starting log streaming", "run_id", runID)
+	Logger.Debug("Starting log streaming", "run_id", runID)
 	// Stream logs and track results
 	logStream, err := client.StreamLogs(ctx, runID)
 	if err != nil {
@@ -160,7 +160,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
-	Logger.Info("Log stream established, entering monitoring loop", "run_id", runID)
+	Logger.Debug("Log stream established, entering monitoring loop", "run_id", runID)
 
 	var result TestSuiteResult
 	result.Name = config.Name
@@ -168,7 +168,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	// Create a channel to receive logs
 	logChan := make(chan *generated.LogLine)
 	errChan := make(chan error)
-	
+
 	// Start goroutine to receive logs
 	go func() {
 		defer close(logChan)
@@ -224,7 +224,7 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 			if log.StepName != "" {
 				brackets += " [" + log.StepName + "]"
 			}
-			
+
 			// Print the log with multi-level bracket prefix and optional timestamp
 			if showTimestamp {
 				fmt.Printf("%s [%s] %s\n", printer.Sprint(brackets), log.Ts, log.Msg)
@@ -322,32 +322,23 @@ func displayRecentRuns(client *EngineClient) error {
 
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
-	fmt.Println("DEBUG: NewRunCmd called")
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run rocketship tests",
 		Long:  `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("DEBUG: RunE function called")
-			Logger.Info("=== RUN COMMAND STARTING ===")
-			
 			// Create a context that we can cancel
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			
-			Logger.Info("=== SETTING UP SIGNAL HANDLER ===")
+
 			// Set up signal handling for graceful shutdown
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-			Logger.Info("Signal handler setup complete, waiting for signals...")
 			go func() {
-				Logger.Info("Signal handler goroutine started")
 				sig := <-sigChan
-				Logger.Info("Received interrupt signal", "signal", sig.String(), "action", "cancelling operations")
 				cancel()
-				Logger.Info("Context cancelled due to signal", "signal", sig.String())
+				Logger.Debug("Context cancelled due to signal", "signal", sig.String())
 			}()
-			Logger.Info("=== SIGNAL HANDLER SETUP COMPLETE ===")
 
 			// Check if we're in auto mode
 			isAuto, err := cmd.Flags().GetBool("auto")
@@ -425,8 +416,8 @@ func NewRunCmd() *cobra.Command {
 
 			// Build RunContext if any context flags are set
 			var runContext *generated.RunContext
-			if projectID != "" || source != "" || branch != "" || commit != "" || 
-			   trigger != "" || scheduleName != "" || len(metadata) > 0 {
+			if projectID != "" || source != "" || branch != "" || commit != "" ||
+				trigger != "" || scheduleName != "" || len(metadata) > 0 {
 				runContext = &generated.RunContext{
 					ProjectId:    projectID,
 					Source:       source,
@@ -495,10 +486,10 @@ func NewRunCmd() *cobra.Command {
 			for {
 				select {
 				case <-ctx.Done():
-					Logger.Info("Context cancelled during result collection, cleaning up auto mode server if needed")
+					Logger.Debug("Context cancelled during result collection, cleaning up auto mode server if needed")
 					// If we're in auto mode and context is cancelled, call cleanup immediately
 					if isAuto && cleanup != nil {
-						Logger.Info("Calling cleanup function for auto mode server")
+						Logger.Debug("Calling cleanup function for auto mode server")
 						cleanup()
 					}
 					return fmt.Errorf("operation cancelled")
@@ -510,18 +501,18 @@ func NewRunCmd() *cobra.Command {
 					results = append(results, result)
 				}
 			}
-			collectComplete:
+		collectComplete:
 
 			// Print final summary
 			printFinalSummary(results)
-			
+
 			// If this was an auto run, also display recent test runs
 			if isAuto {
 				if err := displayRecentRuns(client); err != nil {
 					Logger.Debug("failed to display recent runs", "error", err)
 				}
 			}
-			
+
 			return nil
 		},
 	}
@@ -533,7 +524,7 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
 	cmd.Flags().BoolP("timestamp", "t", false, "Show timestamps in log output")
-	
+
 	// Context flags for enhanced metadata tracking
 	cmd.Flags().String("project-id", "", "Project identifier for test run tracking")
 	cmd.Flags().String("source", "", "Run source: cli-local, ci-branch, ci-main, scheduled")
@@ -542,6 +533,6 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().String("trigger", "", "Trigger type: manual, webhook, schedule")
 	cmd.Flags().String("schedule-name", "", "Schedule name for scheduled runs")
 	cmd.Flags().StringToString("metadata", nil, "Additional metadata key=value pairs")
-	
+
 	return cmd
 }
