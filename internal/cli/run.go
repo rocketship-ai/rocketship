@@ -490,11 +490,27 @@ func NewRunCmd() *cobra.Command {
 				close(resultChan)
 			}()
 
-			// Collect results
+			// Collect results with context cancellation handling
 			var results []TestSuiteResult
-			for result := range resultChan {
-				results = append(results, result)
+			for {
+				select {
+				case <-ctx.Done():
+					Logger.Info("Context cancelled during result collection, cleaning up auto mode server if needed")
+					// If we're in auto mode and context is cancelled, call cleanup immediately
+					if isAuto && cleanup != nil {
+						Logger.Info("Calling cleanup function for auto mode server")
+						cleanup()
+					}
+					return fmt.Errorf("operation cancelled")
+				case result, ok := <-resultChan:
+					if !ok {
+						// Channel closed, all results collected
+						goto collectComplete
+					}
+					results = append(results, result)
+				}
 			}
+			collectComplete:
 
 			// Print final summary
 			printFinalSummary(results)
