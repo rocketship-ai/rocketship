@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -87,10 +86,8 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	cmd.Dir = workDir
 	cmd.Env = append(os.Environ(), pe.buildEnvironment(config)...)
 	
-	// Set process group ID so we can kill the entire process group
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
+	// Set up process group (platform-specific)
+	setupProcessGroup(cmd)
 
 	// Capture stdout and stderr separately
 	var stdout, stderr bytes.Buffer
@@ -100,24 +97,7 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	// Ensure the process and its children are killed if context is cancelled
 	go func() {
 		<-ctx.Done()
-		if cmd.Process != nil {
-			// Kill the entire process group to ensure child processes (browsers) are also killed
-			pgid, err := syscall.Getpgid(cmd.Process.Pid)
-			if err != nil {
-				// Fallback to killing just the process
-				_ = cmd.Process.Kill()
-				return
-			}
-			
-			// Send SIGTERM to the process group first (graceful)
-			_ = syscall.Kill(-pgid, syscall.SIGTERM)
-			
-			// Wait a bit, then send SIGKILL if needed
-			go func() {
-				time.Sleep(2 * time.Second)
-				_ = syscall.Kill(-pgid, syscall.SIGKILL)
-			}()
-		}
+		killProcessGroup(cmd)
 	}()
 	
 	err = cmd.Start()
