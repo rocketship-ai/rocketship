@@ -1,59 +1,169 @@
-# Environment Variables
+# Variables
 
-Access system environment variables in your tests using `{{ .env.VARIABLE_NAME }}` syntax.
+Rocketship supports three types of variables for parameterizing your tests:
 
-## Basic Usage
+- **Environment Variables**: `{{ .env.VAR_NAME }}` - System env vars and secrets
+- **Config Variables**: `{{ .vars.variable_name }}` - Non-sensitive configuration  
+- **Runtime Variables**: `{{ variable_name }}` - Values captured during test execution
+
+## Environment Variables
+
+### Using --env-file (Recommended)
+
+Create a `.env` file:
+```bash
+# .env
+API_BASE_URL=https://api.staging.com
+API_KEY=sk-staging-key-123
+DATABASE_URL=postgres://user:pass@localhost/db
+```
+
+Run with env file:
+```bash
+rocketship run -af test.yaml --env-file .env
+```
+
+Access in tests:
+```yaml
+- name: "API request"
+  plugin: "http"
+  config:
+    url: "{{ .env.API_BASE_URL }}/users"
+    headers:
+      "Authorization": "Bearer {{ .env.API_KEY }}"
+```
+
+### Multi-Environment Setup
+
+```
+project/
+├── .env.example      # Template (commit this)
+├── .env             # Local development (gitignore)
+├── .env.staging     # Staging values (gitignore)
+├── .env.production  # Production values (gitignore)
+└── tests/api.yaml
+```
+
+Usage:
+```bash
+# Local
+rocketship run -af test.yaml --env-file .env
+
+# Staging  
+rocketship run -af test.yaml --env-file .env.staging
+
+# Production
+rocketship run -af test.yaml --env-file .env.production
+```
+
+### CI/CD Integration
+
+**GitHub Actions:**
+```yaml
+- name: Run tests
+  env:
+    API_KEY: ${{ secrets.API_KEY }}
+    DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  run: rocketship run -af test.yaml
+```
+
+**GitLab CI:**
+```yaml
+test:
+  script: rocketship run -af test.yaml
+  variables:
+    API_KEY: $CI_API_KEY
+    DATABASE_URL: $CI_DATABASE_URL
+```
+
+### Precedence
+
+Environment variables follow this precedence:
+
+1. **System environment variables** (highest priority)
+2. **Variables from `--env-file`**
+3. **Default values in test files**
+
+System env vars are never overridden by file values.
+
+## Config Variables
+
+Define reusable configuration in the `vars` section:
 
 ```yaml
-- name: "API request with environment variables"
+vars:
+  base_url: "https://api.staging.com"
+  timeout: 30
+  auth:
+    header_name: "X-API-Key" 
+    token: "test-key-123"
+
+tests:
+  - name: "API test"
+    steps:
+      - name: "Create resource"
+        plugin: "http"
+        config:
+          url: "{{ .vars.base_url }}/resources"
+          headers:
+            "{{ .vars.auth.header_name }}": "{{ .vars.auth.token }}"
+          timeout: "{{ .vars.timeout }}s"
+```
+
+### CLI Overrides
+
+```bash
+# Override variables
+rocketship run -af test.yaml \
+  --var base_url=https://api.production.com \
+  --var auth.token=prod-key-456
+
+# Use variable files
+rocketship run -af test.yaml --var-file prod-vars.yaml
+```
+
+### Variable Files
+
+Create `prod-vars.yaml`:
+```yaml
+base_url: "https://api.production.com"
+environment: "production"
+auth:
+  token: "prod-key-456"
+timeout: 60
+```
+
+### Precedence
+
+Config variables follow this precedence:
+
+1. **CLI Variables** (`--var key=value`)
+2. **Variable Files** (`--var-file vars.yaml`)
+3. **YAML vars section**
+
+## Runtime Variables
+
+Capture values during test execution:
+
+```yaml
+- name: "Create user"
   plugin: "http"
   config:
     method: "POST"
-    url: "{{ .env.API_BASE_URL }}/users"
-    headers:
-      "Authorization": "Bearer {{ .env.API_TOKEN }}"
-      "X-User": "{{ .env.USER }}"
-    body: |-
-      {
-        "username": "{{ .env.USER }}",
-        "api_key": "{{ .env.API_KEY }}"
-      }
-```
+    url: "{{ .vars.base_url }}/users"
+  save:
+    - json_path: ".id"
+      as: "user_id"
 
-## SQL Connections
-
-```yaml
-- name: "Database query"
-  plugin: "sql"
+- name: "Get user"
+  plugin: "http"  
   config:
-    driver: "postgres"
-    dsn: "postgres://{{ .env.DB_USER }}:{{ .env.DB_PASSWORD }}@{{ .env.DB_HOST }}/{{ .env.DB_NAME }}"
-    commands:
-      - "SELECT * FROM users WHERE created_by = '{{ .env.USER }}';"
+    url: "{{ .vars.base_url }}/users/{{ user_id }}"
 ```
 
-## Script Integration
+## Mixed Usage
 
-Environment variables work in JavaScript code:
-
-```yaml
-- name: "Process environment data"
-  plugin: "script"
-  config:
-    language: "javascript"
-    script: |
-      // Access environment variables
-      let systemUser = "{{ .env.USER }}";
-      let homeDir = "{{ .env.HOME }}";
-      let shell = "{{ .env.SHELL }}";
-      
-      // Process and save for later steps
-      save("processed_user", systemUser.toUpperCase());
-      save("user_home", homeDir);
-      save("user_shell", shell);
-```
-
-## Mixed with Other Variables
+Combine all variable types:
 
 ```yaml
 vars:
@@ -72,79 +182,94 @@ tests:
           - json_path: ".id"
             as: "resource_id"
 
-      - name: "Get resource"
+      - name: "Get resource"  
         plugin: "http"
         config:
           url: "{{ .env.API_BASE_URL }}/{{ .vars.api_version }}/resources/{{ resource_id }}"
 ```
 
-## Escaping
+## Handlebars Escaping
 
-Environment variables support handlebars escaping:
+When APIs use handlebars syntax (`{{ }}`), escape with backslashes:
 
+```yaml
+# Normal variable processing
+"message": "Hello {{ user_name }}"
+
+# Escaped (literal handlebars)
+"template": "Use \\{{ user_id }} in API"     # Outputs: Use {{ user_id }} in API
+```
+
+**Multiple escape levels:**
+```yaml
+# 1 backslash (odd) → literal handlebars
+"docs": "Use \\{{ variable }}"              # → Use {{ variable }}
+
+# 2 backslashes (even) → backslash + processed variable
+"path": "\\\\{{ .vars.api_path }}"          # → \staging/api
+
+# 3 backslashes (odd) → backslash + literal handlebars  
+"example": "\\\\\\{{ variable }}"           # → \{{ variable }}
+```
+
+**In JSON contexts:**
 ```yaml
 body: |-
   {
-    "user": "{{ .env.USER }}",
-    "docs": "Set \\{{ .env.API_KEY }} to configure"
+    "instructions": "Use \\{{ user_id }} in requests",
+    "template": "Syntax: \\{{ variable_name }} for literals"
   }
 ```
 
-## Setting Environment Variables
+## Best Practices
 
-### Option 1: Using --env-file (Recommended)
-
+### Security
 ```bash
-# Create .env file
-echo "API_TOKEN=your_token" > .env
-echo "DB_URL=postgres://user:pass@localhost/db" >> .env
-
-# Run with env file
-rocketship run -af test.yaml --env-file .env
+# .gitignore
+.env
+.env.*
+!.env.example
 ```
 
-### Option 2: Command line
+### Environment Variables vs Config Variables
 
-```bash
-# Inline
-API_TOKEN=your_token rocketship run -af test.yaml
+- **Environment Variables (`{{ .env.* }}`)**: API keys, secrets, environment-specific URLs
+- **Config Variables (`{{ .vars.* }}`)**: Test data, timeouts, non-sensitive configuration
+- **Runtime Variables (`{{ variable }}`)**: Values captured during test execution
 
-# Export for session
-export API_TOKEN=your_token
-export DB_URL=postgres://user:pass@localhost/db
-rocketship run -af test.yaml
-```
-
-## Common Variables
+### Variable Validation
 
 ```yaml
-"{{ .env.USER }}"         # Current username
-"{{ .env.HOME }}"         # Home directory
-"{{ .env.API_KEY }}"      # API key
-"{{ .env.API_TOKEN }}"    # Bearer token
-"{{ .env.DATABASE_URL }}" # Database connection
-"{{ .env.NODE_ENV }}"     # Environment name
+- name: "Validate environment"
+  plugin: "script"
+  config:
+    language: "javascript"
+    script: |
+      const required = ['API_KEY', 'DATABASE_URL'];
+      const missing = required.filter(key => !process.env[key]);
+      
+      if (missing.length > 0) {
+        throw new Error(`Missing env vars: ${missing.join(', ')}`);
+      }
 ```
 
-Missing environment variables are treated as empty strings.
+### Default Values
 
-## Working Examples
+```yaml
+config:
+  timeout: "{{ .env.TIMEOUT_SECONDS | default '30' }}s"
+  retries: "{{ .env.MAX_RETRIES | default '3' }}"
+```
 
-See environment variables in action in these examples:
+## Examples
 
 ```bash
-# HTTP plugin with environment variables
-rocketship run -af examples/config-variables/rocketship.yaml
+# Basic environment variables
+rocketship run -af test.yaml --env-file .env
 
-# SQL plugin with environment variables
-rocketship run -af examples/sql-testing/rocketship.yaml
+# Config variables with overrides
+rocketship run -af test.yaml --var environment=production
 
-# Script plugin with environment variables  
-rocketship run -af examples/custom-scripting/rocketship.yaml
+# Mixed usage
+rocketship run -af test.yaml --env-file .env --var-file prod-vars.yaml
 ```
-
-These examples demonstrate:
-- Environment variables in HTTP headers and request bodies
-- Database connection strings using environment variables
-- JavaScript code processing environment variables
-- Mixed usage with config and runtime variables

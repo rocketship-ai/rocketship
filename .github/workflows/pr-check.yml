@@ -100,6 +100,15 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      # Environment variables for environment-variables example
+      API_BASE_URL: https://tryme.rocketship.sh
+      API_TOKEN: ci-test-token
+      API_KEY: ci-test-key-123
+      ENVIRONMENT: ci
+      NODE_ENV: test
+      APP_NAME: Rocketship CI Tests
+      MAX_RETRIES: 3
+      TIMEOUT_SECONDS: 30
     services:
       postgres:
         image: postgres:13
