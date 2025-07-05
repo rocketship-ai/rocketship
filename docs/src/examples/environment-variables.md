@@ -92,8 +92,21 @@ body: |-
 
 ## Setting Environment Variables
 
+### Option 1: Using --env-file (Recommended)
+
 ```bash
-# Command line
+# Create .env file
+echo "API_TOKEN=your_token" > .env
+echo "DB_URL=postgres://user:pass@localhost/db" >> .env
+
+# Run with env file
+rocketship run -af test.yaml --env-file .env
+```
+
+### Option 2: Command line
+
+```bash
+# Inline
 API_TOKEN=your_token rocketship run -af test.yaml
 
 # Export for session

@@ -1,0 +1,86 @@
+name: "Environment Variables Example"
+description: "Demonstrates using environment variables with --env-file flag"
+version: "v1.0.0"
+
+tests:
+  - name: "Environment Variables Demo"
+    steps:
+      - name: "Log environment info"
+        plugin: "log"
+        config:
+          message: "🌍 Testing with environment: {{ .env.ENVIRONMENT }}, API URL: {{ .env.API_BASE_URL }}"
+
+      - name: "API request with env vars"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "{{ .env.API_BASE_URL }}/books"
+          headers:
+            "Authorization": "Bearer {{ .env.API_TOKEN }}"
+            "X-API-Key": "{{ .env.API_KEY }}"
+            "X-Environment": "{{ .env.ENVIRONMENT }}"
+            "X-Node-Env": "{{ .env.NODE_ENV }}"
+          body: |
+            {
+              "title": "Environment Variables Test",
+              "author": "{{ .env.USER }}",
+              "environment": "{{ .env.ENVIRONMENT }}",
+              "app_name": "{{ .env.APP_NAME }}"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "book_id"
+
+      - name: "Log created resource"
+        plugin: "log"
+        config:
+          message: "✅ Created book {{ book_id }} in {{ .env.ENVIRONMENT }} environment"
+
+      - name: "Demonstrate mixed variables"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ .env.API_BASE_URL }}/books/{{ book_id }}"
+          headers:
+            "X-API-Key": "{{ .env.API_KEY }}"
+        assertions:
+          - type: "status_code"
+            expected: 200
+
+      - name: "Script with env vars"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Access environment variables in scripts
+            let apiUrl = "{{ .env.API_BASE_URL }}";
+            let environment = "{{ .env.ENVIRONMENT }}";
+            let maxRetries = parseInt("{{ .env.MAX_RETRIES }}") || 3;
+            let timeout = parseInt("{{ .env.TIMEOUT_SECONDS }}") || 30;
+            
+            console.log(`Running in ${environment} environment`);
+            console.log(`API URL: ${apiUrl}`);
+            console.log(`Max retries: ${maxRetries}, Timeout: ${timeout}s`);
+            
+            // Save processed values
+            save("processed_env", environment.toUpperCase());
+            save("retry_config", `${maxRetries} retries with ${timeout}s timeout`);
+
+      - name: "Verify script processing"
+        plugin: "log"
+        config:
+          message: "Script processed: {{ processed_env }} - Config: {{ retry_config }}"
+
+      - name: "Cleanup"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "{{ .env.API_BASE_URL }}/books/{{ book_id }}"
+          headers:
+            "X-API-Key": "{{ .env.API_KEY }}"
+        assertions:
+          - type: "status_code"
+            expected: 204

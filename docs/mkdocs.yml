@@ -68,6 +68,7 @@ nav:
       - Parameterizing Tests:
           - All About Variables: examples/config-variables.md
           - Environment Variables: examples/environment-variables.md
+          - Environment Files: examples/env-file.md
           - Handlebars Escaping: examples/handlebars-escaping.md
       - Custom Scripting:
           - JavaScript Integration: examples/custom-scripting.md

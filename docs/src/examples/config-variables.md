@@ -11,7 +11,13 @@ This example demonstrates how to use configuration variables in Rocketship test 
 - **CLI Overrides**: Override config variables from the command line
 - **Variable Files**: Load variables from external files
 
-For information about environment variables, see the [Environment Variables guide](environment-variables.md).
+For information about environment variables, see the [Environment Variables guide](environment-variables.md) and [Environment Files guide](env-file.md).
+
+## When to Use Each Variable Type
+
+- **Config Variables (`{{ .vars.* }}`)**: Non-sensitive configuration, test data, mock responses
+- **Environment Variables (`{{ .env.* }}`)**: Secrets, API keys, environment-specific values
+- **Runtime Variables (`{{ variable }}`)**: Values captured during test execution
 
 ### Configuration Variables Section
 
