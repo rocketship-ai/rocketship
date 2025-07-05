@@ -8,9 +8,9 @@ Rocketship comes with example test suites that demonstrate different features an
 
 - [Request Chaining & Delays](examples/request-chaining.md) - Learn how to chain HTTP requests, handle responses, and use delays in your test suites
 
-### Configuration & Variables
+### Variables
 
-- [Configuration Variables](examples/config-variables.md) - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files
+- [Variables](examples/variables.md) - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files
 
 ### Database Testing
 
@@ -64,7 +64,8 @@ rocketship run -f examples/sql-testing/rocketship.yaml -e localhost:7700
 ```
 
 The SQL examples use local test databases with pre-populated sample data:
-- **PostgreSQL**: Available at `localhost:5433` 
+
+- **PostgreSQL**: Available at `localhost:5433`
 - **MySQL**: Available at `localhost:3307`
 
 You can find the test server's source code in the `for-contributors/test-server` directory.

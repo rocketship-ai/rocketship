@@ -399,6 +399,22 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
+			envFile, err := cmd.Flags().GetString("env-file")
+			if err != nil {
+				return err
+			}
+
+			// Load environment variables from file if specified
+			if envFile != "" {
+				envVars, err := loadEnvFile(envFile)
+				if err != nil {
+					return fmt.Errorf("failed to load env file: %w", err)
+				}
+				if err := setEnvironmentVariables(envVars); err != nil {
+					return fmt.Errorf("failed to set environment variables: %w", err)
+				}
+			}
+
 			// Get timestamp flag
 			showTimestamp, err := cmd.Flags().GetBool("timestamp")
 			if err != nil {
@@ -523,6 +539,7 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")
+	cmd.Flags().StringP("env-file", "", "", "Load environment variables from .env file")
 	cmd.Flags().BoolP("timestamp", "t", false, "Show timestamps in log output")
 
 	// Context flags for enhanced metadata tracking
