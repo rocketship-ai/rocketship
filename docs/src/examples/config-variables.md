@@ -11,7 +11,7 @@ This example demonstrates how to use configuration variables in Rocketship test 
 - **CLI Overrides**: Override config variables from the command line
 - **Variable Files**: Load variables from external files
 
-For information about environment variables, see the [Environment Variables guide](environment-variables.md) and [Environment Files guide](env-file.md).
+For information about environment variables, see the [Environment Variables guide](environment-variables.md).
 
 ## When to Use Each Variable Type
 
