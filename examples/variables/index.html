@@ -8,10 +8,10 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/examples/handlebars-escaping/">
+        <link rel="canonical" href="https://docs.rocketship.sh/examples/variables/">
       
       
-        <link rel="prev" href="../environment-variables/">
+        <link rel="prev" href="../supabase-testing/">
       
       
         <link rel="next" href="../custom-scripting/">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Handlebars Escaping - Rocketship CLI</title>
+        <title>All About Variables - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#handlebars-escaping" class="md-skip">
+        <a href="#variables" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Handlebars Escaping
+              All About Variables
             
           </span>
         </div>
@@ -698,10 +698,6 @@
       
         
       
-        
-      
-        
-      
     
     
       
@@ -736,48 +732,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../config-variables/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    All About Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../environment-variables/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Environment Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -794,7 +748,7 @@
           
   
   <span class="md-ellipsis">
-    Handlebars Escaping
+    All About Variables
   </span>
   
 
@@ -805,7 +759,7 @@
         
   
   <span class="md-ellipsis">
-    Handlebars Escaping
+    All About Variables
   </span>
   
 
@@ -827,37 +781,46 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#variable-types" class="md-nav__link">
+  <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Variable Types
+      Environment Variables
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-escaping-syntax" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic Escaping Syntax
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#unlimited-escape-levels" class="md-nav__link">
-    <span class="md-ellipsis">
-      Unlimited Escape Levels
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Unlimited Escape Levels">
+    <nav class="md-nav" aria-label="Environment Variables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#using-env-file-recommended" class="md-nav__link">
     <span class="md-ellipsis">
-      Examples
+      Using --env-file (Recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-environment-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi-Environment Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cicd-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      CI/CD Integration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Precedence
     </span>
   </a>
   
@@ -869,73 +832,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#json-context-considerations" class="md-nav__link">
+  <a href="#config-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      JSON Context Considerations
+      Config Variables
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-working-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Complete Working Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sql-context-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      SQL Context Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#common-use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Common Use Cases
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Common Use Cases">
+    <nav class="md-nav" aria-label="Config Variables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-api-documentation" class="md-nav__link">
+  <a href="#cli-overrides" class="md-nav__link">
     <span class="md-ellipsis">
-      1. API Documentation
+      CLI Overrides
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-template-systems" class="md-nav__link">
+  <a href="#variable-files" class="md-nav__link">
     <span class="md-ellipsis">
-      2. Template Systems
+      Variable Files
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-configuration-examples" class="md-nav__link">
+  <a href="#precedence_1" class="md-nav__link">
     <span class="md-ellipsis">
-      3. Configuration Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-code-generation" class="md-nav__link">
-    <span class="md-ellipsis">
-      4. Code Generation
+      Precedence
     </span>
   </a>
   
@@ -947,9 +874,27 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
+  <a href="#runtime-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      How It Works
+      Runtime Variables
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mixed-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mixed Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handlebars-escaping" class="md-nav__link">
+    <span class="md-ellipsis">
+      Handlebars Escaping
     </span>
   </a>
   
@@ -966,36 +911,36 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-use-block-literals-for-json" class="md-nav__link">
+  <a href="#security" class="md-nav__link">
     <span class="md-ellipsis">
-      1. Use Block Literals for JSON
+      Security
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-test-your-escaping" class="md-nav__link">
+  <a href="#environment-variables-vs-config-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      2. Test Your Escaping
+      Environment Variables vs Config Variables
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-document-your-intent" class="md-nav__link">
+  <a href="#variable-validation" class="md-nav__link">
     <span class="md-ellipsis">
-      3. Document Your Intent
+      Variable Validation
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-start-simple" class="md-nav__link">
+  <a href="#default-values" class="md-nav__link">
     <span class="md-ellipsis">
-      4. Start Simple
+      Default Values
     </span>
   </a>
   
@@ -1007,9 +952,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-the-examples" class="md-nav__link">
+  <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
-      Running the Examples
+      Examples
     </span>
   </a>
   
@@ -1848,37 +1793,46 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#variable-types" class="md-nav__link">
+  <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Variable Types
+      Environment Variables
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-escaping-syntax" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic Escaping Syntax
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#unlimited-escape-levels" class="md-nav__link">
-    <span class="md-ellipsis">
-      Unlimited Escape Levels
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Unlimited Escape Levels">
+    <nav class="md-nav" aria-label="Environment Variables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#using-env-file-recommended" class="md-nav__link">
     <span class="md-ellipsis">
-      Examples
+      Using --env-file (Recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-environment-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multi-Environment Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cicd-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      CI/CD Integration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Precedence
     </span>
   </a>
   
@@ -1890,73 +1844,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#json-context-considerations" class="md-nav__link">
+  <a href="#config-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      JSON Context Considerations
+      Config Variables
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-working-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Complete Working Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sql-context-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      SQL Context Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#common-use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Common Use Cases
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Common Use Cases">
+    <nav class="md-nav" aria-label="Config Variables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-api-documentation" class="md-nav__link">
+  <a href="#cli-overrides" class="md-nav__link">
     <span class="md-ellipsis">
-      1. API Documentation
+      CLI Overrides
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-template-systems" class="md-nav__link">
+  <a href="#variable-files" class="md-nav__link">
     <span class="md-ellipsis">
-      2. Template Systems
+      Variable Files
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-configuration-examples" class="md-nav__link">
+  <a href="#precedence_1" class="md-nav__link">
     <span class="md-ellipsis">
-      3. Configuration Examples
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-code-generation" class="md-nav__link">
-    <span class="md-ellipsis">
-      4. Code Generation
+      Precedence
     </span>
   </a>
   
@@ -1968,9 +1886,27 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
+  <a href="#runtime-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      How It Works
+      Runtime Variables
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mixed-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mixed Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handlebars-escaping" class="md-nav__link">
+    <span class="md-ellipsis">
+      Handlebars Escaping
     </span>
   </a>
   
@@ -1987,36 +1923,36 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-use-block-literals-for-json" class="md-nav__link">
+  <a href="#security" class="md-nav__link">
     <span class="md-ellipsis">
-      1. Use Block Literals for JSON
+      Security
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-test-your-escaping" class="md-nav__link">
+  <a href="#environment-variables-vs-config-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      2. Test Your Escaping
+      Environment Variables vs Config Variables
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-document-your-intent" class="md-nav__link">
+  <a href="#variable-validation" class="md-nav__link">
     <span class="md-ellipsis">
-      3. Document Your Intent
+      Variable Validation
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-start-simple" class="md-nav__link">
+  <a href="#default-values" class="md-nav__link">
     <span class="md-ellipsis">
-      4. Start Simple
+      Default Values
     </span>
   </a>
   
@@ -2028,9 +1964,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#running-the-examples" class="md-nav__link">
+  <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
-      Running the Examples
+      Examples
     </span>
   </a>
   
@@ -2054,183 +1990,222 @@
   
 
 
-<h1 id="handlebars-escaping">Handlebars Escaping</h1>
-<p>When your APIs or databases use handlebars syntax (<code>{{ }}</code>) for their own templating, you need a way to include literal handlebars in your test data without Rocketship trying to process them as variables. Rocketship provides unlimited-level handlebars escaping using backslashes.</p>
-<h2 id="variable-types">Variable Types</h2>
-<p>Rocketship supports multiple types of variables:</p>
+<h1 id="variables">Variables</h1>
+<p>Rocketship supports three types of variables for parameterizing your tests:</p>
 <ul>
-<li><strong>Config variables</strong>: <code>{{ .vars.variable_name }}</code> - Defined in the <code>vars</code> section</li>
-<li><strong>Runtime variables</strong>: <code>{{ variable_name }}</code> - Generated during test execution (from <code>save</code> operations)</li>
-<li><strong>Environment variables</strong>: <code>{{ .env.VARIABLE_NAME }}</code> - System environment variables</li>
+<li><strong>Environment Variables</strong>: <code>{{ .env.VAR_NAME }}</code> - System env vars and secrets</li>
+<li><strong>Config Variables</strong>: <code>{{ .vars.variable_name }}</code> - Non-sensitive configuration  </li>
+<li><strong>Runtime Variables</strong>: <code>{{ variable_name }}</code> - Values captured during test execution</li>
 </ul>
-<p>All variable types support escaping using the same backslash syntax. For detailed information about environment variables, see the <a href="../environment-variables/">Environment Variables guide</a>.</p>
-<h2 id="basic-escaping-syntax">Basic Escaping Syntax</h2>
-<p>Use backslashes (<code>\</code>) before handlebars to escape them:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Normal variable processing</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">&quot;message&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Hello</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_name</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">           </span><span class="c1"># Processes as variable</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Escaped handlebars (literal)</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">&quot;template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">API&quot;</span><span class="w">    </span><span class="c1"># Outputs: Use {{ user_id }} in API</span>
+<h2 id="environment-variables">Environment Variables</h2>
+<h3 id="using-env-file-recommended">Using --env-file (Recommended)</h3>
+<p>Create a <code>.env</code> file:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># .env</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">API_BASE_URL</span><span class="o">=</span>https://api.staging.com
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">API_KEY</span><span class="o">=</span>sk-staging-key-123
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://user:pass@localhost/db
+</code></pre></div></p>
+<p>Run with env file:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
+</code></pre></div></p>
+<p>Access in tests:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API</span><span class="nv"> </span><span class="s">request&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="s">&quot;Authorization&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.API_KEY</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div></p>
+<h3 id="multi-environment-setup">Multi-Environment Setup</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>project/
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├── .env.example      # Template (commit this)
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├── .env             # Local development (gitignore)
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>├── .env.staging     # Staging values (gitignore)
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── .env.production  # Production values (gitignore)
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>└── tests/api.yaml
 </code></pre></div>
-<h2 id="unlimited-escape-levels">Unlimited Escape Levels</h2>
-<p>Rocketship supports unlimited levels of backslash escaping using a mathematical algorithm:</p>
-<ul>
-<li><strong>Odd number of backslashes</strong>: Produces literal handlebars</li>
-<li><strong>Even number of backslashes</strong>: Processes variables with remaining backslashes</li>
-</ul>
-<h3 id="examples">Examples</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># 1 backslash (odd) → literal handlebars</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s">&quot;example1&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Template:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Output: Template: {{ user_id }}</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># 2 backslashes (even) → backslash + processed variable  </span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="s">&quot;example2&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Path:</span><span class="nv"> </span><span class="s">\\\\{{</span><span class="nv"> </span><span class="s">.vars.api_path</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Output: Path: \staging/api</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># 3 backslashes (odd) → backslash + literal handlebars</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="s">&quot;example3&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Docs:</span><span class="nv"> </span><span class="s">\\\\\\{{</span><span class="nv"> </span><span class="s">variable_name</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Output: Docs: \{{ variable_name }}</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># 4 backslashes (even) → double backslash + processed variable</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="s">&quot;example4&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Config:</span><span class="nv"> </span><span class="s">\\\\\\\\{{</span><span class="nv"> </span><span class="s">.vars.environment</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Output: Config: \\staging</span>
-</code></pre></div>
-<h2 id="json-context-considerations">JSON Context Considerations</h2>
-<p>When using escaped handlebars in JSON, remember that JSON has its own escaping rules. In YAML files, you may need to double backslashes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># In YAML block literal (recommended)</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|-</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="no">{</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="no">&quot;instructions&quot;: &quot;Use \\{{ user_id }} in your requests&quot;,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="no">&quot;template_guide&quot;: &quot;Syntax: \\{{ variable_name }} for literals&quot;</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="no">}</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># In YAML quoted strings (requires more escaping)</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="no">{</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="no">&quot;instructions&quot;: &quot;Use \\\\{{ user_id }} in your requests&quot;</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="no">}</span>
-</code></pre></div>
-<h2 id="complete-working-example">Complete Working Example</h2>
-<p>Here's a real example from the config-variables test suite:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Handlebars</span><span class="nv"> </span><span class="s">Escaping</span><span class="nv"> </span><span class="s">Demo&quot;</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v1.0.0&quot;</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nt">vars</span><span class="p">:</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://tryme.rocketship.sh&quot;</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">environment</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;staging&quot;</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="nt">tests</span><span class="p">:</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Config</span><span class="nv"> </span><span class="s">Variables</span><span class="nv"> </span><span class="s">Demo&quot;</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Demo</span><span class="nv"> </span><span class="s">handlebars</span><span class="nv"> </span><span class="s">escaping</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">body&quot;</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST&quot;</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/books&quot;</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">            </span><span class="s">&quot;Content-Type&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">          </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|-</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">            </span><span class="no">{</span>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">              </span><span class="no">&quot;title&quot;: &quot;Handlebars Escaping Demo&quot;,</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">              </span><span class="no">&quot;author&quot;: &quot;{{ .vars.environment }}&quot;,</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">              </span><span class="no">&quot;description&quot;: &quot;Normal var: {{ .vars.environment }}, Escaped: \\{{ user_id }}&quot;,</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">              </span><span class="no">&quot;api_docs&quot;: &quot;Use \\{{ user_id }} in your requests&quot;,</span>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">              </span><span class="no">&quot;template_guide&quot;: &quot;Syntax: \\{{ variable_name }} for literals&quot;,</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">              </span><span class="no">&quot;mixed_example&quot;: &quot;Real: {{ .vars.environment }}, Literal: \\{{ placeholder }}&quot;</span>
-<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">            </span><span class="no">}</span>
-<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="w">        </span><span class="nt">assertions</span><span class="p">:</span>
-<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;status_code&quot;</span>
-<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="w">            </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
-<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json_path&quot;</span>
-<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.description&quot;</span>
-<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="w">            </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Normal</span><span class="nv"> </span><span class="s">var:</span><span class="nv"> </span><span class="s">staging,</span><span class="nv"> </span><span class="s">Escaped:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json_path&quot;</span>
-<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a><span class="w">            </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.api_docs&quot;</span>
-<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a><span class="w">            </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">requests&quot;</span>
-</code></pre></div>
-<h2 id="sql-context-example">SQL Context Example</h2>
-<p>Handlebars escaping also works in SQL statements:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Demo</span><span class="nv"> </span><span class="s">handlebars</span><span class="nv"> </span><span class="s">escaping</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">SQL&quot;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sql</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.postgres_dsn</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">commands</span><span class="p">:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">|-</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="no">INSERT INTO users (name, instructions) </span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="no">VALUES (&#39;{{ .vars.test_user_name }}&#39;, &#39;Use \\{{ user_token }} for auth&#39;);</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="nt">assertions</span><span class="p">:</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">column_value</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">      </span><span class="nt">query_index</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">      </span><span class="nt">row_index</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">      </span><span class="nt">column</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;instructions&quot;</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_token</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">auth&quot;</span>
-</code></pre></div>
-<h2 id="common-use-cases">Common Use Cases</h2>
-<h3 id="1-api-documentation">1. API Documentation</h3>
-<p>When testing APIs that return documentation containing template syntax:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="s">&quot;help_text&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">api_key</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">requests&quot;</span>
-</code></pre></div>
-<h3 id="2-template-systems">2. Template Systems</h3>
-<p>When testing systems that process their own templates:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="s">&quot;mustache_template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Hello</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">name</span><span class="nv"> </span><span class="s">}},</span><span class="nv"> </span><span class="s">welcome</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">site_name</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="s">&quot;handlebars_template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;{{#each</span><span class="nv"> </span><span class="s">items}}\\{{</span><span class="nv"> </span><span class="s">this.name</span><span class="nv"> </span><span class="s">}}{{/each}}&quot;</span>
-</code></pre></div>
-<h3 id="3-configuration-examples">3. Configuration Examples</h3>
-<p>When testing APIs that return configuration examples:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="s">&quot;config_example&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;api_url:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">environment.api_url</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="s">&quot;yaml_template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;name:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">project.name</span><span class="nv"> </span><span class="s">}}\\nversion:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">project.version</span><span class="nv"> </span><span class="s">}}&quot;</span>
-</code></pre></div>
-<h3 id="4-code-generation">4. Code Generation</h3>
-<p>When testing code generation APIs:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="s">&quot;javascript_template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;const</span><span class="nv"> </span><span class="s">userId</span><span class="nv"> </span><span class="s">=</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user.id</span><span class="nv"> </span><span class="s">}};&quot;</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="s">&quot;go_template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;UserID:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">.User.ID</span><span class="nv"> </span><span class="s">}}&quot;</span>
-</code></pre></div>
-<h2 id="how-it-works">How It Works</h2>
-<p>Rocketship's escaping algorithm:</p>
+<p>Usage:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Local</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Staging  </span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env.staging
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Production</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env.production
+</code></pre></div></p>
+<h3 id="cicd-integration">CI/CD Integration</h3>
+<p><strong>GitHub Actions:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run tests</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">API_KEY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.API_KEY }}</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">DATABASE_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.DATABASE_URL }}</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rocketship run -af test.yaml</span>
+</code></pre></div></p>
+<p><strong>GitLab CI:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">test</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">script</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rocketship run -af test.yaml</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">variables</span><span class="p">:</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">API_KEY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$CI_API_KEY</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="nt">DATABASE_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$CI_DATABASE_URL</span>
+</code></pre></div></p>
+<h3 id="precedence">Precedence</h3>
+<p>Environment variables follow this precedence:</p>
 <ol>
-<li><strong>Counts consecutive backslashes</strong> before <code>{{ }}</code></li>
-<li><strong>Determines behavior</strong> based on count:</li>
-<li>Odd count: Treat as literal handlebars</li>
-<li>Even count: Process as variable</li>
-<li><strong>Calculates remaining backslashes</strong>: <code>count / 2</code> (integer division)</li>
-<li><strong>Outputs result</strong> with appropriate backslashes</li>
+<li><strong>System environment variables</strong> (highest priority)</li>
+<li><strong>Variables from <code>--env-file</code></strong></li>
+<li><strong>Default values in test files</strong></li>
 </ol>
-<p>This mathematical approach enables unlimited nesting levels, giving you complete control over handlebars rendering.</p>
-<h2 id="best-practices">Best Practices</h2>
-<h3 id="1-use-block-literals-for-json">1. Use Block Literals for JSON</h3>
-<p>Use YAML block literal syntax (<code>|-</code>) for cleaner JSON:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|-</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="no">{</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="no">&quot;template&quot;: &quot;Use \\{{ variable }} here&quot;</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="no">}</span>
+<p>System env vars are never overridden by file values.</p>
+<h2 id="config-variables">Config Variables</h2>
+<p>Define reusable configuration in the <code>vars</code> section:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">vars</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.staging.com&quot;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">auth</span><span class="p">:</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">header_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;X-API-Key&quot;</span><span class="w"> </span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-key-123&quot;</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API</span><span class="nv"> </span><span class="s">test&quot;</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">resource&quot;</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/resources&quot;</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">            </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.auth.header_name</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.auth.token</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.timeout</span><span class="nv"> </span><span class="s">}}s&quot;</span>
 </code></pre></div>
-<h3 id="2-test-your-escaping">2. Test Your Escaping</h3>
-<p>Always verify your escaping works by checking the actual output:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">assertions</span><span class="p">:</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;json_path&quot;</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.template&quot;</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">variable</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">here&quot;</span><span class="w">  </span><span class="c1"># Verify literal handlebars</span>
+<h3 id="cli-overrides">CLI Overrides</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Override variables</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--var<span class="w"> </span><span class="nv">base_url</span><span class="o">=</span>https://api.production.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--var<span class="w"> </span>auth.token<span class="o">=</span>prod-key-456
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="c1"># Use variable files</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--var-file<span class="w"> </span>prod-vars.yaml
 </code></pre></div>
-<h3 id="3-document-your-intent">3. Document Your Intent</h3>
-<p>Add comments to clarify when you're using escaping:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># This should output literal {{ user_id }}, not process as variable</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="s">&quot;instructions&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">calls&quot;</span>
+<h3 id="variable-files">Variable Files</h3>
+<p>Create <code>prod-vars.yaml</code>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.production.com&quot;</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">environment</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;production&quot;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nt">auth</span><span class="p">:</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;prod-key-456&quot;</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</code></pre></div></p>
+<h3 id="precedence_1">Precedence</h3>
+<p>Config variables follow this precedence:</p>
+<ol>
+<li><strong>CLI Variables</strong> (<code>--var key=value</code>)</li>
+<li><strong>Variable Files</strong> (<code>--var-file vars.yaml</code>)</li>
+<li><strong>YAML vars section</strong></li>
+</ol>
+<h2 id="runtime-variables">Runtime Variables</h2>
+<p>Capture values during test execution:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">user&quot;</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST&quot;</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">save</span><span class="p">:</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">json_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.id&quot;</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">      </span><span class="nt">as</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user_id&quot;</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Get</span><span class="nv"> </span><span class="s">user&quot;</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span><span class="w">  </span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/users/{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<h3 id="4-start-simple">4. Start Simple</h3>
-<p>Begin with single backslash escaping and only use multiple levels if needed:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Usually sufficient for most cases</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="s">&quot;example&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Template:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">variable</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<h2 id="mixed-usage">Mixed Usage</h2>
+<p>Combine all variable types:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">vars</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">api_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v1&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Mixed</span><span class="nv"> </span><span class="s">variables&quot;</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">resource&quot;</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/{{</span><span class="nv"> </span><span class="s">.vars.api_version</span><span class="nv"> </span><span class="s">}}/resources&quot;</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">            </span><span class="s">&quot;Authorization&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.API_TOKEN</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">        </span><span class="nt">save</span><span class="p">:</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">json_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.id&quot;</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">            </span><span class="nt">as</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;resource_id&quot;</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Get</span><span class="nv"> </span><span class="s">resource&quot;</span><span class="w">  </span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/{{</span><span class="nv"> </span><span class="s">.vars.api_version</span><span class="nv"> </span><span class="s">}}/resources/{{</span><span class="nv"> </span><span class="s">resource_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<h2 id="running-the-examples">Running the Examples</h2>
-<p>Test the handlebars escaping functionality:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Run config-variables example (includes escaping demo)</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/config-variables/rocketship.yaml
+<h2 id="handlebars-escaping">Handlebars Escaping</h2>
+<p>When APIs use handlebars syntax (<code>{{ }}</code>), escape with backslashes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Normal variable processing</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="s">&quot;message&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Hello</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_name</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Escaped (literal handlebars)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="s">&quot;template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">API&quot;</span><span class="w">     </span><span class="c1"># Outputs: Use {{ user_id }} in API</span>
+</code></pre></div>
+<p><strong>Multiple escape levels:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># 1 backslash (odd) → literal handlebars</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="s">&quot;docs&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">variable</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">              </span><span class="c1"># → Use {{ variable }}</span>
 <a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Run SQL escaping example  </span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/sql-testing/rocketship.yaml
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># 2 backslashes (even) → backslash + processed variable</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="s">&quot;path&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;\\\\{{</span><span class="nv"> </span><span class="s">.vars.api_path</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">          </span><span class="c1"># → \staging/api</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># 3 backslashes (odd) → backslash + literal handlebars  </span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="s">&quot;example&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;\\\\\\{{</span><span class="nv"> </span><span class="s">variable</span><span class="nv"> </span><span class="s">}}&quot;</span><span class="w">           </span><span class="c1"># → \{{ variable }}</span>
+</code></pre></div></p>
+<p><strong>In JSON contexts:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|-</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="no">{</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="no">&quot;instructions&quot;: &quot;Use \\{{ user_id }} in requests&quot;,</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="no">&quot;template&quot;: &quot;Syntax: \\{{ variable_name }} for literals&quot;</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span><span class="no">}</span>
+</code></pre></div></p>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="security">Security</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># .gitignore</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>.env
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>.env.*
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>!.env.example
 </code></pre></div>
-<p>The examples demonstrate real-world usage of handlebars escaping in both HTTP and SQL contexts.</p>
+<h3 id="environment-variables-vs-config-variables">Environment Variables vs Config Variables</h3>
+<ul>
+<li><strong>Environment Variables (<code>{{ .env.* }}</code>)</strong>: API keys, secrets, environment-specific URLs</li>
+<li><strong>Config Variables (<code>{{ .vars.* }}</code>)</strong>: Test data, timeouts, non-sensitive configuration</li>
+<li><strong>Runtime Variables (<code>{{ variable }}</code>)</strong>: Values captured during test execution</li>
+</ul>
+<h3 id="variable-validation">Variable Validation</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Validate</span><span class="nv"> </span><span class="s">environment&quot;</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;script&quot;</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;javascript&quot;</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">script</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">      </span><span class="no">const required = [&#39;API_KEY&#39;, &#39;DATABASE_URL&#39;];</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">      </span><span class="no">const missing = required.filter(key =&gt; !process.env[key]);</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">      </span><span class="no">if (missing.length &gt; 0) {</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">        </span><span class="no">throw new Error(`Missing env vars: ${missing.join(&#39;, &#39;)}`);</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">      </span><span class="no">}</span>
+</code></pre></div>
+<h3 id="default-values">Default Values</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.TIMEOUT_SECONDS</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">default</span><span class="nv"> </span><span class="s">&#39;30&#39;</span><span class="nv"> </span><span class="s">}}s&quot;</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.MAX_RETRIES</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">default</span><span class="nv"> </span><span class="s">&#39;3&#39;</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div>
+<h2 id="examples">Examples</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Basic environment variables</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Config variables with overrides</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--var<span class="w"> </span><span class="nv">environment</span><span class="o">=</span>production
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># Mixed usage</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env<span class="w"> </span>--var-file<span class="w"> </span>prod-vars.yaml
+</code></pre></div>
 
 
 

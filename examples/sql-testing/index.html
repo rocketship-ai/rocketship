@@ -1033,10 +1033,6 @@
       
         
       
-        
-      
-        
-      
     
     
       
@@ -1076,53 +1072,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../config-variables/" class="md-nav__link">
+      <a href="../variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     All About Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../environment-variables/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Environment Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../handlebars-escaping/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Handlebars Escaping
   </span>
   
 
@@ -2384,14 +2338,18 @@
 <a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nt">commands</span><span class="p">:</span>
 <a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;SELECT</span><span class="nv"> </span><span class="s">&#39;Normal:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.vars.test_user_name</span><span class="nv"> </span><span class="s">}},</span><span class="nv"> </span><span class="s">Escaped:</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">placeholder</span><span class="nv"> </span><span class="s">}}&#39;</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">mixed_example;&quot;</span>
 </code></pre></div>
-<p>In this example:
-- <code>{{ .vars.test_user_name }}</code> will be replaced with the actual variable value
-- <code>\\{{ placeholder }}</code> will render as literal <code>{{ placeholder }}</code> in the SQL query</p>
-<p>For multiple levels of escaping:
-- <code>\\{{ }}</code> → <code>{{ }}</code> (literal handlebars)
-- <code>\\\\{{ }}</code> → <code>\\{{ }}</code> (escaped backslash + handlebars variable)
-- <code>\\\\\\{{ }}</code> → <code>\\{{ }}</code> (literal escaped handlebars)</p>
-<p>See the <a href="../handlebars-escaping/">Handlebars Escaping guide</a> for more detailed examples and use cases.</p>
+<p>In this example:</p>
+<ul>
+<li><code>{{ .vars.test_user_name }}</code> will be replaced with the actual variable value</li>
+<li><code>\\{{ placeholder }}</code> will render as literal <code>{{ placeholder }}</code> in the SQL query</li>
+</ul>
+<p>For multiple levels of escaping:</p>
+<ul>
+<li><code>\\{{ }}</code> → <code>{{ }}</code> (literal handlebars)</li>
+<li><code>\\\\{{ }}</code> → <code>\\{{ }}</code> (escaped backslash + handlebars variable)</li>
+<li><code>\\\\\\{{ }}</code> → <code>\\{{ }}</code> (literal escaped handlebars)</li>
+</ul>
+<p>See the Handlebars Escaping section in (variables.md) for complete details and advanced usage.</p>
 <h2 id="complete-example">Complete Example</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;User</span><span class="nv"> </span><span class="s">Management</span><span class="nv"> </span><span class="s">Test&quot;</span>
 <a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v1.0.0&quot;</span>

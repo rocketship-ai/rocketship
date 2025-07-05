@@ -520,9 +520,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration-variables" class="md-nav__link">
+  <a href="#variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration &amp; Variables
+      Variables
     </span>
   </a>
   
@@ -820,10 +820,6 @@
       
         
       
-        
-      
-        
-      
     
     
       
@@ -863,53 +859,11 @@
   
   
     <li class="md-nav__item">
-      <a href="config-variables/" class="md-nav__link">
+      <a href="variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     All About Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="environment-variables/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Environment Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="handlebars-escaping/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Handlebars Escaping
   </span>
   
 
@@ -1762,9 +1716,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration-variables" class="md-nav__link">
+  <a href="#variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration &amp; Variables
+      Variables
     </span>
   </a>
   
@@ -1851,9 +1805,9 @@
 <ul>
 <li><a href="request-chaining/">Request Chaining &amp; Delays</a> - Learn how to chain HTTP requests, handle responses, and use delays in your test suites</li>
 </ul>
-<h3 id="configuration-variables">Configuration &amp; Variables</h3>
+<h3 id="variables">Variables</h3>
 <ul>
-<li><a href="config-variables/">Configuration Variables</a> - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files</li>
+<li><a href="variables/">Variables</a> - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files</li>
 </ul>
 <h3 id="database-testing">Database Testing</h3>
 <ul>
@@ -1898,9 +1852,11 @@
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Wait for databases to be ready, then run SQL tests</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>examples/sql-testing/rocketship.yaml<span class="w"> </span>-e<span class="w"> </span>localhost:7700
 </code></pre></div>
-<p>The SQL examples use local test databases with pre-populated sample data:
-- <strong>PostgreSQL</strong>: Available at <code>localhost:5433</code> 
-- <strong>MySQL</strong>: Available at <code>localhost:3307</code></p>
+<p>The SQL examples use local test databases with pre-populated sample data:</p>
+<ul>
+<li><strong>PostgreSQL</strong>: Available at <code>localhost:5433</code></li>
+<li><strong>MySQL</strong>: Available at <code>localhost:3307</code></li>
+</ul>
 <p>You can find the test server's source code in the <code>for-contributors/test-server</code> directory.</p>
 
 

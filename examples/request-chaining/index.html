@@ -781,10 +781,6 @@
       
         
       
-        
-      
-        
-      
     
     
       
@@ -824,53 +820,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../config-variables/" class="md-nav__link">
+      <a href="../variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     All About Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../environment-variables/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Environment Variables
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../handlebars-escaping/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Handlebars Escaping
   </span>
   
 
@@ -1872,7 +1826,7 @@
 <p><strong>Request Chaining</strong>:</p>
 <ol>
 <li>Creating multiple cars with different data</li>
-<li>Saving response values (JSON and headers) for later use  </li>
+<li>Saving response values (JSON and headers) for later use</li>
 <li>Using saved header values in subsequent request bodies</li>
 <li>Verifying changes across requests with variable substitution</li>
 </ol>
@@ -1905,7 +1859,7 @@
 <li><strong>Create first car</strong> - Save car ID, model (JSON) and server header value</li>
 <li><strong>Wait for system processing</strong> - 1 second delay</li>
 <li><strong>Create second car</strong> - Use saved header value in request body</li>
-<li><strong>Short delay</strong> - 500ms for consistency </li>
+<li><strong>Short delay</strong> - 500ms for consistency</li>
 <li><strong>List all cars</strong> - Verify both cars exist and header value was passed through</li>
 <li><strong>Cleanup</strong> - Delete both cars using saved IDs</li>
 </ol>
@@ -1945,7 +1899,7 @@
 <a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="nt">expected</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">your</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">calls&quot;</span>
 </code></pre></div>
 <p>The backslash (<code>\</code>) escapes the handlebars, making <code>\\{{ user_id }}</code> output literal <code>{{ user_id }}</code> instead of trying to process it as a variable.</p>
-<p>See the <a href="../handlebars-escaping/">Handlebars Escaping guide</a> for complete details and advanced usage.</p>
+<p>See the Handlebars Escaping section in (variables.md) for complete details and advanced usage.</p>
 
 
 
