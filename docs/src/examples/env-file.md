@@ -193,16 +193,26 @@ config:
 
 ## Precedence
 
-Environment variables are loaded in this order (highest to lowest precedence):
+Environment variables follow this precedence order:
 
-1. System environment variables (already set in shell)
-2. Variables from `--env-file`
-3. Default values in test files
+1. **System environment variables** (already set in shell) - **HIGHEST PRIORITY**
+2. **Variables from `--env-file`** - only set if not already in environment
+3. **Default values in test files** - used if variable not found
 
 This means:
-- System env vars override file values
-- You can mix both approaches
-- CI/CD secrets work seamlessly
+- System env vars are NEVER overridden by file values
+- You can use `--env-file` for defaults while allowing overrides
+- CI/CD secrets work seamlessly since they're set as system env vars
+- Local developers can override file values by exporting variables
+
+Example:
+```bash
+# .env file has API_KEY=default-key
+# But you can override for this session:
+export API_KEY=my-special-key
+rocketship run -af test.yaml --env-file .env
+# Uses API_KEY=my-special-key (system wins)
+```
 
 ## Complete Example
 

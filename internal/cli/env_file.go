@@ -62,8 +62,14 @@ func loadEnvFile(path string) (map[string]string, error) {
 }
 
 // setEnvironmentVariables sets the given environment variables in the current process
+// System environment variables take precedence and will not be overridden
 func setEnvironmentVariables(env map[string]string) error {
 	for key, value := range env {
+		// Check if the key already exists in the environment
+		if _, exists := os.LookupEnv(key); exists {
+			// Skip setting the variable if it already exists
+			continue
+		}
 		if err := os.Setenv(key, value); err != nil {
 			return fmt.Errorf("failed to set environment variable %s: %w", key, err)
 		}

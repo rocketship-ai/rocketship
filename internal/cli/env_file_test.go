@@ -86,7 +86,7 @@ ANOTHER_VALID=test
 func TestSetEnvironmentVariables(t *testing.T) {
 	// Save original env values
 	originalValues := make(map[string]string)
-	testKeys := []string{"TEST_ENV_VAR_1", "TEST_ENV_VAR_2"}
+	testKeys := []string{"TEST_ENV_VAR_1", "TEST_ENV_VAR_2", "TEST_ENV_VAR_3"}
 	for _, key := range testKeys {
 		originalValues[key] = os.Getenv(key)
 	}
@@ -102,16 +102,38 @@ func TestSetEnvironmentVariables(t *testing.T) {
 		}
 	}()
 
-	// Test setting environment variables
-	env := map[string]string{
-		"TEST_ENV_VAR_1": "value1",
-		"TEST_ENV_VAR_2": "value2",
-	}
+	t.Run("sets new environment variables", func(t *testing.T) {
+		// Make sure test vars are not already set
+		_ = os.Unsetenv("TEST_ENV_VAR_1")
+		_ = os.Unsetenv("TEST_ENV_VAR_2")
 
-	err := setEnvironmentVariables(env)
-	require.NoError(t, err)
+		// Test setting environment variables
+		env := map[string]string{
+			"TEST_ENV_VAR_1": "value1",
+			"TEST_ENV_VAR_2": "value2",
+		}
 
-	// Verify the environment variables were set
-	assert.Equal(t, "value1", os.Getenv("TEST_ENV_VAR_1"))
-	assert.Equal(t, "value2", os.Getenv("TEST_ENV_VAR_2"))
+		err := setEnvironmentVariables(env)
+		require.NoError(t, err)
+
+		// Verify the environment variables were set
+		assert.Equal(t, "value1", os.Getenv("TEST_ENV_VAR_1"))
+		assert.Equal(t, "value2", os.Getenv("TEST_ENV_VAR_2"))
+	})
+
+	t.Run("does not override existing environment variables", func(t *testing.T) {
+		// Set an existing environment variable
+		_ = os.Setenv("TEST_ENV_VAR_3", "existing_value")
+
+		// Try to override it
+		env := map[string]string{
+			"TEST_ENV_VAR_3": "new_value",
+		}
+
+		err := setEnvironmentVariables(env)
+		require.NoError(t, err)
+
+		// Verify the existing value was not overridden
+		assert.Equal(t, "existing_value", os.Getenv("TEST_ENV_VAR_3"))
+	})
 }
