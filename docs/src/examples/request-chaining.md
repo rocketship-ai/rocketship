@@ -110,7 +110,7 @@ tests:
 **Request Chaining**:
 
 1. Creating multiple cars with different data
-2. Saving response values (JSON and headers) for later use  
+2. Saving response values (JSON and headers) for later use
 3. Using saved header values in subsequent request bodies
 4. Verifying changes across requests with variable substitution
 
@@ -148,7 +148,7 @@ The example demonstrates a complete car management workflow with header operatio
 1. **Create first car** - Save car ID, model (JSON) and server header value
 2. **Wait for system processing** - 1 second delay
 3. **Create second car** - Use saved header value in request body
-4. **Short delay** - 500ms for consistency 
+4. **Short delay** - 500ms for consistency
 5. **List all cars** - Verify both cars exist and header value was passed through
 6. **Cleanup** - Delete both cars using saved IDs
 
@@ -193,4 +193,4 @@ When your APIs return or expect handlebars syntax (`{{ }}`), use backslash escap
 
 The backslash (`\`) escapes the handlebars, making `\\{{ user_id }}` output literal `{{ user_id }}` instead of trying to process it as a variable.
 
-See the [Handlebars Escaping guide](handlebars-escaping.md) for complete details and advanced usage.
+See the Handlebars Escaping section in (variables.md) for complete details and advanced usage.

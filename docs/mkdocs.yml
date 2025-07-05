@@ -66,9 +66,7 @@ nav:
       - Supabase Testing:
           - Full-Stack Database Testing: examples/supabase-testing.md
       - Parameterizing Tests:
-          - All About Variables: examples/config-variables.md
-          - Environment Variables: examples/environment-variables.md
-          - Handlebars Escaping: examples/handlebars-escaping.md
+          - All About Variables: examples/variables.md
       - Custom Scripting:
           - JavaScript Integration: examples/custom-scripting.md
           - Shell Scripting: examples/shell-scripting.md

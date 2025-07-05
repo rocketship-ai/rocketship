@@ -164,15 +164,17 @@ When your SQL queries contain literal handlebars syntax (e.g., for stored proced
 ```
 
 In this example:
+
 - `{{ .vars.test_user_name }}` will be replaced with the actual variable value
 - `\\{{ placeholder }}` will render as literal `{{ placeholder }}` in the SQL query
 
 For multiple levels of escaping:
+
 - `\\{{ }}` → `{{ }}` (literal handlebars)
 - `\\\\{{ }}` → `\\{{ }}` (escaped backslash + handlebars variable)
 - `\\\\\\{{ }}` → `\\{{ }}` (literal escaped handlebars)
 
-See the [Handlebars Escaping guide](handlebars-escaping.md) for more detailed examples and use cases.
+See the Handlebars Escaping section in (variables.md) for complete details and advanced usage.
 
 ## Complete Example
 
