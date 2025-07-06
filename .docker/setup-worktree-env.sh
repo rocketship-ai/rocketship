@@ -50,10 +50,23 @@ ENGINE_METRICS_PORT=$((7701 + PORT_OFFSET))
 POSTGRES_TEST_PORT=$((5433 + PORT_OFFSET))
 MYSQL_TEST_PORT=$((3307 + PORT_OFFSET))
 
-# Create .env file with unique project name
+# Create .env file with unique project name and Temporal versions
 cat > .docker/.env.local << EOF
 # Auto-generated environment file for worktree: ${WORKTREE_NAME}
 COMPOSE_PROJECT_NAME=${PROJECT_NAME}
+
+# Temporal environment variables (from original .env)
+CASSANDRA_VERSION=3.11.9
+ELASTICSEARCH_VERSION=7.17.27
+MYSQL_VERSION=8
+TEMPORAL_VERSION=1.27.2
+TEMPORAL_ADMINTOOLS_VERSION=1.27.2-tctl-1.18.2-cli-1.3.0
+TEMPORAL_UI_VERSION=2.34.0
+POSTGRESQL_VERSION=16
+POSTGRES_PASSWORD=temporal
+POSTGRES_USER=temporal
+POSTGRES_DEFAULT_PORT=5432
+OPENSEARCH_VERSION=2.5.0
 
 # Unique ports for this instance
 TEMPORAL_UI_PORT=${TEMPORAL_UI_PORT}
@@ -107,7 +120,7 @@ services:
 
 networks:
   temporal-network:
-    name: ${PROJECT_NAME}-network
+    name: temporal-network
 EOF
 
 # Update the docker-rocketship.sh script to use the correct values
@@ -119,7 +132,7 @@ cat > .docker/docker-rocketship-local.sh << EOF
 # Set values based on this worktree
 WORKTREE_NAME="${WORKTREE_NAME}"
 PROJECT_NAME="${PROJECT_NAME}"
-NETWORK="${PROJECT_NAME}-network"
+NETWORK="temporal-network"
 ENGINE_HOST="${PROJECT_NAME}-engine:7700"
 IMAGE="${PROJECT_NAME}-cli:latest"
 
@@ -178,7 +191,7 @@ cat > .docker/start-services.sh << EOF
 # Start services for this worktree
 cd "\$(dirname "\$0")"
 echo "Starting services for ${PROJECT_NAME}..."
-docker-compose -p ${PROJECT_NAME} up -d
+docker-compose --env-file .env.local -p ${PROJECT_NAME} up -d
 echo "Services started! Temporal UI: http://localhost:${TEMPORAL_UI_PORT}"
 EOF
 
