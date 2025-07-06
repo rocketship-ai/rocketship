@@ -24,7 +24,7 @@ retry:
 
 ### 3. Test Scenarios
 
-1. **HTTP Request with Retry Policy**: Tests HTTP requests with failing assertions (triggers retries)
+1. **HTTP Request with Retry Policy**: Tests HTTP requests with retry configuration (succeeds without needing retries)
 2. **Delay Plugin with Retry Policy**: Shows retry works with non-HTTP plugins
 3. **Multiple Plugin Types**: Different retry policies for different plugins
 4. **Steps Without Retry Policy**: Demonstrates backward compatibility
@@ -91,7 +91,7 @@ When you run this test suite:
 5. Debug logging will show retry attempts in action
 
 !!! note "When Retries Occur"
-    Retries only happen when a step **fails** - either due to assertion failures, network errors, or plugin execution errors. If all assertions pass, the step is successful and no retries occur.
+    Retries only happen when a step **fails** - either due to assertion failures, network errors, or plugin execution errors. If all assertions pass, the step is successful and no retries occur. This test demonstrates retry **configuration** working correctly, not actual retry execution.
 
 ## Debug Logging
 

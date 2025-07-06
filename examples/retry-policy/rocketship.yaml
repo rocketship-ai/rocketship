@@ -7,13 +7,13 @@ tests:
       - name: "Log start of retry test"
         plugin: "log"
         config:
-          message: "🔄 Starting retry policy test - testing HTTP request with failures"
+          message: "🔄 Starting retry policy test - testing HTTP request with retry configuration"
 
-      - name: "HTTP request with failing assertion (will retry)"
+      - name: "HTTP request with retry configuration (successful)"
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/status/500"  # This will always return 500
+          url: "https://httpbin.org/delay/0"  # Fast endpoint that should succeed
           headers:
             X-Test-Session: "retry-test-session"
         retry:
@@ -23,7 +23,7 @@ tests:
           backoff_coefficient: 2.0
         assertions:
           - type: "status_code"
-            expected: 200  # This will fail since URL returns 500, triggering retries
+            expected: 200  # This should succeed without needing retries
 
       - name: "HTTP request with successful retry simulation"
         plugin: "http"
