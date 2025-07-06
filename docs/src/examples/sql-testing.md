@@ -180,7 +180,6 @@ See the Handlebars Escaping section in (variables.md) for complete details and a
 
 ```yaml
 name: "User Management Test"
-version: "v1.0.0"
 
 vars:
   db_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"

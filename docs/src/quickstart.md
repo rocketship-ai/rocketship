@@ -28,7 +28,6 @@ Create a test file:
 cat > simple-test.yaml << 'EOF'
 name: "Simple Test Suite"
 description: "A simple test suite!"
-version: "v1.0.0"
 tests:
   - name: "API Health Check"
     steps:
