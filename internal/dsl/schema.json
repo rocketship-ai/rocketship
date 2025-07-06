@@ -170,6 +170,39 @@
                       }
                     ]
                   }
+                },
+                "retry": {
+                  "type": "object",
+                  "description": "Retry policy for the step activity",
+                  "properties": {
+                    "initial_interval": {
+                      "type": "string",
+                      "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+                      "description": "Initial retry interval (e.g., '1s', '500ms')"
+                    },
+                    "maximum_interval": {
+                      "type": "string",
+                      "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+                      "description": "Maximum retry interval (e.g., '10s', '1m')"
+                    },
+                    "maximum_attempts": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Maximum number of retry attempts"
+                    },
+                    "backoff_coefficient": {
+                      "type": "number",
+                      "minimum": 1.0,
+                      "description": "Backoff coefficient for exponential backoff"
+                    },
+                    "non_retryable_errors": {
+                      "type": "array",
+                      "description": "List of error types that should not be retried",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               },
               "allOf": [

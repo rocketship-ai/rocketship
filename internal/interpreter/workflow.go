@@ -109,9 +109,16 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		pluginParams["vars"] = vars
 	}
 
-	// Execute the plugin activity
+	// Create step-specific activity options with retry policy
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: time.Minute * 30,
+		RetryPolicy:         buildRetryPolicy(step.Retry),
+	}
+	stepCtx := workflow.WithActivityOptions(ctx, ao)
+
+	// Execute the plugin activity with step-specific options
 	var activityResp interface{}
-	err := workflow.ExecuteActivity(ctx, step.Plugin, pluginParams).Get(ctx, &activityResp)
+	err := workflow.ExecuteActivity(stepCtx, step.Plugin, pluginParams).Get(stepCtx, &activityResp)
 	if err != nil {
 		logger.Error("Plugin activity failed", "plugin", step.Plugin, "error", err)
 		return fmt.Errorf("%s activity error: %w", step.Plugin, err)
@@ -140,6 +147,56 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 
 	logger.Info(fmt.Sprintf("Updated state: %v", state))
 	return nil
+}
+
+// buildRetryPolicy converts DSL retry configuration to Temporal RetryPolicy
+func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
+	// Default retry policy with single attempt (existing behavior)
+	defaultPolicy := &temporal.RetryPolicy{
+		MaximumAttempts: 1,
+	}
+
+	// If no retry config is provided, use default
+	if retryConfig == nil {
+		return defaultPolicy
+	}
+
+	// Build retry policy from configuration
+	policy := &temporal.RetryPolicy{}
+
+	// Set initial interval
+	if retryConfig.InitialInterval != "" {
+		if duration, err := time.ParseDuration(retryConfig.InitialInterval); err == nil {
+			policy.InitialInterval = duration
+		}
+	}
+
+	// Set maximum interval
+	if retryConfig.MaximumInterval != "" {
+		if duration, err := time.ParseDuration(retryConfig.MaximumInterval); err == nil {
+			policy.MaximumInterval = duration
+		}
+	}
+
+	// Set maximum attempts
+	if retryConfig.MaximumAttempts > 0 {
+		policy.MaximumAttempts = int32(retryConfig.MaximumAttempts)
+	} else {
+		// Default to 1 attempt if not specified
+		policy.MaximumAttempts = 1
+	}
+
+	// Set backoff coefficient
+	if retryConfig.BackoffCoefficient > 0 {
+		policy.BackoffCoefficient = retryConfig.BackoffCoefficient
+	}
+
+	// Set non-retryable error types
+	if len(retryConfig.NonRetryableErrors) > 0 {
+		policy.NonRetryableErrorTypes = retryConfig.NonRetryableErrors
+	}
+
+	return policy
 }
 
 // extractSavedValues extracts saved values from plugin response using deterministic iteration

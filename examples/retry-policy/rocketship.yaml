@@ -1,0 +1,156 @@
+name: "Retry Policy Test Suite"
+description: "Test suite demonstrating retry functionality for plugin steps"
+version: "v1.0.0"
+tests:
+  - name: "HTTP Request with Retry Policy"
+    steps:
+      - name: "Log start of retry test"
+        plugin: "log"
+        config:
+          message: "🔄 Starting retry policy test - testing HTTP request with failures"
+
+      - name: "HTTP request that fails initially"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/status/500"  # This will always return 500
+          headers:
+            X-Test-Session: "retry-test-session"
+        retry:
+          initial_interval: "1s"
+          maximum_interval: "5s"
+          maximum_attempts: 3
+          backoff_coefficient: 2.0
+        assertions:
+          - type: "status_code"
+            expected: 500  # We expect this to fail, but retry should happen
+
+      - name: "HTTP request with successful retry simulation"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/delay/1"  # This should succeed after delay
+          headers:
+            X-Test-Session: "retry-test-session"
+        retry:
+          initial_interval: "500ms"
+          maximum_interval: "2s"
+          maximum_attempts: 2
+          backoff_coefficient: 1.5
+        assertions:
+          - type: "status_code"
+            expected: 200
+
+      - name: "Log successful retry completion"
+        plugin: "log"
+        config:
+          message: "✅ Retry policy test completed successfully"
+
+  - name: "Delay Plugin with Retry Policy"
+    steps:
+      - name: "Log start of delay retry test"
+        plugin: "log"
+        config:
+          message: "⏱️ Testing delay plugin with retry policy"
+
+      - name: "Delay with retry configuration"
+        plugin: "delay"
+        config:
+          duration: "2s"
+        retry:
+          initial_interval: "1s"
+          maximum_interval: "3s"
+          maximum_attempts: 2
+          backoff_coefficient: 1.0
+
+      - name: "Log delay retry completion"
+        plugin: "log"
+        config:
+          message: "✅ Delay with retry policy completed successfully"
+
+  - name: "Multiple Plugin Types with Different Retry Policies"
+    steps:
+      - name: "Log start of mixed plugin retry test"
+        plugin: "log"
+        config:
+          message: "🔧 Testing multiple plugin types with different retry policies"
+
+      - name: "HTTP with minimal retry"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/json"
+          headers:
+            X-Test-Session: "retry-test-session"
+        retry:
+          maximum_attempts: 2
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".slideshow.title"
+            as: "json_title"
+
+      - name: "Log with retry (should not fail)"
+        plugin: "log"
+        config:
+          message: "📝 Retrieved JSON title: {{ json_title }}"
+        retry:
+          initial_interval: "100ms"
+          maximum_attempts: 1
+
+      - name: "HTTP with comprehensive retry policy"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/headers"
+          headers:
+            X-Test-Session: "retry-test-session"
+            X-Custom-Header: "test-value"
+        retry:
+          initial_interval: "500ms"
+          maximum_interval: "10s"
+          maximum_attempts: 4
+          backoff_coefficient: 2.5
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".headers[\"X-Custom-Header\"]"
+            expected: "test-value"
+
+      - name: "Log completion of mixed retry test"
+        plugin: "log"
+        config:
+          message: "✅ Mixed plugin retry policies test completed successfully"
+
+  - name: "Test Steps Without Retry Policy"
+    steps:
+      - name: "Log start of no-retry test"
+        plugin: "log"
+        config:
+          message: "🚫 Testing steps without retry policy (should use default)"
+
+      - name: "HTTP without retry policy"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/uuid"
+          headers:
+            X-Test-Session: "retry-test-session"
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".uuid"
+            as: "generated_uuid"
+
+      - name: "Log without retry policy"
+        plugin: "log"
+        config:
+          message: "🆔 Generated UUID: {{ generated_uuid }}"
+
+      - name: "Log completion of no-retry test"
+        plugin: "log"
+        config:
+          message: "✅ No-retry test completed (using default retry policy)"

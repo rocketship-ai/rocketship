@@ -31,6 +31,15 @@ type Step struct {
 	Config     map[string]interface{}   `json:"config" yaml:"config"`
 	Assertions []map[string]interface{} `json:"assertions" yaml:"assertions"`
 	Save       []map[string]interface{} `json:"save" yaml:"save,omitempty"`
+	Retry      *RetryPolicy             `json:"retry" yaml:"retry,omitempty"`
+}
+
+type RetryPolicy struct {
+	InitialInterval    string   `json:"initial_interval" yaml:"initial_interval,omitempty"`
+	MaximumInterval    string   `json:"maximum_interval" yaml:"maximum_interval,omitempty"`
+	MaximumAttempts    int      `json:"maximum_attempts" yaml:"maximum_attempts,omitempty"`
+	BackoffCoefficient float64  `json:"backoff_coefficient" yaml:"backoff_coefficient,omitempty"`
+	NonRetryableErrors []string `json:"non_retryable_errors" yaml:"non_retryable_errors,omitempty"`
 }
 
 // validateWithSchema validates the YAML data against the embedded JSON schema
