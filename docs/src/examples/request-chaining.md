@@ -7,7 +7,6 @@ This example demonstrates how to chain HTTP requests and use delays in your test
 ```yaml
 name: "Request Chaining & Delays Example"
 description: "A test suite demonstrating request chaining and delays with the test server"
-version: "v1.0.0"
 tests:
   - name: "Car Management Flow"
     steps:

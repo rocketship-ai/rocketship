@@ -460,7 +460,6 @@ assertions:
 
 ```yaml
 name: "Supabase E2E User Journey"
-version: "v1.0.0"
 
 vars:
   supabase_url: "https://your-project.supabase.co"

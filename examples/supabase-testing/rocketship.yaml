@@ -14,7 +14,6 @@
 # After successful completion, only the original sample data remains.
 
 name: "Supabase Plugin Integration Tests"
-version: "v1.0.0"
 description: "Comprehensive integration tests for Supabase plugin covering all features with complete resource cleanup"
 
 vars:

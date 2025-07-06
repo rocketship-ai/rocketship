@@ -3,7 +3,7 @@
   "title": "Rocketship Test Suite Schema",
   "description": "Schema for Rocketship test suite definition files",
   "type": "object",
-  "required": ["name", "version", "tests"],
+  "required": ["name", "tests"],
   "properties": {
     "name": {
       "type": "string",
@@ -12,11 +12,6 @@
     "description": {
       "type": "string",
       "description": "Description of the test suite"
-    },
-    "version": {
-      "type": "string",
-      "description": "Version of the test suite definition",
-      "pattern": "^v\\d+\\.\\d+\\.\\d+$"
     },
     "vars": {
       "type": "object",

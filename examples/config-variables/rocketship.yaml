@@ -1,6 +1,5 @@
 name: "Configuration Variables Example"
 description: "Demonstrates config variables with vars. prefix and mixing with runtime variables"
-version: "v1.0.0"
 
 # Configuration variables - accessed with {{ .vars.variable_name }}
 vars:
