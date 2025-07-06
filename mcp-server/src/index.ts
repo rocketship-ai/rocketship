@@ -70,45 +70,7 @@ class RocketshipKnowledgeLoader {
 const knowledgeLoader = new RocketshipKnowledgeLoader();
 
 // REMOVED: Hard-coded tool descriptions replaced with dynamic generation
-  get_rocketship_examples: `Provides real examples from the Rocketship codebase for specific features or use cases.
 
-💡 YOU (the coding agent) create the test files based on these examples.
-💡 For frontend projects, consider using the browser plugin for user journey testing.
-💡 Structure: .rocketship/ directory with subdirectories, each containing rocketship.yaml
-💡 Variables: {{ .vars.name }} (config), {{ .env.NAME }} (environment), {{ name }} (runtime)
-💡 JSON paths: .field_name for JSON paths (no $ prefix)`,
-
-  suggest_test_structure: `Suggests proper Rocketship file structure and test organization for your project.
-
-💡 YOU (the coding agent) create the directory structure and files.
-💡 For frontend projects: Consider browser-based user journey testing.
-💡 For API projects: Focus on user workflows rather than just coverage.`,
-
-  get_schema_info: `Provides the current Rocketship schema information for validation and proper syntax.
-
-💡 Use this to ensure your YAML follows the correct schema.
-💡 Pay attention to required fields, valid plugin names, and assertion types.`,
-
-  get_cli_guidance: `Provides correct Rocketship CLI usage patterns and commands.
-
-💡 YOU (the coding agent) will run these commands to execute tests.
-💡 Use rocketship run -af for auto-start with single file, -ad for directories.`,
-
-  analyze_codebase_for_testing: `Analyzes a codebase to suggest meaningful test scenarios based on user journeys.
-
-💡 Focus on customer-facing flows and critical business logic.
-💡 For frontends: Consider browser testing of key user paths.
-💡 For APIs: Test the endpoints that support those user paths.
-💡 TIP: Include relevant keywords in your description to get better flow suggestions:
-   - authentication, login, access, permissions (for auth flows)
-   - dashboard, main, overview, portal (for main interface)
-   - search, find, filter, browse (for discovery)
-   - create, edit, manage, records, crud (for data management)
-   - settings, config, preferences, account (for configuration)
-   - process, workflow, submit, approve (for business processes)
-   - reports, analytics, export, metrics (for reporting)
-   - notifications, messages, alerts, communication (for messaging)`,
-};
 
 // Generate dynamic tool descriptions based on CLI introspection data
 function generateToolDescriptions(knowledgeLoader: RocketshipKnowledgeLoader) {
