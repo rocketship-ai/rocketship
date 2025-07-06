@@ -22,3 +22,8 @@ honeyruns/
 
 # testing directories with secrets
 testing-browser-plugin/
+
+# Docker worktree-specific files
+.docker/.env.local
+.docker/docker-compose.override.yml
+.docker/docker-rocketship-local.sh
