@@ -1,6 +1,5 @@
 name: "SQL Testing Suite"
 description: "Comprehensive test suite for the SQL plugin demonstrating database operations, assertions, and state management"
-version: "v1.0.0"
 
 vars:
   postgres_dsn: "postgres://testuser:testpass@localhost:5433/testdb?sslmode=disable"

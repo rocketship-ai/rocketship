@@ -1,5 +1,5 @@
 #!/bin/bash
-# Setup script for isolated Docker environment in git worktrees
+# Fixed setup script for isolated Docker environment in git worktrees
 # Each Claude Code instance should run this to get their own isolated containers
 
 set -e
@@ -29,6 +29,11 @@ if ! docker info > /dev/null 2>&1; then
     echo -e "${RED}Error: Docker is not running. Please start Docker first.${NC}"
     exit 1
 fi
+
+# Clean up any existing containers/networks for this project
+echo -e "${YELLOW}Cleaning up any existing containers for ${PROJECT_NAME}...${NC}"
+docker-compose -f .docker/docker-compose.yaml -p ${PROJECT_NAME} down -v 2>/dev/null || true
+docker network rm ${PROJECT_NAME}-network 2>/dev/null || true
 
 # Calculate unique ports for this instance
 HASH=$(echo -n "${WORKTREE_NAME}" | cksum | cut -d' ' -f1)
@@ -65,14 +70,15 @@ cat > .docker/docker-compose.override.yml << EOF
 
 services:
   temporal-ui:
+    container_name: ${PROJECT_NAME}-temporal-ui
     ports:
-      - "\${TEMPORAL_UI_PORT:-8080}:8080"
+      - "${TEMPORAL_UI_PORT}:8080"
 
   engine:
     container_name: ${PROJECT_NAME}-engine
     ports:
-      - "\${ENGINE_PORT:-7700}:7700"
-      - "\${ENGINE_METRICS_PORT:-7701}:7701"
+      - "${ENGINE_PORT}:7700"
+      - "${ENGINE_METRICS_PORT}:7701"
 
   worker:
     container_name: ${PROJECT_NAME}-worker
@@ -80,12 +86,12 @@ services:
   postgres-test:
     container_name: ${PROJECT_NAME}-postgres-test
     ports:
-      - "\${POSTGRES_TEST_PORT:-5433}:5432"
+      - "${POSTGRES_TEST_PORT}:5432"
 
   mysql-test:
     container_name: ${PROJECT_NAME}-mysql-test
     ports:
-      - "\${MYSQL_TEST_PORT:-3307}:3306"
+      - "${MYSQL_TEST_PORT}:3306"
 
   temporal:
     container_name: ${PROJECT_NAME}-temporal
@@ -96,9 +102,6 @@ services:
   temporal-elasticsearch:
     container_name: ${PROJECT_NAME}-temporal-elasticsearch
 
-  temporal-ui:
-    container_name: ${PROJECT_NAME}-temporal-ui
-
   temporal-admin-tools:
     container_name: ${PROJECT_NAME}-temporal-admin-tools
 
@@ -108,28 +111,27 @@ networks:
 EOF
 
 # Update the docker-rocketship.sh script to use the correct values
-cat > .docker/docker-rocketship-local.sh << 'EOF'
+cat > .docker/docker-rocketship-local.sh << EOF
 #!/bin/bash
 # Docker-based Rocketship CLI wrapper for this worktree
 # Auto-generated - do not edit
 
-# Load local environment
-source "$(dirname "$0")/.env.local"
-
 # Set values based on this worktree
-NETWORK="${COMPOSE_PROJECT_NAME}-network"
-ENGINE_HOST="${COMPOSE_PROJECT_NAME}-engine:7700"
-IMAGE="${COMPOSE_PROJECT_NAME}-cli:latest"
+WORKTREE_NAME="${WORKTREE_NAME}"
+PROJECT_NAME="${PROJECT_NAME}"
+NETWORK="${PROJECT_NAME}-network"
+ENGINE_HOST="${PROJECT_NAME}-engine:7700"
+IMAGE="${PROJECT_NAME}-cli:latest"
 
 # Function to show usage
 usage() {
-    echo "Usage: $0 [rocketship-command] [arguments...]"
+    echo "Usage: \$0 [rocketship-command] [arguments...]"
     echo ""
     echo "This script runs Rocketship CLI commands in a Docker container."
     echo "It automatically connects to this worktree's dockerized engine."
     echo ""
-    echo "Worktree: ${WORKTREE_NAME}"
-    echo "Project: ${COMPOSE_PROJECT_NAME}"
+    echo "Worktree: \${WORKTREE_NAME}"
+    echo "Project: \${PROJECT_NAME}"
     echo ""
     exit 1
 }
@@ -141,34 +143,58 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Check if the network exists
-if ! docker network inspect $NETWORK > /dev/null 2>&1; then
-    echo "Error: Docker network '$NETWORK' not found."
-    echo "Please run: cd .docker && docker-compose up -d"
+if ! docker network inspect \$NETWORK > /dev/null 2>&1; then
+    echo "Error: Docker network '\$NETWORK' not found."
+    echo "Please run: cd .docker && docker-compose -p \${PROJECT_NAME} up -d"
     exit 1
 fi
 
 # Check if the engine is running
-if ! docker ps | grep -q "${COMPOSE_PROJECT_NAME}-engine"; then
+if ! docker ps | grep -q "\${PROJECT_NAME}-engine"; then
     echo "Error: Rocketship engine is not running."
-    echo "Please run: cd .docker && docker-compose up -d"
+    echo "Please run: cd .docker && docker-compose -p \${PROJECT_NAME} up -d"
     exit 1
 fi
 
 # Build the image if it doesn't exist
-if ! docker image inspect $IMAGE > /dev/null 2>&1; then
+if ! docker image inspect \$IMAGE > /dev/null 2>&1; then
     echo "Building Rocketship CLI image..."
-    docker build -f "$(dirname "$0")/Dockerfile.cli" -t $IMAGE "$(dirname "$0")/.." || exit 1
+    docker build -f "\$(dirname "\$0")/Dockerfile.cli" -t \$IMAGE "\$(dirname "\$0")/.." || exit 1
 fi
 
 # Run the command
-docker run --rm \
-    --network $NETWORK \
-    -v "$(pwd)":/workspace \
-    -w /workspace \
-    $IMAGE "$@" -e $ENGINE_HOST
+docker run --rm \\
+    --network \$NETWORK \\
+    -v "\$(pwd)":/workspace \\
+    -w /workspace \\
+    \$IMAGE "\$@" -e \$ENGINE_HOST
 EOF
 
 chmod +x .docker/docker-rocketship-local.sh
+
+# Create a simple start script
+cat > .docker/start-services.sh << EOF
+#!/bin/bash
+# Start services for this worktree
+cd "\$(dirname "\$0")"
+echo "Starting services for ${PROJECT_NAME}..."
+docker-compose -p ${PROJECT_NAME} up -d
+echo "Services started! Temporal UI: http://localhost:${TEMPORAL_UI_PORT}"
+EOF
+
+chmod +x .docker/start-services.sh
+
+# Create a stop script
+cat > .docker/stop-services.sh << EOF
+#!/bin/bash
+# Stop services for this worktree
+cd "\$(dirname "\$0")"
+echo "Stopping services for ${PROJECT_NAME}..."
+docker-compose -p ${PROJECT_NAME} down -v
+echo "Services stopped and cleaned up."
+EOF
+
+chmod +x .docker/stop-services.sh
 
 # Show the generated configuration
 echo -e "\n${GREEN}Generated configuration:${NC}"
@@ -181,12 +207,15 @@ echo "- MySQL test: localhost:${MYSQL_TEST_PORT}"
 
 echo -e "\n${GREEN}Next steps:${NC}"
 echo "1. Start the services:"
-echo "   cd .docker && docker-compose up -d"
+echo "   .docker/start-services.sh"
 echo ""
 echo "2. Use the CLI wrapper:"
 echo "   .docker/docker-rocketship-local.sh run -f test.yaml"
 echo ""
 echo "3. View Temporal UI:"
 echo "   open http://localhost:${TEMPORAL_UI_PORT}"
+echo ""
+echo "4. Stop services when done:"
+echo "   .docker/stop-services.sh"
 echo ""
 echo -e "${YELLOW}Note: Each worktree will have its own isolated set of containers and ports.${NC}"

@@ -106,7 +106,6 @@ func validateFile(filePath string) error {
 	// Additional summary for verbose output
 	Logger.Debug("file details", 
 		"name", config.Name,
-		"version", config.Version,
 		"tests", len(config.Tests),
 		"description", config.Description,
 	)
