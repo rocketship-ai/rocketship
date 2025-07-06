@@ -1,0 +1,13 @@
+version: "v1.0.0"
+name: Docker Container Test
+tests:
+  - name: Simple HTTP test
+    steps:
+      - name: Test delay
+        plugin: delay
+        config:
+          duration: "100ms"
+      - name: Test log
+        plugin: log
+        config:
+          message: "Hello from Docker container!"

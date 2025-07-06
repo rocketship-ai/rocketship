@@ -152,97 +152,325 @@ function getGitBranch() {
   }
 }
 
-// Extract installation and usage patterns
+// Extract installation info dynamically from documentation
 function extractInstallationInfo() {
-  // Read from README or installation docs
-  const readmePath = path.join(PROJECT_ROOT, 'README.md');
-  let installationMethods = {
-    recommended: 'Direct download from GitHub releases',
-    methods: [
-      {
-        name: 'GitHub Releases',
-        description: 'Download pre-built binaries from GitHub releases',
-        command: 'curl -L https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64 -o rocketship && chmod +x rocketship'
-      },
-      {
-        name: 'Go Install',
-        description: 'Install from source using Go',
-        command: 'go install github.com/rocketship-ai/rocketship/cmd/rocketship@latest'
-      },
-      {
-        name: 'Docker',
-        description: 'Run using Docker container',
-        command: 'docker run --rm rocketshipai/rocketship:latest'
-      }
-    ],
-    notAvailable: [
-      'Homebrew (brew install) - not currently supported',
-      'Package managers (apt, yum, etc.) - not currently supported'
-    ]
+  const installationMethods = {
+    methods: [],
+    notAvailable: [],
+    recommended: null
   };
 
+  // Read from README
+  const readmePath = path.join(PROJECT_ROOT, 'README.md');
   if (fs.existsSync(readmePath)) {
     const readme = fs.readFileSync(readmePath, 'utf8');
-    // Extract installation info from README if available
+    
+    // Extract installation section
     const installSection = readme.match(/## Installation[\s\S]*?(?=##|$)/i);
     if (installSection) {
-      installationMethods.fromReadme = installSection[0];
+      const installText = installSection[0];
+      installationMethods.fromReadme = installText;
+      
+      // Extract installation methods from README
+      const codeBlocks = installText.match(/```[\s\S]*?```/g) || [];
+      codeBlocks.forEach((block, index) => {
+        const command = block.replace(/```\w*\n?|```/g, '').trim();
+        if (command && !command.includes('# ')) {
+          installationMethods.methods.push({
+            name: `Method ${index + 1}`,
+            description: 'Installation method from documentation',
+            command: command
+          });
+        }
+      });
+      
+      // Look for "not available" mentions
+      if (installText.toLowerCase().includes('homebrew') && installText.toLowerCase().includes('not')) {
+        installationMethods.notAvailable.push('Homebrew (brew install) - not currently supported');
+      }
+      if (installText.toLowerCase().includes('apt') && installText.toLowerCase().includes('not')) {
+        installationMethods.notAvailable.push('Package managers (apt, yum, etc.) - not currently supported');
+      }
+      
+      // Extract recommended method
+      const recommendedMatch = installText.match(/recommended[\s\S]*?(?:\n|$)/i);
+      if (recommendedMatch) {
+        installationMethods.recommended = recommendedMatch[0].trim();
+      }
+    }
+  }
+  
+  // Fallback: extract from docs directory
+  const docsPath = path.join(PROJECT_ROOT, 'docs');
+  if (fs.existsSync(docsPath)) {
+    const docFiles = fs.readdirSync(docsPath).filter(f => f.endsWith('.md'));
+    for (const docFile of docFiles) {
+      if (docFile.toLowerCase().includes('install') || docFile.toLowerCase().includes('setup')) {
+        const docContent = fs.readFileSync(path.join(docsPath, docFile), 'utf8');
+        installationMethods.fromDocs = installationMethods.fromDocs || {};
+        installationMethods.fromDocs[docFile] = docContent;
+      }
     }
   }
 
   return installationMethods;
 }
 
-// Extract common usage patterns and examples
-function extractUsagePatterns() {
-  return {
-    common_patterns: [
-      {
-        name: 'Run single test with auto-start',
-        command: 'rocketship run -af test.yaml',
-        description: 'Automatically starts engine, runs test, stops engine'
-      },
-      {
-        name: 'Run directory of tests',
-        command: 'rocketship run -ad .rocketship/',
-        description: 'Run all rocketship.yaml files in directory'
-      },
-      {
-        name: 'Run with variables',
-        command: 'rocketship run -af test.yaml --var URL=http://localhost:3000',
-        description: 'Set runtime variables for tests'
-      },
-      {
-        name: 'Run with variable file',
-        command: 'rocketship run -af test.yaml --var-file vars.yaml',
-        description: 'Load variables from YAML file'
-      },
-      {
-        name: 'Validate tests',
-        command: 'rocketship validate test.yaml',
-        description: 'Check test syntax without running'
-      },
-      {
-        name: 'Manual server mode',
-        command: 'rocketship start server -b && rocketship run test.yaml && rocketship stop server',
-        description: 'Manual control of server lifecycle'
+// Extract usage patterns dynamically from CLI help and documentation
+function extractUsagePatterns(binaryPath, helpData) {
+  const patterns = {
+    common_patterns: [],
+    file_structure: {},
+    examples_from_help: {},
+    syntax_patterns: {}
+  };
+  
+  // Extract examples from CLI help text
+  Object.entries(helpData).forEach(([command, data]) => {
+    if (typeof data === 'object' && data.help) {
+      const help = data.help;
+      
+      // Look for "Examples:" section
+      const examplesMatch = help.match(/Examples?:[\s\S]*?(?=\n\n|\nFlags:|$)/i);
+      if (examplesMatch) {
+        patterns.examples_from_help[command] = examplesMatch[0];
+        
+        // Extract individual command examples
+        const commandLines = examplesMatch[0].split('\n')
+          .filter(line => line.trim().startsWith('rocketship'))
+          .map(line => line.trim());
+          
+        commandLines.forEach((cmdLine, index) => {
+          patterns.common_patterns.push({
+            name: `${command} example ${index + 1}`,
+            command: cmdLine,
+            description: `Example from ${command} help`,
+            source: 'cli_help'
+          });
+        });
       }
-    ],
-    file_structure: {
-      recommended: '.rocketship/',
-      pattern: '.rocketship/test-name/rocketship.yaml',
-      example: {
-        '.rocketship/': {
-          'login-test/': {
-            'rocketship.yaml': 'Test file for login functionality'
-          },
-          'api-tests/': {
-            'rocketship.yaml': 'Test file for API endpoints'
-          }
-        }
+      
+      // Look for "Usage:" patterns
+      const usageMatch = help.match(/Usage:[\s\S]*?(?=\n\n|\nFlags:|$)/i);
+      if (usageMatch) {
+        patterns.examples_from_help[`${command}_usage`] = usageMatch[0];
       }
     }
+  });
+  
+  // Extract file structure patterns from documentation
+  patterns.file_structure = extractFileStructureFromDocs();
+  
+  // Extract syntax patterns from documentation
+  patterns.syntax_patterns = extractSyntaxPatternsFromDocs();
+  
+  return patterns;
+}
+
+// Extract file structure patterns from documentation
+function extractFileStructureFromDocs() {
+  const structure = {
+    recommended: null,
+    pattern: null,
+    examples: {},
+    from_docs: {}
   };
+  
+  // Check CLAUDE.md for structure guidance
+  const claudePath = path.join(PROJECT_ROOT, 'CLAUDE.md');
+  if (fs.existsSync(claudePath)) {
+    const claudeContent = fs.readFileSync(claudePath, 'utf8');
+    
+    // Extract file structure examples
+    const structureMatches = claudeContent.match(/```[\s\S]*?\.rocketship[\s\S]*?```/g) || [];
+    structureMatches.forEach((match, index) => {
+      structure.examples[`example_${index + 1}`] = match.replace(/```\w*\n?|```/g, '').trim();
+    });
+    
+    // Look for recommended patterns
+    const patternMatch = claudeContent.match(/\.rocketship\/[\w-]+\/rocketship\.yaml/g);
+    if (patternMatch) {
+      structure.pattern = patternMatch[0];
+      structure.recommended = '.rocketship/';
+    }
+    
+    structure.from_docs.claude = claudeContent;
+  }
+  
+  // Check examples directory
+  const examplesPath = path.join(PROJECT_ROOT, 'examples');
+  if (fs.existsSync(examplesPath)) {
+    const exampleDirs = fs.readdirSync(examplesPath, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+      
+    structure.real_examples = {};
+    exampleDirs.forEach(dir => {
+      const yamlPath = path.join(examplesPath, dir, 'rocketship.yaml');
+      if (fs.existsSync(yamlPath)) {
+        structure.real_examples[dir] = {
+          path: `examples/${dir}/rocketship.yaml`,
+          exists: true
+        };
+      }
+    });
+  }
+  
+  return structure;
+}
+
+// Extract syntax patterns from documentation
+function extractSyntaxPatternsFromDocs() {
+  const syntax = {
+    variables: {},
+    assertions: {},
+    plugins: {},
+    save_operations: {},
+    from_docs: {}
+  };
+  
+  // Extract from CLAUDE.md
+  const claudePath = path.join(PROJECT_ROOT, 'CLAUDE.md');
+  if (fs.existsSync(claudePath)) {
+    const claudeContent = fs.readFileSync(claudePath, 'utf8');
+    
+    // Extract variable syntax
+    const variableMatches = claudeContent.match(/{{[^}]+}}/g) || [];
+    variableMatches.forEach(match => {
+      if (match.includes('.vars.')) {
+        syntax.variables.config = syntax.variables.config || [];
+        syntax.variables.config.push(match);
+      } else if (match.includes('.env.')) {
+        syntax.variables.environment = syntax.variables.environment || [];
+        syntax.variables.environment.push(match);
+      } else {
+        syntax.variables.runtime = syntax.variables.runtime || [];
+        syntax.variables.runtime.push(match);
+      }
+    });
+    
+    // Extract save operation patterns
+    const saveMatches = claudeContent.match(/save:[\s\S]*?(?=\n\w|\n#|$)/gm) || [];
+    saveMatches.forEach((match, index) => {
+      syntax.save_operations[`example_${index + 1}`] = match.trim();
+    });
+    
+    syntax.from_docs.claude = claudeContent;
+  }
+  
+  // Extract from documentation files
+  const docsPath = path.join(PROJECT_ROOT, 'docs');
+  if (fs.existsSync(docsPath)) {
+    const findDocs = (dir) => {
+      const files = [];
+      if (fs.existsSync(dir)) {
+        fs.readdirSync(dir, { withFileTypes: true }).forEach(dirent => {
+          const fullPath = path.join(dir, dirent.name);
+          if (dirent.isDirectory()) {
+            files.push(...findDocs(fullPath));
+          } else if (dirent.name.endsWith('.md')) {
+            files.push(fullPath);
+          }
+        });
+      }
+      return files;
+    };
+    
+    const docFiles = findDocs(docsPath);
+    docFiles.forEach(filePath => {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const relativePath = path.relative(PROJECT_ROOT, filePath);
+      syntax.from_docs[relativePath] = content;
+      
+      // Extract plugin-specific syntax
+      const pluginMatches = content.match(/plugin:\s*(\w+)/g) || [];
+      pluginMatches.forEach(match => {
+        const plugin = match.split(':')[1].trim();
+        syntax.plugins[plugin] = syntax.plugins[plugin] || [];
+        
+        // Get the surrounding context
+        const lines = content.split('\n');
+        const lineIndex = lines.findIndex(line => line.includes(match));
+        if (lineIndex !== -1) {
+          const context = lines.slice(Math.max(0, lineIndex - 5), lineIndex + 10).join('\n');
+          syntax.plugins[plugin].push(context);
+        }
+      });
+    });
+  }
+  
+  return syntax;
+}
+
+// Extract all documentation content
+function extractDocumentationContent() {
+  const docs = {};
+  
+  // Get all markdown files
+  const findMarkdownFiles = (dir, prefix = '') => {
+    if (!fs.existsSync(dir)) return;
+    
+    fs.readdirSync(dir, { withFileTypes: true }).forEach(dirent => {
+      const fullPath = path.join(dir, dirent.name);
+      const relativePath = prefix ? `${prefix}/${dirent.name}` : dirent.name;
+      
+      if (dirent.isDirectory()) {
+        findMarkdownFiles(fullPath, relativePath);
+      } else if (dirent.name.endsWith('.md')) {
+        docs[relativePath] = fs.readFileSync(fullPath, 'utf8');
+      }
+    });
+  };
+  
+  // Scan key directories
+  findMarkdownFiles(path.join(PROJECT_ROOT, 'docs'));
+  findMarkdownFiles(path.join(PROJECT_ROOT, 'examples'));
+  
+  // Include key files
+  const keyFiles = ['README.md', 'CLAUDE.md'];
+  keyFiles.forEach(file => {
+    const filePath = path.join(PROJECT_ROOT, file);
+    if (fs.existsSync(filePath)) {
+      docs[file] = fs.readFileSync(filePath, 'utf8');
+    }
+  });
+  
+  return docs;
+}
+
+// Extract schema information from actual schema files
+function extractSchemaInformation() {
+  const schemaInfo = {};
+  
+  // Look for schema files
+  const findSchemaFiles = (dir, prefix = '') => {
+    if (!fs.existsSync(dir)) return;
+    
+    fs.readdirSync(dir, { withFileTypes: true }).forEach(dirent => {
+      const fullPath = path.join(dir, dirent.name);
+      const relativePath = prefix ? `${prefix}/${dirent.name}` : dirent.name;
+      
+      if (dirent.isDirectory()) {
+        findSchemaFiles(fullPath, relativePath);
+      } else if (dirent.name.includes('schema') || dirent.name.endsWith('.json')) {
+        try {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          if (content.trim().startsWith('{')) {
+            schemaInfo[relativePath] = JSON.parse(content);
+          } else {
+            schemaInfo[relativePath] = content;
+          }
+        } catch (error) {
+          schemaInfo[relativePath] = { error: `Failed to parse: ${error.message}` };
+        }
+      }
+    });
+  };
+  
+  // Scan for schema files
+  findSchemaFiles(PROJECT_ROOT);
+  
+  return schemaInfo;
 }
 
 // Main introspection function
@@ -250,14 +478,17 @@ function performCLIIntrospection() {
   console.log('🔍 Starting CLI introspection...');
   
   const binaryPath = buildCLI();
+  const helpData = extractCLIHelp(binaryPath);
   
   const introspectionData = {
     timestamp: new Date().toISOString(),
     version: extractVersionInfo(binaryPath),
-    help: extractCLIHelp(binaryPath),
+    help: helpData,
     installation: extractInstallationInfo(),
-    usage: extractUsagePatterns(),
-    flags: extractFlagDocumentation(binaryPath)
+    usage: extractUsagePatterns(binaryPath, helpData),
+    flags: extractFlagDocumentation(binaryPath),
+    documentation: extractDocumentationContent(),
+    schema_info: extractSchemaInformation()
   };
   
   console.log('✓ CLI introspection completed');
