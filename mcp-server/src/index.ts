@@ -12,6 +12,7 @@ class RocketshipKnowledgeLoader {
   private schema: any = null;
   private examples: Map<string, any> = new Map();
   private docs: Map<string, string> = new Map();
+  private cliData: any = null;
 
   constructor() {
     console.log(`Initializing Rocketship MCP Server v0.4.1`);
@@ -28,13 +29,16 @@ class RocketshipKnowledgeLoader {
       EMBEDDED_SCHEMA,
       EMBEDDED_EXAMPLES,
       EMBEDDED_DOCS,
+      EMBEDDED_CLI_DATA,
     } = require("./embedded-knowledge");
 
     this.schema = EMBEDDED_SCHEMA;
     this.examples = EMBEDDED_EXAMPLES;
     this.docs = EMBEDDED_DOCS;
+    this.cliData = EMBEDDED_CLI_DATA;
 
     console.log(`📦 Loaded real embedded knowledge from build step`);
+    console.log(`📋 CLI Version: ${this.cliData?.version?.version || 'unknown'}`);
   }
 
   getSchema(): any {
@@ -55,6 +59,10 @@ class RocketshipKnowledgeLoader {
 
   getAllDocs(): string[] {
     return Array.from(this.docs.keys());
+  }
+
+  getCLIData(): any {
+    return this.cliData;
   }
 }
 
@@ -600,12 +608,28 @@ export class RocketshipMCPServer {
 
   private async handleGetCLIGuidance(args: any) {
     const { command } = args;
+    const cliData = this.knowledgeLoader.getCLIData();
 
     let response = `# Rocketship CLI Guidance\n\n`;
+    
+    if (cliData?.version?.version) {
+      response += `*Current CLI Version: ${cliData.version.version}*\n\n`;
+    }
 
+    // Use actual CLI help data if available
     if (command === "run" || command === "structure") {
       response += `## Running Tests\n\n`;
-      response += `### Auto-start mode (recommended for development)\n`;
+      
+      if (cliData?.help?.run?.help) {
+        // Extract examples from actual CLI help
+        const runHelp = cliData.help.run.help;
+        if (runHelp.includes('Usage:')) {
+          response += `### Current CLI Usage\n`;
+          response += `\`\`\`\n${runHelp}\`\`\`\n\n`;
+        }
+      }
+
+      response += `### Common Patterns (Updated)\n`;
       response += `\`\`\`bash\n`;
       response += `# Run single test file with auto-start/stop\n`;
       response += `rocketship run -af .rocketship/login-flow/rocketship.yaml\n`;
@@ -613,53 +637,82 @@ export class RocketshipMCPServer {
       response += `# Run all tests in directory with auto-start/stop\n`;
       response += `rocketship run -ad .rocketship\n`;
       response += `\n`;
-      response += `# Run with environment variables\n`;
+      response += `# Run with variables (CORRECT FLAG)\n`;
       response += `rocketship run -ad .rocketship --var APP_URL=http://localhost:3000\n`;
+      response += `\n`;
+      response += `# Load variables from file (CORRECT FLAG)\n`;
+      response += `rocketship run -af test.yaml --var-file vars.yaml\n`;
       response += `\`\`\`\n\n`;
 
-      response += `### Manual engine mode\n`;
-      response += `\`\`\`bash\n`;
-      response += `# Start engine in background\n`;
-      response += `rocketship start server --local --background\n`;
-      response += `\n`;
-      response += `# Run tests against running engine\n`;
-      response += `rocketship run -d .rocketship\n`;
-      response += `\n`;
-      response += `# Stop engine\n`;
-      response += `rocketship stop server\n`;
-      response += `\`\`\`\n\n`;
+      // Manual server mode using actual CLI data
+      if (cliData?.help?.start?.subcommands?.server) {
+        response += `### Manual Engine Mode\n`;
+        response += `\`\`\`bash\n`;
+        response += `# Start engine in background\n`;
+        response += `rocketship start server -b\n`;
+        response += `\n`;
+        response += `# Run tests against running engine\n`;
+        response += `rocketship run -d .rocketship\n`;
+        response += `\n`;
+        response += `# Stop engine\n`;
+        response += `rocketship stop server\n`;
+        response += `\`\`\`\n\n`;
+      }
     }
 
     if (command === "validate" || command === "structure") {
       response += `## Validation\n\n`;
+      
+      if (cliData?.help?.validate?.help) {
+        response += `### Current Validate Command\n`;
+        response += `\`\`\`\n${cliData.help.validate.help}\`\`\`\n\n`;
+      }
+      
+      response += `### Validation Examples\n`;
       response += `\`\`\`bash\n`;
       response += `# Validate single file\n`;
       response += `rocketship validate .rocketship/login-flow/rocketship.yaml\n`;
       response += `\n`;
-      response += `# Validate all files in directory\n`;
+      response += `# Validate directory\n`;
       response += `rocketship validate .rocketship\n`;
-      response += `\n`;
-      response += `# Validate with variables\n`;
-      response += `rocketship validate .rocketship --var APP_URL=http://localhost:3000\n`;
       response += `\`\`\`\n\n`;
     }
 
-    response += `## Key Flags\n\n`;
-    response += `- \`-a, --auto\`: Auto-start and stop engine\n`;
-    response += `- \`-f, --file\`: Single test file\n`;
-    response += `- \`-d, --dir\`: Directory of tests\n`;
-    response += `- \`--var key=value\`: Set variables\n`;
-    response += `- \`--var-file path\`: Load variables from file\n\n`;
+    // Use actual flag data
+    response += `## Current CLI Flags\n\n`;
+    if (cliData?.flags) {
+      for (const [flag, info] of Object.entries(cliData.flags as any)) {
+        const flagInfo = info as any;
+        response += `- \`${flagInfo.short ? flagInfo.short + ', ' : ''}${flagInfo.long}\`: ${flagInfo.description}\n`;
+      }
+    } else {
+      // Fallback to known correct flags
+      response += `- \`-a, --auto\`: Auto-start and stop engine\n`;
+      response += `- \`-f, --file\`: Single test file\n`;
+      response += `- \`-d, --dir\`: Directory of tests\n`;
+      response += `- \`--var key=value\`: Set variables (NOT --vars)\n`;
+      response += `- \`--var-file path\`: Load variables from file (NOT --var-file)\n`;
+    }
+    response += `\n`;
 
-    response += `## File Discovery\n`;
-    response += `Rocketship automatically finds \`rocketship.yaml\` files recursively in directories.\n\n`;
-
-    const runDoc = this.knowledgeLoader.getDocumentation(
-      "reference/rocketship_run.md"
-    );
-    if (runDoc) {
-      response += `## Complete CLI Reference\n\n`;
-      response += runDoc;
+    response += `## Installation (Current Methods)\n\n`;
+    if (cliData?.installation) {
+      response += `**Recommended:** ${cliData.installation.recommended}\n\n`;
+      
+      if (cliData.installation.methods) {
+        response += `**Available Methods:**\n`;
+        for (const method of cliData.installation.methods) {
+          response += `- **${method.name}**: ${method.description}\n`;
+          response += `  \`\`\`bash\n  ${method.command}\n  \`\`\`\n`;
+        }
+      }
+      
+      if (cliData.installation.notAvailable) {
+        response += `\n**NOT Available:**\n`;
+        for (const na of cliData.installation.notAvailable) {
+          response += `- ${na}\n`;
+        }
+      }
     }
 
     return {

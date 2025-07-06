@@ -2,11 +2,12 @@
 
 /**
  * Build script to embed Rocketship knowledge into the MCP server
- * This replaces the static embedded content with real examples and docs
+ * This replaces the static embedded content with real examples, docs, and current CLI capabilities
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { performCLIIntrospection } from './cli-introspection.js';
 
 const PROJECT_ROOT = path.resolve(process.cwd(), '..');
 const MCP_SRC = path.resolve(process.cwd(), 'src');
@@ -74,16 +75,22 @@ function generateKnowledgeModule() {
   const schema = loadRealSchema();
   const examples = loadRealExamples();
   const docs = loadRealDocs();
+  const cliData = performCLIIntrospection();
   
   console.log(`✓ Loaded schema`);
   console.log(`✓ Loaded ${examples.size} examples`);
   console.log(`✓ Loaded ${docs.size} documentation files`);
+  console.log(`✓ Loaded current CLI capabilities (${cliData.version.version})`);
 
   // Generate TypeScript module
   let moduleContent = `// Auto-generated embedded knowledge - DO NOT EDIT MANUALLY
 // Generated on ${new Date().toISOString()}
+// CLI Version: ${cliData.version.version}
+// Git Commit: ${cliData.version.gitCommit}
 
 export const EMBEDDED_SCHEMA = ${JSON.stringify(schema, null, 2)};
+
+export const EMBEDDED_CLI_DATA = ${JSON.stringify(cliData, null, 2)};
 
 export const EMBEDDED_EXAMPLES = new Map([
 `;

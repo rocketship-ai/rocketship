@@ -3,6 +3,13 @@
 /internal/embedded/bin/*
 !/internal/embedded/bin/.gitkeep
 
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
 # python
 .DS_Store
 **/.DS_Store
@@ -22,6 +29,11 @@ honeyruns/
 
 # testing directories with secrets
 testing-browser-plugin/
+
+# Temporary build artifacts
+tmp/
+cli-introspection.json
+*.log
 
 # Docker worktree-specific files
 .docker/.env.local
