@@ -1,6 +1,5 @@
 name: "Simple Delay Test Suite"
 description: "A simple test suite demonstrating delay plugin"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:

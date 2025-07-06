@@ -1,5 +1,4 @@
 name: "Custom Scripting Demo - HTTP↔Script State Integration"
-version: "v1.0.0"
 vars:
   api_url: "https://tryme.rocketship.sh"
   max_retries: 3

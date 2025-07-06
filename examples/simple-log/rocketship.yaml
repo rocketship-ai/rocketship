@@ -1,6 +1,5 @@
 name: "Simple Log Test Suite"  
 description: "Demonstrates the log plugin for custom logging during test execution"
-version: "v1.0.0"
 
 vars:
   environment: "staging"

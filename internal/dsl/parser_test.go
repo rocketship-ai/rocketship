@@ -18,7 +18,6 @@ func TestParseYAML_ValidConfigs(t *testing.T) {
 			yaml: `
 name: "Simple Delay Test"
 description: "A simple test with delay"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:
@@ -33,7 +32,6 @@ tests:
 			yaml: `
 name: "Simple HTTP Test"
 description: "A simple HTTP test"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:
@@ -52,7 +50,6 @@ tests:
 			yaml: `
 name: "Complex HTTP Test"
 description: "Complex test with request chaining"
-version: "v1.0.0"
 tests:
   - name: "Product Test"
     steps:
@@ -75,6 +72,20 @@ tests:
             as: "product_id"
 `,
 		},
+		{
+			name: "test without version should pass",
+			yaml: `
+name: "Test Suite"
+description: "Test without version"
+tests:
+  - name: "Test 1"
+    steps:
+      - name: "Step 1"
+        plugin: "delay"
+        config:
+          duration: "5s"
+`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -82,7 +93,7 @@ tests:
 			config, err := ParseYAML([]byte(strings.TrimSpace(tt.yaml)))
 			require.NoError(t, err)
 			assert.NotEmpty(t, config.Name)
-			assert.Equal(t, "v1.0.0", config.Version)
+			// Version field no longer exists in spec
 			assert.NotEmpty(t, config.Tests)
 		})
 	}
@@ -110,40 +121,9 @@ tests:
 			expectedErr: "schema validation failed",
 		},
 		{
-			name: "missing version",
-			yaml: `
-name: "Test Suite"
-description: "Test without version"
-tests:
-  - name: "Test 1"
-    steps:
-      - name: "Step 1"
-        plugin: "delay"
-        config:
-          duration: "5s"
-`,
-			expectedErr: "schema validation failed",
-		},
-		{
-			name: "invalid version format",
-			yaml: `
-name: "Test Suite"
-version: "1.0.0"
-tests:
-  - name: "Test 1"
-    steps:
-      - name: "Step 1"
-        plugin: "delay"
-        config:
-          duration: "5s"
-`,
-			expectedErr: "schema validation failed",
-		},
-		{
 			name: "no tests",
 			yaml: `
 name: "Test Suite"
-version: "v1.0.0"
 tests: []
 `,
 			expectedErr: "schema validation failed",
@@ -152,7 +132,6 @@ tests: []
 			name: "invalid plugin",
 			yaml: `
 name: "Test Suite"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:
@@ -167,7 +146,6 @@ tests:
 			name: "missing assertion path for json_path type",
 			yaml: `
 name: "Test Suite"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:
@@ -194,10 +172,9 @@ tests:
 }
 
 func TestParseYAML_BackwardsCompatibility(t *testing.T) {
-	// Test that schema validation catches invalid versions
+	// Test that YAML without version field should pass
 	yaml := `
 name: "Test Suite"
-version: "2.0.0"
 tests:
   - name: "Test 1"
     steps:
@@ -206,16 +183,16 @@ tests:
         config:
           duration: "5s"
 `
-	_, err := ParseYAML([]byte(strings.TrimSpace(yaml)))
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "schema validation failed")
+	config, err := ParseYAML([]byte(strings.TrimSpace(yaml)))
+	require.NoError(t, err)
+	assert.Equal(t, "Test Suite", config.Name)
+	assert.NotEmpty(t, config.Tests)
 }
 
 func TestValidateWithSchema_DirectTesting(t *testing.T) {
 	// Test the schema validation function directly
 	validYAML := []byte(`
 name: "Test Suite"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:

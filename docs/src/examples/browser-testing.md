@@ -65,7 +65,6 @@ config:
 
 ```yaml
 name: "Basic Browser Test"
-version: "v1.0.0"
 
 tests:
   - name: "Check website content"
@@ -101,7 +100,6 @@ tests:
 
 ```yaml
 name: "Browser Plugin Feature Demo"
-version: "v1.0.0"
 
 vars:
   target_site: "https://docs.rocketship.sh"

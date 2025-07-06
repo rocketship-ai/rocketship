@@ -1,6 +1,5 @@
 name: "Environment Variables Example"
 description: "Demonstrates using environment variables with --env-file flag"
-version: "v1.0.0"
 
 tests:
   - name: "Environment Variables Demo"
