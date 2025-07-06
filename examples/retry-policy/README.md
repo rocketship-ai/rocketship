@@ -24,7 +24,7 @@ retry:
 
 ### 3. Test Scenarios
 
-1. **HTTP Request with Retry Policy**: Tests HTTP requests that may fail initially
+1. **HTTP Request with Retry Policy**: Tests HTTP requests with failing assertions (triggers retries)
 2. **Delay Plugin with Retry Policy**: Shows retry works with non-HTTP plugins
 3. **Multiple Plugin Types**: Different retry policies for different plugins
 4. **Steps Without Retry Policy**: Demonstrates backward compatibility
@@ -84,11 +84,14 @@ err := workflow.ExecuteActivity(stepCtx, step.Plugin, pluginParams).Get(stepCtx,
 
 When you run this test suite:
 
-1. Steps with retry policies will attempt retries according to their configuration
+1. Steps with retry policies will attempt retries **only when the step fails** (assertion failures, network errors, etc.)
 2. Steps without retry policies will use the default (single attempt)
 3. All plugin types work with retry policies
 4. Failed requests will be retried with exponential backoff
 5. Debug logging will show retry attempts in action
+
+!!! note "When Retries Occur"
+    Retries only happen when a step **fails** - either due to assertion failures, network errors, or plugin execution errors. If all assertions pass, the step is successful and no retries occur.
 
 ## Debug Logging
 

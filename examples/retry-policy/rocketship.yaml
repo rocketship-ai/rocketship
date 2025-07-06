@@ -9,7 +9,7 @@ tests:
         config:
           message: "🔄 Starting retry policy test - testing HTTP request with failures"
 
-      - name: "HTTP request that fails initially"
+      - name: "HTTP request with failing assertion (will retry)"
         plugin: "http"
         config:
           method: "GET"
@@ -23,7 +23,7 @@ tests:
           backoff_coefficient: 2.0
         assertions:
           - type: "status_code"
-            expected: 500  # We expect this to fail, but retry should happen
+            expected: 200  # This will fail since URL returns 500, triggering retries
 
       - name: "HTTP request with successful retry simulation"
         plugin: "http"
