@@ -1,6 +1,5 @@
 name: "Retry Policy Test Suite"
 description: "Test suite demonstrating retry functionality for plugin steps"
-version: "v1.0.0"
 tests:
   - name: "HTTP Request with Retry Policy"
     steps:
