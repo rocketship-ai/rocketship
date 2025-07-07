@@ -17,7 +17,9 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface
 	// Plugin activities will override this with step-specific options in executePlugin
 	baseAO := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30,
-		// No retry policy here - let plugin activities set their own
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, baseAO)
 
@@ -152,7 +154,9 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
 	// If no retry config is provided, disable retries entirely
 	if retryConfig == nil {
-		return nil // No retry policy = no retries, fail immediately
+		return &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		}
 	}
 
 	// Build retry policy from configuration

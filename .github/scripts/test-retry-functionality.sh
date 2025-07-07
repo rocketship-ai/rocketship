@@ -71,14 +71,14 @@ else
     exit 1
 fi
 
-# Check that multiple attempts were made by counting error repetitions in the error message
-ERROR_COUNT=$(echo "$OUTPUT" | grep -o "status code assertion failed: expected 200, got 503" | wc -l | tr -d ' ')
+# Check that multiple attempts were made by counting actual activity attempts
+ERROR_COUNT=$(echo "$OUTPUT" | grep -E "Attempt [0-9].*ActivityType http" | wc -l | tr -d ' ')
 if [ "$ERROR_COUNT" -ge 3 ]; then
     echo "✅ HTTP retry test: Found $ERROR_COUNT retry attempts (≥3 as configured)"
 else
     echo "❌ HTTP retry test: Only found $ERROR_COUNT retry attempts, expected at least 3"
     echo "Let's check what error patterns we have:"
-    echo "$OUTPUT" | grep -i "error\|fail\|assertion" | head -10
+    echo "$OUTPUT" | grep -E "Attempt [0-9].*ActivityType http" | head -10
     exit 1
 fi
 
@@ -120,13 +120,14 @@ else
     exit 1
 fi
 
-# Check that retries actually happened by counting error repetitions
-RETRY_COUNT=$(echo "$OUTPUT" | grep -o "Intentional script failure for retry testing" | wc -l | tr -d ' ')
+# Check that retries actually happened by counting actual activity attempts
+RETRY_COUNT=$(echo "$OUTPUT" | grep -E "Attempt [0-9].*ActivityType script" | wc -l | tr -d ' ')
 if [ "$RETRY_COUNT" -ge 4 ]; then
     echo "✅ Script retry test: Found $RETRY_COUNT retry attempts (≥4 as configured)"
 else
     echo "❌ Script retry test: Only found $RETRY_COUNT retry attempts, expected at least 4"
-    echo "Debug output: $OUTPUT"
+    echo "Debug output:"
+    echo "$OUTPUT" | grep -E "Attempt [0-9].*ActivityType script"
     exit 1
 fi
 
@@ -165,12 +166,14 @@ else
 fi
 
 # Check that exactly one attempt was made (no retries)
-RETRY_COUNT=$(echo "$OUTPUT" | grep -o "status code assertion failed: expected 200, got 404" | wc -l | tr -d ' ')
+# Count actual activity attempts, not error message occurrences
+RETRY_COUNT=$(echo "$OUTPUT" | grep -E "Attempt [0-9].*ActivityType http" | wc -l | tr -d ' ')
 if [ "$RETRY_COUNT" -eq 1 ]; then
     echo "✅ No-retry test: Found exactly 1 attempt (no retries) as expected"
 else
     echo "❌ No-retry test: Found $RETRY_COUNT attempts, expected exactly 1"
-    echo "Debug output: $OUTPUT"
+    echo "Debug output:"
+    echo "$OUTPUT" | grep -E "Attempt [0-9].*ActivityType http"
     exit 1
 fi
 
