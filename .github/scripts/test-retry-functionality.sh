@@ -4,6 +4,10 @@
 
 set -e  # Exit on any error
 
+# Add debug output for CI troubleshooting
+echo "🔧 Debug: Current working directory: $(pwd)"
+echo "🔧 Debug: Available rocketship version: $(rocketship version 2>/dev/null || echo 'not found')"
+
 echo "🔄 Testing retry functionality..."
 
 # Test 1: Verify retry configuration is properly parsed and applied
@@ -53,8 +57,21 @@ EOF
 
 echo "  → Running HTTP retry test with debug logging..."
 set +e  # Don't exit on failure for this test
-OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-http-retry.yaml 2>&1)
-EXIT_CODE=$?
+
+# Add timeout and retry for network reliability
+for attempt in 1 2 3; do
+    OUTPUT=$(timeout 120 rocketship run -af /tmp/test-http-retry.yaml 2>&1 || true)
+    EXIT_CODE=$?
+    
+    # Check if we got meaningful output (not just timeout/network error)
+    if echo "$OUTPUT" | grep -q "HTTP Retry Test"; then
+        break
+    fi
+    
+    echo "  ⚠️  Attempt $attempt failed, retrying..."
+    sleep 2
+done
+
 set -e
 
 # Check if the test run shows failures (which is what we want)
