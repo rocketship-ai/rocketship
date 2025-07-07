@@ -1,0 +1,13 @@
+version: "v1.0.0"
+name: "Isolated Environment Test"
+tests:
+  - name: "Simple delay test"
+    steps:
+      - name: "Test delay"
+        plugin: delay
+        config:
+          duration: "100ms"
+      - name: "Test log"
+        plugin: log
+        config:
+          message: "Hello from isolated environment!"
