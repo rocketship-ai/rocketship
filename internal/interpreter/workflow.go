@@ -12,15 +12,7 @@ import (
 
 func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}, runID string) error {
 	logger := workflow.GetLogger(ctx)
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: time.Minute * 30, // TODO: Make this configurable
-		RetryPolicy: &temporal.RetryPolicy{
-			MaximumAttempts: 1,
-			// BackoffCoefficient: 2,
-			// MaximumAttempts:    5,
-		},
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
+	// Remove global ActivityOptions - use step-specific options in executePlugin instead
 
 	// Initialize workflow state
 	state := make(map[string]string)
@@ -110,12 +102,9 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	}
 
 	// Create step-specific activity options with retry policy
-	retryPolicy := buildRetryPolicy(step.Retry)
-	logger.Info(fmt.Sprintf("Applying retry policy for step %s: %+v", step.Name, retryPolicy))
-	
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30,
-		RetryPolicy:         retryPolicy,
+		RetryPolicy:         buildRetryPolicy(step.Retry),
 	}
 	stepCtx := workflow.WithActivityOptions(ctx, ao)
 
@@ -154,10 +143,10 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 
 // buildRetryPolicy converts DSL retry configuration to Temporal RetryPolicy
 func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
-	// If no retry config is provided, disable retries completely
+	// If no retry config is provided, disable retries (try once only)
 	if retryConfig == nil {
 		return &temporal.RetryPolicy{
-			MaximumAttempts: 0, // 0 means no retries at all
+			MaximumAttempts: 1, // Try once, no retries
 		}
 	}
 
