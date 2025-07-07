@@ -110,9 +110,12 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	}
 
 	// Create step-specific activity options with retry policy
+	retryPolicy := buildRetryPolicy(step.Retry)
+	logger.Info(fmt.Sprintf("Applying retry policy for step %s: %+v", step.Name, retryPolicy))
+	
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30,
-		RetryPolicy:         buildRetryPolicy(step.Retry),
+		RetryPolicy:         retryPolicy,
 	}
 	stepCtx := workflow.WithActivityOptions(ctx, ao)
 
@@ -154,7 +157,7 @@ func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
 	// If no retry config is provided, disable retries completely
 	if retryConfig == nil {
 		return &temporal.RetryPolicy{
-			MaximumAttempts: 1,
+			MaximumAttempts: 0, // 0 means no retries at all
 		}
 	}
 
