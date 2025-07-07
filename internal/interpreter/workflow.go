@@ -12,7 +12,14 @@ import (
 
 func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}, runID string) error {
 	logger := workflow.GetLogger(ctx)
-	// Remove global ActivityOptions - use step-specific options in executePlugin instead
+	
+	// Set base timeout for non-plugin activities (LogForwarderActivity, etc.)
+	// Plugin activities will override this with step-specific options in executePlugin
+	baseAO := workflow.ActivityOptions{
+		StartToCloseTimeout: time.Minute * 30,
+		// No retry policy here - let plugin activities set their own
+	}
+	ctx = workflow.WithActivityOptions(ctx, baseAO)
 
 	// Initialize workflow state
 	state := make(map[string]string)
