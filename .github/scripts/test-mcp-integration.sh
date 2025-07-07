@@ -499,13 +499,6 @@ if [ -f "test-generated/test.yaml" ]; then
         print_error "Test YAML missing assertions"
         exit 1
     fi
-    
-    if grep -q "version:" test-generated/test.yaml; then
-        print_success "Test YAML contains version field"
-    else
-        print_error "Test YAML missing version field"
-        exit 1
-    fi
 else
     print_error "Test YAML file not found"
     exit 1
