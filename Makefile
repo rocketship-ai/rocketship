@@ -136,6 +136,26 @@ install: build
 	@rm -f $(shell which rocketship 2>/dev/null)
 	go install ./cmd/rocketship
 
+# Install for local development with forced local binary usage
+install-dev: build
+	@echo "Installing CLI for development..."
+	@rm -f $(shell which rocketship 2>/dev/null)
+	@# Clear any cached binaries to ensure fresh start
+	@rm -rf ~/Library/Caches/rocketship/ 2>/dev/null || true
+	@rm -rf ~/.cache/rocketship/ 2>/dev/null || true
+	@# Install CLI
+	go install ./cmd/rocketship
+	@echo "✅ CLI installed for development mode"
+	@echo "   Local binaries will be used from internal/embedded/bin/"
+	@echo "   Run 'make clean-cache' to clear cached binaries if needed"
+
+# Clear cached binaries to force using local development binaries
+clean-cache:
+	@echo "Clearing cached rocketship binaries..."
+	@rm -rf ~/Library/Caches/rocketship/ 2>/dev/null || true
+	@rm -rf ~/.cache/rocketship/ 2>/dev/null || true
+	@echo "✅ Cache cleared"
+
 # Set up development environment
 dev-setup: prepare-embed
 	@echo "Setting up development environment..."

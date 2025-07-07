@@ -22,15 +22,37 @@ type binaryMetadata struct {
 
 // ExtractAndRun extracts a binary and runs it
 func ExtractAndRun(name string, args []string, env []string) (*exec.Cmd, error) {
-	// Always check for local development binary first
-	localBinaryPath := filepath.Join("internal", "embedded", "bin", name)
-	if stat, err := os.Stat(localBinaryPath); err == nil && stat.Mode()&0111 != 0 {
-		// Use local binary in development mode
-		cmd := exec.Command(localBinaryPath, args...)
-		cmd.Env = env
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd, nil
+	// Try multiple paths to find local development binaries
+	localPaths := []string{
+		// Relative to current working directory (when running from project root)
+		filepath.Join("internal", "embedded", "bin", name),
+	}
+
+	// Add path relative to executable
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		// Try different relative paths from the executable
+		possiblePaths := []string{
+			filepath.Join(execDir, "..", "internal", "embedded", "bin", name),
+			filepath.Join(execDir, "..", "..", "internal", "embedded", "bin", name),
+			filepath.Join(execDir, "internal", "embedded", "bin", name),
+		}
+		localPaths = append(localPaths, possiblePaths...)
+	}
+
+	// Check each possible local path
+	for _, localBinaryPath := range localPaths {
+		if localBinaryPath == "" {
+			continue
+		}
+		if stat, err := os.Stat(localBinaryPath); err == nil && stat.Mode()&0111 != 0 {
+			// Use local binary in development mode
+			cmd := exec.Command(localBinaryPath, args...)
+			cmd.Env = env
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			return cmd, nil
+		}
 	}
 
 	// Get the temporary directory
