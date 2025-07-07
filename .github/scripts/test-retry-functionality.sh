@@ -72,13 +72,13 @@ else
 fi
 
 # Check that multiple attempts were made by counting actual activity attempts
-ERROR_COUNT=$(echo "$OUTPUT" | grep -E "ActivityType http.*Attempt [0-9]" | wc -l | tr -d ' ')
+ERROR_COUNT=$(echo "$OUTPUT" | grep -E "Activity error.*ActivityType http.*Attempt [0-9]" | wc -l | tr -d ' ')
 if [ "$ERROR_COUNT" -ge 3 ]; then
     echo "✅ HTTP retry test: Found $ERROR_COUNT retry attempts (≥3 as configured)"
 else
     echo "❌ HTTP retry test: Only found $ERROR_COUNT retry attempts, expected at least 3"
     echo "Let's check what error patterns we have:"
-    echo "$OUTPUT" | grep -E "ActivityType http.*Attempt [0-9]" | head -10
+    echo "$OUTPUT" | grep -E "Activity error.*ActivityType http.*Attempt [0-9]" | head -10
     exit 1
 fi
 
@@ -121,13 +121,13 @@ else
 fi
 
 # Check that retries actually happened by counting actual activity attempts
-RETRY_COUNT=$(echo "$OUTPUT" | grep -E "ActivityType script.*Attempt [0-9]" | wc -l | tr -d ' ')
+RETRY_COUNT=$(echo "$OUTPUT" | grep -E "Activity error.*ActivityType script.*Attempt [0-9]" | wc -l | tr -d ' ')
 if [ "$RETRY_COUNT" -ge 4 ]; then
     echo "✅ Script retry test: Found $RETRY_COUNT retry attempts (≥4 as configured)"
 else
     echo "❌ Script retry test: Only found $RETRY_COUNT retry attempts, expected at least 4"
     echo "Debug output:"
-    echo "$OUTPUT" | grep -E "ActivityType script.*Attempt [0-9]"
+    echo "$OUTPUT" | grep -E "Activity error.*ActivityType script.*Attempt [0-9]"
     exit 1
 fi
 
@@ -167,13 +167,13 @@ fi
 
 # Check that exactly one attempt was made (no retries)
 # Count actual activity attempts, not error message occurrences
-RETRY_COUNT=$(echo "$OUTPUT" | grep -E "ActivityType http.*Attempt [0-9]" | wc -l | tr -d ' ')
+RETRY_COUNT=$(echo "$OUTPUT" | grep -E "Activity error.*ActivityType http.*Attempt [0-9]" | wc -l | tr -d ' ')
 if [ "$RETRY_COUNT" -eq 1 ]; then
     echo "✅ No-retry test: Found exactly 1 attempt (no retries) as expected"
 else
     echo "❌ No-retry test: Found $RETRY_COUNT attempts, expected exactly 1"
     echo "Debug output:"
-    echo "$OUTPUT" | grep -E "ActivityType http.*Attempt [0-9]"
+    echo "$OUTPUT" | grep -E "Activity error.*ActivityType http.*Attempt [0-9]"
     exit 1
 fi
 
