@@ -287,7 +287,6 @@ print_info "Test 3: Testing YAML validation with Rocketship CLI..."
 # Create test YAML content based on MCP guidance patterns
 mkdir -p test-generated
 cat > test-generated/test.yaml << 'EOF'
-version: "v1.0.0"
 name: "MCP Assisted Test Suite"
 description: "Test file created with MCP guidance"
 vars:

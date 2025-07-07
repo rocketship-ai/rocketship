@@ -35,7 +35,6 @@ echo ""
 echo "📋 Test 2: HTTP plugin retry with failing endpoint..."
 
 cat > /tmp/test-http-retry.yaml << 'EOF'
-version: "v1.0.0"
 name: HTTP Retry Test
 tests:
   - name: HTTP with retries
@@ -88,7 +87,6 @@ echo ""
 echo "📋 Test 3: Script plugin retry with failing script..."
 
 cat > /tmp/test-script-retry.yaml << 'EOF'
-version: "v1.0.0"
 name: Script Retry Test
 tests:
   - name: Script with retries
@@ -137,7 +135,6 @@ echo ""
 echo "📋 Test 4: No retry configuration should fail immediately (no retries)..."
 
 cat > /tmp/test-no-retry.yaml << 'EOF'
-version: "v1.0.0"
 name: No Retry Test
 tests:
   - name: No retry config
@@ -182,7 +179,6 @@ echo ""
 echo "📋 Test 5: Successful step with retry config should not retry..."
 
 cat > /tmp/test-success-no-retry.yaml << 'EOF'
-version: "v1.0.0"
 name: Success No Retry Test
 tests:
   - name: Success with retry config
