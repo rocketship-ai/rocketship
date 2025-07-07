@@ -58,19 +58,8 @@ EOF
 echo "  → Running HTTP retry test with debug logging..."
 set +e  # Don't exit on failure for this test
 
-# Add timeout and retry for network reliability
-for attempt in 1 2 3; do
-    OUTPUT=$(timeout 120 rocketship run -af /tmp/test-http-retry.yaml 2>&1 || true)
-    EXIT_CODE=$?
-    
-    # Check if we got meaningful output (not just timeout/network error)
-    if echo "$OUTPUT" | grep -q "HTTP Retry Test"; then
-        break
-    fi
-    
-    echo "  ⚠️  Attempt $attempt failed, retrying..."
-    sleep 2
-done
+OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-http-retry.yaml 2>&1)
+EXIT_CODE=$?
 
 set -e
 
@@ -143,9 +132,9 @@ else
     exit 1
 fi
 
-# Test 4: Steps without retry should use Temporal default behavior
+# Test 4: Steps without retry should fail immediately (no retries)
 echo ""
-echo "📋 Test 4: No retry configuration should use Temporal default behavior..."
+echo "📋 Test 4: No retry configuration should fail immediately (no retries)..."
 
 cat > /tmp/test-no-retry.yaml << 'EOF'
 version: "v1.0.0"
@@ -178,12 +167,12 @@ else
     exit 1
 fi
 
-# Check that attempts were made but not excessive (Temporal has default retry behavior)
+# Check that exactly one attempt was made (no retries)
 RETRY_COUNT=$(echo "$OUTPUT" | grep -o "status code assertion failed: expected 200, got 404" | wc -l | tr -d ' ')
-if [ "$RETRY_COUNT" -le 15 ]; then
-    echo "✅ No-retry test: Found $RETRY_COUNT attempts (within reasonable default range)"
+if [ "$RETRY_COUNT" -eq 1 ]; then
+    echo "✅ No-retry test: Found exactly 1 attempt (no retries) as expected"
 else
-    echo "❌ No-retry test: Found $RETRY_COUNT attempts, excessive even for default behavior"
+    echo "❌ No-retry test: Found $RETRY_COUNT attempts, expected exactly 1"
     echo "Debug output: $OUTPUT"
     exit 1
 fi
@@ -239,6 +228,6 @@ echo ""
 echo "🎉 All retry functionality tests passed!"
 echo "✅ Verified retry behavior for HTTP and Script plugins"
 echo "✅ Verified retry counts meet or exceed configuration (working as expected)"
-echo "✅ Verified Temporal default retry behavior when retry not configured"
+echo "✅ Verified no retries occur when retry not configured"
 echo "✅ Verified successful steps don't trigger retries"
 echo "✅ Retry functionality is truly plugin-agnostic!"
