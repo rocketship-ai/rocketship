@@ -151,14 +151,11 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 
 // buildRetryPolicy converts DSL retry configuration to Temporal RetryPolicy
 func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
-	// Default retry policy with single attempt (existing behavior)
-	defaultPolicy := &temporal.RetryPolicy{
-		MaximumAttempts: 1,
-	}
-
-	// If no retry config is provided, use default
+	// If no retry config is provided, disable retries completely
 	if retryConfig == nil {
-		return defaultPolicy
+		return &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		}
 	}
 
 	// Build retry policy from configuration
