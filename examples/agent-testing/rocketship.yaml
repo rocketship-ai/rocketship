@@ -1,6 +1,5 @@
 name: "Comprehensive Agent Plugin Testing"
 description: "Test suite covering all agent plugin features with Claude Code integration"
-version: "v1.0.0"
 
 vars:
   test_endpoint: "https://jsonplaceholder.typicode.com/posts/1"

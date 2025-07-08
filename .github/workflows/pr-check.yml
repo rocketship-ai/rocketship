@@ -287,6 +287,7 @@ jobs:
           ./.github/scripts/test-log-plugin.sh
           ./.github/scripts/test-log-plugin-validation.sh
           ./.github/scripts/test-env-file.sh
+          ./.github/scripts/test-retry-functionality.sh
 
           echo "Testing browser plugin integration..."
           OUTPUT=$(rocketship run -af examples/browser-testing/rocketship.yaml)

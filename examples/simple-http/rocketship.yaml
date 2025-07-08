@@ -1,6 +1,5 @@
 name: "Simple HTTP Test Suite"
 description: "A simple test suite that demonstrates basic HTTP operations"
-version: "v1.0.0"
 tests:
   - name: "Create and Get User"
     steps:
