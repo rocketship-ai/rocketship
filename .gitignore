@@ -3,6 +3,12 @@
 /internal/embedded/bin/*
 !/internal/embedded/bin/.gitkeep
 
+# MCP server Node.js dependencies
+mcp-server/node_modules/
+mcp-server/npm-debug.log*
+mcp-server/yarn-debug.log*
+mcp-server/yarn-error.log*
+
 # python
 .DS_Store
 **/.DS_Store
@@ -23,9 +29,7 @@ honeyruns/
 # testing directories with secrets
 testing-browser-plugin/
 
-# Docker worktree-specific files
-.docker/.env.local
-.docker/docker-compose.override.yml
-.docker/docker-rocketship-local.sh
-.docker/start-services.sh
-.docker/stop-services.sh
+# Temporary build artifacts
+tmp/
+cli-introspection.json
+*.log

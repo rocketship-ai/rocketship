@@ -12,6 +12,7 @@ class RocketshipKnowledgeLoader {
   private schema: any = null;
   private examples: Map<string, any> = new Map();
   private docs: Map<string, string> = new Map();
+  private cliData: any = null;
 
   constructor() {
     console.log(`Initializing Rocketship MCP Server v0.4.1`);
@@ -28,13 +29,16 @@ class RocketshipKnowledgeLoader {
       EMBEDDED_SCHEMA,
       EMBEDDED_EXAMPLES,
       EMBEDDED_DOCS,
+      EMBEDDED_CLI_DATA,
     } = require("./embedded-knowledge");
 
     this.schema = EMBEDDED_SCHEMA;
     this.examples = EMBEDDED_EXAMPLES;
     this.docs = EMBEDDED_DOCS;
+    this.cliData = EMBEDDED_CLI_DATA;
 
     console.log(`📦 Loaded real embedded knowledge from build step`);
+    console.log(`📋 CLI Version: ${this.cliData?.version?.version || 'unknown'}`);
   }
 
   getSchema(): any {
@@ -56,52 +60,88 @@ class RocketshipKnowledgeLoader {
   getAllDocs(): string[] {
     return Array.from(this.docs.keys());
   }
+
+  getCLIData(): any {
+    return this.cliData;
+  }
 }
 
 // Initialize knowledge loader
 const knowledgeLoader = new RocketshipKnowledgeLoader();
 
-// Tool descriptions that emphasize the assistant nature
-const TOOL_DESCRIPTIONS = {
-  get_rocketship_examples: `Provides real examples from the Rocketship codebase for specific features or use cases.
+// REMOVED: Hard-coded tool descriptions replaced with dynamic generation
+
+
+// Generate dynamic tool descriptions based on CLI introspection data
+function generateToolDescriptions(knowledgeLoader: RocketshipKnowledgeLoader) {
+  const cliData = knowledgeLoader.getCLIData();
+  const schema = knowledgeLoader.getSchema();
+  const availablePlugins = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum || [];
+
+  // Extract dynamic information
+  const filePattern = cliData?.usage?.file_structure?.pattern || 'rocketship.yaml';
+  const varExamples = cliData?.usage?.syntax_patterns?.variables || {};
+  const commonCommands = cliData?.usage?.common_patterns || [];
+  
+  // Build variable syntax examples from extracted data
+  let variableSyntax = '';
+  if (varExamples.config && varExamples.config.length > 0) {
+    variableSyntax += `💡 Config variables: ${varExamples.config.slice(0, 2).join(', ')}\n`;
+  }
+  if (varExamples.environment && varExamples.environment.length > 0) {
+    variableSyntax += `💡 Environment variables: ${varExamples.environment.slice(0, 2).join(', ')}\n`;
+  }
+  if (varExamples.runtime && varExamples.runtime.length > 0) {
+    variableSyntax += `💡 Runtime variables: ${varExamples.runtime.slice(0, 2).join(', ')}\n`;
+  }
+
+  // Build CLI command examples from extracted data
+  let cliExamples = '';
+  const runCommands = commonCommands.filter((c: any) => c.command.includes('run')).slice(0, 2);
+  if (runCommands.length > 0) {
+    cliExamples = `💡 Example commands: ${runCommands.map((c: any) => c.command).join(', ')}`;
+  }
+
+  // Build plugin recommendations from available plugins
+  let pluginRecommendations = '';
+  if (availablePlugins.includes('browser')) {
+    pluginRecommendations += '💡 For frontend projects: browser plugin available for user journey testing\n';
+  }
+  if (availablePlugins.includes('http')) {
+    pluginRecommendations += '💡 For API projects: http plugin available for endpoint testing\n';
+  }
+
+  return {
+    get_rocketship_examples: `Provides real examples from the current codebase for specific features or use cases.
 
 💡 YOU (the coding agent) create the test files based on these examples.
-💡 For frontend projects, consider using the browser plugin for user journey testing.
-💡 Structure: .rocketship/ directory with subdirectories, each containing rocketship.yaml
-💡 Variables: {{ .vars.name }} (config), {{ .env.NAME }} (environment), {{ name }} (runtime)
-💡 JSON paths: .field_name for JSON paths (no $ prefix)`,
+${pluginRecommendations}💡 File pattern: ${filePattern}
+${variableSyntax}`,
 
-  suggest_test_structure: `Suggests proper Rocketship file structure and test organization for your project.
+    suggest_test_structure: `Suggests proper file structure and test organization based on current project configuration.
 
 💡 YOU (the coding agent) create the directory structure and files.
-💡 For frontend projects: Consider browser-based user journey testing.
-💡 For API projects: Focus on user workflows rather than just coverage.`,
+${pluginRecommendations}💡 Available plugins: ${availablePlugins.join(', ')}`,
 
-  get_schema_info: `Provides the current Rocketship schema information for validation and proper syntax.
+    get_schema_info: `Provides current schema information for validation and proper syntax.
 
 💡 Use this to ensure your YAML follows the correct schema.
-💡 Pay attention to required fields, valid plugin names, and assertion types.`,
+💡 Available plugins: ${availablePlugins.join(', ')}
+💡 Schema validation ensures compatibility with current version.`,
 
-  get_cli_guidance: `Provides correct Rocketship CLI usage patterns and commands.
+    get_cli_guidance: `Provides current CLI usage patterns and commands from introspection.
 
 💡 YOU (the coding agent) will run these commands to execute tests.
-💡 Use rocketship run -af for auto-start with single file, -ad for directories.`,
+${cliExamples}
+💡 All commands are extracted from current CLI version.`,
 
-  analyze_codebase_for_testing: `Analyzes a codebase to suggest meaningful test scenarios based on user journeys.
+    analyze_codebase_for_testing: `Analyzes a codebase to suggest meaningful test scenarios based on available plugins.
 
 💡 Focus on customer-facing flows and critical business logic.
-💡 For frontends: Consider browser testing of key user paths.
-💡 For APIs: Test the endpoints that support those user paths.
-💡 TIP: Include relevant keywords in your description to get better flow suggestions:
-   - authentication, login, access, permissions (for auth flows)
-   - dashboard, main, overview, portal (for main interface)
-   - search, find, filter, browse (for discovery)
-   - create, edit, manage, records, crud (for data management)
-   - settings, config, preferences, account (for configuration)
-   - process, workflow, submit, approve (for business processes)
-   - reports, analytics, export, metrics (for reporting)
-   - notifications, messages, alerts, communication (for messaging)`,
-};
+${pluginRecommendations}💡 Suggestions are based on available plugins: ${availablePlugins.join(', ')}
+💡 TIP: Include relevant keywords for better flow suggestions`,
+  };
+}
 
 export class RocketshipMCPServer {
   private server: Server;
@@ -126,7 +166,8 @@ export class RocketshipMCPServer {
 
   private setupHandlers() {
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      // Dynamically get available plugins from schema
+      // Generate dynamic tool descriptions based on current CLI introspection data
+      const dynamicDescriptions = generateToolDescriptions(this.knowledgeLoader);
       const schema = this.knowledgeLoader.getSchema();
       const availablePlugins = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum || [];
       
@@ -134,7 +175,7 @@ export class RocketshipMCPServer {
         tools: [
           {
             name: "get_rocketship_examples",
-            description: TOOL_DESCRIPTIONS.get_rocketship_examples,
+            description: dynamicDescriptions.get_rocketship_examples,
             inputSchema: {
               type: "object",
               properties: {
@@ -153,7 +194,7 @@ export class RocketshipMCPServer {
           },
           {
             name: "suggest_test_structure",
-            description: TOOL_DESCRIPTIONS.suggest_test_structure,
+            description: dynamicDescriptions.suggest_test_structure,
             inputSchema: {
               type: "object",
               properties: {
@@ -174,7 +215,7 @@ export class RocketshipMCPServer {
           },
           {
             name: "get_schema_info",
-            description: TOOL_DESCRIPTIONS.get_schema_info,
+            description: dynamicDescriptions.get_schema_info,
             inputSchema: {
               type: "object",
               properties: {
@@ -189,7 +230,7 @@ export class RocketshipMCPServer {
           },
           {
             name: "get_cli_guidance",
-            description: TOOL_DESCRIPTIONS.get_cli_guidance,
+            description: dynamicDescriptions.get_cli_guidance,
             inputSchema: {
               type: "object",
               properties: {
@@ -204,7 +245,7 @@ export class RocketshipMCPServer {
           },
           {
             name: "analyze_codebase_for_testing",
-            description: TOOL_DESCRIPTIONS.analyze_codebase_for_testing,
+            description: dynamicDescriptions.analyze_codebase_for_testing,
             inputSchema: {
               type: "object",
               properties: {
@@ -302,17 +343,20 @@ export class RocketshipMCPServer {
       response += `- Focus on the most important customer paths\n\n`;
     }
 
-    response += `## File Structure\n`;
-    response += `Create this structure (YOU must create these files):\n`;
-    response += `\`\`\`\n`;
-    response += `.rocketship/\n`;
-    response += `├── login-flow/\n`;
-    response += `│   └── rocketship.yaml\n`;
-    response += `├── purchase-journey/\n`;
-    response += `│   └── rocketship.yaml\n`;
-    response += `└── dashboard-tests/\n`;
-    response += `    └── rocketship.yaml\n`;
-    response += `\`\`\`\n\n`;
+    // Use extracted file structure from CLI introspection
+    const cliData = this.knowledgeLoader.getCLIData();
+    if (cliData?.usage?.file_structure) {
+      response += `## File Structure\n`;
+      response += `Create this structure (YOU must create these files):\n`;
+      
+      if (cliData.usage.file_structure.examples) {
+        Object.entries(cliData.usage.file_structure.examples).forEach(([key, example]) => {
+          response += `\`\`\`\n${example}\`\`\`\n\n`;
+        });
+      } else if (cliData.usage.file_structure.pattern) {
+        response += `Pattern: \`${cliData.usage.file_structure.pattern}\`\n\n`;
+      }
+    }
 
     // Show real examples
     response += `## Real Examples from Codebase\n\n`;
@@ -335,42 +379,57 @@ export class RocketshipMCPServer {
       }
     }
 
-    // Add syntax reminders
-    response += `## Critical Syntax Rules\n\n`;
-    response += `**Variable Types:**\n`;
-    response += `- Config variables: \`{{ .vars.variable_name }}\` (from vars section)\n`;
-    response += `- Environment variables: \`{{ .env.VARIABLE_NAME }}\` (from system env)\n`;
-    response += `- Runtime variables: \`{{ variable_name }}\` (from save operations)\n\n`;
-    response += `**Other syntax:**\n`;
-    response += `- JSON paths: \`.field_name\` or \`.items_0.id\` (NO $ prefix)\n`;
-    response += `- File names: Always \`rocketship.yaml\` in subdirectories\n`;
-    response += `- Step chaining: Save with \`json_path: ".field"\` and \`as: "var_name"\`\n\n`;
-
-    // Add browser-specific guidance
-    if (feature_type === "browser") {
-      response += `## Browser Plugin Requirements\n\n`;
-      response += `- \`task\`: Natural language description of what to do\n`;
-      response += `- \`llm\`: Configuration with provider and model\n`;
-      response += `- Common tasks: "Navigate to X and Y", "Fill form and submit", "Extract data from page"\n\n`;
-
-      const browserDoc = this.knowledgeLoader.getDocumentation(
-        "examples/browser-testing.md"
-      );
-      if (browserDoc) {
-        // Extract key sections from browser documentation
-        const configMatch = browserDoc.match(
-          /## Basic Configuration\n\n```yaml\n([\s\S]*?)\n```/
-        );
-        if (configMatch) {
-          response += `## Browser Plugin Configuration\n\n\`\`\`yaml\n${configMatch[1]}\`\`\`\n\n`;
+    // Use extracted syntax patterns from CLI introspection
+    if (cliData?.usage?.syntax_patterns) {
+      response += `## Syntax Rules (from Documentation)\n\n`;
+      
+      if (cliData.usage.syntax_patterns.variables) {
+        response += `**Variable Types:**\n`;
+        const vars = cliData.usage.syntax_patterns.variables;
+        
+        if (vars.config && vars.config.length > 0) {
+          response += `- Config variables: Examples: ${vars.config.slice(0, 3).map((v: string) => `\`${v}\``).join(', ')}\n`;
         }
+        if (vars.environment && vars.environment.length > 0) {
+          response += `- Environment variables: Examples: ${vars.environment.slice(0, 3).map((v: string) => `\`${v}\``).join(', ')}\n`;
+        }
+        if (vars.runtime && vars.runtime.length > 0) {
+          response += `- Runtime variables: Examples: ${vars.runtime.slice(0, 3).map((v: string) => `\`${v}\``).join(', ')}\n`;
+        }
+        response += `\n`;
+      }
+      
+      if (cliData.usage.syntax_patterns.save_operations && Object.keys(cliData.usage.syntax_patterns.save_operations).length > 0) {
+        response += `**Save Operations:**\n`;
+        Object.entries(cliData.usage.syntax_patterns.save_operations).slice(0, 2).forEach(([key, example]) => {
+          response += `\`\`\`yaml\n${example}\`\`\`\n`;
+        });
+        response += `\n`;
       }
     }
 
+    // Use extracted plugin-specific guidance from CLI introspection
+    if (feature_type === "browser" && cliData?.usage?.syntax_patterns?.plugins?.browser) {
+      response += `## Browser Plugin Guidance (from Documentation)\n\n`;
+      cliData.usage.syntax_patterns.plugins.browser.forEach((context: string, index: number) => {
+        response += `### Example ${index + 1}\n\`\`\`yaml\n${context}\`\`\`\n\n`;
+      });
+    }
+
+    // Use extracted CLI commands for next steps
     response += `## Next Steps\n`;
-    response += `1. YOU create the .rocketship/ directory structure\n`;
+    response += `1. YOU create the directory structure shown above\n`;
     response += `2. YOU write the rocketship.yaml files based on these examples\n`;
-    response += `3. Run: \`rocketship run -ad .rocketship\` to execute all tests\n`;
+    
+    // Use actual CLI commands from introspection
+    if (cliData?.usage?.common_patterns) {
+      const runPatterns = cliData.usage.common_patterns.filter((p: any) => 
+        p.command.includes('run') && (p.command.includes('-ad') || p.command.includes('--dir'))
+      );
+      if (runPatterns.length > 0) {
+        response += `3. Run: \`${runPatterns[0].command}\` to execute tests\n`;
+      }
+    }
 
     return {
       content: [
@@ -384,81 +443,119 @@ export class RocketshipMCPServer {
 
   private async handleSuggestStructure(args: any) {
     const { project_type, user_flows } = args;
+    const cliData = this.knowledgeLoader.getCLIData();
 
     let response = `# Rocketship Test Structure for ${project_type} Project\n\n`;
-
     response += `💡 **Note: YOU create all directories and files yourself**\n\n`;
 
-    // Project-specific guidance
+    // Use extracted file structure patterns from CLI introspection
+    if (cliData?.usage?.file_structure) {
+      response += `## Recommended Structure (from Documentation)\n\n`;
+      
+      if (cliData.usage.file_structure.pattern) {
+        response += `**Pattern:** \`${cliData.usage.file_structure.pattern}\`\n\n`;
+      }
+      
+      if (cliData.usage.file_structure.examples) {
+        Object.entries(cliData.usage.file_structure.examples).forEach(([key, example]) => {
+          response += `### ${key}\n\`\`\`\n${example}\`\`\`\n\n`;
+        });
+      }
+      
+      // Show real examples from actual codebase
+      if (cliData.usage.file_structure.real_examples) {
+        response += `### Real Examples in Codebase\n`;
+        Object.entries(cliData.usage.file_structure.real_examples).forEach(([dir, info]: [string, any]) => {
+          response += `- \`${info.path}\` ✓\n`;
+        });
+        response += `\n`;
+      }
+    }
+
+    // Project-specific guidance with dynamic examples
+    const availablePlugins = this.knowledgeLoader.getSchema()?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum || [];
+    
     if (project_type === "frontend" || project_type === "fullstack") {
       response += `## 🌐 Frontend Testing Strategy\n\n`;
-      response += `**Recommended: Browser plugin for user journey testing**\n\n`;
-
-      response += `Create this structure:\n\`\`\`\n`;
-      response += `.rocketship/\n`;
+      
+      if (availablePlugins.includes("browser")) {
+        response += `**Available: Browser plugin for user journey testing**\n\n`;
+        response += `For complete working examples, use:\n`;
+        response += `\`\`\`\nget_rocketship_examples feature_type="browser"\n\`\`\`\n\n`;
+      }
+      
+      // Generate user flow structure dynamically
       if (user_flows && user_flows.length > 0) {
+        response += `### Suggested Structure for Your Flows\n\`\`\`\n`;
+        response += `.rocketship/\n`;
         for (const flow of user_flows.slice(0, 5)) {
-          const cleanName = flow
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "");
+          const cleanName = flow.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
           response += `├── ${cleanName}/\n`;
           response += `│   └── rocketship.yaml\n`;
         }
-      } else {
-        response += `├── user-registration/\n`;
-        response += `│   └── rocketship.yaml\n`;
-        response += `├── login-flow/\n`;
-        response += `│   └── rocketship.yaml\n`;
-        response += `├── main-dashboard/\n`;
-        response += `│   └── rocketship.yaml\n`;
+        response += `\`\`\`\n\n`;
       }
-      response += `\`\`\`\n\n`;
-
-      response += `### Getting Started\n\n`;
-      
-      // Direct users to use the examples tool
-      response += `For complete working examples, use:\n`;
-      response += `\`\`\`\nget_rocketship_examples feature_type="browser"\n\`\`\`\n\n`;
-      response += `This will show you real browser testing examples from the Rocketship codebase.\n\n`;
-      
-      response += `### Variable Types\n\n`;
-      response += `Rocketship supports three types of variables:\n`;
-      response += `- **Config variables**: \`{{ .vars.variable_name }}\` (from vars section)\n`;
-      response += `- **Environment variables**: \`{{ .env.VARIABLE_NAME }}\` (from system env)\n`;
-      response += `- **Runtime variables**: \`{{ variable_name }}\` (from save operations)\n\n`;
     } else {
       response += `## 🔌 API Testing Strategy\n\n`;
       response += `Focus on user journey endpoints (not just coverage)\n\n`;
+      
+      if (availablePlugins.includes("http")) {
+        response += `**Available: HTTP plugin for API testing**\n\n`;
+        response += `For complete working examples, use:\n`;
+        response += `\`\`\`\nget_rocketship_examples feature_type="http"\n\`\`\`\n\n`;
+      }
+    }
 
-      response += `Create this structure:\n\`\`\`\n`;
-      response += `.rocketship/\n`;
-      response += `├── health-checks/\n`;
-      response += `│   └── rocketship.yaml\n`;
-      response += `├── user-authentication/\n`;
-      response += `│   └── rocketship.yaml\n`;
-      response += `├── core-business-flow/\n`;
-      response += `│   └── rocketship.yaml\n`;
+    // Use extracted variable syntax from CLI introspection
+    if (cliData?.usage?.syntax_patterns?.variables) {
+      response += `### Variable Types (from Documentation)\n\n`;
+      const vars = cliData.usage.syntax_patterns.variables;
+      
+      if (vars.config && vars.config.length > 0) {
+        response += `- **Config variables**: ${vars.config.slice(0, 2).map((v: string) => `\`${v}\``).join(', ')}\n`;
+      }
+      if (vars.environment && vars.environment.length > 0) {
+        response += `- **Environment variables**: ${vars.environment.slice(0, 2).map((v: string) => `\`${v}\``).join(', ')}\n`;
+      }
+      if (vars.runtime && vars.runtime.length > 0) {
+        response += `- **Runtime variables**: ${vars.runtime.slice(0, 2).map((v: string) => `\`${v}\``).join(', ')}\n`;
+      }
+      response += `\n`;
+    }
+
+    // Use extracted CLI commands from introspection
+    response += `## CLI Commands (from Current CLI)\n\n`;
+    if (cliData?.usage?.common_patterns) {
+      response += `\`\`\`bash\n`;
+      
+      // Find validate patterns
+      const validatePatterns = cliData.usage.common_patterns.filter((p: any) => p.command.includes('validate'));
+      if (validatePatterns.length > 0) {
+        response += `# ${validatePatterns[0].description}\n`;
+        response += `${validatePatterns[0].command}\n\n`;
+      }
+      
+      // Find run patterns
+      const runPatterns = cliData.usage.common_patterns.filter((p: any) => p.command.includes('run'));
+      runPatterns.slice(0, 3).forEach((pattern: any) => {
+        response += `# ${pattern.description}\n`;
+        response += `${pattern.command}\n\n`;
+      });
+      
       response += `\`\`\`\n\n`;
     }
 
-    response += `## CLI Commands YOU Need to Run\n\n`;
-    response += `\`\`\`bash\n`;
-    response += `# Validate your YAML files\n`;
-    response += `rocketship validate .rocketship\n`;
-    response += `\n`;
-    response += `# Run all tests with auto-start/stop\n`;
-    response += `rocketship run -ad .rocketship\n`;
-    response += `\n`;
-    response += `# Run specific test\n`;
-    response += `rocketship run -af .rocketship/login-flow/rocketship.yaml\n`;
-    response += `\`\`\`\n\n`;
-
-    response += `## Key Reminders\n`;
-    response += `- File names: Always \`rocketship.yaml\` (exact name)\n`;
-    response += `- Directory structure: \`.rocketship/test-name/rocketship.yaml\`\n`;
-    response += `- Config variables: \`{{ .vars.name }}\`, Environment: \`{{ .env.NAME }}\`, Runtime: \`{{ name }}\`\n`;
-    response += `- JSON paths: \`.field_name\` (no $ prefix)\n`;
+    // Use extracted patterns for key reminders
+    response += `## Key Information (from Documentation)\n`;
+    if (cliData?.usage?.file_structure?.pattern) {
+      response += `- File pattern: \`${cliData.usage.file_structure.pattern}\`\n`;
+    }
+    if (cliData?.usage?.syntax_patterns?.save_operations) {
+      const saveExample = Object.values(cliData.usage.syntax_patterns.save_operations)[0] as string;
+      if (saveExample) {
+        response += `- Save syntax: See documentation for \`save:\` operations\n`;
+      }
+    }
 
     return {
       content: [
@@ -600,66 +697,105 @@ export class RocketshipMCPServer {
 
   private async handleGetCLIGuidance(args: any) {
     const { command } = args;
+    const cliData = this.knowledgeLoader.getCLIData();
 
     let response = `# Rocketship CLI Guidance\n\n`;
+    
+    if (cliData?.version?.version) {
+      response += `*Current CLI Version: ${cliData.version.version}*\n\n`;
+    }
 
+    // Use actual CLI help data and usage patterns from introspection
     if (command === "run" || command === "structure") {
       response += `## Running Tests\n\n`;
-      response += `### Auto-start mode (recommended for development)\n`;
-      response += `\`\`\`bash\n`;
-      response += `# Run single test file with auto-start/stop\n`;
-      response += `rocketship run -af .rocketship/login-flow/rocketship.yaml\n`;
-      response += `\n`;
-      response += `# Run all tests in directory with auto-start/stop\n`;
-      response += `rocketship run -ad .rocketship\n`;
-      response += `\n`;
-      response += `# Run with environment variables\n`;
-      response += `rocketship run -ad .rocketship --var APP_URL=http://localhost:3000\n`;
-      response += `\`\`\`\n\n`;
+      
+      if (cliData?.help?.run?.help) {
+        response += `### Current CLI Usage\n`;
+        response += `\`\`\`\n${cliData.help.run.help}\`\`\`\n\n`;
+      }
 
-      response += `### Manual engine mode\n`;
-      response += `\`\`\`bash\n`;
-      response += `# Start engine in background\n`;
-      response += `rocketship start server --local --background\n`;
-      response += `\n`;
-      response += `# Run tests against running engine\n`;
-      response += `rocketship run -d .rocketship\n`;
-      response += `\n`;
-      response += `# Stop engine\n`;
-      response += `rocketship stop server\n`;
-      response += `\`\`\`\n\n`;
+      // Use extracted usage patterns instead of hard-coded ones
+      if (cliData?.usage?.common_patterns) {
+        response += `### Common Patterns\n`;
+        response += `\`\`\`bash\n`;
+        
+        cliData.usage.common_patterns.forEach((pattern: any) => {
+          response += `# ${pattern.description}\n`;
+          response += `${pattern.command}\n\n`;
+        });
+        
+        response += `\`\`\`\n\n`;
+      }
+
+      // Use extracted examples from CLI help
+      if (cliData?.usage?.examples_from_help?.run) {
+        response += `### Examples from CLI Help\n`;
+        response += `\`\`\`\n${cliData.usage.examples_from_help.run}\`\`\`\n\n`;
+      }
+
+      // Manual server mode using actual CLI data
+      if (cliData?.help?.start?.subcommands?.server) {
+        response += `### Manual Engine Mode\n`;
+        response += `\`\`\`\n${cliData.help.start.subcommands.server}\`\`\`\n\n`;
+      }
     }
 
     if (command === "validate" || command === "structure") {
       response += `## Validation\n\n`;
-      response += `\`\`\`bash\n`;
-      response += `# Validate single file\n`;
-      response += `rocketship validate .rocketship/login-flow/rocketship.yaml\n`;
-      response += `\n`;
-      response += `# Validate all files in directory\n`;
-      response += `rocketship validate .rocketship\n`;
-      response += `\n`;
-      response += `# Validate with variables\n`;
-      response += `rocketship validate .rocketship --var APP_URL=http://localhost:3000\n`;
-      response += `\`\`\`\n\n`;
+      
+      if (cliData?.help?.validate?.help) {
+        response += `### Current Validate Command\n`;
+        response += `\`\`\`\n${cliData.help.validate.help}\`\`\`\n\n`;
+      }
+
+      // Use extracted examples if available
+      if (cliData?.usage?.examples_from_help?.validate) {
+        response += `### Examples from CLI Help\n`;
+        response += `\`\`\`\n${cliData.usage.examples_from_help.validate}\`\`\`\n\n`;
+      }
     }
 
-    response += `## Key Flags\n\n`;
-    response += `- \`-a, --auto\`: Auto-start and stop engine\n`;
-    response += `- \`-f, --file\`: Single test file\n`;
-    response += `- \`-d, --dir\`: Directory of tests\n`;
-    response += `- \`--var key=value\`: Set variables\n`;
-    response += `- \`--var-file path\`: Load variables from file\n\n`;
+    // Use actual flag data - NO FALLBACKS
+    response += `## Current CLI Flags\n\n`;
+    if (cliData?.flags && Object.keys(cliData.flags).length > 0) {
+      for (const [flag, info] of Object.entries(cliData.flags as any)) {
+        const flagInfo = info as any;
+        response += `- \`${flagInfo.short ? flagInfo.short + ', ' : ''}${flagInfo.long}\`: ${flagInfo.description}\n`;
+      }
+    } else {
+      response += `Flag documentation not available in CLI introspection data.\n`;
+    }
+    response += `\n`;
 
-    response += `## File Discovery\n`;
-    response += `Rocketship automatically finds \`rocketship.yaml\` files recursively in directories.\n\n`;
+    // Use actual installation data - NO FALLBACKS
+    response += `## Installation Methods\n\n`;
+    if (cliData?.installation) {
+      if (cliData.installation.recommended) {
+        response += `**Recommended:** ${cliData.installation.recommended}\n\n`;
+      }
+      
+      if (cliData.installation.methods && cliData.installation.methods.length > 0) {
+        response += `**Available Methods:**\n`;
+        for (const method of cliData.installation.methods) {
+          response += `- **${method.name}**: ${method.description}\n`;
+          response += `  \`\`\`bash\n  ${method.command}\n  \`\`\`\n`;
+        }
+      }
+      
+      if (cliData.installation.notAvailable && cliData.installation.notAvailable.length > 0) {
+        response += `\n**NOT Available:**\n`;
+        for (const na of cliData.installation.notAvailable) {
+          response += `- ${na}\n`;
+        }
+      }
 
-    const runDoc = this.knowledgeLoader.getDocumentation(
-      "reference/rocketship_run.md"
-    );
-    if (runDoc) {
-      response += `## Complete CLI Reference\n\n`;
-      response += runDoc;
+      // Include actual README installation section if available
+      if (cliData.installation.fromReadme) {
+        response += `\n### From Documentation\n\n`;
+        response += `${cliData.installation.fromReadme}\n\n`;
+      }
+    } else {
+      response += `Installation information not available in CLI introspection data.\n\n`;
     }
 
     return {

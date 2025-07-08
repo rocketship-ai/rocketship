@@ -1,18 +1,19 @@
+
 ## Test Step Structure
 
 | Field | Required | Description |
-|-------|----------|-------------|
+| ----- | -------- | ----------- |
 | `name` | ✅ | Name of the test step |
 | `plugin` | ✅ | Plugin to use for this step |
 | `config` | ✅ | Configuration for the plugin |
 | `assertions` |  | Assertions to validate the response |
 | `save` |  | Response values to save for use in later steps |
+| `retry` |  | Retry policy for the step activity |
+
 
 ---
 
 ## Supported Plugins
-
-You can use the following plugins in a test step:
 
 - `http`: Make HTTP requests and validate responses
 - `delay`: Pause execution for a given duration
@@ -23,55 +24,64 @@ You can use the following plugins in a test step:
 - `browser`: Automate browser actions using Playwright
 - `supabase`: Interact with Supabase APIs or database
 
+
 ---
 
 ## Plugin Configurations
 
+
 ### Plugin: `script`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
-|-------|----------|-------------|------------------------|-------|
+| ----- | -------- | ----------- | --------------------- | ----- |
 | `language` | ✅ | Script language to use | `javascript`, `shell` | - |
 | `script` |  (oneOf) | Inline script content | `string` | - |
 | `file` |  (oneOf) | Path to external script file | `string` | - |
 | `timeout` |  | Script execution timeout | `string` | - |
 
+
 ### Plugin: `sql`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
-|-------|----------|-------------|------------------------|-------|
+| ----- | -------- | ----------- | --------------------- | ----- |
 | `driver` | ✅ | Database driver to use | `postgres`, `mysql`, `sqlite`, `sqlserver` | - |
 | `dsn` | ✅ | Database connection string (Data Source Name) | `string` | - |
 | `commands[]` |  (oneOf) | Array of SQL commands to execute | `array of string` | - |
 | `file` |  (oneOf) | Path to external SQL file | `string` | - |
 | `timeout` |  | Query execution timeout | `string` | - |
-##### ```sql Assertions``` 
+
+
+##### `sql` Assertions
 
 | Field | Required | Description | Allowed Values |
-|-------|----------|-------------|----------------|
+| ----- | -------- | ----------- | -------------- |
 | `type` | ✅ | Type of SQL assertion | `row_count`, `query_count`, `success_count`, `column_value` |
 | `expected` | ✅ | Expected value for the assertion | - |
 | `query_index` |  (if `type` is `row_count`) (if `type` is `column_value`) | Index of query to check (for row_count and column_value assertions) | - |
 | `row_index` |  (if `type` is `column_value`) | Index of row to check (for column_value assertion) | - |
 | `column` |  (if `type` is `column_value`) | Column name to check (for column_value assertion) | - |
-##### ```sql Save Fields```
+
+
+##### `sql` Save Fields
 
 | Field | Required | Description | Notes |
-|-------|----------|-------------|-------|
+| ----- | -------- | ----------- | ----- |
 | `sql_result` | ✅ | Path to extract from SQL result (e.g., '.queries[0].rows[0].id') | - |
 | `as` |  | Variable name to save the extracted value as | - |
 | `required` |  | Whether the value is required (defaults to true) | - |
 
+
 ### Plugin: `log`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
-|-------|----------|-------------|------------------------|-------|
+| ----- | -------- | ----------- | --------------------- | ----- |
 | `message` | ✅ | Message to log (supports template variables) | `string` | - |
+
 
 ### Plugin: `agent`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
-|-------|----------|-------------|------------------------|-------|
+| ----- | -------- | ----------- | --------------------- | ----- |
 | `agent` | ✅ | Type of coding agent to use | `claude-code` | - |
 | `prompt` | ✅ | Prompt to send to the agent (supports template variables) | `string` | - |
 | `mode` |  | Agent execution mode | `single`, `continue`, `resume` | - |
@@ -83,10 +93,11 @@ You can use the following plugins in a test step:
 | `continue_recent` |  | Continue the most recent conversation | `boolean` | - |
 | `save_full_response` |  | Save the complete response to context | `boolean` | - |
 
+
 ### Plugin: `browser`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
-|-------|----------|-------------|------------------------|-------|
+| ----- | -------- | ----------- | --------------------- | ----- |
 | `task` | ✅ | Task description for the browser agent to perform (supports template variables) | `string` | - |
 | `llm` | ✅ | No description | `object` | - |
 | `llm.provider` | ✅ | LLM provider to use | `openai`, `anthropic` | - |
@@ -105,10 +116,11 @@ You can use the following plugins in a test step:
 | `viewport.width` |  | Viewport width in pixels | `integer` | - |
 | `viewport.height` |  | Viewport height in pixels | `integer` | - |
 
+
 ### Plugin: `supabase`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
-|-------|----------|-------------|------------------------|-------|
+| ----- | -------- | ----------- | --------------------- | ----- |
 | `url` | ✅ | Supabase project URL | `string` | - |
 | `key` | ✅ | Supabase API key (anon or service key) | `string` | - |
 | `operation` | ✅ | Supabase operation to perform | `select`, `insert`, `update`, `delete`, `rpc`, `auth_create_user`, `auth_delete_user`, `auth_sign_up`, `auth_sign_in`, `storage_create_bucket`, `storage_upload`, `storage_download`, `storage_delete` | - |
@@ -159,14 +171,13 @@ You can use the following plugins in a test step:
 | `storage.content_type` |  | No description | `string` | - |
 | `timeout` |  | Operation timeout | `string` | - |
 
+
 ---
 
 ## Assertions
 
-Each assertion must include:
-
 | Field | Required | Description | Allowed Values |
-|-------|----------|-------------|----------------|
+| ----- | -------- | ----------- | -------------- |
 | `type` | ✅ | Type of assertion | `status_code`, `json_path`, `header`, `row_count`, `query_count`, `success_count`, `column_value`, `supabase_count`, `supabase_error` |
 | `expected` | ✅ | Expected value for the assertion | - |
 | `path` |  (if `type` is `json_path`) | JSON path for json_path assertion type | - |
@@ -175,16 +186,16 @@ Each assertion must include:
 | `row_index` |  (if `type` is `column_value`) | Index of row to check (for column_value assertion) | - |
 | `column` |  (if `type` is `column_value`) | Column name to check (for column_value assertion) | - |
 
+
 ---
 
 ## Save Fields
 
-Each item must include:
-
 | Field | Required | Description | Notes |
-|-------|----------|-------------|-------|
+| ----- | -------- | ----------- | ----- |
 | `json_path` |  (oneOf) | JSON path to extract from response | - |
 | `header` |  (oneOf) | Header name to extract from response | - |
 | `sql_result` |  (oneOf) | Path to extract from SQL result (e.g., '.queries[0].rows[0].id') | - |
 | `as` | ✅ | Variable name to save the extracted value as | - |
 | `required` |  | Whether the value is required (defaults to true) | - |
+

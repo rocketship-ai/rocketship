@@ -75,6 +75,8 @@ nav:
           - Browser Plugin: examples/browser-testing.md
       - Logging:
           - Log Plugin: examples/log-plugin.md
+      - Reliability:
+          - Retry Policies: examples/retry-policies.md
   - YAML Reference:
       - Overview: yaml-reference/plugin-reference.md
   - MCP Server: mcp-server.md
