@@ -26,7 +26,6 @@ echo "  → Starting test with a long-running delay (will be cancelled)..."
 
 # Create a test YAML file with a long delay that we can cancel
 cat > /tmp/test-auto-cancel.yaml << 'EOF'
-version: v1.0.0
 name: Auto Mode Cancellation Test
 tests:
   - name: Long running test
@@ -91,7 +90,6 @@ echo "📋 Test 3: Verify normal auto mode still works after cancellation test..
 
 # Create a short test that should complete normally
 cat > /tmp/test-auto-normal.yaml << 'EOF'
-version: v1.0.0
 name: Normal Auto Mode Test
 tests:
   - name: Quick test

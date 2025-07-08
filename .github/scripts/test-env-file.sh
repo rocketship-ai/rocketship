@@ -20,7 +20,6 @@ EOF
 
 # Create a test YAML that uses these env vars
 cat > /tmp/test-env.yaml << 'EOF'
-version: v1.0.0
 name: Env File Test
 tests:
   - name: Test env vars
@@ -92,7 +91,6 @@ PATH_VALUE=/usr/local/bin:/usr/bin
 EOF
 
 cat > /tmp/test-quotes.yaml << 'EOF'
-version: v1.0.0
 name: Quotes Test
 tests:
   - name: Test quoted values
@@ -151,7 +149,6 @@ TEST_FILE_ONLY=file_only_value
 EOF
 
 cat > /tmp/test-precedence.yaml << 'EOF'
-version: v1.0.0
 name: Precedence Test
 tests:
   - name: Test precedence
