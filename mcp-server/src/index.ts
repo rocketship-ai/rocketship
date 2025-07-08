@@ -388,13 +388,13 @@ export class RocketshipMCPServer {
         const vars = cliData.usage.syntax_patterns.variables;
         
         if (vars.config && vars.config.length > 0) {
-          response += `- Config variables: Examples: ${vars.config.slice(0, 3).map(v => `\`${v}\``).join(', ')}\n`;
+          response += `- Config variables: Examples: ${vars.config.slice(0, 3).map((v: string) => `\`${v}\``).join(', ')}\n`;
         }
         if (vars.environment && vars.environment.length > 0) {
-          response += `- Environment variables: Examples: ${vars.environment.slice(0, 3).map(v => `\`${v}\``).join(', ')}\n`;
+          response += `- Environment variables: Examples: ${vars.environment.slice(0, 3).map((v: string) => `\`${v}\``).join(', ')}\n`;
         }
         if (vars.runtime && vars.runtime.length > 0) {
-          response += `- Runtime variables: Examples: ${vars.runtime.slice(0, 3).map(v => `\`${v}\``).join(', ')}\n`;
+          response += `- Runtime variables: Examples: ${vars.runtime.slice(0, 3).map((v: string) => `\`${v}\``).join(', ')}\n`;
         }
         response += `\n`;
       }
@@ -512,13 +512,13 @@ export class RocketshipMCPServer {
       const vars = cliData.usage.syntax_patterns.variables;
       
       if (vars.config && vars.config.length > 0) {
-        response += `- **Config variables**: ${vars.config.slice(0, 2).map(v => `\`${v}\``).join(', ')}\n`;
+        response += `- **Config variables**: ${vars.config.slice(0, 2).map((v: string) => `\`${v}\``).join(', ')}\n`;
       }
       if (vars.environment && vars.environment.length > 0) {
-        response += `- **Environment variables**: ${vars.environment.slice(0, 2).map(v => `\`${v}\``).join(', ')}\n`;
+        response += `- **Environment variables**: ${vars.environment.slice(0, 2).map((v: string) => `\`${v}\``).join(', ')}\n`;
       }
       if (vars.runtime && vars.runtime.length > 0) {
-        response += `- **Runtime variables**: ${vars.runtime.slice(0, 2).map(v => `\`${v}\``).join(', ')}\n`;
+        response += `- **Runtime variables**: ${vars.runtime.slice(0, 2).map((v: string) => `\`${v}\``).join(', ')}\n`;
       }
       response += `\n`;
     }
