@@ -90,7 +90,7 @@ function generateKnowledgeModule() {
 
 export const EMBEDDED_SCHEMA = ${JSON.stringify(schema, null, 2)};
 
-export const EMBEDDED_CLI_DATA = ${JSON.stringify(cliData, null, 2)};
+export const EMBEDDED_CLI_DATA: any = ${JSON.stringify(cliData, null, 2)};
 
 export const EMBEDDED_EXAMPLES = new Map([
 `;
