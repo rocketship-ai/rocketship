@@ -3,12 +3,11 @@
 /internal/embedded/bin/*
 !/internal/embedded/bin/.gitkeep
 
-# Node.js dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
+# MCP server Node.js dependencies
+mcp-server/node_modules/
+mcp-server/npm-debug.log*
+mcp-server/yarn-debug.log*
+mcp-server/yarn-error.log*
 
 # python
 .DS_Store
