@@ -67,7 +67,7 @@ jobs:
       - name: Test Docker builds
         run: |
           # Test CLI image build
-          docker build -f .docker/ci-testing/Dockerfile.cli -t rocketshipai/rocketship:test .
+          docker build -f .docker/Dockerfile.cli -t rocketshipai/rocketship:test .
 
           # Test Engine image build
           docker build -f .docker/Dockerfile.engine -t rocketshipai/rocketship-engine:test .
@@ -91,6 +91,7 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
+          args: --timeout=5m
 
   cli-integration:
     name: CLI Integration Tests
