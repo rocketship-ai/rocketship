@@ -77,6 +77,8 @@ nav:
           - Log Plugin: examples/log-plugin.md
       - Reliability:
           - Retry Policies: examples/retry-policies.md
+  - YAML Reference:
+      - Overview: yaml-reference/plugin-reference.md
   - MCP Server: mcp-server.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
