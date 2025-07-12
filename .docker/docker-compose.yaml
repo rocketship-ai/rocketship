@@ -103,6 +103,7 @@ services:
     build:
       context: ..
       dockerfile: .docker/Dockerfile.engine
+    image: rocketship-engine:${STACK_NAME:-latest}
     depends_on:
       temporal:
         condition: service_healthy
@@ -118,6 +119,7 @@ services:
     build:
       context: ..
       dockerfile: .docker/Dockerfile.worker
+    image: rocketship-worker:${STACK_NAME:-latest}
     depends_on:
       temporal:
         condition: service_healthy

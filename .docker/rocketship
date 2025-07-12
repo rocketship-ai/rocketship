@@ -229,7 +229,7 @@ run_cli_command() {
     local stack_name=$(get_stack_name)
     local network="rocketship-${stack_name}-network"
     local engine_host="rocketship-${stack_name}-engine-1:7700"
-    local image="rocketship-cli:latest"
+    local image="rocketship-cli:${stack_name}"
     
     # Build CLI image if it doesn't exist
     if ! docker image inspect "$image" > /dev/null 2>&1; then
