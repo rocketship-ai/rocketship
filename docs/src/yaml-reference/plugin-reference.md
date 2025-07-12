@@ -1,4 +1,16 @@
 
+## Test Structure
+
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `name` | ✅ | Name of the test suite |
+| `description` |  | Description of the test suite |
+| `vars` |  | Configuration variables that can be referenced in test steps using {{ vars.key }} syntax |
+| `tests` | ✅ | Array of test cases |
+
+
+---
+
 ## Test Step Structure
 
 | Field | Required | Description |

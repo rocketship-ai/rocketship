@@ -58,13 +58,13 @@ def extract_fields(
     return rows
 
 
-def generate_step_base_template(step_props: Dict[str, Any]) -> str:
+def generate_step_base_template(step_props: Dict[str, Any], required_fields:List, heading_:str) -> str:
     rows = []
     for key, val in step_props.items():
         desc = val.get("description", "No description")
-        required = "✅" if key in ["name", "plugin", "config"] else ""
+        required = "✅" if key in required_fields else ""
         rows.append([f"`{key}`", required, desc])
-    return heading("Test Step Structure") + render_table(["Field", "Required", "Description"], rows)
+    return heading(heading_) + render_table(["Field", "Required", "Description"], rows)
 
 
 def generate_plugin_list(steps_schema: dict) -> str:
@@ -171,14 +171,21 @@ def generate_save_fields_table(schema, plugin=None, level=2) -> str:
 
 def generate_full_markdown(schema: dict) -> str:
     try:
-        steps_schema = schema["properties"]["tests"]["items"]["properties"]["steps"]["items"]
-        base_md = generate_step_base_template(steps_schema["properties"])
-        plugin_list_md = generate_plugin_list(steps_schema)
-        plugin_config_md = generate_plugin_configs_table(steps_schema.get("allOf", []))
-        assertions_md = generate_assertion_fields_table(steps_schema["properties"]["assertions"])
-        save_md = generate_save_fields_table(steps_schema["properties"]["save"])
+        test_schema_heading = "Test Structure"
+        test_schema = generate_step_base_template(schema["properties"], schema["required"], test_schema_heading)
+        
+        test_steps_schema = schema["properties"]["tests"]["items"]["properties"]["steps"]["items"]
+        test_steps_schema_heading = "Test Step Structure"
+        base_md = generate_step_base_template(test_steps_schema["properties"], test_steps_schema["required"], test_steps_schema_heading)
+        
+        plugin_list_md = generate_plugin_list(test_steps_schema)
+        assertions_md = generate_assertion_fields_table(test_steps_schema["properties"]["assertions"])
+        save_md = generate_save_fields_table(test_steps_schema["properties"]["save"])
+        plugin_config_md = generate_plugin_configs_table(test_steps_schema.get("allOf", []))
 
         return (
+            test_schema +
+            "\n---\n" +
             base_md +
             "\n---\n" +
             plugin_list_md +
