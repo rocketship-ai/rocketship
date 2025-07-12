@@ -34,20 +34,22 @@ fi
 echo -e "${YELLOW}Cleaning up any existing containers for ${PROJECT_NAME}...${NC}"
 docker-compose -f .docker/docker-compose.yaml -p ${PROJECT_NAME} down -v 2>/dev/null || true
 
-# Calculate unique ports for this instance
+# Calculate unique ports for this instance with better separation
 HASH=$(echo -n "${WORKTREE_NAME}" | cksum | cut -d' ' -f1)
-PORT_OFFSET=$((HASH % 100))
+# Use larger offsets and ensure no overlaps between different port ranges
+PORT_OFFSET=$((HASH % 50))  # Smaller range to prevent conflicts
+WORKTREE_ID=$((PORT_OFFSET * 10))  # Multiply by 10 for separation
 
-# Temporal UI port (base: 8080)
-TEMPORAL_UI_PORT=$((8080 + PORT_OFFSET))
+# Temporal UI port (base: 8080, range: 8080-8500)
+TEMPORAL_UI_PORT=$((8080 + WORKTREE_ID))
 
-# Engine ports (base: 7700, 7701)
-ENGINE_PORT=$((7700 + PORT_OFFSET))
-ENGINE_METRICS_PORT=$((7701 + PORT_OFFSET))
+# Engine ports (base: 7700, range: 7700-8000) 
+ENGINE_PORT=$((7700 + WORKTREE_ID))
+ENGINE_METRICS_PORT=$((7701 + WORKTREE_ID))
 
-# Test database ports
-POSTGRES_TEST_PORT=$((5433 + PORT_OFFSET))
-MYSQL_TEST_PORT=$((3307 + PORT_OFFSET))
+# Test database ports with large separation
+POSTGRES_TEST_PORT=$((5500 + WORKTREE_ID))  # Range: 5500-6000
+MYSQL_TEST_PORT=$((3400 + WORKTREE_ID))     # Range: 3400-3900
 
 # Create .env file with unique project name and all required variables
 cat > .docker/.env.local << EOF
@@ -75,65 +77,24 @@ POSTGRES_TEST_PORT=${POSTGRES_TEST_PORT}
 MYSQL_TEST_PORT=${MYSQL_TEST_PORT}
 EOF
 
-# Create docker-compose override file
-cat > .docker/docker-compose.override.yml << EOF
-# Auto-generated override for worktree: ${WORKTREE_NAME}
-# This file provides unique ports and container names
+# No override file needed - environment variables will be used directly
 
-services:
-  temporal-ui:
-    container_name: ${PROJECT_NAME}-temporal-ui
-    ports:
-      - "${TEMPORAL_UI_PORT}:8080"
-
-  engine:
-    container_name: ${PROJECT_NAME}-engine
-    ports:
-      - "${ENGINE_PORT}:7700"
-      - "${ENGINE_METRICS_PORT}:7701"
-
-  worker:
-    container_name: ${PROJECT_NAME}-worker
-
-  postgres-test:
-    container_name: ${PROJECT_NAME}-postgres-test
-    ports:
-      - "${POSTGRES_TEST_PORT}:5432"
-
-  mysql-test:
-    container_name: ${PROJECT_NAME}-mysql-test
-    ports:
-      - "${MYSQL_TEST_PORT}:3306"
-
-  temporal:
-    container_name: ${PROJECT_NAME}-temporal
-
-  temporal-postgresql:
-    container_name: ${PROJECT_NAME}-temporal-postgresql
-
-  temporal-elasticsearch:
-    container_name: ${PROJECT_NAME}-temporal-elasticsearch
-
-  temporal-admin-tools:
-    container_name: ${PROJECT_NAME}-temporal-admin-tools
-
-networks:
-  temporal-network:
-    name: temporal-network
-EOF
-
-# Create the CLI wrapper script
+# Create the CLI wrapper script with strict isolation
 cat > .docker/docker-rocketship-local.sh << EOF
 #!/bin/bash
 # Docker-based Rocketship CLI wrapper for this worktree
 # Auto-generated - do not edit
+# IMPORTANT: This ensures complete isolation between Claude agents
 
 # Set values based on this worktree
 WORKTREE_NAME="${WORKTREE_NAME}"
 PROJECT_NAME="${PROJECT_NAME}"
-NETWORK="temporal-network"
+NETWORK="${PROJECT_NAME}-network"
 ENGINE_HOST="${PROJECT_NAME}-engine:7700"
 IMAGE="${PROJECT_NAME}-cli:latest"
+
+# Unique session ID for this agent (prevents cross-contamination)
+SESSION_ID="${WORKTREE_NAME}-\$(date +%s)-\$(head -c 8 /dev/urandom | base64 | tr -d '=+/' | cut -c1-8)"
 
 # Function to show usage
 usage() {
@@ -174,9 +135,28 @@ if ! docker image inspect \$IMAGE > /dev/null 2>&1; then
     docker build -f "\$(dirname "\$0")/Dockerfile.cli" -t \$IMAGE "\$(dirname "\$0")/.." || exit 1
 fi
 
-# Run the command
+# Prevent manual engine specification to ensure isolation
+FILTERED_ARGS=()
+for arg in "\$@"; do
+    if [[ "\$arg" == "-e" ]] || [[ "\$arg" == "--engine" ]]; then
+        echo "Warning: Engine flag ignored. Using isolated engine: \$ENGINE_HOST"
+        continue
+    fi
+    # Skip the next argument if it's an engine address
+    if [[ "\$prev_arg" == "-e" ]] || [[ "\$prev_arg" == "--engine" ]]; then
+        prev_arg="\$arg"
+        continue
+    fi
+    FILTERED_ARGS+=("\$arg")
+    prev_arg="\$arg"
+done
+
+# Run the command with strict isolation
+echo "🔒 Using isolated engine: \$ENGINE_HOST"
+echo "🆔 Session ID: \$SESSION_ID"
+
 # If no arguments provided, show help
-if [ \$# -eq 0 ]; then
+if [ \${#FILTERED_ARGS[@]} -eq 0 ]; then
     docker run --rm \\
         --network \$NETWORK \\
         -v "\$(pwd)":/workspace \\
@@ -184,13 +164,14 @@ if [ \$# -eq 0 ]; then
         \$IMAGE --help
 else
     # For commands that need engine connection, add -e flag
-    case "\$1" in
+    case "\${FILTERED_ARGS[0]}" in
         run|list|get)
             docker run --rm \\
                 --network \$NETWORK \\
                 -v "\$(pwd)":/workspace \\
                 -w /workspace \\
-                \$IMAGE "\$@" -e \$ENGINE_HOST
+                -e "ROCKETSHIP_SESSION_ID=\$SESSION_ID" \\
+                \$IMAGE "\${FILTERED_ARGS[@]}" -e \$ENGINE_HOST
             ;;
         *)
             # For other commands (validate, help, version), don't add engine flag
@@ -198,7 +179,7 @@ else
                 --network \$NETWORK \\
                 -v "\$(pwd)":/workspace \\
                 -w /workspace \\
-                \$IMAGE "\$@"
+                \$IMAGE "\${FILTERED_ARGS[@]}"
             ;;
     esac
 fi
@@ -210,17 +191,25 @@ chmod +x .docker/docker-rocketship-local.sh
 cat > .docker/start-services.sh << EOF
 #!/bin/bash
 # Start services for this worktree
-cd "\$(dirname "\$0")"
 echo "Starting services for ${PROJECT_NAME}..."
+
+# Get the directory where this script is located
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 
 # Load both env files to ensure all variables are available
 set -a
-source .env
-source .env.local
+if [ -f "\$SCRIPT_DIR/.env" ]; then
+    source "\$SCRIPT_DIR/.env"
+fi
+if [ -f "\$SCRIPT_DIR/.env.local" ]; then
+    source "\$SCRIPT_DIR/.env.local"
+fi
 set +a
 
-docker-compose -p ${PROJECT_NAME} up -d
+# Start services with explicit paths to avoid cd issues
+docker-compose -f "\$SCRIPT_DIR/docker-compose.yaml" -p ${PROJECT_NAME} up -d
 echo "Services started! Temporal UI: http://localhost:${TEMPORAL_UI_PORT}"
+echo "Engine available at: localhost:${ENGINE_PORT}"
 EOF
 
 chmod +x .docker/start-services.sh
@@ -229,9 +218,13 @@ chmod +x .docker/start-services.sh
 cat > .docker/stop-services.sh << EOF
 #!/bin/bash
 # Stop services for this worktree
-cd "\$(dirname "\$0")"
 echo "Stopping services for ${PROJECT_NAME}..."
-docker-compose -p ${PROJECT_NAME} down -v
+
+# Get the directory where this script is located
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+
+# Stop services with explicit paths
+docker-compose -f "\$SCRIPT_DIR/docker-compose.yaml" -p ${PROJECT_NAME} down -v
 echo "Services stopped and cleaned up."
 EOF
 

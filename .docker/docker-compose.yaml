@@ -1,7 +1,6 @@
 services:
   ### START OF TEMPORAL DEPENDENCIES COPIED FROM HASH: https://github.com/temporalio/docker-compose/blob/5326abea4cdc2590d2ff93e5e249824e873a7c2f/docker-compose.yml ###
   elasticsearch:
-    container_name: temporal-elasticsearch
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -23,7 +22,6 @@ services:
       timeout: 5s
       retries: 5
   postgresql:
-    container_name: temporal-postgresql
     environment:
       POSTGRES_PASSWORD: temporal
       POSTGRES_USER: temporal
@@ -40,7 +38,6 @@ services:
       timeout: 5s
       retries: 5
   temporal:
-    container_name: temporal
     depends_on:
       postgresql:
         condition: service_healthy
@@ -71,7 +68,6 @@ services:
       timeout: 5s
       retries: 5
   temporal-admin-tools:
-    container_name: temporal-admin-tools
     depends_on:
       temporal:
         condition: service_healthy
@@ -84,7 +80,6 @@ services:
     stdin_open: true
     tty: true
   temporal-ui:
-    container_name: temporal-ui
     depends_on:
       temporal:
         condition: service_healthy
@@ -95,7 +90,7 @@ services:
     networks:
       - temporal-network
     ports:
-      - 8080:8080
+      - "${TEMPORAL_UI_PORT:-8080}:8080"
   ### END OF TEMPORAL DEPENDENCIES ###
   # .
   # .
@@ -113,7 +108,9 @@ services:
         condition: service_healthy
     environment:
       - TEMPORAL_HOST=temporal:7233
-    ports: ["7700:7700", "7701:7701"]
+    ports:
+      - "${ENGINE_PORT:-7700}:7700"
+      - "${ENGINE_METRICS_PORT:-7701}:7701"
     networks:
       - temporal-network
     restart: unless-stopped
@@ -132,7 +129,6 @@ services:
   ### END OF ROCKETSHIP CORE ###
   ### START OF TEST DATABASES ###
   postgres-test:
-    container_name: rocketship-postgres-test
     image: postgres:13
     environment:
       POSTGRES_DB: testdb
@@ -141,7 +137,7 @@ services:
     networks:
       - temporal-network
     ports:
-      - "5433:5432"
+      - "${POSTGRES_TEST_PORT:-5433}:5432"
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
       - ./test-db-init/postgres:/docker-entrypoint-initdb.d
@@ -152,7 +148,6 @@ services:
       retries: 5
 
   mysql-test:
-    container_name: rocketship-mysql-test
     image: mysql:8.0
     environment:
       MYSQL_DATABASE: testdb
@@ -162,7 +157,7 @@ services:
     networks:
       - temporal-network
     ports:
-      - "3307:3306"
+      - "${MYSQL_TEST_PORT:-3307}:3306"
     volumes:
       - mysql_test_data:/var/lib/mysql
       - ./test-db-init/mysql:/docker-entrypoint-initdb.d
@@ -182,13 +177,15 @@ services:
 networks:
   temporal-network:
     driver: bridge
-    name: temporal-network
+    name: ${COMPOSE_PROJECT_NAME:-temporal}-network
 ### END OF TEMPORAL NETWORK ###
 
 ### START OF VOLUMES ###
 volumes:
   postgres_test_data:
     driver: local
+    name: ${COMPOSE_PROJECT_NAME:-rocketship}_postgres_test_data
   mysql_test_data:
     driver: local
+    name: ${COMPOSE_PROJECT_NAME:-rocketship}_mysql_test_data
 ### END OF VOLUMES ###

@@ -1,0 +1,46 @@
+name: "Agent Isolation Test"
+description: "Test that demonstrates proper isolation between Claude agents"
+tests:
+  - name: "Test isolated session"
+    steps:
+      - name: "Create user with session isolation"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/users"
+          headers:
+            X-Test-Session: "{{ .env.ROCKETSHIP_SESSION_ID }}"
+          body: |
+            {
+              "name": "Test User",
+              "email": "test@example.com",
+              "agent_info": "{{ .env.ROCKETSHIP_SESSION_ID }}"
+            }
+        assertions:
+          - type: status_code
+            expected: 200
+          - type: json_path
+            path: ".name"
+            expected: "Test User"
+        save:
+          - json_path: ".id"
+            as: "user_id"
+
+      - name: "Verify user isolation"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/users/{{ user_id }}"
+          headers:
+            X-Test-Session: "{{ .env.ROCKETSHIP_SESSION_ID }}"
+        assertions:
+          - type: status_code
+            expected: 200
+          - type: json_path
+            path: ".agent_info"
+            expected: "{{ .env.ROCKETSHIP_SESSION_ID }}"
+
+      - name: "Log isolation info"
+        plugin: log
+        config:
+          message: "✅ Agent isolation working! Session: {{ .env.ROCKETSHIP_SESSION_ID }}"

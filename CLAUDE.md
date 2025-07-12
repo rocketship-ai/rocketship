@@ -238,3 +238,45 @@ playwright install chromium
 # Run browser tests
 rocketship run -af examples/browser-automation/rocketship.yaml
 ```
+
+## Testing Against tryme Server
+
+For testing purposes, there's a hosted test server at `tryme.rocketship.sh` that provides endpoints for testing HTTP requests. This server is useful for development and testing without requiring external services.
+
+The tryme server features:
+- Test CRUD operations for a resource type
+- Resources are isolated based off a session header
+- Resource cleanup is done hourly (every :00)
+
+### Test Session Isolation
+
+When multiple coding agents are testing simultaneously, use the `X-Test-Session` header to ensure complete isolation between test sessions:
+
+```yaml
+steps:
+  - name: "Test with session isolation"
+    plugin: http
+    config:
+      url: "https://tryme.rocketship.sh/users"
+      method: "POST"
+      headers:
+        X-Test-Session: "unique-session-id-for-this-agent"
+      body: |
+        {
+          "name": "Test User",
+          "email": "test@example.com"
+        }
+```
+
+**Important**: Each coding agent should use a unique value for the `X-Test-Session` header to prevent interference between concurrent test runs. This ensures that:
+
+- Test data is isolated per session
+- Concurrent agents don't affect each other's test results
+- Each agent gets its own isolated test environment
+
+Example session ID patterns:
+- `agent-1-timestamp-hash`
+- `worktree-name-uuid`
+- `feature-branch-random-id`
+
+This isolation is particularly important when using the Docker worktree setup where multiple agents may be testing simultaneously.
