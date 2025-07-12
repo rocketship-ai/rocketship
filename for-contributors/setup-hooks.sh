@@ -10,6 +10,20 @@ if ! make lint test; then
     exit 1
 fi
 
+# Check if schema.json was modified
+if git diff --cached --name-only | grep -q "internal/dsl/schema.json"; then
+    echo "📚 Schema changed, regenerating plugin reference docs..."
+    cd docs && python3 src/yaml-reference/generate-plugin-reference.py
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to generate plugin reference docs. Commit aborted."
+        exit 1
+    fi
+    cd ..
+    # Stage the updated docs
+    git add docs/src/yaml-reference/plugin-reference.md
+    echo "✅ Plugin reference docs updated!"
+fi
+
 echo "✅ Lint and tests passed!"
 exit 0
 EOL

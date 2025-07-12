@@ -171,11 +171,15 @@ docs-deps:
 docs: docs-deps
 	@echo "Generating documentation..."
 	@go run ./cmd/docgen
+	@echo "Generating plugin reference..."
+	@cd docs && python3 src/yaml-reference/generate-plugin-reference.py
 	@. docs/.venv/bin/activate && cd docs && mkdocs build
 
 docs-serve: docs-deps
 	@echo "Starting documentation server..."
 	@go run ./cmd/docgen
+	@echo "Generating plugin reference..."
+	@cd docs && python3 src/yaml-reference/generate-plugin-reference.py
 	@. docs/.venv/bin/activate && cd docs && mkdocs serve
 
 docs-clean:

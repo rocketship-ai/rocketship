@@ -12,6 +12,7 @@ on:
       - ".docker/**"
       - "examples/**"
       - "internal/dsl/schema.json"
+      - "docs/src/yaml-reference/**"
       - "mcp-server/**"
       - "package*.json"
       - "proto/**"
@@ -91,6 +92,45 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
+
+  check-plugin-docs:
+    name: Check Plugin Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check if plugin docs are up-to-date
+        run: |
+          echo "Generating plugin reference documentation..."
+          cd docs && python3 src/yaml-reference/generate-plugin-reference.py
+          cd ..
+          
+          echo "Checking for differences..."
+          if git diff --exit-code docs/src/yaml-reference/plugin-reference.md; then
+            echo "✅ Plugin reference docs are up-to-date!"
+          else
+            echo "❌ Plugin reference docs are out of sync!"
+            echo ""
+            echo "The plugin reference documentation is not up-to-date with the schema."
+            echo "This usually happens when:"
+            echo "1. You modified internal/dsl/schema.json but didn't update the docs"
+            echo "2. You don't have the pre-commit hook installed"
+            echo ""
+            echo "To fix this, run:"
+            echo "  cd docs && python3 src/yaml-reference/generate-plugin-reference.py"
+            echo "  git add docs/src/yaml-reference/plugin-reference.md"
+            echo "  git commit --amend"
+            echo ""
+            echo "Or install the pre-commit hook:"
+            echo "  ./for-contributors/setup-hooks.sh"
+            echo ""
+            exit 1
+          fi
 
   cli-integration:
     name: CLI Integration Tests
