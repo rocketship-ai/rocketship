@@ -70,19 +70,8 @@ def generate_step_base_template(step_props: Dict[str, Any], required_fields:List
 def generate_plugin_list(steps_schema: dict) -> str:
     md = heading("Supported Plugins")
     plugin_enum = steps_schema["properties"]["plugin"].get("enum", [])
-    plugin_descriptions = {
-        "http": "Make HTTP requests and validate responses",
-        "delay": "Pause execution for a given duration",
-        "script": "Run JavaScript or shell scripts",
-        "sql": "Run SQL queries and validate results",
-        "log": "Emit logs for visibility or debugging",
-        "agent": "Run steps on remote agents",
-        "browser": "Automate browser actions using Playwright",
-        "supabase": "Interact with Supabase APIs or database"
-    }
     for plugin in plugin_enum:
-        desc = plugin_descriptions.get(plugin, "No description")
-        md += f"- `{plugin}`: {desc}\n"
+        md += f"- `{plugin}`\n"
     return md + "\n"
 
 

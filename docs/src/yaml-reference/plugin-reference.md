@@ -27,14 +27,14 @@
 
 ## Supported Plugins
 
-- `http`: Make HTTP requests and validate responses
-- `delay`: Pause execution for a given duration
-- `script`: Run JavaScript or shell scripts
-- `sql`: Run SQL queries and validate results
-- `log`: Emit logs for visibility or debugging
-- `agent`: Run steps on remote agents
-- `browser`: Automate browser actions using Playwright
-- `supabase`: Interact with Supabase APIs or database
+- `http`
+- `delay`
+- `script`
+- `sql`
+- `log`
+- `agent`
+- `browser`
+- `supabase`
 
 
 ---
