@@ -1,181 +1,275 @@
-# Rocketship Docker Setup
+# Rocketship Multi-Stack Docker Environment
 
-This directory contains the Docker configuration for running Rocketship in a fully containerized environment. This setup is ideal for:
-- Isolated development environments
-- Running multiple Rocketship instances
-- CI/CD pipelines
-- Testing without local installation
+This directory provides a **completely automated multi-stack Docker environment** for Rocketship development. It's designed specifically for **git worktree workflows** where each worktree gets its own isolated Docker environment with **zero configuration required**.
 
-## Architecture
+## 🎯 Key Features
 
-The Docker setup includes:
-- **Temporal Stack**: PostgreSQL, Elasticsearch, Temporal Server, UI, and Admin Tools
-- **Rocketship Engine**: gRPC server that orchestrates test execution
-- **Rocketship Worker**: Executes test workflows using plugins
-- **Rocketship CLI**: Command-line interface in a container
-- **Test Databases**: PostgreSQL and MySQL for SQL plugin testing
+- **🔍 Auto-Discovery**: Automatically detects your current git worktree/branch
+- **🔢 Dynamic Ports**: Calculates unique ports to prevent conflicts between environments  
+- **🚀 Zero Config**: No manual environment setup required
+- **🌐 Complete Isolation**: Each worktree gets separate networks, volumes, and containers
+- **⚡ Simple Commands**: Single CLI that handles everything automatically
 
-## Quick Start
+## 🚀 Quick Start for Git Worktrees
 
-### 1. Start All Services
+### Step 1: Create a Git Worktree
 
 ```bash
-cd .docker
-docker-compose up -d
+# From main rocketship directory
+git worktree add ../rocketship-feature-xyz
+
+# Navigate to your worktree
+cd ../rocketship-feature-xyz
 ```
 
-This will start:
-- Temporal server on port 7233
-- Temporal UI on http://localhost:8080
-- Rocketship Engine on port 7700
-- Test PostgreSQL on port 5433
-- Test MySQL on port 3307
-
-### 2. Build the CLI Container
+### Step 2: Initialize Isolated Environment
 
 ```bash
-docker build -f Dockerfile.cli -t rocketship-cli:latest ..
+# Auto-initialize environment for this worktree
+./.docker/rocketship init
 ```
 
-### 3. Run Tests Using the CLI Container
+This command will:
+- Auto-detect your branch/worktree name
+- Calculate unique ports (no conflicts!)
+- Generate environment configuration
+- Set up isolated Docker stack
+
+### Step 3: Start and Use Your Environment
 
 ```bash
-# Using the convenience script
-./docker-rocketship.sh run -f ../examples/simple-http/rocketship.yaml
+# Start your isolated stack
+./.docker/rocketship start
 
-# Or directly with docker
-docker run --rm \
-  --network temporal-network \
-  -v $(pwd)/..:/workspace \
-  -w /workspace \
-  rocketship-cli:latest run -e temporal-engine-1:7700 -f examples/simple-http/rocketship.yaml
+# Run tests in your environment
+./.docker/rocketship run -f test.yaml
+
+# Check status
+./.docker/rocketship status
+
+# Stop when done
+./.docker/rocketship stop
 ```
 
-## Using the Docker Rocketship CLI
+## 🏗️ How It Works
 
-The `docker-rocketship.sh` script provides a convenient wrapper:
+### Auto-Discovery Magic
+
+The system automatically:
+
+1. **Detects your current git branch** (e.g., `feature-xyz`)
+2. **Creates a stack name** (e.g., `rocketship-feature-xyz`)
+3. **Calculates unique ports** using hash-based allocation
+4. **Generates environment** with zero conflicts
+
+### Port Allocation Example
+
+If you have multiple worktrees:
+
+**Worktree 1** (`feature-api`):
+- Stack Name: `rocketship-feature-api`
+- Temporal UI: `http://localhost:8180`
+- Engine API: `localhost:7800`
+
+**Worktree 2** (`feature-ui`):
+- Stack Name: `rocketship-feature-ui`  
+- Temporal UI: `http://localhost:9280`
+- Engine API: `localhost:8900`
+
+**No conflicts!** Each gets its own port range automatically.
+
+## 📋 Available Commands
+
+### Environment Management
+```bash
+./rocketship init                    # Initialize stack for current worktree
+./rocketship start                   # Start the current stack
+./rocketship stop                    # Stop the current stack
+./rocketship restart                 # Restart the current stack
+./rocketship status                  # Show status of current stack
+./rocketship info                    # Show detailed stack information
+./rocketship logs [service]          # Show logs (optionally for specific service)
+./rocketship clean                   # Stop and remove all containers and volumes
+```
+
+### Test Commands
+```bash
+./rocketship validate <file>         # Validate test file
+./rocketship run [options]           # Run tests (pass options to rocketship CLI)
+./rocketship list                    # List test runs
+./rocketship get <run-id>            # Get test run details
+```
+
+## 🎯 Git Worktree Workflow Examples
+
+### Scenario 1: Single Developer, Multiple Features
 
 ```bash
-# Validate test files
-./docker-rocketship.sh validate test.yaml
+# Main development
+cd rocketship
+./.docker/rocketship init && ./.docker/rocketship start
 
-# Run tests
-./docker-rocketship.sh run -f test.yaml
+# Work on API feature in parallel
+git worktree add ../rocketship-api-enhancement
+cd ../rocketship-api-enhancement
+./.docker/rocketship init && ./.docker/rocketship start
 
-# List test runs
-./docker-rocketship.sh list runs
-
-# Get run details
-./docker-rocketship.sh get run <run-id>
+# Both environments running simultaneously with different ports!
 ```
 
-## Running SQL Tests
-
-The setup includes test databases for SQL plugin testing:
+### Scenario 2: Team Development
 
 ```bash
-# PostgreSQL is available at localhost:5433
-# MySQL is available at localhost:3307
+# Developer A - Feature Branch
+git worktree add ../rocketship-user-auth
+cd ../rocketship-user-auth
+./.docker/rocketship init
+./.docker/rocketship start
+# Gets ports: 8xxx range
 
-# Run SQL tests
-./docker-rocketship.sh run -f ../examples/sql-testing/rocketship.yaml
+# Developer B - Different Feature  
+git worktree add ../rocketship-payment-flow
+cd ../rocketship-payment-flow
+./.docker/rocketship init
+./.docker/rocketship start
+# Gets ports: 9xxx range (automatically different!)
 ```
 
-## Environment Variables
+### Scenario 3: Claude Code Agents
 
-You can pass environment variables to the CLI container:
+Each Claude Code agent working in a different worktree gets completely isolated environments:
 
 ```bash
-docker run --rm \
-  --network temporal-network \
-  -v $(pwd):/workspace \
-  -e API_KEY=your-key \
-  -e API_URL=https://api.example.com \
-  rocketship-cli:latest run -e temporal-engine-1:7700 -f test.yaml
+# Agent 1 Prompt:
+# "You are working in worktree ../rocketship-feature-x"
+# "Run: ./.docker/rocketship init && ./.docker/rocketship start"
+
+# Agent 2 Prompt:  
+# "You are working in worktree ../rocketship-feature-y"
+# "Run: ./.docker/rocketship init && ./.docker/rocketship start"
+
+# Zero conflicts, complete isolation!
 ```
 
-## Monitoring
+## 🔧 Technical Details
 
-- **Temporal UI**: http://localhost:8080 - Monitor workflows and workers
-- **Engine Logs**: `docker logs temporal-engine-1`
-- **Worker Logs**: `docker logs temporal-worker-1`
+### Stack Naming Convention
 
-## Stopping Services
+- **Git Branch**: `feature/user-auth` → **Stack Name**: `rocketship-feature-user-auth`
+- **Worktree Dir**: `rocketship-api-v2` → **Stack Name**: `rocketship-rocketship-api-v2`
+- **Special chars** are automatically converted to hyphens for Docker compatibility
+
+### Port Calculation Algorithm
 
 ```bash
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (clean slate)
-docker-compose down -v
+# Simplified algorithm:
+hash = checksum(stack_name)
+offset = (hash % 50) * 100
+temporal_port = 7233 + offset
+engine_port = 7700 + offset
+# ... etc for all services
 ```
 
-## Troubleshooting
+This ensures:
+- **50 possible port ranges** (0-4900 offset)
+- **100 ports per range** (enough for all services)
+- **Deterministic allocation** (same branch = same ports)
+- **Zero conflicts** between different stacks
 
-### Container can't connect to engine
-Ensure you're using the correct network and hostname:
-- Network: `temporal-network`
-- Engine host: `temporal-engine-1:7700`
+### File Structure
 
-### Permission issues with mounted volumes
-The CLI container runs as user `rocketship` (UID 1001). Ensure your test files are readable.
+```
+.docker/
+├── rocketship                       # Main CLI (auto-detects everything)
+├── init-stack.sh                    # Stack initialization script
+├── stack-utils.sh                   # Shared utilities and logic
+├── docker-compose.yaml              # Parameterized compose file
+├── Dockerfile.cli                   # CLI container image
+├── Dockerfile.engine                # Engine container image
+├── Dockerfile.worker                # Worker container image
+├── templates/
+│   └── .env.template               # Environment file template
+└── .env.{stack-name}              # Generated environment files
+```
 
-### Build failures
-Check that you have the latest Go version that matches the project (currently Go 1.24).
+## 🐛 Troubleshooting
 
-## Advanced Usage
-
-### Running Multiple Instances
-
-To run multiple isolated Rocketship instances:
-
+### "Stack not initialized"
 ```bash
-# Create a new compose file with different project name
-docker-compose -p instance1 up -d
-docker-compose -p instance2 up -d
+# Solution: Initialize first
+./.docker/rocketship init
 ```
 
-### Custom Configuration
-
-Modify `docker-compose.yaml` to:
-- Change port mappings
-- Add environment variables
-- Mount configuration files
-- Scale workers
-
-### Browser Testing Support
-
-To add browser testing support to the CLI container, build with the browser-enabled Dockerfile:
-
+### "Stack not running"
 ```bash
-# TODO: Create Dockerfile.cli.browser with Python and Playwright
-docker build -f Dockerfile.cli.browser -t rocketship-cli:browser ..
+# Solution: Start the stack
+./.docker/rocketship start
 ```
 
-## Development Workflow
+### "Port already in use"
+This should never happen with the auto-allocation system, but if it does:
+```bash
+# Check what's using the port
+lsof -i :PORT_NUMBER
 
-1. Make changes to Rocketship code
-2. Rebuild the affected containers:
-   ```bash
-   docker-compose build engine worker
-   docker build -f Dockerfile.cli -t rocketship-cli:latest ..
-   ```
-3. Restart services:
-   ```bash
-   docker-compose restart engine worker
-   ```
-4. Test your changes using the CLI container
+# Or force clean and restart
+./.docker/rocketship clean
+./.docker/rocketship start
+```
 
-## Security Considerations
+### "Docker not running"
+```bash
+# Start Docker Desktop or Docker daemon
+# Then retry your command
+```
 
-- All services run as non-root users
-- Containers use minimal Alpine Linux images
-- Network isolation between services
-- No unnecessary ports exposed
+## 🧹 Cleanup
 
-## Next Steps
+### Clean Single Environment
+```bash
+# Stop and remove containers/volumes for current worktree
+./.docker/rocketship clean
+```
 
-- Add browser testing dependencies to CLI container
-- Create development vs production compose profiles
-- Add health check endpoints
-- Implement log aggregation
+### Clean All Environments
+```bash
+# Stop all rocketship containers
+docker stop $(docker ps -q --filter "name=rocketship-")
+
+# Remove all rocketship containers and volumes
+docker system prune -f
+docker volume prune -f
+```
+
+## 🎉 Benefits for Development
+
+### For Individual Developers
+- **Parallel Development**: Work on multiple features simultaneously
+- **Clean Separation**: No interference between different features
+- **Quick Switching**: Each worktree maintains its own state
+
+### For Teams
+- **Zero Conflicts**: Everyone gets unique ports automatically
+- **Easy Onboarding**: New team members just run `init` and `start`
+- **Consistent Environments**: Same setup across all machines
+
+### For Claude Code Agents
+- **Perfect Isolation**: Each agent has its own complete environment
+- **Auto-Configuration**: Agents can set up environments autonomously
+- **Conflict-Free**: Multiple agents can work simultaneously
+
+## 🔗 Integration with Main Workflow
+
+This multi-stack system integrates seamlessly with the standard Rocketship development workflow:
+
+1. **Create worktree** for your feature/fix
+2. **Initialize environment** with `./.docker/rocketship init`
+3. **Develop and test** using standard rocketship commands
+4. **Commit and push** your changes
+5. **Clean up** with `./.docker/rocketship clean` when done
+
+The isolated environment ensures your development doesn't interfere with other work and provides a clean, reproducible testing environment for every feature.
+
+---
+
+**Ready to get started?** Just `cd` to any rocketship worktree and run `./.docker/rocketship init`! 🚀
