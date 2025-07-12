@@ -1,0 +1,46 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.mod and go.sum
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build all binaries
+RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/rocketship ./cmd/rocketship
+# Create the final image
+FROM ubuntu:22.04
+
+# Install required packages and Temporal CLI
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    # we should pin a version
+    && curl -sSf https://temporal.download/cli.sh | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Temporal CLI to PATH
+ENV PATH="/root/.temporalio/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy all binaries from builder
+COPY --from=builder /bin/rocketship /usr/local/bin/rocketship
+
+# Make rocketship executable
+RUN chmod +x /usr/local/bin/rocketship
+
+# Create a non-root user for running the container
+RUN useradd -m -u 1001 rocketship
+
+# Switch to non-root user
+USER rocketship
+
+# Set entrypoint to rocketship CLI
+ENTRYPOINT ["/usr/local/bin/rocketship"]
+
+# Default command shows help
+CMD ["--help"]
