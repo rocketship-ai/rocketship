@@ -145,4 +145,9 @@
          <lastmod>2025-07-12</lastmod>
          <changefreq>daily</changefreq>
     </url>
+    <url>
+         <loc>https://docs.rocketship.sh/yaml-reference/plugin-reference/</loc>
+         <lastmod>2025-07-12</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
 </urlset>

@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/reference/rocketship_run/">
+        <link rel="canonical" href="https://docs.rocketship.sh/yaml-reference/plugin-reference/">
       
       
-        <link rel="prev" href="../rocketship/">
+        <link rel="prev" href="../../examples/retry-policies/">
       
       
-        <link rel="next" href="../rocketship_list/">
+        <link rel="next" href="../../mcp-server/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>run - Rocketship CLI</title>
+        <title>Overview - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#rocketship-run" class="md-skip">
+        <a href="#test-structure" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              run
+              Overview
             
           </span>
         </div>
@@ -1104,8 +1104,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1119,13 +1121,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -1139,7 +1139,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             YAML Reference
@@ -1150,10 +1150,28 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../yaml-reference/plugin-reference/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1162,6 +1180,162 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#test-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Structure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-step-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Step Structure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Plugins
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plugin-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin Configurations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin Configurations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#plugin-script" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: script
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-sql" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: sql
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin: sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sql-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      sql Assertions
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sql-save-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      sql Save Fields
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: log
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: agent
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-browser" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: browser
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-supabase" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: supabase
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#save-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      Save Fields
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1295,10 +1469,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1326,11 +1498,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1344,7 +1518,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Command Reference
@@ -1358,7 +1532,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship/" class="md-nav__link">
+      <a href="../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1376,28 +1550,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    run
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1406,81 +1562,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#rocketship-run" class="md-nav__link">
-    <span class="md-ellipsis">
-      rocketship run
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship run">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-12-jul-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 12-Jul-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1493,7 +1574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1514,7 +1595,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_get/" class="md-nav__link">
+      <a href="../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1580,7 +1661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start/" class="md-nav__link">
+      <a href="../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1601,7 +1682,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1675,7 +1756,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1696,7 +1777,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1725,7 +1806,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_validate/" class="md-nav__link">
+      <a href="../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1746,7 +1827,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_version/" class="md-nav__link">
+      <a href="../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1812,47 +1893,74 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rocketship-run" class="md-nav__link">
+  <a href="#test-structure" class="md-nav__link">
     <span class="md-ellipsis">
-      rocketship run
+      Test Structure
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="rocketship run">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-step-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Step Structure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-plugins" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Plugins
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plugin-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin Configurations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin Configurations">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
+  <a href="#plugin-script" class="md-nav__link">
     <span class="md-ellipsis">
-      Synopsis
+      Plugin: script
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+  <a href="#plugin-sql" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      Plugin: sql
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plugin: sql">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sql-assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      sql Assertions
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#sql-save-fields" class="md-nav__link">
     <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-12-jul-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 12-Jul-2025
+      sql Save Fields
     </span>
   </a>
   
@@ -1863,8 +1971,62 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#plugin-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: log
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: agent
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-browser" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: browser
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-supabase" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: supabase
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assertions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Assertions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#save-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      Save Fields
+    </span>
+  </a>
   
 </li>
       
@@ -1886,37 +2048,957 @@
   
 
 
-  <h1>run</h1>
+  <h1>Overview</h1>
 
-<h2 id="rocketship-run">rocketship run</h2>
-<p>Run rocketship tests</p>
-<h3 id="synopsis">Synopsis</h3>
-<p>Run rocketship tests from YAML files. Can run a single file or all tests in a directory.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rocketship run [flags]
-</code></pre></div>
-<h3 id="options">Options</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  -a, --auto                      Automatically start and stop the local server for test execution
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>      --branch string             Git branch name (auto-detected if not specified)
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>      --commit string             Git commit SHA (auto-detected if not specified)
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  -d, --dir string                Path to directory containing test files (will run all rocketship.yaml files recursively)
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  -e, --engine string             Address of the rocketship engine (default &quot;localhost:7700&quot;)
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>      --env-file string           Load environment variables from .env file
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  -f, --file string               Path to a single test file (default: rocketship.yaml in current directory)
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>  -h, --help                      help for run
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>      --metadata stringToString   Additional metadata key=value pairs (default [])
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>      --project-id string         Project identifier for test run tracking
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>      --schedule-name string      Schedule name for scheduled runs
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>      --source string             Run source: cli-local, ci-branch, ci-main, scheduled
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>  -t, --timestamp                 Show timestamps in log output
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>      --trigger string            Trigger type: manual, webhook, schedule
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>  -v, --var stringToString        Set variables (can be used multiple times: --var key=value --var nested.key=value) (default [])
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>      --var-file string           Load variables from YAML file
-</code></pre></div>
-<h3 id="see-also">SEE ALSO</h3>
+<h2 id="test-structure">Test Structure</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>✅</td>
+<td>Name of the test suite</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td></td>
+<td>Description of the test suite</td>
+</tr>
+<tr>
+<td><code>vars</code></td>
+<td></td>
+<td>Configuration variables that can be referenced in test steps using {{ vars.key }} syntax</td>
+</tr>
+<tr>
+<td><code>tests</code></td>
+<td>✅</td>
+<td>Array of test cases</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="test-step-structure">Test Step Structure</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>✅</td>
+<td>Name of the test step</td>
+</tr>
+<tr>
+<td><code>plugin</code></td>
+<td>✅</td>
+<td>Plugin to use for this step</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>✅</td>
+<td>Configuration for the plugin</td>
+</tr>
+<tr>
+<td><code>assertions</code></td>
+<td></td>
+<td>Assertions to validate the response</td>
+</tr>
+<tr>
+<td><code>save</code></td>
+<td></td>
+<td>Response values to save for use in later steps</td>
+</tr>
+<tr>
+<td><code>retry</code></td>
+<td></td>
+<td>Retry policy for the step activity</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="supported-plugins">Supported Plugins</h2>
 <ul>
-<li><a href="../rocketship/">rocketship</a>    - Rocketship CLI</li>
+<li><code>http</code></li>
+<li><code>delay</code></li>
+<li><code>script</code></li>
+<li><code>sql</code></li>
+<li><code>log</code></li>
+<li><code>agent</code></li>
+<li><code>browser</code></li>
+<li><code>supabase</code></li>
 </ul>
-<h6 id="auto-generated-by-spf13cobra-on-12-jul-2025">Auto generated by spf13/cobra on 12-Jul-2025</h6>
+<hr />
+<h2 id="plugin-configurations">Plugin Configurations</h2>
+<h3 id="plugin-script">Plugin: <code>script</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>language</code></td>
+<td>✅</td>
+<td>Script language to use</td>
+<td><code>javascript</code>, <code>shell</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>script</code></td>
+<td>(oneOf)</td>
+<td>Inline script content</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>(oneOf)</td>
+<td>Path to external script file</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td></td>
+<td>Script execution timeout</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-sql">Plugin: <code>sql</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>driver</code></td>
+<td>✅</td>
+<td>Database driver to use</td>
+<td><code>postgres</code>, <code>mysql</code>, <code>sqlite</code>, <code>sqlserver</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>dsn</code></td>
+<td>✅</td>
+<td>Database connection string (Data Source Name)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>commands[]</code></td>
+<td>(oneOf)</td>
+<td>Array of SQL commands to execute</td>
+<td><code>array of string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>(oneOf)</td>
+<td>Path to external SQL file</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td></td>
+<td>Query execution timeout</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h5 id="sql-assertions"><code>sql</code> Assertions</h5>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Allowed Values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td>✅</td>
+<td>Type of SQL assertion</td>
+<td><code>row_count</code>, <code>query_count</code>, <code>success_count</code>, <code>column_value</code></td>
+</tr>
+<tr>
+<td><code>expected</code></td>
+<td>✅</td>
+<td>Expected value for the assertion</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>query_index</code></td>
+<td>(if <code>type</code> is <code>row_count</code>) (if <code>type</code> is <code>column_value</code>)</td>
+<td>Index of query to check (for row_count and column_value assertions)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>row_index</code></td>
+<td>(if <code>type</code> is <code>column_value</code>)</td>
+<td>Index of row to check (for column_value assertion)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>column</code></td>
+<td>(if <code>type</code> is <code>column_value</code>)</td>
+<td>Column name to check (for column_value assertion)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h5 id="sql-save-fields"><code>sql</code> Save Fields</h5>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sql_result</code></td>
+<td>✅</td>
+<td>Path to extract from SQL result (e.g., '.queries[0].rows[0].id')</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>as</code></td>
+<td></td>
+<td>Variable name to save the extracted value as</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>required</code></td>
+<td></td>
+<td>Whether the value is required (defaults to true)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-log">Plugin: <code>log</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>message</code></td>
+<td>✅</td>
+<td>Message to log (supports template variables)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-agent">Plugin: <code>agent</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agent</code></td>
+<td>✅</td>
+<td>Type of coding agent to use</td>
+<td><code>claude-code</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>prompt</code></td>
+<td>✅</td>
+<td>Prompt to send to the agent (supports template variables)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td></td>
+<td>Agent execution mode</td>
+<td><code>single</code>, <code>continue</code>, <code>resume</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td></td>
+<td>Session ID for resume mode (supports template variables)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>max_turns</code></td>
+<td></td>
+<td>Maximum number of conversation turns</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td></td>
+<td>Agent execution timeout</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>system_prompt</code></td>
+<td></td>
+<td>System prompt for the agent</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>output_format</code></td>
+<td></td>
+<td>Output format from the agent</td>
+<td><code>text</code>, <code>json</code>, <code>streaming-json</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>continue_recent</code></td>
+<td></td>
+<td>Continue the most recent conversation</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>save_full_response</code></td>
+<td></td>
+<td>Save the complete response to context</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-browser">Plugin: <code>browser</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>task</code></td>
+<td>✅</td>
+<td>Task description for the browser agent to perform (supports template variables)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm.provider</code></td>
+<td>✅</td>
+<td>LLM provider to use</td>
+<td><code>openai</code>, <code>anthropic</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm.model</code></td>
+<td>✅</td>
+<td>LLM model to use (e.g., gpt-4, claude-3-sonnet)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm.config</code></td>
+<td></td>
+<td>LLM configuration (API keys, etc.)</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>executor_type</code></td>
+<td></td>
+<td>Browser executor type</td>
+<td><code>python</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td></td>
+<td>Browser automation timeout</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>max_steps</code></td>
+<td></td>
+<td>Maximum number of browser automation steps</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>browser_type</code></td>
+<td></td>
+<td>Browser type to use</td>
+<td><code>chromium</code>, <code>chrome</code>, <code>edge</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>headless</code></td>
+<td></td>
+<td>Run browser in headless mode</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>use_vision</code></td>
+<td></td>
+<td>Enable visual processing</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>session_id</code></td>
+<td></td>
+<td>Browser session ID for session persistence (supports template variables)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>save_screenshots</code></td>
+<td></td>
+<td>Save screenshots during execution</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>allowed_domains[]</code></td>
+<td></td>
+<td>List of allowed domains for browser navigation</td>
+<td><code>array of string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>viewport</code></td>
+<td></td>
+<td>Browser viewport configuration</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>viewport.width</code></td>
+<td></td>
+<td>Viewport width in pixels</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>viewport.height</code></td>
+<td></td>
+<td>Viewport height in pixels</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-supabase">Plugin: <code>supabase</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>url</code></td>
+<td>✅</td>
+<td>Supabase project URL</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>key</code></td>
+<td>✅</td>
+<td>Supabase API key (anon or service key)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>operation</code></td>
+<td>✅</td>
+<td>Supabase operation to perform</td>
+<td><code>select</code>, <code>insert</code>, <code>update</code>, <code>delete</code>, <code>rpc</code>, <code>auth_create_user</code>, <code>auth_delete_user</code>, <code>auth_sign_up</code>, <code>auth_sign_in</code>, <code>storage_create_bucket</code>, <code>storage_upload</code>, <code>storage_download</code>, <code>storage_delete</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>table</code></td>
+<td></td>
+<td>Table name for database operations</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select</code></td>
+<td></td>
+<td>Configuration for select operation</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.columns[]</code></td>
+<td></td>
+<td>Columns to select</td>
+<td><code>array of string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.filters[]</code></td>
+<td></td>
+<td>Filters to apply</td>
+<td><code>array of objects</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.filters[].column</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.filters[].operator</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>eq</code>, <code>neq</code>, <code>gt</code>, <code>gte</code>, <code>lt</code>, <code>lte</code>, <code>like</code>, <code>ilike</code>, <code>is</code>, <code>in</code>, <code>contains</code>, <code>contained_by</code>, <code>range_gt</code>, <code>range_gte</code>, <code>range_lt</code>, <code>range_lte</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.filters[].value</code></td>
+<td>✅</td>
+<td>Filter value</td>
+<td><code>any</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.order[]</code></td>
+<td></td>
+<td>Ordering configuration</td>
+<td><code>array of objects</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.order[].column</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.order[].ascending</code></td>
+<td></td>
+<td>No description</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.limit</code></td>
+<td></td>
+<td>No description</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.offset</code></td>
+<td></td>
+<td>No description</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>select.count</code></td>
+<td></td>
+<td>Count type for query</td>
+<td><code>exact</code>, <code>planned</code>, <code>estimated</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>insert</code></td>
+<td></td>
+<td>Configuration for insert operation</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>insert.data</code></td>
+<td>✅</td>
+<td>Data to insert (object or array of objects)</td>
+<td><code>any</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>insert.upsert</code></td>
+<td></td>
+<td>Use upsert (insert or update)</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>insert.on_conflict</code></td>
+<td></td>
+<td>Column(s) for conflict resolution</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>update</code></td>
+<td></td>
+<td>Configuration for update operation</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>update.data</code></td>
+<td>✅</td>
+<td>Data to update</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>update.filters[]</code></td>
+<td></td>
+<td>Filters to apply for update</td>
+<td><code>array of objects</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>update.filters[].column</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>update.filters[].operator</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>update.filters[].value</code></td>
+<td>✅</td>
+<td>Filter value</td>
+<td><code>any</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>delete</code></td>
+<td></td>
+<td>Configuration for delete operation</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>delete.filters[]</code></td>
+<td>✅</td>
+<td>Filters to apply for delete</td>
+<td><code>array of objects</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>delete.filters[].column</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>delete.filters[].operator</code></td>
+<td>✅</td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>delete.filters[].value</code></td>
+<td>✅</td>
+<td>Filter value</td>
+<td><code>any</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>rpc</code></td>
+<td></td>
+<td>Configuration for RPC function call</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>rpc.function</code></td>
+<td>✅</td>
+<td>Function name to call</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>rpc.params</code></td>
+<td></td>
+<td>Function parameters</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>auth</code></td>
+<td></td>
+<td>Configuration for auth operations</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>auth.email</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>auth.password</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>auth.user_id</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>auth.user_metadata</code></td>
+<td></td>
+<td>No description</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>auth.app_metadata</code></td>
+<td></td>
+<td>No description</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage</code></td>
+<td></td>
+<td>Configuration for storage operations</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.bucket</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.path</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.file_content</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.file_path</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.public</code></td>
+<td></td>
+<td>No description</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.cache_control</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>storage.content_type</code></td>
+<td></td>
+<td>No description</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td></td>
+<td>Operation timeout</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="assertions">Assertions</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Allowed Values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td>✅</td>
+<td>Type of assertion</td>
+<td><code>status_code</code>, <code>json_path</code>, <code>header</code>, <code>row_count</code>, <code>query_count</code>, <code>success_count</code>, <code>column_value</code>, <code>supabase_count</code>, <code>supabase_error</code></td>
+</tr>
+<tr>
+<td><code>expected</code></td>
+<td>✅</td>
+<td>Expected value for the assertion</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>path</code></td>
+<td>(if <code>type</code> is <code>json_path</code>)</td>
+<td>JSON path for json_path assertion type</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>(if <code>type</code> is <code>header</code>)</td>
+<td>Header name for header assertion type</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>query_index</code></td>
+<td>(if <code>type</code> is <code>row_count</code>) (if <code>type</code> is <code>column_value</code>)</td>
+<td>Index of query to check (for SQL assertions)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>row_index</code></td>
+<td>(if <code>type</code> is <code>column_value</code>)</td>
+<td>Index of row to check (for column_value assertion)</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>column</code></td>
+<td>(if <code>type</code> is <code>column_value</code>)</td>
+<td>Column name to check (for column_value assertion)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="save-fields">Save Fields</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>json_path</code></td>
+<td>(oneOf)</td>
+<td>JSON path to extract from response</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>header</code></td>
+<td>(oneOf)</td>
+<td>Header name to extract from response</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>sql_result</code></td>
+<td>(oneOf)</td>
+<td>Path to extract from SQL result (e.g., '.queries[0].rows[0].id')</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>as</code></td>
+<td>✅</td>
+<td>Variable name to save the extracted value as</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>required</code></td>
+<td></td>
+<td>Whether the value is required (defaults to true)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
 
 
 
