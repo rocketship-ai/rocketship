@@ -52,7 +52,6 @@ For detailed installation instructions for other platforms and optional aliases,
 cat > rocketship.yaml << 'EOF'
 name: "Simple Test Suite"
 description: "Showing some of the plugins"
-version: "v1.0.0"
 vars:
   base_url: "https://tryme.rocketship.sh"
 tests:

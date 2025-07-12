@@ -16,13 +16,13 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.15.0",
     "js-yaml": "^4.1.0",
     "simple-git": "^3.20.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.19.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },

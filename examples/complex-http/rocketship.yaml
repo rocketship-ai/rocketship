@@ -1,6 +1,5 @@
 name: "Complex HTTP Test Suite"
 description: "A test suite demonstrating complex HTTP operations with request chaining"
-version: "v1.0.0"
 tests:
   - name: "Product Management Flow"
     steps:

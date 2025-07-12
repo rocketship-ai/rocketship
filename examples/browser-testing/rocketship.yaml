@@ -1,6 +1,5 @@
 name: "Browser Plugin Integration Tests"
 description: "Test browser plugin fixes: max_steps, success/failure detection, and proper configuration"
-version: "v1.0.0"
 
 tests:
   - name: "Test max_steps limitation"

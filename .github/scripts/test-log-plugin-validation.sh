@@ -7,7 +7,6 @@ echo "Testing log plugin validation..."
 # Create a temporary invalid test file
 cat > /tmp/invalid-log-test.yaml << 'EOF'
 name: "Invalid Log Test"
-version: "v1.0.0"
 tests:
   - name: "Test invalid log config"
     steps:
@@ -34,7 +33,6 @@ rm -f /tmp/invalid-log-test.yaml
 # Create a valid test file to ensure validation passes
 cat > /tmp/valid-log-test.yaml << 'EOF'
 name: "Valid Log Test"
-version: "v1.0.0"
 tests:
   - name: "Test valid log config"
     steps:

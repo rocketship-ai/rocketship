@@ -1,6 +1,5 @@
 name: "Agent Plugin Integration Tests"
 description: "Comprehensive test of all working agent plugin features"
-version: "v1.0.0"
 
 vars:
   test_data: "Machine learning is transforming healthcare through predictive analytics."

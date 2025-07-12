@@ -253,7 +253,6 @@ func TestCreateRunValidation(t *testing.T) {
 	t.Run("no tests in run", func(t *testing.T) {
 		validYAML := `name: "Empty Test Suite"
 description: "A test suite with no tests"
-version: "v1.0.0"
 tests: []`
 		req := &generated.CreateRunRequest{
 			YamlPayload: []byte(validYAML),

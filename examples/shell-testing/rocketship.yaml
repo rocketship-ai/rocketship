@@ -1,4 +1,3 @@
-version: "v1.0.0"
 name: "Shell Script Testing"
 description: "Demonstrates shell script execution capabilities"
 
