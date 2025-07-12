@@ -4,7 +4,7 @@
 
 # Set default values
 NETWORK="temporal-network"
-ENGINE_HOST="temporal-engine-1:7700"
+ENGINE_HOST="engine:7700"
 IMAGE="rocketship-cli:latest"
 
 # Function to show usage
@@ -37,7 +37,7 @@ if ! docker network inspect $NETWORK > /dev/null 2>&1; then
 fi
 
 # Check if the engine is running
-if ! docker ps | grep -q temporal-engine-1; then
+if ! docker ps | grep -q engine; then
     echo "Error: Rocketship engine is not running. Please run 'docker-compose up -d' first."
     exit 1
 fi
@@ -48,9 +48,17 @@ if ! docker image inspect $IMAGE > /dev/null 2>&1; then
     docker build -f Dockerfile.cli -t $IMAGE .. || exit 1
 fi
 
+# Determine if we need to add engine host parameter
+NEEDS_ENGINE_HOST=""
+case "$1" in
+    run|get|list|start|stop)
+        NEEDS_ENGINE_HOST="--engine $ENGINE_HOST"
+        ;;
+esac
+
 # Run the command
 docker run --rm \
     --network $NETWORK \
     -v "$(pwd)":/workspace \
     -w /workspace \
-    $IMAGE "$@" -e $ENGINE_HOST
+    $IMAGE "$@" $NEEDS_ENGINE_HOST

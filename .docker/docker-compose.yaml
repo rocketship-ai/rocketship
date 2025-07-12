@@ -12,8 +12,8 @@ services:
     image: elasticsearch:${ELASTICSEARCH_VERSION}
     networks:
       - temporal-network
-    expose:
-      - 9200:9200
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
     volumes:
       - /var/lib/elasticsearch/data
     healthcheck:
@@ -28,8 +28,8 @@ services:
     image: postgres:${POSTGRESQL_VERSION}
     networks:
       - temporal-network
-    expose:
-      - 5432:5432
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - /var/lib/postgresql/data
     healthcheck:
@@ -59,7 +59,7 @@ services:
     networks:
       - temporal-network
     ports:
-      - 7233:7233
+      - "${TEMPORAL_PORT:-7233}:7233"
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig
     healthcheck:
