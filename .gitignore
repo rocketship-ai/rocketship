@@ -17,22 +17,8 @@ mcp-server/yarn-error.log*
 docs/site/
 docs/.venv/
 
-# custom debugging
-test_stability.sh
-
 # working with teams
 honeyruns/
-
-# claude code
-.mcp.json
-
-# testing directories with secrets
-testing-browser-plugin/
-
-# Docker worktree-specific files
-.docker/.env.local
-.docker/docker-compose.override.yml
-.docker/docker-rocketship-local.sh
 
 # Temporary build artifacts
 tmp/
