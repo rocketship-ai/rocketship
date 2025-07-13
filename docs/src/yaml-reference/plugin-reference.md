@@ -35,6 +35,7 @@
 - `agent`
 - `browser`
 - `supabase`
+- `kafka`
 
 
 ---
@@ -190,7 +191,7 @@
 
 | Field | Required | Description | Allowed Values |
 | ----- | -------- | ----------- | -------------- |
-| `type` | ✅ | Type of assertion | `status_code`, `json_path`, `header`, `row_count`, `query_count`, `success_count`, `column_value`, `supabase_count`, `supabase_error` |
+| `type` | ✅ | Type of assertion | `status_code`, `json_path`, `header`, `row_count`, `query_count`, `success_count`, `column_value`, `supabase_count`, `supabase_error`, `message_received`, `message_count`, `message_key`, `message_value`, `message_header`, `partition`, `topic_exists`, `partition_count` |
 | `expected` | ✅ | Expected value for the assertion | - |
 | `path` |  (if `type` is `json_path`) | JSON path for json_path assertion type | - |
 | `name` |  (if `type` is `header`) | Header name for header assertion type | - |
@@ -208,6 +209,9 @@
 | `json_path` |  (oneOf) | JSON path to extract from response | - |
 | `header` |  (oneOf) | Header name to extract from response | - |
 | `sql_result` |  (oneOf) | Path to extract from SQL result (e.g., '.queries[0].rows[0].id') | - |
+| `message_field` |  (oneOf) | Kafka message field to extract (e.g., 'key', 'value', 'partition', 'offset', 'timestamp', or header name) | - |
+| `message_index` |  | Index of message to extract from (0-based, defaults to 0) | - |
+| `topic_info` |  (oneOf) | Kafka topic info field to extract (e.g., 'name', 'partition_count', 'partitions', 'config', or specific config key) | - |
 | `as` | ✅ | Variable name to save the extracted value as | - |
 | `required` |  | Whether the value is required (defaults to true) | - |
 

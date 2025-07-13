@@ -45,7 +45,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase"]
+                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase", "kafka"]
                 },
                 "config": {
                   "type": "object",
@@ -61,7 +61,7 @@
                       "type": {
                         "type": "string",
                         "description": "Type of assertion",
-                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value", "supabase_count", "supabase_error"]
+                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value", "supabase_count", "supabase_error", "message_received", "message_count", "message_key", "message_value", "message_header", "partition", "topic_exists", "partition_count"]
                       },
                       "expected": {
                         "description": "Expected value for the assertion"
@@ -144,6 +144,18 @@
                         "type": "string",
                         "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
                       },
+                      "message_field": {
+                        "type": "string",
+                        "description": "Kafka message field to extract (e.g., 'key', 'value', 'partition', 'offset', 'timestamp', or header name)"
+                      },
+                      "message_index": {
+                        "type": "integer",
+                        "description": "Index of message to extract from (0-based, defaults to 0)"
+                      },
+                      "topic_info": {
+                        "type": "string",
+                        "description": "Kafka topic info field to extract (e.g., 'name', 'partition_count', 'partitions', 'config', or specific config key)"
+                      },
                       "as": {
                         "type": "string",
                         "description": "Variable name to save the extracted value as"
@@ -162,6 +174,12 @@
                       },
                       {
                         "required": ["sql_result"]
+                      },
+                      {
+                        "required": ["message_field"]
+                      },
+                      {
+                        "required": ["topic_info"]
                       }
                     ]
                   }

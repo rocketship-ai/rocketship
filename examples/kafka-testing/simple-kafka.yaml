@@ -1,0 +1,42 @@
+name: "Simple Kafka Test"
+description: "Basic Kafka produce and consume example"
+
+vars:
+  topic: "simple-test-topic"
+  message: "Hello, Kafka!"
+
+tests:
+  - name: "Basic Kafka Workflow"
+    description: "Produce a message and then consume it"
+    steps:
+      - name: "Produce message"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.topic }}"
+          message: "{{ .vars.message }}"
+          key: "simple-key"
+        save:
+          - message_field: offset
+            as: message_offset
+
+      - name: "Consume message"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: consume
+          topic: "{{ .vars.topic }}"
+          offset: "earliest"
+          timeout_ms: 5000
+          max_messages: 1
+        assertions:
+          - type: message_received
+            expected: true
+          - type: message_value
+            expected: "{{ .vars.message }}"
+          - type: message_key
+            expected: "simple-key"
+        save:
+          - message_field: value
+            as: consumed_message

@@ -1,0 +1,263 @@
+name: "Kafka Plugin Comprehensive Test Suite"
+description: "Tests all Kafka plugin functionality including produce, consume, and topic management"
+
+vars:
+  test_topic: "rocketship-test-topic"
+  consumer_group: "rocketship-test-group"
+  test_message: "Hello from Rocketship Kafka Plugin!"
+  test_key: "test-key-123"
+  session_id: "kafka-test-{{ .env.USER }}-{{ .vars.agent_session_id }}"
+
+tests:
+  - name: "Kafka Topic Management Test"
+    description: "Test topic information retrieval"
+    steps:
+      - name: "Get topic information"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: topic_info
+          topic: "{{ .vars.test_topic }}"
+        assertions:
+          - type: topic_exists
+          - type: partition_count
+            expected: 3
+        save:
+          - topic_info: name
+            as: actual_topic_name
+          - topic_info: partition_count
+            as: partition_count
+
+  - name: "Kafka Producer Test"
+    description: "Test message production with headers and key"
+    steps:
+      - name: "Produce message with headers"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "{{ .vars.test_message }} - Session: {{ .vars.session_id }}"
+          key: "{{ .vars.test_key }}"
+          headers:
+            test-session: "{{ .vars.session_id }}"
+            test-timestamp: "{{ .env.ROCKETSHIP_TIMESTAMP }}"
+            content-type: "text/plain"
+          required_acks: 1
+        assertions:
+          - type: partition
+            expected: 0  # Will be auto-assigned, but we can assert it's valid
+        save:
+          - message_field: partition
+            as: produced_partition
+          - message_field: offset
+            as: produced_offset
+          - message_field: timestamp
+            as: produced_timestamp
+
+      - name: "Produce message to specific partition"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "Targeted message for partition 1"
+          key: "partition-1-key"
+          partition: 1
+          headers:
+            target-partition: "1"
+        assertions:
+          - type: partition
+            expected: 1
+        save:
+          - message_field: partition
+            as: targeted_partition
+          - message_field: offset
+            as: targeted_offset
+
+  - name: "Kafka Consumer Test"
+    description: "Test message consumption with filtering and timeouts"
+    steps:
+      - name: "Consume messages from topic"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: consume
+          topic: "{{ .vars.test_topic }}"
+          consumer_group: "{{ .vars.consumer_group }}"
+          offset: "earliest"
+          timeout_ms: 10000
+          max_messages: 5
+        assertions:
+          - type: message_received
+          - type: message_count
+            expected: 2  # We produced 2 messages in previous test
+        save:
+          - message_field: key
+            message_index: 0
+            as: first_message_key
+          - message_field: value
+            message_index: 0
+            as: first_message_value
+          - message_field: test-session
+            message_index: 0
+            as: first_message_session_header
+          - message_field: partition
+            message_index: 1
+            as: second_message_partition
+
+      - name: "Consume with message filtering"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: consume
+          topic: "{{ .vars.test_topic }}"
+          consumer_group: "{{ .vars.consumer_group }}-filtered"
+          offset: "earliest"
+          timeout_ms: 5000
+          max_messages: 10
+          message_filter:
+            key_contains: "test-key"
+            headers:
+              test-session: "{{ .vars.session_id }}"
+        assertions:
+          - type: message_received
+          - type: message_key
+            expected: "{{ .vars.test_key }}"
+            message_index: 0
+          - type: message_header
+            field: "test-session"
+            expected: "{{ .vars.session_id }}"
+            message_index: 0
+        save:
+          - message_field: value
+            message_index: 0
+            as: filtered_message_value
+
+  - name: "Kafka Consumer Advanced Filtering Test"
+    description: "Test advanced message filtering capabilities"
+    steps:
+      - name: "Produce messages for filtering test"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "Filter test message - should be found"
+          key: "filter-test-key"
+          headers:
+            filter-test: "include-me"
+            category: "test"
+
+      - name: "Produce message that should be filtered out"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "This message should be filtered out"
+          key: "other-key"
+          headers:
+            filter-test: "exclude-me"
+            category: "other"
+
+      - name: "Consume with value content filtering"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: consume
+          topic: "{{ .vars.test_topic }}"
+          consumer_group: "{{ .vars.consumer_group }}-content-filter"
+          offset: "earliest"
+          timeout_ms: 5000
+          max_messages: 10
+          message_filter:
+            value_contains: "should be found"
+            headers:
+              filter-test: "include-me"
+        assertions:
+          - type: message_received
+          - type: message_value
+            expected: "Filter test message - should be found"
+        save:
+          - message_field: key
+            as: content_filtered_key
+
+  - name: "Kafka Error Handling Test"
+    description: "Test error handling for invalid configurations"
+    steps:
+      - name: "Test invalid topic name handling"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: topic_info
+          topic: "non-existent-topic-{{ .vars.session_id }}"
+        assertions: []  # We expect this to fail, so no assertions
+        # Note: This test demonstrates error handling - in a real scenario,
+        # you might want to catch and handle the error appropriately
+
+  - name: "Kafka Performance Test"
+    description: "Test rapid message production and consumption"
+    steps:
+      - name: "Produce multiple messages rapidly"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "Performance test message #1"
+          key: "perf-test-1"
+          headers:
+            batch: "performance-test"
+            sequence: "1"
+
+      - name: "Produce second performance message"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "Performance test message #2"
+          key: "perf-test-2"
+          headers:
+            batch: "performance-test"
+            sequence: "2"
+
+      - name: "Produce third performance message"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: produce
+          topic: "{{ .vars.test_topic }}"
+          message: "Performance test message #3"
+          key: "perf-test-3"
+          headers:
+            batch: "performance-test"
+            sequence: "3"
+
+      - name: "Consume performance test messages"
+        plugin: kafka
+        config:
+          brokers: ["kafka:29092"]
+          operation: consume
+          topic: "{{ .vars.test_topic }}"
+          consumer_group: "{{ .vars.consumer_group }}-performance"
+          offset: "latest"
+          timeout_ms: 8000
+          max_messages: 3
+          message_filter:
+            headers:
+              batch: "performance-test"
+        assertions:
+          - type: message_count
+            expected: 3
+        save:
+          - message_field: sequence
+            message_index: 0
+            as: first_sequence
+          - message_field: sequence
+            message_index: 1
+            as: second_sequence
+          - message_field: sequence
+            message_index: 2
+            as: third_sequence

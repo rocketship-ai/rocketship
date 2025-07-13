@@ -12,6 +12,7 @@ import (
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/browser"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/kafka"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/log"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/sql"
