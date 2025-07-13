@@ -168,6 +168,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mongodb-test:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: testuser
+      MONGO_INITDB_ROOT_PASSWORD: testpass
+      MONGO_INITDB_DATABASE: testdb
+    networks:
+      - temporal-network
+    ports:
+      - "${MONGODB_TEST_PORT:-27017}:27017"
+    volumes:
+      - mongodb_test_data:/data/db
+      - ./test-db-init/mongodb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   ### END OF TEST DATABASES ###
 # .
 # .
@@ -190,4 +209,7 @@ volumes:
   mysql_test_data:
     driver: local
     name: ${COMPOSE_PROJECT_NAME:-rocketship}_mysql_test_data
+  mongodb_test_data:
+    driver: local
+    name: ${COMPOSE_PROJECT_NAME:-rocketship}_mongodb_test_data
 ### END OF VOLUMES ###

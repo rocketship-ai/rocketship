@@ -1,0 +1,393 @@
+name: MongoDB Testing
+vars:
+  mongodb_uri: "mongodb://testuser:testpass@mongodb-test:27017/rocketship_test"
+  test_database: "rocketship_test"
+  test_collection: "test_users"
+
+tests:
+  - name: MongoDB CRUD Operations Test
+    steps:
+      # 1. Create Collection
+      - name: "Create test collection"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          operation: "create_collection"
+          admin:
+            action: "create_collection"
+            collection: "{{ .vars.test_collection }}"
+        assertions:
+          - type: "json_path"
+            path: ".data.created_collection"
+            expected: "{{ .vars.test_collection }}"
+
+      # 2. Insert single document
+      - name: "Insert single user document"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "insert"
+          insert:
+            document:
+              name: "John Doe"
+              email: "john.doe@example.com"
+              age: 30
+              active: true
+              tags: ["developer", "mongodb"]
+        assertions:
+          - type: "json_path"
+            path: ".inserted_ids[0]"
+        save:
+          - as: "user_id"
+            json_path: ".inserted_ids[0]"
+
+      # 3. Insert multiple documents
+      - name: "Insert multiple users"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "insert_many"
+          insert:
+            documents:
+              - name: "Jane Smith"
+                email: "jane.smith@example.com"
+                age: 28
+                active: true
+                tags: ["designer", "ui/ux"]
+              - name: "Bob Johnson"
+                email: "bob.johnson@example.com"
+                age: 35
+                active: false
+                tags: ["manager", "product"]
+              - name: "Alice Brown"
+                email: "alice.brown@example.com"
+                age: 32
+                active: true
+                tags: ["developer", "frontend"]
+            ordered: true
+        assertions:
+          - type: "json_path"
+            path: ".inserted_ids | length"
+            expected: "3"
+
+      # 4. Find all documents
+      - name: "Find all users"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "find"
+          find:
+            filter: {}
+            sort:
+              age: 1
+        assertions:
+          - type: "count_equals"
+            expected: 4
+          - type: "field_matches"
+            field: "name"
+            expected: "Jane Smith"
+
+      # 5. Find one document
+      - name: "Find specific user by email"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "find_one"
+          find:
+            filter:
+              email: "john.doe@example.com"
+            projection:
+              name: 1
+              email: 1
+              age: 1
+        assertions:
+          - type: "document_exists"
+            expected: true
+          - type: "field_matches"
+            field: "name"
+            expected: "John Doe"
+          - type: "field_matches"
+            field: "age"
+            expected: "30"
+
+      # 6. Update single document
+      - name: "Update user age"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "update"
+          update:
+            filter:
+              email: "john.doe@example.com"
+            update:
+              $set:
+                age: 31
+                updated_at: "2024-01-15T10:00:00Z"
+            upsert: false
+        assertions:
+          - type: "json_path"
+            path: ".matched_count"
+            expected: "1"
+          - type: "json_path"
+            path: ".modified_count"
+            expected: "1"
+
+      # 7. Update multiple documents
+      - name: "Activate all users with developer tag"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "update_many"
+          update:
+            filter:
+              tags: "developer"
+            update:
+              $set:
+                active: true
+                last_login: "2024-01-15T10:00:00Z"
+            upsert: false
+        assertions:
+          - type: "json_path"
+            path: ".matched_count"
+            expected: "2"
+          - type: "json_path"
+            path: ".modified_count"
+            expected: "2"
+
+      # 8. Count documents
+      - name: "Count active users"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "count"
+          count:
+            filter:
+              active: true
+        assertions:
+          - type: "json_path"
+            path: ".count"
+            expected: "3"
+
+      # 9. Aggregation pipeline
+      - name: "Aggregate users by age groups"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "aggregate"
+          aggregate:
+            pipeline:
+              - $group:
+                  _id:
+                    $cond:
+                      if: { $gte: ["$age", 30] }
+                      then: "30+"
+                      else: "under_30"
+                  count: { $sum: 1 }
+                  avg_age: { $avg: "$age" }
+              - $sort:
+                  _id: 1
+        assertions:
+          - type: "count_equals"
+            expected: 2
+          - type: "json_path"
+            path: ".[0]._id"
+            expected: "30+"
+
+      # 10. Create index
+      - name: "Create index on email field"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "create_index"
+          index:
+            keys:
+              email: 1
+            options:
+              unique: true
+              name: "email_unique_idx"
+        assertions:
+          - type: "json_path"
+            path: ".data.index_name"
+            expected: "email_unique_idx"
+
+      # 11. List indexes
+      - name: "List collection indexes"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "list_indexes"
+        assertions:
+          - type: "result_contains"
+            expected: "email_unique_idx"
+
+      # 12. Delete single document
+      - name: "Delete inactive user"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "delete"
+          delete:
+            filter:
+              active: false
+        assertions:
+          - type: "json_path"
+            path: ".deleted_count"
+            expected: "1"
+
+      # 13. Verify deletion with count
+      - name: "Count remaining users"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "count"
+          count:
+            filter: {}
+        assertions:
+          - type: "json_path"
+            path: ".count"
+            expected: "3"
+
+      # 14. Drop index
+      - name: "Drop email index"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "{{ .vars.test_collection }}"
+          operation: "drop_index"
+          index:
+            name: "email_unique_idx"
+        assertions:
+          - type: "json_path"
+            path: ".data.dropped_index"
+            expected: "email_unique_idx"
+
+      # 15. List collections
+      - name: "List all collections in database"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          operation: "list_collections"
+        assertions:
+          - type: "result_contains"
+            expected: "{{ .vars.test_collection }}"
+
+      # 16. Drop collection (cleanup)
+      - name: "Drop test collection"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          operation: "drop_collection"
+          admin:
+            action: "drop_collection"
+            collection: "{{ .vars.test_collection }}"
+        assertions:
+          - type: "json_path"
+            path: ".data.dropped_collection"
+            expected: "{{ .vars.test_collection }}"
+
+  - name: MongoDB Error Handling Test
+    steps:
+      # Test error conditions
+      - name: "Test connection error"
+        plugin: mongodb
+        config:
+          uri: "mongodb://invalid-host:27017"
+          database: "test"
+          collection: "test"
+          operation: "find"
+          timeout: "5s"
+        assertions:
+          - type: "error_exists"
+            expected: true
+
+      - name: "Test missing collection error"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "nonexistent_collection"
+          operation: "find_one"
+          find:
+            filter:
+              _id: "nonexistent"
+        assertions:
+          - type: "document_exists"
+            expected: false
+
+  - name: MongoDB Variable Replacement Test
+    steps:
+      # Test variable replacement in various contexts
+      - name: "Test runtime variable in filter"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "variable_test"
+          operation: "insert"
+          insert:
+            document:
+              test_field: "{{ test_value }}"
+              static_field: "static_value"
+        save:
+          - as: "test_value"
+            json_path: ".inserted_ids[0]"
+
+      - name: "Find document with variable"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          collection: "variable_test"
+          operation: "find_one"
+          find:
+            filter:
+              test_field: "{{ test_value }}"
+        assertions:
+          - type: "document_exists"
+            expected: true
+          - type: "field_matches"
+            field: "static_field"
+            expected: "static_value"
+
+      # Cleanup
+      - name: "Drop variable test collection"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.test_database }}"
+          operation: "drop_collection"
+          admin:
+            action: "drop_collection"
+            collection: "variable_test"
+        assertions:
+          - type: "json_path"
+            path: ".data.dropped_collection"
+            expected: "variable_test"

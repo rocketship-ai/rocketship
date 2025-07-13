@@ -35,6 +35,7 @@
 - `agent`
 - `browser`
 - `supabase`
+- `mongodb`
 
 
 ---
@@ -184,13 +185,54 @@
 | `timeout` |  | Operation timeout | `string` | - |
 
 
+### Plugin: `mongodb`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `uri` | ✅ | MongoDB connection URI | `string` | - |
+| `database` | ✅ | Database name | `string` | - |
+| `collection` |  | Collection name for operations | `string` | - |
+| `operation` | ✅ | MongoDB operation to perform | `insert`, `insert_many`, `find`, `find_one`, `update`, `update_many`, `delete`, `delete_many`, `count`, `aggregate`, `create_index`, `drop_index`, `list_indexes`, `create_collection`, `drop_collection`, `list_collections` | - |
+| `insert` |  | Configuration for insert operations | `object` | - |
+| `insert.document` |  | Single document to insert | `any` | - |
+| `insert.documents[]` |  | Multiple documents to insert | `array of any` | - |
+| `insert.ordered` |  | Whether to perform ordered insertion | `boolean` | - |
+| `find` |  | Configuration for find operations | `object` | - |
+| `find.filter` |  | Query filter | `object` | - |
+| `find.projection` |  | Fields to include/exclude | `object` | - |
+| `find.sort` |  | Sort specification | `object` | - |
+| `find.limit` |  | Limit number of results | `integer` | - |
+| `find.skip` |  | Number of documents to skip | `integer` | - |
+| `update` |  | Configuration for update operations | `object` | - |
+| `update.filter` | ✅ | Query filter | `object` | - |
+| `update.update` | ✅ | Update document | `object` | - |
+| `update.upsert` |  | Create if not exists | `boolean` | - |
+| `update.multiple` |  | Update multiple documents | `boolean` | - |
+| `delete` |  | Configuration for delete operations | `object` | - |
+| `delete.filter` | ✅ | Query filter | `object` | - |
+| `delete.multiple` |  | Delete multiple documents | `boolean` | - |
+| `count` |  | Configuration for count operations | `object` | - |
+| `count.filter` |  | Query filter | `object` | - |
+| `aggregate` |  | Configuration for aggregate operations | `object` | - |
+| `aggregate.pipeline[]` | ✅ | Aggregation pipeline | `array of object` | - |
+| `index` |  | Configuration for index operations | `object` | - |
+| `index.keys` |  | Index keys specification | `object` | - |
+| `index.options` |  | Index options | `object` | - |
+| `index.action` |  | Index action | `create`, `drop`, `list` | - |
+| `index.name` |  | Index name for drop operation | `string` | - |
+| `admin` |  | Configuration for admin operations | `object` | - |
+| `admin.action` | ✅ | Admin action | `create_collection`, `drop_collection`, `list_collections` | - |
+| `admin.collection` |  | Collection name | `string` | - |
+| `timeout` |  | Operation timeout | `string` | - |
+
+
 ---
 
 ## Assertions
 
 | Field | Required | Description | Allowed Values |
 | ----- | -------- | ----------- | -------------- |
-| `type` | ✅ | Type of assertion | `status_code`, `json_path`, `header`, `row_count`, `query_count`, `success_count`, `column_value`, `supabase_count`, `supabase_error` |
+| `type` | ✅ | Type of assertion | `status_code`, `json_path`, `header`, `row_count`, `query_count`, `success_count`, `column_value`, `supabase_count`, `supabase_error`, `document_exists`, `count_equals`, `field_matches`, `result_contains`, `error_exists` |
 | `expected` | ✅ | Expected value for the assertion | - |
 | `path` |  (if `type` is `json_path`) | JSON path for json_path assertion type | - |
 | `name` |  (if `type` is `header`) | Header name for header assertion type | - |

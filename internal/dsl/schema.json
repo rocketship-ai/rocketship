@@ -45,7 +45,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase"]
+                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase", "mongodb"]
                 },
                 "config": {
                   "type": "object",
@@ -61,7 +61,7 @@
                       "type": {
                         "type": "string",
                         "description": "Type of assertion",
-                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value", "supabase_count", "supabase_error"]
+                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value", "supabase_count", "supabase_error", "document_exists", "count_equals", "field_matches", "result_contains", "error_exists"]
                       },
                       "expected": {
                         "description": "Expected value for the assertion"
@@ -723,6 +723,195 @@
                               "cache_control": {"type": "string"},
                               "content_type": {"type": "string"}
                             }
+                          },
+                          "timeout": {
+                            "type": "string",
+                            "pattern": "^[0-9]+(s|m|h)$",
+                            "description": "Operation timeout",
+                            "default": "30s"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": { "plugin": { "const": "mongodb" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["uri", "database", "operation"],
+                        "properties": {
+                          "uri": {
+                            "type": "string",
+                            "description": "MongoDB connection URI"
+                          },
+                          "database": {
+                            "type": "string",
+                            "description": "Database name"
+                          },
+                          "collection": {
+                            "type": "string",
+                            "description": "Collection name for operations"
+                          },
+                          "operation": {
+                            "type": "string",
+                            "enum": ["insert", "insert_many", "find", "find_one", "update", "update_many", "delete", "delete_many", "count", "aggregate", "create_index", "drop_index", "list_indexes", "create_collection", "drop_collection", "list_collections"],
+                            "description": "MongoDB operation to perform"
+                          },
+                          "insert": {
+                            "type": "object",
+                            "description": "Configuration for insert operations",
+                            "properties": {
+                              "document": {
+                                "description": "Single document to insert"
+                              },
+                              "documents": {
+                                "type": "array",
+                                "description": "Multiple documents to insert",
+                                "items": {}
+                              },
+                              "ordered": {
+                                "type": "boolean",
+                                "description": "Whether to perform ordered insertion",
+                                "default": false
+                              }
+                            }
+                          },
+                          "find": {
+                            "type": "object",
+                            "description": "Configuration for find operations",
+                            "properties": {
+                              "filter": {
+                                "type": "object",
+                                "description": "Query filter"
+                              },
+                              "projection": {
+                                "type": "object",
+                                "description": "Fields to include/exclude"
+                              },
+                              "sort": {
+                                "type": "object",
+                                "description": "Sort specification"
+                              },
+                              "limit": {
+                                "type": "integer",
+                                "description": "Limit number of results",
+                                "minimum": 1
+                              },
+                              "skip": {
+                                "type": "integer",
+                                "description": "Number of documents to skip",
+                                "minimum": 0
+                              }
+                            }
+                          },
+                          "update": {
+                            "type": "object",
+                            "description": "Configuration for update operations",
+                            "properties": {
+                              "filter": {
+                                "type": "object",
+                                "description": "Query filter"
+                              },
+                              "update": {
+                                "type": "object",
+                                "description": "Update document"
+                              },
+                              "upsert": {
+                                "type": "boolean",
+                                "description": "Create if not exists",
+                                "default": false
+                              },
+                              "multiple": {
+                                "type": "boolean",
+                                "description": "Update multiple documents",
+                                "default": false
+                              }
+                            },
+                            "required": ["filter", "update"]
+                          },
+                          "delete": {
+                            "type": "object",
+                            "description": "Configuration for delete operations",
+                            "properties": {
+                              "filter": {
+                                "type": "object",
+                                "description": "Query filter"
+                              },
+                              "multiple": {
+                                "type": "boolean",
+                                "description": "Delete multiple documents",
+                                "default": false
+                              }
+                            },
+                            "required": ["filter"]
+                          },
+                          "count": {
+                            "type": "object",
+                            "description": "Configuration for count operations",
+                            "properties": {
+                              "filter": {
+                                "type": "object",
+                                "description": "Query filter"
+                              }
+                            }
+                          },
+                          "aggregate": {
+                            "type": "object",
+                            "description": "Configuration for aggregate operations",
+                            "properties": {
+                              "pipeline": {
+                                "type": "array",
+                                "description": "Aggregation pipeline",
+                                "items": {
+                                  "type": "object"
+                                }
+                              }
+                            },
+                            "required": ["pipeline"]
+                          },
+                          "index": {
+                            "type": "object",
+                            "description": "Configuration for index operations",
+                            "properties": {
+                              "keys": {
+                                "type": "object",
+                                "description": "Index keys specification"
+                              },
+                              "options": {
+                                "type": "object",
+                                "description": "Index options"
+                              },
+                              "action": {
+                                "type": "string",
+                                "enum": ["create", "drop", "list"],
+                                "description": "Index action"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Index name for drop operation"
+                              }
+                            }
+                          },
+                          "admin": {
+                            "type": "object",
+                            "description": "Configuration for admin operations",
+                            "properties": {
+                              "action": {
+                                "type": "string",
+                                "enum": ["create_collection", "drop_collection", "list_collections"],
+                                "description": "Admin action"
+                              },
+                              "collection": {
+                                "type": "string",
+                                "description": "Collection name"
+                              }
+                            },
+                            "required": ["action"]
                           },
                           "timeout": {
                             "type": "string",

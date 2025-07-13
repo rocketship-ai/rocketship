@@ -1,0 +1,112 @@
+name: Simple MongoDB Example
+vars:
+  mongodb_uri: "mongodb://testuser:testpass@mongodb-test:27017/testdb"
+  database_name: "testdb"
+  collection_name: "products"
+
+tests:
+  - name: Basic MongoDB Operations
+    steps:
+      # Insert a product
+      - name: "Create a product"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.database_name }}"
+          collection: "{{ .vars.collection_name }}"
+          operation: "insert"
+          insert:
+            document:
+              name: "Laptop"
+              price: 999.99
+              category: "Electronics"
+              in_stock: true
+        save:
+          - as: "product_id"
+            json_path: ".inserted_ids[0]"
+
+      # Find the product
+      - name: "Find the product"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.database_name }}"
+          collection: "{{ .vars.collection_name }}"
+          operation: "find_one"
+          find:
+            filter:
+              name: "Laptop"
+        assertions:
+          - type: "document_exists"
+            expected: true
+          - type: "field_matches"
+            field: "price"
+            expected: "999.99"
+          - type: "field_matches"
+            field: "category"
+            expected: "Electronics"
+
+      # Update the product
+      - name: "Update product price"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.database_name }}"
+          collection: "{{ .vars.collection_name }}"
+          operation: "update"
+          update:
+            filter:
+              name: "Laptop"
+            update:
+              $set:
+                price: 899.99
+                updated_at: "2024-01-15"
+        assertions:
+          - type: "json_path"
+            path: ".modified_count"
+            expected: "1"
+
+      # Verify the update
+      - name: "Verify price update"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.database_name }}"
+          collection: "{{ .vars.collection_name }}"
+          operation: "find_one"
+          find:
+            filter:
+              name: "Laptop"
+        assertions:
+          - type: "field_matches"
+            field: "price"
+            expected: "899.99"
+
+      # Count documents
+      - name: "Count products"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.database_name }}"
+          collection: "{{ .vars.collection_name }}"
+          operation: "count"
+        assertions:
+          - type: "json_path"
+            path: ".count"
+            expected: "1"
+
+      # Clean up
+      - name: "Delete the product"
+        plugin: mongodb
+        config:
+          uri: "{{ .vars.mongodb_uri }}"
+          database: "{{ .vars.database_name }}"
+          collection: "{{ .vars.collection_name }}"
+          operation: "delete"
+          delete:
+            filter:
+              name: "Laptop"
+        assertions:
+          - type: "json_path"
+            path: ".deleted_count"
+            expected: "1"

@@ -13,6 +13,7 @@ import (
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/log"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/mongodb"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/sql"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/supabase"
