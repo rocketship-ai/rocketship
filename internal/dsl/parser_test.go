@@ -109,7 +109,6 @@ func TestParseYAML_InvalidConfigs(t *testing.T) {
 			name: "missing name",
 			yaml: `
 description: "Test without name"
-version: "v1.0.0"
 tests:
   - name: "Test 1"
     steps:

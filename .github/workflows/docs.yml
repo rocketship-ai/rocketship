@@ -36,6 +36,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Generate plugin reference
+        working-directory: ./docs
+        run: python src/yaml-reference/generate-plugin-reference.py
+
       - name: Build documentation
         working-directory: ./docs
         run: mkdocs build
