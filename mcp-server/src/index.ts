@@ -112,11 +112,23 @@ function generateToolDescriptions(knowledgeLoader: RocketshipKnowledgeLoader) {
   }
 
   return {
+    get_available_examples: `Lists all available examples from the current codebase with descriptions and metadata.
+
+💡 Use this to discover what examples exist before requesting specific ones.
+💡 Shows available plugins: ${availablePlugins.join(', ')}
+💡 Returns example names, descriptions, and plugin types for easy discovery.`,
+
     get_rocketship_examples: `Provides real examples from the current codebase for specific features or use cases.
 
 💡 YOU (the coding agent) create the test files based on these examples.
 ${pluginRecommendations}💡 File pattern: ${filePattern}
 ${variableSyntax}`,
+
+    search_examples: `Search for examples using keywords to find relevant test patterns.
+
+💡 Use this when you're not sure which plugin to use or need examples for a specific use case.
+💡 Searches across example content, file names, and plugin types.
+💡 Better than guessing - find examples that match your testing scenario.`,
 
     suggest_test_structure: `Suggests proper file structure and test organization based on current project configuration.
 
@@ -134,6 +146,13 @@ ${pluginRecommendations}💡 Available plugins: ${availablePlugins.join(', ')}`,
 💡 YOU (the coding agent) will run these commands to execute tests.
 ${cliExamples}
 💡 All commands are extracted from current CLI version.`,
+
+    get_rocketship_cli_installation_instructions: `Get step-by-step instructions for installing the Rocketship CLI on different platforms.
+
+💡 Use this when rocketship command is not found or you need to install Rocketship.
+💡 Provides platform-specific installation commands and troubleshooting.
+💡 Shows what methods are available vs NOT available (like Homebrew).
+💡 Includes prerequisites and post-installation verification steps.`,
 
     analyze_codebase_for_testing: `Analyzes a codebase to suggest meaningful test scenarios based on available plugins.
 
@@ -173,6 +192,35 @@ export class RocketshipMCPServer {
       
       return {
         tools: [
+          {
+            name: "get_available_examples",
+            description: dynamicDescriptions.get_available_examples,
+            inputSchema: {
+              type: "object",
+              properties: {},
+              required: [],
+            },
+          },
+          {
+            name: "search_examples",
+            description: dynamicDescriptions.search_examples,
+            inputSchema: {
+              type: "object",
+              properties: {
+                keywords: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Keywords to search for in examples (e.g., ['authentication', 'api', 'database'])",
+                },
+                plugin_type: {
+                  type: "string",
+                  enum: availablePlugins.concat(["any"]),
+                  description: "Optional: Filter by specific plugin type, or 'any' for all plugins",
+                },
+              },
+              required: ["keywords"],
+            },
+          },
           {
             name: "get_rocketship_examples",
             description: dynamicDescriptions.get_rocketship_examples,
@@ -236,11 +284,26 @@ export class RocketshipMCPServer {
               properties: {
                 command: {
                   type: "string",
-                  enum: ["run", "validate", "structure"],
+                  enum: this.getAvailableCLICommands(),
                   description: "CLI command guidance needed",
                 },
               },
               required: ["command"],
+            },
+          },
+          {
+            name: "get_rocketship_cli_installation_instructions",
+            description: dynamicDescriptions.get_rocketship_cli_installation_instructions,
+            inputSchema: {
+              type: "object",
+              properties: {
+                platform: {
+                  type: "string",
+                  enum: ["auto", "macos-arm64", "macos-intel", "linux", "windows"],
+                  description: "Target platform for installation (auto-detects if not specified)",
+                },
+              },
+              required: [],
             },
           },
           {
@@ -283,6 +346,10 @@ export class RocketshipMCPServer {
 
       try {
         switch (name) {
+          case "get_available_examples":
+            return this.handleGetAvailableExamples(args);
+          case "search_examples":
+            return this.handleSearchExamples(args);
           case "get_rocketship_examples":
             return this.handleGetExamples(args);
           case "suggest_test_structure":
@@ -291,6 +358,8 @@ export class RocketshipMCPServer {
             return this.handleGetSchemaInfo(args);
           case "get_cli_guidance":
             return this.handleGetCLIGuidance(args);
+          case "get_rocketship_cli_installation_instructions":
+            return this.handleGetInstallationInstructions(args);
           case "analyze_codebase_for_testing":
             return this.handleAnalyzeCodebase(args);
           default:
@@ -309,6 +378,204 @@ export class RocketshipMCPServer {
         };
       }
     });
+  }
+
+  private async handleGetAvailableExamples(args: any) {
+    const allExamples = this.knowledgeLoader.getAllExamples();
+    const schema = this.knowledgeLoader.getSchema();
+    const availablePlugins = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum || [];
+    
+    let response = `# Available Rocketship Examples\n\n`;
+    response += `Found ${allExamples.length} examples in the current codebase:\n\n`;
+    
+    for (const exampleName of allExamples) {
+      const example = this.knowledgeLoader.getExample(exampleName);
+      if (example) {
+        response += `## ${exampleName}\n\n`;
+        
+        // Try to detect plugin types from the example content
+        const detectedPlugins = this.detectPluginsInExample(example.content, availablePlugins);
+        if (detectedPlugins.length > 0) {
+          response += `**Plugins used:** ${detectedPlugins.join(', ')}\n\n`;
+        }
+        
+        // Try to extract description or name from the YAML
+        const description = this.extractDescriptionFromYAML(example.content);
+        if (description) {
+          response += `**Description:** ${description}\n\n`;
+        }
+        
+        // Show first few lines as preview
+        const lines = example.content.split('\n').slice(0, 5);
+        response += `**Preview:**\n\`\`\`yaml\n${lines.join('\n')}\n...\n\`\`\`\n\n`;
+        
+        response += `Use \`get_rocketship_examples(feature_type="${detectedPlugins[0] || 'http'}")\` to see full example.\n\n`;
+        response += `---\n\n`;
+      }
+    }
+    
+    response += `## Quick Reference\n\n`;
+    response += `**Available plugins:** ${availablePlugins.join(', ')}\n\n`;
+    response += `**Usage:**\n`;
+    response += `- Use \`search_examples(keywords=["keyword1", "keyword2"])\` to find specific examples\n`;
+    response += `- Use \`get_rocketship_examples(feature_type="plugin_name")\` to get full examples\n`;
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: response,
+        },
+      ],
+    };
+  }
+
+  private async handleSearchExamples(args: any) {
+    const { keywords, plugin_type } = args;
+    const allExamples = this.knowledgeLoader.getAllExamples();
+    const schema = this.knowledgeLoader.getSchema();
+    const availablePlugins = schema?.properties?.tests?.items?.properties?.steps?.items?.properties?.plugin?.enum || [];
+    
+    let response = `# Search Results for: ${keywords.join(', ')}\n\n`;
+    
+    const matchingExamples: Array<{name: string, content: string, score: number, matches: string[]}> = [];
+    
+    for (const exampleName of allExamples) {
+      const example = this.knowledgeLoader.getExample(exampleName);
+      if (example) {
+        const matches: string[] = [];
+        let score = 0;
+        
+        // Search in example name
+        for (const keyword of keywords) {
+          const lowerKeyword = keyword.toLowerCase();
+          if (exampleName.toLowerCase().includes(lowerKeyword)) {
+            matches.push(`name contains "${keyword}"`);
+            score += 3;
+          }
+        }
+        
+        // Search in example content
+        const lowerContent = example.content.toLowerCase();
+        for (const keyword of keywords) {
+          const lowerKeyword = keyword.toLowerCase();
+          if (lowerContent.includes(lowerKeyword)) {
+            matches.push(`content contains "${keyword}"`);
+            score += 1;
+          }
+        }
+        
+        // Filter by plugin type if specified
+        if (plugin_type && plugin_type !== "any") {
+          const detectedPlugins = this.detectPluginsInExample(example.content, availablePlugins);
+          if (!detectedPlugins.includes(plugin_type)) {
+            continue; // Skip this example
+          }
+        }
+        
+        if (matches.length > 0) {
+          matchingExamples.push({
+            name: exampleName,
+            content: example.content,
+            score,
+            matches
+          });
+        }
+      }
+    }
+    
+    // Sort by relevance score
+    matchingExamples.sort((a, b) => b.score - a.score);
+    
+    if (matchingExamples.length === 0) {
+      response += `No examples found matching: ${keywords.join(', ')}\n\n`;
+      response += `**Available examples:** ${allExamples.join(', ')}\n\n`;
+      response += `**Available plugins:** ${availablePlugins.join(', ')}\n\n`;
+      response += `Try broader keywords or use \`get_available_examples()\` to see all examples.\n`;
+    } else {
+      response += `Found ${matchingExamples.length} matching examples:\n\n`;
+      
+      for (const match of matchingExamples.slice(0, 5)) { // Show top 5 matches
+        response += `## ${match.name} (Score: ${match.score})\n\n`;
+        response += `**Matches:** ${match.matches.join(', ')}\n\n`;
+        
+        const detectedPlugins = this.detectPluginsInExample(match.content, availablePlugins);
+        if (detectedPlugins.length > 0) {
+          response += `**Plugins:** ${detectedPlugins.join(', ')}\n\n`;
+        }
+        
+        const description = this.extractDescriptionFromYAML(match.content);
+        if (description) {
+          response += `**Description:** ${description}\n\n`;
+        }
+        
+        // Show relevant lines (lines containing keywords)
+        const relevantLines = this.findRelevantLines(match.content, keywords);
+        if (relevantLines.length > 0) {
+          response += `**Relevant content:**\n\`\`\`yaml\n${relevantLines.slice(0, 10).join('\n')}\n\`\`\`\n\n`;
+        }
+        
+        response += `Use \`get_rocketship_examples(feature_type="${detectedPlugins[0] || 'http'}")\` to see full example.\n\n`;
+        response += `---\n\n`;
+      }
+      
+      if (matchingExamples.length > 5) {
+        response += `... and ${matchingExamples.length - 5} more matches. Refine your search for better results.\n\n`;
+      }
+    }
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: response,
+        },
+      ],
+    };
+  }
+
+  private detectPluginsInExample(content: string, availablePlugins: string[]): string[] {
+    const plugins: string[] = [];
+    const lowerContent = content.toLowerCase();
+    
+    for (const plugin of availablePlugins) {
+      if (lowerContent.includes(`plugin: ${plugin}`)) {
+        plugins.push(plugin);
+      }
+    }
+    
+    return [...new Set(plugins)]; // Remove duplicates
+  }
+
+  private extractDescriptionFromYAML(content: string): string | null {
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('description:')) {
+        return trimmed.replace('description:', '').trim().replace(/['"]/g, '');
+      }
+      if (trimmed.startsWith('name:')) {
+        return trimmed.replace('name:', '').trim().replace(/['"]/g, '');
+      }
+    }
+    return null;
+  }
+
+  private findRelevantLines(content: string, keywords: string[]): string[] {
+    const lines = content.split('\n');
+    const relevantLines: string[] = [];
+    
+    for (const line of lines) {
+      const lowerLine = line.toLowerCase();
+      for (const keyword of keywords) {
+        if (lowerLine.includes(keyword.toLowerCase())) {
+          relevantLines.push(line);
+          break;
+        }
+      }
+    }
+    
+    return relevantLines;
   }
 
   private async handleGetExamples(args: any) {
@@ -699,60 +966,85 @@ export class RocketshipMCPServer {
     const { command } = args;
     const cliData = this.knowledgeLoader.getCLIData();
 
-    let response = `# Rocketship CLI Guidance\n\n`;
+    let response = `# Rocketship CLI Guidance: ${command}\n\n`;
     
     if (cliData?.version?.version) {
       response += `*Current CLI Version: ${cliData.version.version}*\n\n`;
     }
 
-    // Use actual CLI help data and usage patterns from introspection
-    if (command === "run" || command === "structure") {
-      response += `## Running Tests\n\n`;
+    // Handle specific command help
+    if (cliData?.help?.[command]) {
+      const commandHelp = cliData.help[command];
       
-      if (cliData?.help?.run?.help) {
-        response += `### Current CLI Usage\n`;
-        response += `\`\`\`\n${cliData.help.run.help}\`\`\`\n\n`;
+      response += `## Command: \`rocketship ${command}\`\n\n`;
+      
+      if (commandHelp.description) {
+        response += `**Description:** ${commandHelp.description}\n\n`;
+      }
+      
+      if (commandHelp.help) {
+        response += `### Usage Information\n`;
+        response += `\`\`\`\n${commandHelp.help}\`\`\`\n\n`;
+      }
+      
+      // Add usage patterns for this specific command
+      if (cliData?.usage?.common_patterns) {
+        const commandPatterns = cliData.usage.common_patterns.filter((p: any) => 
+          p.command.includes(command) || p.name.toLowerCase().includes(command)
+        );
+        
+        if (commandPatterns.length > 0) {
+          response += `### Common Usage Patterns\n`;
+          response += `\`\`\`bash\n`;
+          commandPatterns.forEach((pattern: any) => {
+            response += `# ${pattern.description}\n`;
+            response += `${pattern.command}\n\n`;
+          });
+          response += `\`\`\`\n\n`;
+        }
       }
 
-      // Use extracted usage patterns instead of hard-coded ones
+      // Add examples from CLI help for this command
+      if (cliData?.usage?.examples_from_help?.[command]) {
+        response += `### Examples from CLI Help\n`;
+        response += `\`\`\`\n${cliData.usage.examples_from_help[command]}\`\`\`\n\n`;
+      }
+    } else if (command === "structure") {
+      // Special handling for structure guidance
+      response += `## File Structure Guidance\n\n`;
+      
+      if (cliData?.usage?.file_structure) {
+        response += `### Recommended Structure\n`;
+        if (cliData.usage.file_structure.pattern) {
+          response += `Pattern: \`${cliData.usage.file_structure.pattern}\`\n\n`;
+        }
+        if (cliData.usage.file_structure.examples) {
+          Object.entries(cliData.usage.file_structure.examples).forEach(([key, example]) => {
+            response += `\`\`\`\n${example}\`\`\`\n\n`;
+          });
+        }
+      }
+      
+      if (cliData?.help?.validate?.help) {
+        response += `### Validation Command\n`;
+        response += `\`\`\`\n${cliData.help.validate.help}\`\`\`\n\n`;
+      }
+    } else if (command === "usage") {
+      // Special handling for general usage patterns
+      response += `## General Usage Patterns\n\n`;
+      
       if (cliData?.usage?.common_patterns) {
-        response += `### Common Patterns\n`;
+        response += `### Common Command Patterns\n`;
         response += `\`\`\`bash\n`;
-        
         cliData.usage.common_patterns.forEach((pattern: any) => {
           response += `# ${pattern.description}\n`;
           response += `${pattern.command}\n\n`;
         });
-        
         response += `\`\`\`\n\n`;
       }
-
-      // Use extracted examples from CLI help
-      if (cliData?.usage?.examples_from_help?.run) {
-        response += `### Examples from CLI Help\n`;
-        response += `\`\`\`\n${cliData.usage.examples_from_help.run}\`\`\`\n\n`;
-      }
-
-      // Manual server mode using actual CLI data
-      if (cliData?.help?.start?.subcommands?.server) {
-        response += `### Manual Engine Mode\n`;
-        response += `\`\`\`\n${cliData.help.start.subcommands.server}\`\`\`\n\n`;
-      }
-    }
-
-    if (command === "validate" || command === "structure") {
-      response += `## Validation\n\n`;
-      
-      if (cliData?.help?.validate?.help) {
-        response += `### Current Validate Command\n`;
-        response += `\`\`\`\n${cliData.help.validate.help}\`\`\`\n\n`;
-      }
-
-      // Use extracted examples if available
-      if (cliData?.usage?.examples_from_help?.validate) {
-        response += `### Examples from CLI Help\n`;
-        response += `\`\`\`\n${cliData.usage.examples_from_help.validate}\`\`\`\n\n`;
-      }
+    } else {
+      response += `No specific guidance available for command: ${command}\n\n`;
+      response += `Available commands: ${this.getAvailableCLICommands().join(', ')}\n\n`;
     }
 
     // Use actual flag data - NO FALLBACKS
@@ -767,36 +1059,9 @@ export class RocketshipMCPServer {
     }
     response += `\n`;
 
-    // Use actual installation data - NO FALLBACKS
-    response += `## Installation Methods\n\n`;
-    if (cliData?.installation) {
-      if (cliData.installation.recommended) {
-        response += `**Recommended:** ${cliData.installation.recommended}\n\n`;
-      }
-      
-      if (cliData.installation.methods && cliData.installation.methods.length > 0) {
-        response += `**Available Methods:**\n`;
-        for (const method of cliData.installation.methods) {
-          response += `- **${method.name}**: ${method.description}\n`;
-          response += `  \`\`\`bash\n  ${method.command}\n  \`\`\`\n`;
-        }
-      }
-      
-      if (cliData.installation.notAvailable && cliData.installation.notAvailable.length > 0) {
-        response += `\n**NOT Available:**\n`;
-        for (const na of cliData.installation.notAvailable) {
-          response += `- ${na}\n`;
-        }
-      }
-
-      // Include actual README installation section if available
-      if (cliData.installation.fromReadme) {
-        response += `\n### From Documentation\n\n`;
-        response += `${cliData.installation.fromReadme}\n\n`;
-      }
-    } else {
-      response += `Installation information not available in CLI introspection data.\n\n`;
-    }
+    // Installation instructions moved to dedicated get_rocketship_cli_installation_instructions tool
+    response += `## Installation\n\n`;
+    response += `For Rocketship CLI installation instructions, use the \`get_rocketship_cli_installation_instructions\` tool.\n\n`;
 
     return {
       content: [
@@ -806,6 +1071,135 @@ export class RocketshipMCPServer {
         },
       ],
     };
+  }
+
+  private async handleGetInstallationInstructions(args: any) {
+    const { platform = "auto" } = args;
+    const cliData = this.knowledgeLoader.getCLIData();
+    
+    let response = `# Rocketship CLI Installation Instructions\n\n`;
+    
+    if (cliData?.version?.version) {
+      response += `*Installing: ${cliData.version.version}*\n\n`;
+    }
+    
+    // Platform-specific instructions
+    response += `## Installation Methods\n\n`;
+    
+    if (cliData?.installation) {
+      // Show recommended method if available
+      if (cliData.installation.recommended) {
+        response += `**Recommended:** ${cliData.installation.recommended}\n\n`;
+      }
+      
+      // Show available installation methods
+      if (cliData.installation.methods && cliData.installation.methods.length > 0) {
+        response += `### ✅ Available Methods\n\n`;
+        
+        for (const method of cliData.installation.methods) {
+          // Platform filtering
+          if (platform !== "auto") {
+            const methodPlatform = this.detectPlatformFromMethod(method);
+            if (methodPlatform && methodPlatform !== platform) {
+              continue; // Skip methods for other platforms
+            }
+          }
+          
+          response += `#### ${method.name}\n\n`;
+          response += `${method.description}\n\n`;
+          response += `\`\`\`bash\n${method.command}\n\`\`\`\n\n`;
+        }
+      }
+      
+      // Show methods that are NOT available
+      if (cliData.installation.notAvailable && cliData.installation.notAvailable.length > 0) {
+        response += `### ❌ NOT Available\n\n`;
+        response += `The following installation methods are **NOT supported**:\n\n`;
+        for (const na of cliData.installation.notAvailable) {
+          response += `- ${na}\n`;
+        }
+        response += `\n`;
+      }
+
+      // Include complete installation section from documentation
+      if (cliData.installation.fromReadme) {
+        response += `### 📖 Complete Installation Guide\n\n`;
+        response += `${cliData.installation.fromReadme}\n`;
+        response += `For additional platforms and detailed instructions, see the [Installation Guide](https://docs.rocketship.sh/installation).\n\n`;
+      }
+    } else {
+      response += `❌ Installation information not available from CLI introspection data.\n\n`;
+      response += `Please check the [Rocketship documentation](https://docs.rocketship.sh/installation) for installation instructions.\n\n`;
+    }
+    
+    // Post-installation verification
+    response += `## ✅ Verify Installation\n\n`;
+    response += `After installation, verify Rocketship is working:\n\n`;
+    response += `\`\`\`bash\n`;
+    response += `# Check if rocketship is in your PATH\n`;
+    response += `rocketship version\n\n`;
+    response += `# Run a simple validation\n`;
+    response += `rocketship validate --help\n`;
+    response += `\`\`\`\n\n`;
+    
+    // Troubleshooting section
+    response += `## 🔧 Troubleshooting\n\n`;
+    response += `**Command not found:** Make sure \`/usr/local/bin\` is in your PATH\n`;
+    response += `**Permission denied:** Ensure the binary has execute permissions (\`chmod +x\`)\n`;
+    response += `**For other platforms:** Visit [docs.rocketship.sh/installation](https://docs.rocketship.sh/installation)\n\n`;
+    
+    return {
+      content: [
+        {
+          type: "text",
+          text: response,
+        },
+      ],
+    };
+  }
+
+  private getAvailableCLICommands(): string[] {
+    const cliData = this.knowledgeLoader.getCLIData();
+    
+    if (!cliData?.help) {
+      return ["run", "validate", "structure"]; // Fallback to basics
+    }
+    
+    // Extract commands from CLI help data
+    const commands: string[] = [];
+    
+    // Get commands from help object keys (excluding 'main')
+    for (const key of Object.keys(cliData.help)) {
+      if (key !== 'main') {
+        commands.push(key);
+      }
+    }
+    
+    // Add special commands that are useful but might not be in help
+    const specialCommands = ["structure", "usage"];
+    for (const cmd of specialCommands) {
+      if (!commands.includes(cmd)) {
+        commands.push(cmd);
+      }
+    }
+    
+    return commands.sort();
+  }
+
+  private detectPlatformFromMethod(method: any): string | null {
+    const command = method.command.toLowerCase();
+    const name = method.name.toLowerCase();
+    
+    if (name.includes('macos') && name.includes('arm64')) return 'macos-arm64';
+    if (name.includes('macos') && name.includes('intel')) return 'macos-intel';
+    if (name.includes('linux')) return 'linux';
+    if (name.includes('windows')) return 'windows';
+    if (command.includes('darwin-arm64')) return 'macos-arm64';
+    if (command.includes('darwin-amd64')) return 'macos-intel';
+    if (command.includes('linux')) return 'linux';
+    if (command.includes('windows') || command.includes('.exe')) return 'windows';
+    
+    return null; // Platform-agnostic method
   }
 
   private async handleAnalyzeCodebase(args: any) {
