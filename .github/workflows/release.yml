@@ -24,8 +24,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "18"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Build release artifacts
         run: |
@@ -98,14 +98,14 @@ jobs:
         run: |
           # Install dependencies
           npm ci
-          
+
           # Build with embedded knowledge
           npm run build
-          
+
           # Set version to match release tag (remove 'v' prefix)
           VERSION_NUMBER=${GITHUB_REF#refs/tags/v}
           npm version $VERSION_NUMBER --no-git-tag-version
-          
+
           # Publish to npm
           npm publish --access public
         env:
@@ -115,7 +115,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: .docker/ci-testing/Dockerfile.cli
+          file: .docker/Dockerfile.cli
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: false
