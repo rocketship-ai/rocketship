@@ -147,10 +147,10 @@ The MCP server acts as a knowledgeable assistant, providing:
 
 - **`get_rocketship_examples`** - Get examples and best practices for specific Rocketship features
 - **`suggest_test_structure`** - Returns test templates with TODOs for you to implement
-- **`get_assertion_patterns`** - Shows assertion examples for different testing scenarios
-- **`get_plugin_config`** - Provides configuration examples for Rocketship plugins
-- **`validate_and_suggest`** - Reviews your YAML and suggests improvements
-- **`get_cli_commands`** - Provides CLI usage examples and best practices
+- **`get_schema_info`** - Provides current schema information for validation and proper syntax
+- **`get_cli_guidance`** - Provides CLI usage patterns and commands from introspection
+- **`get_rocketship_cli_installation_instructions`** - Get step-by-step CLI installation instructions for different platforms
+- **`analyze_codebase_for_testing`** - Analyzes codebases to suggest meaningful test scenarios
 
 #### Example Usage
 
@@ -158,6 +158,7 @@ Ask your coding agent for guidance:
 
 - "Show me examples of API testing with step chaining"
 - "What assertions should I use for JSON responses?"
+- "How do I install the Rocketship CLI?"
 - "How do I configure the Supabase plugin?"
 - "Give me a template for an E2E customer journey test"
 

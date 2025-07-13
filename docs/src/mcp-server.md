@@ -32,155 +32,154 @@ The MCP server provides six assistant tools that provide guidance rather than ge
 
 ### 1. get_rocketship_examples
 
-Get examples and best practices for specific Rocketship features.
-
-**Features:**
-
-- `api_testing` - HTTP endpoint testing with authentication and validation
-- `step_chaining` - Using data from previous steps in workflows
-- `assertions` - Comprehensive validation patterns
-- `plugins` - Configuration examples for all plugins
-- `environments` - Multi-stage configuration patterns
-- `customer_journeys` - E2E workflow testing examples
-
-**Example Request:**
-
-```
-"Show me API testing examples with authentication"
-```
-
-**What You Get:**
-
-- Real YAML code examples
-- Best practices for the feature
-- Implementation guidance
-- Next steps checklist
-
-### 2. suggest_test_structure
-
-Returns a test template with TODOs and implementation guidance.
-
-**Test Types:**
-
-- `api` - HTTP endpoint testing
-- `browser` - UI automation testing
-- `sql` - Database testing
-- `integration` - Multi-service testing
-- `e2e` - End-to-end customer journeys
-
-**Example Request:**
-
-```
-"I need to test user registration and email verification flow"
-```
-
-**What You Get:**
-
-- YAML template with TODO sections
-- Implementation checklist
-- Suggested structure for your specific use case
-
-### 3. get_assertion_patterns
-
-Shows assertion examples for different testing scenarios.
-
-**Response Types:**
-
-- `json` - JSON API response validation
-- `xml` - XML response validation
-- `text` - Plain text response validation
-- `status` - HTTP status code patterns
-- `headers` - HTTP header validation
-- `sql` - Database result validation
-- `browser` - UI element validation
-
-**Example Request:**
-
-```
-"What assertions should I use for user profile API responses?"
-```
-
-**What You Get:**
-
-- Comprehensive assertion examples
-- JSONPath and XPath patterns
-- Validation tips and best practices
-
-### 4. get_plugin_config
-
-Provides configuration examples for Rocketship plugins.
+Get real examples and best practices for specific Rocketship features from the current codebase.
 
 **Available Plugins:**
 
-- `http` - API testing with retry logic and authentication
-- `sql` - Database operations with transaction support
-- `browser` - UI automation with screenshots and interactions
-- `agent` - AI-powered validation and analysis
-- `supabase` - Direct Supabase API operations
-- `delay` - Timing control with jitter
-- `script` - Custom JavaScript logic
+- `http` - API endpoint testing with authentication and validation
+- `delay` - Timing control and wait operations
+- `script` - Custom JavaScript logic execution
+- `sql` - Database operations and validation
 - `log` - Structured logging and debugging
+- `agent` - AI-powered validation and analysis
+- `browser` - UI automation and testing
+- `supabase` - Direct Supabase API operations
 
 **Example Request:**
 
 ```
-"How do I configure the SQL plugin for PostgreSQL testing?"
+"Show me examples of HTTP testing with step chaining"
 ```
 
 **What You Get:**
 
-- Basic and advanced configuration examples
-- Feature descriptions and capabilities
-- Plugin-specific tips and best practices
+- Real YAML code examples from the codebase
+- Best practices for the specific plugin
+- Implementation guidance and patterns
+- Variable usage examples
 
-### 5. validate_and_suggest
+### 2. suggest_test_structure
 
-Reviews your Rocketship YAML content and suggests improvements.
+Suggests proper file structure and test organization based on current project configuration.
 
-**Improvement Focus Areas:**
+**Project Types:**
 
-- `performance` - Timeout and retry optimizations
-- `assertions` - Better validation patterns
-- `structure` - YAML organization improvements
-- `coverage` - Test scenario completeness
-- `best_practices` - General Rocketship recommendations
+- `frontend` - Browser-based testing with user journeys
+- `backend` - API endpoint testing
+- `fullstack` - Combined frontend and backend testing
+- `api` - Pure API testing focus
+- `mobile` - Mobile application testing
 
 **Example Request:**
 
 ```
-"Review my test file and suggest improvements"
+"I need a test structure for an e-commerce frontend project"
 ```
 
 **What You Get:**
 
-- Issue identification and fixes
-- Specific improvement suggestions
-- Best practice recommendations
-- Next steps for enhancement
+- Recommended directory structure
+- File organization patterns
+- Plugin recommendations for your project type
+- Test flow suggestions
 
-### 6. get_cli_commands
+### 3. get_schema_info
 
-Provides CLI command examples and usage patterns.
+Provides current schema information for validation and proper syntax.
 
-**Command Categories:**
+**Schema Sections:**
+
+- `plugins` - Available plugins and their configurations
+- `assertions` - Validation patterns and types
+- `save` - Data extraction and variable storage
+- `structure` - Overall YAML test structure
+- `full` - Complete schema documentation
+
+**Example Request:**
+
+```
+"Show me the schema for assertions and save operations"
+```
+
+**What You Get:**
+
+- Current schema validation rules
+- Required and optional fields
+- Examples of proper syntax
+- Compatibility information
+
+### 4. get_cli_guidance
+
+Provides current CLI usage patterns and commands from introspection.
+
+**Command Types:**
 
 - `run` - Execute tests with various options
 - `validate` - Syntax and schema validation
-- `start` - Start Rocketship engine server
-- `stop` - Stop engine server
-- `general` - Help, version, and configuration
+- `structure` - File structure and organization guidance
 
 **Example Request:**
 
 ```
-"How do I run tests with custom variables in CI/CD?"
+"How do I run tests with custom variables?"
 ```
 
 **What You Get:**
 
-- Command examples for different scenarios
+- Current CLI command examples
 - Flag explanations and usage
-- Workflow patterns and best practices
+- Common usage patterns
+- Version-specific information
+
+### 5. get_rocketship_cli_installation_instructions
+
+Get step-by-step instructions for installing the Rocketship CLI on different platforms.
+
+**Platform Support:**
+
+- `auto` - Auto-detect platform (default)
+- `macos-arm64` - macOS with Apple Silicon
+- `macos-intel` - macOS with Intel processors
+- `linux` - Linux distributions
+- `windows` - Windows systems
+
+**Example Request:**
+
+```
+"How do I install Rocketship on macOS?"
+```
+
+**What You Get:**
+
+- Platform-specific installation commands
+- Available vs NOT available installation methods
+- Post-installation verification steps
+- Troubleshooting guidance
+- Prerequisites and dependencies
+
+### 6. analyze_codebase_for_testing
+
+Analyzes a codebase to suggest meaningful test scenarios based on available plugins.
+
+**Focus Areas:**
+
+- `user_journeys` - End-to-end customer workflows
+- `api_endpoints` - API testing strategies
+- `critical_paths` - Business-critical functionality
+- `integration_points` - Service integration testing
+
+**Example Request:**
+
+```
+"Analyze my React e-commerce app for testing opportunities"
+```
+
+**What You Get:**
+
+- Suggested test scenarios for your codebase
+- Plugin recommendations based on project type
+- Critical flow identification
+- Testing strategy recommendations
 
 ## Integration Examples
 
@@ -202,10 +201,10 @@ Add to your `.mcp.json` file in your project root:
 Then ask Claude for help:
 
 ```
-"I need to create API tests for my Express.js authentication endpoints. Show me some patterns I can follow."
+"I need to install Rocketship and create API tests for my Express.js authentication endpoints."
 ```
 
-Claude will use the MCP server to get relevant examples and help you create your own test files.
+Claude will use the MCP server to provide installation instructions and relevant testing examples to help you get started.
 
 ### With Cursor
 
@@ -226,7 +225,7 @@ Claude will use the MCP server to get relevant examples and help you create your
 3. Ask Cursor for guidance:
 
 ```
-"What's the best way to structure a Rocketship test for user login with database validation?"
+"How do I install Rocketship and structure a test for user login with database validation?"
 ```
 
 ### With Windsurf
@@ -247,7 +246,7 @@ Add to your Windsurf MCP configuration (`~/.codeium/windsurf/mcp_config.json`):
 Then ask for assistance:
 
 ```
-"Help me understand how to use step chaining in Rocketship for a complete e-commerce checkout flow"
+"Help me install Rocketship and understand how to use step chaining for a complete e-commerce checkout flow"
 ```
 
 ### With Other MCP Clients
@@ -262,6 +261,7 @@ Instead of asking for complete test generation, ask for guidance on specific asp
 
 **Good:**
 
+- "How do I install Rocketship on my platform?"
 - "Show me examples of API authentication testing"
 - "What assertions work best for user profile endpoints?"
 - "How should I structure an E2E checkout flow test?"
@@ -304,12 +304,24 @@ Use the validation tool to continuously improve:
 Here's how a typical interaction works:
 
 ```
-User: "I need to test a user registration API that creates a user,
-       sends an email, and requires email verification"
+User: "I need to install Rocketship and test a user registration API 
+       that creates a user, sends an email, and requires email verification"
 
-Agent: *Uses get_rocketship_examples with feature="customer_journeys"*
+Agent: *Uses get_rocketship_cli_installation_instructions*
 
-MCP Server: *Returns E2E customer journey examples including:*
+MCP Server: *Returns platform-specific installation instructions with:*
+- Installation commands for the user's platform
+- Post-installation verification steps
+- Troubleshooting guidance
+
+Agent: "First, let's get Rocketship installed..."
+       *Provides installation guidance*
+
+User: "Great! Now I need help with the test structure"
+
+Agent: *Uses get_rocketship_examples with feature_type="http"*
+
+MCP Server: *Returns HTTP testing examples including:*
 - Multi-step workflow patterns
 - Email verification testing approaches
 - Data validation between steps

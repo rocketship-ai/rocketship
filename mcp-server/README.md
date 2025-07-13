@@ -8,12 +8,12 @@ This MCP server is designed as a **knowledgeable assistant** that helps coding a
 
 ## Features
 
-- **Pattern Library**: Comprehensive examples for API testing, step chaining, assertions, and customer journeys
-- **Test Structure Guidance**: Suggests templates with TODOs for agents to implement
-- **Plugin Configuration Help**: Shows configuration examples for all Rocketship plugins
-- **Assertion Patterns**: Demonstrates validation techniques for different response types
-- **CLI Command Reference**: Provides usage examples and best practices
-- **YAML Validation**: Reviews test files and suggests improvements
+- **Real Examples**: Provides actual examples from the current Rocketship codebase
+- **Test Structure Guidance**: Suggests file organization and project structure
+- **Schema Information**: Current schema validation rules and syntax
+- **CLI Installation Help**: Step-by-step installation instructions for all platforms
+- **CLI Command Reference**: Current usage patterns extracted from CLI introspection
+- **Codebase Analysis**: Suggests test scenarios based on your project type
 
 ## Installation
 
@@ -83,65 +83,75 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 ## Available Tools
 
 ### 1. `get_rocketship_examples`
-Get examples and best practices for specific Rocketship features.
+Get real examples and best practices for specific Rocketship features from the current codebase.
 
-**Features:** `api_testing`, `step_chaining`, `assertions`, `plugins`, `environments`, `customer_journeys`
+**Plugins:** `http`, `delay`, `script`, `sql`, `log`, `agent`, `browser`, `supabase`
 
 ### 2. `suggest_test_structure`
-Returns a test template with TODOs for you to implement.
+Suggests proper file structure and test organization based on current project configuration.
 
-**Types:** `api`, `browser`, `sql`, `integration`, `e2e`
+**Project Types:** `frontend`, `backend`, `fullstack`, `api`, `mobile`
 
-### 3. `get_assertion_patterns`
-Shows assertion examples for different testing scenarios.
+### 3. `get_schema_info`
+Provides current schema information for validation and proper syntax.
 
-**Response Types:** `json`, `xml`, `text`, `status`, `headers`, `sql`, `browser`
+**Sections:** `plugins`, `assertions`, `save`, `structure`, `full`
 
-### 4. `get_plugin_config`
-Provides configuration examples for Rocketship plugins.
+### 4. `get_cli_guidance`
+Provides current CLI usage patterns and commands from introspection.
 
-**Plugins:** `http`, `sql`, `browser`, `agent`, `supabase`, `delay`, `script`, `log`
+**Command Types:** `run`, `validate`, `structure`
 
-### 5. `validate_and_suggest`
-Reviews your Rocketship YAML and suggests improvements.
+### 5. `get_rocketship_cli_installation_instructions`
+Get step-by-step instructions for installing the Rocketship CLI on different platforms.
 
-**Focus Areas:** `performance`, `assertions`, `structure`, `coverage`, `best_practices`
+**Platforms:** `auto`, `macos-arm64`, `macos-intel`, `linux`, `windows`
 
-### 6. `get_cli_commands`
-Provides CLI command examples and usage patterns.
+### 6. `analyze_codebase_for_testing`
+Analyzes a codebase to suggest meaningful test scenarios based on available plugins.
 
-**Commands:** `run`, `validate`, `start`, `stop`, `general`
+**Focus Areas:** `user_journeys`, `api_endpoints`, `critical_paths`, `integration_points`
 
 ## Usage Examples
 
-### Learning API Testing Patterns
+### Installing Rocketship CLI
 
 ```
-"Show me examples of API testing with authentication and response validation"
+"How do I install Rocketship on my Mac?"
 
-Agent asks for: get_rocketship_examples(feature="api_testing")
-You get: Examples, best practices, and implementation guidance
-You create: Your own test file based on the patterns
+Agent asks for: get_rocketship_cli_installation_instructions(platform="macos-arm64")
+You get: Platform-specific installation commands, verification steps, and troubleshooting
+You run: The installation commands to get Rocketship set up
 ```
 
-### Creating Test Structure
+### Getting Real Examples
 
 ```
-"I need to create an E2E test for user registration flow"
+"Show me examples of HTTP testing with step chaining"
 
-Agent asks for: suggest_test_structure(test_name="User Registration", test_type="e2e", customer_journey="User signs up and verifies email")
-You get: Template with TODOs and implementation checklist
-You create: Complete test by filling in the TODOs
+Agent asks for: get_rocketship_examples(feature_type="http", use_case="step chaining")
+You get: Real YAML examples from the codebase, variable usage patterns
+You create: Your own test file based on the actual patterns
 ```
 
-### Understanding Assertions
+### Structuring Tests for Projects
 
 ```
-"What assertions should I use for JSON API responses?"
+"I need a test structure for my React e-commerce frontend"
 
-Agent asks for: get_assertion_patterns(response_type="json", test_scenario="User profile API")
-You get: Comprehensive assertion examples and tips
-You implement: Appropriate assertions in your test
+Agent asks for: suggest_test_structure(project_type="frontend", user_flows=["checkout", "authentication"])
+You get: Directory structure recommendations, plugin suggestions
+You create: Organized test structure following the guidance
+```
+
+### Analyzing Your Codebase
+
+```
+"What should I test in my Express.js API?"
+
+Agent asks for: analyze_codebase_for_testing(codebase_info="Express.js API with authentication", focus_area="api_endpoints")
+You get: Suggested test scenarios, critical path identification
+You implement: Tests for the most important functionality
 ```
 
 ## Key Benefits
