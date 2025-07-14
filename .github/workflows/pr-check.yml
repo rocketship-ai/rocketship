@@ -346,6 +346,9 @@ jobs:
             exit 1
           fi
 
+          echo "Testing browser plugin assertion failure behavior..."
+          ./.github/scripts/test-browser-assertion-failures.sh
+
           echo "Testing all examples directory..."
           OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
           echo "$OUTPUT"
