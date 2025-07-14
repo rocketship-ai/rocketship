@@ -41,9 +41,9 @@ tests:
             - Max steps test success (should be false): {{ max_steps_success }}
             - Max steps result: {{ max_steps_result }}
 
-  - name: "Test browser plugin configuration and error handling"
+  - name: "Test success detection with achievable task"
     steps:
-      - name: "Test browser plugin with invalid API key (should fail gracefully)"
+      - name: "Simple navigation task"
         plugin: browser
         config:
           task: "Navigate to https://example.com and confirm the page loaded successfully"
@@ -51,26 +51,26 @@ tests:
             provider: "openai"
             model: "gpt-4o"
             config:
-              OPENAI_API_KEY: "invalid-key-for-testing"
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
           headless: true
-          timeout: "10s"
-          max_steps: 2
+          timeout: "30s"
+          max_steps: 5
           use_vision: false
         save:
           - json_path: ".success"
-            as: "browser_test_success"
+            as: "navigation_success"
           - json_path: ".result"
-            as: "browser_test_result"
-        # Expect failure due to invalid API key - this tests that assertion validation works
+            as: "navigation_result"
+        # Expect success for simple navigation
         assertions:
           - type: "json_path"
             path: ".success"
-            expected: false
+            expected: true
 
-      - name: "Log browser test results"
+      - name: "Log navigation test results"
         plugin: log
         config:
           message: |
-            Browser Plugin Error Handling Test Results:
-            - Browser test success (expected false): {{ browser_test_success }}
-            - Browser test result: {{ browser_test_result }}
+            Browser Plugin Navigation Test Results:
+            - Simple navigation test success: {{ navigation_success }}
+            - Navigation result: {{ navigation_result }}
