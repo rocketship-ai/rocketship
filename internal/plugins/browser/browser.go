@@ -408,11 +408,12 @@ func (bp *BrowserPlugin) processAssertions(p map[string]interface{}, result map[
 			}
 			
 			// Try to parse as boolean, number, or keep as string
-			if processedExpected == "true" {
+			switch processedExpected {
+			case "true":
 				assertionMap["expected"] = true
-			} else if processedExpected == "false" {
+			case "false":
 				assertionMap["expected"] = false
-			} else {
+			default:
 				assertionMap["expected"] = processedExpected
 			}
 		}
