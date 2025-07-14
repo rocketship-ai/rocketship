@@ -41,36 +41,36 @@ tests:
             - Max steps test success (should be false): {{ max_steps_success }}
             - Max steps result: {{ max_steps_result }}
 
-  - name: "Test success detection with achievable task"
+  - name: "Test browser automation with timeout failure"
     steps:
-      - name: "Simple navigation task"
+      - name: "Impossible task that will timeout"
         plugin: browser
         config:
-          task: "Navigate to https://example.com and confirm the page loaded successfully"
+          task: "Find a non-existent element with ID 'impossible-element-that-does-not-exist-anywhere' on https://example.com"
           llm:
             provider: "openai"
             model: "gpt-4o"
             config:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
           headless: true
-          timeout: "30s"
-          max_steps: 5
+          timeout: "10s"
+          max_steps: 3
           use_vision: false
         save:
           - json_path: ".success"
             as: "navigation_success"
           - json_path: ".result"
             as: "navigation_result"
-        # Expect success for simple navigation
+        # Expect failure for impossible task
         assertions:
           - type: "json_path"
             path: ".success"
-            expected: true
+            expected: false
 
-      - name: "Log navigation test results"
+      - name: "Log timeout test results"
         plugin: log
         config:
           message: |
-            Browser Plugin Navigation Test Results:
-            - Simple navigation test success: {{ navigation_success }}
-            - Navigation result: {{ navigation_result }}
+            Browser Plugin Timeout Test Results:
+            - Impossible task test success (should be false): {{ navigation_success }}
+            - Timeout test result: {{ navigation_result }}
