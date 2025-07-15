@@ -2,152 +2,152 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.rocketship.sh/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/contributing/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/deploy-on-kubernetes/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/deploy-on-your-cloud/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/installation/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/mcp-server/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/quickstart/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/test-run-management/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/agent-testing/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/browser-testing/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/custom-scripting/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/log-plugin/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/request-chaining/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/retry-policies/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/shell-scripting/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/sql-testing/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/supabase-testing/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/variables/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_get/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_list/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_run/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_start/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_start_server/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_stop/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_stop_server/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_validate/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_version/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/yaml-reference/plugin-reference/</loc>
-         <lastmod>2025-07-14</lastmod>
+         <lastmod>2025-07-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
