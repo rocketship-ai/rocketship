@@ -1,0 +1,67 @@
+name: "Simple S3 Test Suite"
+description: "A simple test suite that demonstrates basic S3 operations"
+tests:
+  - name: "Upload File to S3"
+    steps:
+      - name: "Log start of S3 upload test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting S3 upload test - uploading file"
+
+      - name: "Upload a new file"
+        plugin: "s3"
+        config:
+          operation: "upload"
+          file_path: "/home/rahul/so i will work on adding.txt"
+          aws_access_key: "AKIAYKFQQVWF2INHHSG3"
+          aws_secret_key: "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"
+          bucket: "girmantech-public-bucket"
+          s3_folder_name: "uploads"
+          aws_region: "ap-south-1"
+
+      - name: "Log end of S3 upload test"
+        plugin: "log"
+        config:
+          message: "🔧 Finished S3 upload test - uploaded file"
+
+      - name: "Log start of S3 download test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting S3 download test - downloading file"
+
+      - name: "Download File from S3"
+        plugin: "s3"
+        config:
+          operation: "download"
+          s3_file_name: "so i will work on adding.txt"
+          aws_access_key: "AKIAYKFQQVWF2INHHSG3"
+          aws_secret_key: "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"
+          bucket: "girmantech-public-bucket"
+          s3_folder_name: "uploads"
+          aws_region: "ap-south-1"
+
+      - name: "Log end of S3 download test"
+        plugin: "log"
+        config:
+          message: "🔧 Finished S3 download test - downloaded file"
+
+      - name: "Log start of S3 delete test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting S3 delete test - deleting file"
+
+      - name: "Delete File from S3"
+        plugin: "s3"
+        config:
+          operation: "delete"
+          s3_file_name: "so i will work on adding.txt"
+          aws_access_key: "AKIAYKFQQVWF2INHHSG3"
+          aws_secret_key: "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"
+          bucket: "girmantech-public-bucket"
+          s3_folder_name: "uploads"
+          aws_region: "ap-south-1"
+
+      - name: "Log end of S3 delete test"
+        plugin: "log"
+        config:
+          message: "🔧 Finished S3 delete test - deleted file"
