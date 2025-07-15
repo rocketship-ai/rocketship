@@ -1,17 +1,20 @@
 package browser
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -89,10 +92,57 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	// Set up process group (platform-specific)
 	setupProcessGroup(cmd)
 
-	// Capture stdout and stderr separately
+	// Check if debug logging is enabled
+	isDebugEnabled := strings.ToUpper(os.Getenv("ROCKETSHIP_LOG")) == "DEBUG"
+	
+	// Capture stdout and stderr
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	var stdoutReader, stderrReader io.Reader
+	var wg sync.WaitGroup
+	
+	if isDebugEnabled {
+		// For debug mode, create pipes to stream output in real-time
+		stdoutPipe, err := cmd.StdoutPipe()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
+		}
+		stderrPipe, err := cmd.StderrPipe()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+		}
+		
+		// Create tee readers to both capture and stream
+		stdoutReader = io.TeeReader(stdoutPipe, &stdout)
+		stderrReader = io.TeeReader(stderrPipe, &stderr)
+		
+		// Stream stderr (browser-use logs) to our logger in real-time
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			scanner := bufio.NewScanner(stderrReader)
+			for scanner.Scan() {
+				line := scanner.Text()
+				log.Printf("[BROWSER-USE] %s", line)
+			}
+		}()
+		
+		// Stream stdout (but don't log it since it contains the final JSON)
+		go func() {
+			defer wg.Done()
+			scanner := bufio.NewScanner(stdoutReader)
+			for scanner.Scan() {
+				line := scanner.Text()
+				// Only log non-JSON lines from stdout in debug mode
+				if !strings.HasPrefix(strings.TrimSpace(line), "{") {
+					log.Printf("[BROWSER-USE-OUT] %s", line)
+				}
+			}
+		}()
+	} else {
+		// For non-debug mode, just capture normally
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+	}
 	
 	// Ensure the process and its children are killed if context is cancelled
 	go func() {
@@ -107,8 +157,13 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	
 	err = cmd.Wait()
 	duration := time.Since(startTime)
+	
+	// Wait for all streaming goroutines to complete
+	if isDebugEnabled {
+		wg.Wait()
+	}
 
-	// Log stderr if there are errors
+	// Log stderr if there are errors (always log errors regardless of debug mode)
 	if stderr.Len() > 0 && err != nil {
 		log.Printf("[ERROR] Python stderr: %s", stderr.String())
 	}
