@@ -1,5 +1,11 @@
 name: "Simple S3 Test Suite"
 description: "A simple test suite that demonstrates basic S3 operations"
+vars:
+  s3_bucket: "rahul-girman-bucket"
+  aws_access_key: "AKIAYKFQQVWF2INHHSG3"
+  aws_secret_key: "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"
+  aws_region: "ap-south-1"
+  
 tests:
   - name: "Upload File to S3"
     steps:
@@ -11,13 +17,23 @@ tests:
       - name: "Upload a new file"
         plugin: "s3"
         config:
-          operation: "upload"
+          operation: "PUT"
           file_path: "/home/rahul/so i will work on adding.txt"
-          aws_access_key: "AKIAYKFQQVWF2INHHSG3"
-          aws_secret_key: "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"
-          bucket: "girmantech-public-bucket"
-          s3_folder_name: "uploads"
-          aws_region: "ap-south-1"
+          aws_access_key: "{{ .vars.aws_access_key }}"
+          aws_secret_key: "{{ .vars.aws_secret_key }}"
+          bucket: "{{ .vars.s3_bucket }}"
+          key_prefix: "uploads"
+          aws_region: "{{ .vars.aws_region }}"
+        assertions:
+          - type: "json_path"
+            path: ".status"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "https://{{ .vars.s3_bucket }}.s3.{{ .vars.aws_region }}.amazonaws.com/uploads/so_i_will_work_on_adding.txt"
+        save:
+          - json_path: ".s3_file_name"
+            as: "file_name"
 
       - name: "Log end of S3 upload test"
         plugin: "log"
@@ -32,13 +48,14 @@ tests:
       - name: "Download File from S3"
         plugin: "s3"
         config:
-          operation: "download"
-          s3_file_name: "so i will work on adding.txt"
-          aws_access_key: "AKIAYKFQQVWF2INHHSG3"
-          aws_secret_key: "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"
-          bucket: "girmantech-public-bucket"
-          s3_folder_name: "uploads"
-          aws_region: "ap-south-1"
+          operation: "GET"
+          s3_file_name: "{{ file_name }}"
+          aws_access_key: "{{ .vars.aws_access_key }}"
+          aws_secret_key: "{{ .vars.aws_secret_key }}"
+          bucket: "{{ .vars.s3_bucket }}"
+          aws_region: "{{ .vars.aws_region }}"
+          key_prefix: "uploads"
+          file_path: "/home/rahul/{{file_name}}"
 
       - name: "Log end of S3 download test"
         plugin: "log"
@@ -53,13 +70,13 @@ tests:
       - name: "Delete File from S3"
         plugin: "s3"
         config:
-          operation: "delete"
+          operation: "DELETE"
           s3_file_name: "so i will work on adding.txt"
-          aws_access_key: "AKIAYKFQQVWF2INHHSG3"
-          aws_secret_key: "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"
-          bucket: "girmantech-public-bucket"
-          s3_folder_name: "uploads"
-          aws_region: "ap-south-1"
+          aws_access_key: "{{ .vars.aws_access_key }}"
+          aws_secret_key: "{{ .vars.aws_secret_key }}"
+          bucket: "{{ .vars.s3_bucket }}"
+          key_prefix: "uploads"
+          aws_region: "{{ .vars.aws_region }}"
 
       - name: "Log end of S3 delete test"
         plugin: "log"
