@@ -12,12 +12,12 @@ type S3Plugin struct {
 type S3Config struct {
 	Operation  string `json:"operation" yaml:"operation"`
 	Bucket     string `json:"bucket" yaml:"bucket"`
-	Region     string `json:"region" yaml:"region"`
-	AccessKey  string `json:"access_key" yaml:"access_key"`
-	SecretKey  string `json:"secret_key" yaml:"secret_key"`
+	AWSRegion     string `json:"aws_region" yaml:"aws_region"`
+	AWSAccessKey  string `json:"aws_access_key" yaml:"aws_access_key"`
+	AWSSecretKey  string `json:"aws_secret_key" yaml:"aws_secret_key"`
 	FilePath   string `json:"file_path" yaml:"file_path,omitempty"` // Local file path for upload/download
-	FileName   string `json:"file_name" yaml:"file_name,omitempty"` // Name of the file in S3
-	FolderName string `json:"folder_name" yaml:"folder_name,omitempty"` // Folder name in S3 bucket
+	S3FileName string `json:"s3_file_name" yaml:"s3_file_name,omitempty"` // Name of the file in S3
+	S3FolderName string `json:"s3_folder_name" yaml:"s3_folder_name,omitempty"` // Folder name in S3 bucket
 }
 
 type SaveConfig struct {
@@ -28,5 +28,10 @@ type SaveConfig struct {
 
 // S3Response represents the response from S3 operations
 type S3Response struct {
-	URL     string `json:"url,omitempty" yaml:"url,omitempty"` // URL of the uploaded file if applicable
+	Result  map[string]interface{} `json:"result"`
+}
+	
+type ActivityResponse struct {
+	Response *S3Response 	 `json:"response"`
+	Saved map[string]string  `json:"saved,omitempty"`
 }
