@@ -2,8 +2,8 @@ name: "Simple S3 Test Suite"
 description: "A simple test suite that demonstrates basic S3 operations"
 vars:
   s3_bucket: "rahul-girman-bucket"
-  aws_access_key: "AKIAYKFQQVWF2INHHSG3"
-  aws_secret_key: "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"
+  aws_access_key: ""
+  aws_secret_key: ""
   aws_region: "ap-south-1"
   
 tests:
