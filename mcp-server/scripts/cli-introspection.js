@@ -165,8 +165,8 @@ function extractInstallationInfo() {
   if (fs.existsSync(readmePath)) {
     const readme = fs.readFileSync(readmePath, 'utf8');
     
-    // Extract installation section
-    const installSection = readme.match(/## Installation[\s\S]*?(?=##|$)/i);
+    // Extract installation section - look for #### Install pattern specifically
+    const installSection = readme.match(/#{3,4}\s*Install\b[\s\S]*?(?=#{2,4}\s*[A-Z]|$)/i);
     if (installSection) {
       const installText = installSection[0];
       installationMethods.fromReadme = installText;
@@ -175,21 +175,49 @@ function extractInstallationInfo() {
       const codeBlocks = installText.match(/```[\s\S]*?```/g) || [];
       codeBlocks.forEach((block, index) => {
         const command = block.replace(/```\w*\n?|```/g, '').trim();
-        if (command && !command.includes('# ')) {
-          installationMethods.methods.push({
-            name: `Method ${index + 1}`,
-            description: 'Installation method from documentation',
-            command: command
-          });
+        if (command) {
+          // Only include commands that actually install Rocketship itself
+          // Skip prerequisites like 'brew install temporal'
+          if (command.includes('rocketship') && !command.includes('brew install temporal')) {
+            // Determine installation method type
+            let methodName = `Method ${index + 1}`;
+            if (command.includes('curl') && command.includes('rocketship')) {
+              if (command.includes('darwin-arm64')) {
+                methodName = 'Direct Download (macOS ARM64)';
+              } else if (command.includes('darwin-amd64')) {
+                methodName = 'Direct Download (macOS Intel)';
+              } else if (command.includes('linux-amd64')) {
+                methodName = 'Direct Download (Linux AMD64)';
+              } else if (command.includes('linux-arm64')) {
+                methodName = 'Direct Download (Linux ARM64)';
+              } else if (command.includes('windows')) {
+                methodName = 'Direct Download (Windows)';
+              } else {
+                methodName = 'Direct Download';
+              }
+            }
+            
+            installationMethods.methods.push({
+              name: methodName,
+              description: 'Installation method from documentation',
+              command: command
+            });
+          }
         }
       });
       
-      // Look for "not available" mentions
+      // Look for "not available" mentions and add known limitations
       if (installText.toLowerCase().includes('homebrew') && installText.toLowerCase().includes('not')) {
         installationMethods.notAvailable.push('Homebrew (brew install) - not currently supported');
+      } else {
+        // Since Rocketship is not available via Homebrew, explicitly note this
+        installationMethods.notAvailable.push('Homebrew (brew install rocketship) - NOT Available');
       }
+      
       if (installText.toLowerCase().includes('apt') && installText.toLowerCase().includes('not')) {
         installationMethods.notAvailable.push('Package managers (apt, yum, etc.) - not currently supported');
+      } else {
+        installationMethods.notAvailable.push('Package managers (apt install, yum install) - NOT Available');
       }
       
       // Extract recommended method

@@ -2,10 +2,12 @@ package browser
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/itchyny/gojq"
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"go.temporal.io/sdk/activity"
@@ -180,6 +182,11 @@ func (bp *BrowserPlugin) Activity(ctx context.Context, p map[string]interface{})
 		result["error"] = response.Error
 	}
 
+	// Process assertions after building the result
+	if err := bp.processAssertions(p, result, stateInterface); err != nil {
+		return nil, fmt.Errorf("assertion failed: %w", err)
+	}
+
 	logger.Info("Browser plugin execution completed successfully")
 	return result, nil
 }
@@ -347,4 +354,179 @@ func extractSimpleValue(data map[string]interface{}, path string) (string, error
 		return "", fmt.Errorf("field %q not found", fieldName)
 	}
 	return "", fmt.Errorf("unsupported path format: %s", path)
+}
+
+// processAssertions processes assertions for the browser plugin
+func (bp *BrowserPlugin) processAssertions(p map[string]interface{}, result map[string]interface{}, state map[string]interface{}) error {
+	assertions, ok := p["assertions"].([]interface{})
+	if !ok {
+		return nil // No assertions to process
+	}
+
+	// Convert state to string map for template processing (compatibility with existing plugins)
+	stateStrings := make(map[string]string)
+	for k, v := range state {
+		switch val := v.(type) {
+		case string:
+			stateStrings[k] = val
+		case float64:
+			stateStrings[k] = fmt.Sprintf("%.0f", val)
+		case bool:
+			stateStrings[k] = fmt.Sprintf("%t", val)
+		case nil:
+			stateStrings[k] = ""
+		default:
+			bytes, err := json.Marshal(val)
+			if err != nil {
+				return fmt.Errorf("failed to convert state value for %s: %w", k, err)
+			}
+			stateStrings[k] = string(bytes)
+		}
+	}
+
+	for _, assertion := range assertions {
+		assertionMap, ok := assertion.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid assertion format: got type %T", assertion)
+		}
+
+		assertionType, ok := assertionMap["type"].(string)
+		if !ok {
+			return fmt.Errorf("assertion type is required")
+		}
+
+		// Replace variables in expected value if it's a string
+		if expectedStr, ok := assertionMap["expected"].(string); ok {
+			// Create template context
+			templateContext := dsl.TemplateContext{
+				Runtime: state,
+			}
+
+			processedExpected, err := dsl.ProcessTemplate(expectedStr, templateContext)
+			if err != nil {
+				return fmt.Errorf("failed to process template in expected value: %w", err)
+			}
+			
+			// Try to parse as boolean, number, or keep as string
+			switch processedExpected {
+			case "true":
+				assertionMap["expected"] = true
+			case "false":
+				assertionMap["expected"] = false
+			default:
+				assertionMap["expected"] = processedExpected
+			}
+		}
+
+		switch assertionType {
+		case "json_path":
+			// Handle JSON path assertions on browser result
+			path, ok := assertionMap["path"].(string)
+			if !ok {
+				return fmt.Errorf("path is required for json_path assertion")
+			}
+
+			// Replace variables in path field before parsing as jq expression
+			templateContext := dsl.TemplateContext{
+				Runtime: state,
+			}
+			
+			processedPath, err := dsl.ProcessTemplate(path, templateContext)
+			if err != nil {
+				return fmt.Errorf("failed to process template in path field: %w", err)
+			}
+
+			query, err := gojq.Parse(processedPath)
+			if err != nil {
+				return fmt.Errorf("failed to parse jq expression %q: %w", processedPath, err)
+			}
+
+			iter := query.Run(result)
+			var actualValue interface{}
+			var found bool
+
+			for {
+				v, ok := iter.Next()
+				if !ok {
+					break
+				}
+				if err, ok := v.(error); ok {
+					return fmt.Errorf("error evaluating jq expression %q: %w", processedPath, err)
+				}
+				if !found {
+					actualValue = v
+					found = true
+				}
+			}
+
+			// If we're just checking existence
+			if exists, ok := assertionMap["exists"].(bool); ok && exists {
+				if !found {
+					resultPreview, _ := json.Marshal(result)
+					previewStr := string(resultPreview)
+					if len(previewStr) > 200 {
+						previewStr = previewStr[:200] + "..."
+					}
+					return fmt.Errorf("jq assertion failed: path %q does not exist. Browser result: %s", processedPath, previewStr)
+				}
+				// Skip value comparison if we're only checking existence
+				continue
+			}
+
+			if !found {
+				resultPreview, _ := json.Marshal(result)
+				previewStr := string(resultPreview)
+				if len(previewStr) > 200 {
+					previewStr = previewStr[:200] + "..."
+				}
+				return fmt.Errorf("no results from jq expression %q. Browser result: %s", processedPath, previewStr)
+			}
+
+			// Only compare values if we have an expected value
+			if expected, hasExpected := assertionMap["expected"]; hasExpected {
+				equal := false
+				switch v := actualValue.(type) {
+				case int:
+					if exp, ok := expected.(float64); ok {
+						equal = float64(v) == exp
+					} else if exp, ok := expected.(int); ok {
+						equal = v == exp
+					} else if exp, ok := expected.(bool); ok {
+						equal = (v != 0) == exp
+					}
+				case float64:
+					if exp, ok := expected.(float64); ok {
+						equal = v == exp
+					} else if exp, ok := expected.(int); ok {
+						equal = v == float64(exp)
+					} else if exp, ok := expected.(bool); ok {
+						equal = (v != 0) == exp
+					}
+				case bool:
+					if exp, ok := expected.(bool); ok {
+						equal = v == exp
+					} else if exp, ok := expected.(string); ok {
+						equal = fmt.Sprintf("%t", v) == exp
+					}
+				case string:
+					if exp, ok := expected.(string); ok {
+						equal = v == exp
+					} else if exp, ok := expected.(bool); ok {
+						equal = v == fmt.Sprintf("%t", exp)
+					}
+				default:
+					equal = actualValue == expected
+				}
+
+				if !equal {
+					return fmt.Errorf("json_path assertion failed: path %q expected %v (type %T), got %v (type %T)", processedPath, expected, expected, actualValue, actualValue)
+				}
+			}
+
+		default:
+			return fmt.Errorf("unsupported assertion type for browser plugin: %s", assertionType)
+		}
+	}
+
+	return nil
 }
