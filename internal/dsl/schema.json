@@ -45,7 +45,7 @@
                 "plugin": {
                   "type": "string",
                   "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase"]
+                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase", "s3"]
                 },
                 "config": {
                   "type": "object",
@@ -734,7 +734,99 @@
                       }
                     }
                   }
+                },
+
+                {
+                  "if": {
+                    "properties": {
+                      "plugin": {
+                        "const": "s3"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "properties": {
+                          "operation": {
+                            "type": "string",
+                            "enum": ["PUT", "GET", "DELETE"]
+                          },
+                          "file_path": {
+                            "type": "string",
+                            "description": "Local file path to upload/download (for PUT/GET operations)"
+                          },
+                          "s3_file_name": {
+                            "type": "string",
+                            "description": "File name in S3 (for download/delete)"
+                          },
+                          "bucket": {
+                            "type": "string",
+                            "description":"S3 bucket name"
+                          },
+                          "key_prefix": {
+                            "type": "string",
+                            "description": "Folder path in S3,  ex: uploads/testing"
+                          },
+                          "aws_access_key": {
+                            "type": "string",
+                            "description": "AWS access key"
+                          },
+                          "aws_secret_key": {
+                            "type": "string",
+                            "description": "AWS secret key"
+                          },
+                          "aws_region": {
+                            "type": "string",
+                            "description": "AWS region"
+                          }
+                        },
+                        "required": [
+                          "operation",
+                          "bucket",
+                          "aws_access_key",
+                          "aws_secret_key",
+                          "aws_region"
+                        ],
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "operation": {
+                                  "const": "PUT"
+                                }
+                              }
+                            },
+                            "then": {
+                              "required": [
+                                "file_path"
+                              ]
+                            }
+                          },
+                          {
+                            "if": {
+                              "properties": {
+                                "operation": {
+                                  "enum": [
+                                    "GET",
+                                    "DELETE"
+                                  ]
+                                }
+                              }
+                            },
+                            "then": {
+                              "required": [
+                                "s3_file_name"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
                 }
+              
               ]
             }
           }
