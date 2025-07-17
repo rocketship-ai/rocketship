@@ -213,14 +213,24 @@ func handlePut(ctx context.Context, cfg map[string]interface{}, params map[strin
 		"version_id":  versionID, // empty string if versioning is disabled
 	}
 
+	// Compensation cleanup logic if assertions/saves fail
+	rollback := func() {
+		_, _ = client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+	}
+
 	// get assertions from params
 	if err := processAssertions(params, result, state); err != nil {
+		rollback()
 		return nil, err
 	}
 	
 	saved := make(map[string]string)
 
 	if err := processSaves(params, result, saved); err != nil {
+		rollback()
 		return nil, err
 	}
 	

@@ -55,7 +55,7 @@ tests:
           bucket: "{{ .vars.s3_bucket }}"
           aws_region: "{{ .vars.aws_region }}"
           key_prefix: "uploads"
-          file_path: "/home/rahul/{{file_name}}"
+          file_path: "/home/rahul/{{file_name}}" # Path to save the downloaded file if provided
 
       - name: "Log end of S3 download test"
         plugin: "log"
