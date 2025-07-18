@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -30,7 +29,7 @@ func (m *Migrator) Up(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer migrator.Close()
+	defer func() { _, _ = migrator.Close() }()
 
 	if err := migrator.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("failed to run migrations: %w", err)
@@ -45,7 +44,7 @@ func (m *Migrator) Down(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer migrator.Close()
+	defer func() { _, _ = migrator.Close() }()
 
 	if err := migrator.Down(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("failed to rollback migrations: %w", err)
@@ -60,7 +59,7 @@ func (m *Migrator) Version(ctx context.Context) (uint, bool, error) {
 	if err != nil {
 		return 0, false, fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer migrator.Close()
+	defer func() { _, _ = migrator.Close() }()
 
 	version, dirty, err := migrator.Version()
 	if err != nil {
@@ -72,27 +71,26 @@ func (m *Migrator) Version(ctx context.Context) (uint, bool, error) {
 
 // createMigrator creates a new migrate instance
 func (m *Migrator) createMigrator() (*migrate.Migrate, error) {
-	// Get a connection from the pool
-	conn, err := m.pool.Acquire(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire connection: %w", err)
-	}
-	defer conn.Release()
-
-	// Create database driver
-	driver, err := postgres.WithConnection(context.Background(), conn.Conn(), &postgres.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create database driver: %w", err)
-	}
-
 	// Create source driver from embedded filesystem
 	source, err := iofs.New(migrationsFS, "migrations")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source driver: %w", err)
 	}
 
-	// Create migrator
-	migrator, err := migrate.NewWithDatabaseInstance("iofs", source, "postgres", driver)
+	// Get database config to construct DSN
+	config := DefaultConfig()
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		config.Username,
+		config.Password,
+		config.Host,
+		config.Port,
+		config.Database,
+		config.SSLMode,
+	)
+
+	// Create migrator with DSN
+	migrator, err := migrate.NewWithSourceInstance("iofs", source, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create migrator: %w", err)
 	}
