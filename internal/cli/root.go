@@ -37,6 +37,9 @@ func NewRootCmd() *cobra.Command {
 		NewValidateCmd(),
 		NewListCmd(),
 		NewGetCmd(),
+		NewAuthCmd(),
+		NewTeamCmd(),
+		NewTokenCmd(),
 	)
 
 	return cmd
