@@ -19,7 +19,7 @@ func NewEnforcer(repo *Repository) *Enforcer {
 
 // CanRunTest checks if a user can run tests for a specific repository/path
 func (e *Enforcer) CanRunTest(ctx context.Context, authCtx *AuthContext, req *TestRunRequest) (bool, error) {
-	// Organization admins can always run tests
+	// Global admins can always run tests
 	if authCtx.IsAdmin {
 		return true, nil
 	}
@@ -167,7 +167,7 @@ func (e *Enforcer) isUserInOwners(ctx context.Context, authCtx *AuthContext, own
 
 // CanManageTeam checks if a user can manage a team
 func (e *Enforcer) CanManageTeam(ctx context.Context, authCtx *AuthContext, teamID string) (bool, error) {
-	// Organization admins can manage any team
+	// Global admins can manage any team
 	if authCtx.IsAdmin {
 		return true, nil
 	}
@@ -189,7 +189,7 @@ func (e *Enforcer) CanManageTeam(ctx context.Context, authCtx *AuthContext, team
 
 // CanManageRepository checks if a user can manage a repository
 func (e *Enforcer) CanManageRepository(ctx context.Context, authCtx *AuthContext, repoURL string) (bool, error) {
-	// Organization admins can manage any repository
+	// Global admins can manage any repository
 	if authCtx.IsAdmin {
 		return true, nil
 	}

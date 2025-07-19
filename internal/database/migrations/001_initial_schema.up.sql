@@ -6,7 +6,7 @@ CREATE TABLE users (
     id VARCHAR(255) PRIMARY KEY, -- OIDC subject
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255),
-    is_admin BOOLEAN DEFAULT false, -- Organization-level admin
+    is_admin BOOLEAN DEFAULT false, -- Global admin
     created_at TIMESTAMPTZ DEFAULT NOW(),
     last_login TIMESTAMPTZ
 );

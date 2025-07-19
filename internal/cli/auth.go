@@ -144,7 +144,7 @@ func runAuthLogin(ctx context.Context) error {
 	fmt.Printf("\n%s Authentication successful!\n", color.GreenString("✓"))
 	fmt.Printf("Welcome, %s (%s)\n", userInfo.Name, userInfo.Email)
 	if userInfo.IsAdmin {
-		fmt.Printf("Organization role: %s\n", color.YellowString("Admin"))
+		fmt.Printf("Admin role: %s\n", color.YellowString("Yes"))
 	}
 
 	return nil
@@ -224,9 +224,9 @@ func runAuthStatus(ctx context.Context) error {
 	fmt.Printf("User: %s (%s)\n", userInfo.Name, userInfo.Email)
 	fmt.Printf("Subject: %s\n", userInfo.Subject)
 	if userInfo.IsAdmin {
-		fmt.Printf("Organization role: %s\n", color.YellowString("Admin"))
+		fmt.Printf("Admin role: %s\n", color.YellowString("Yes"))
 	} else {
-		fmt.Printf("Organization role: Member\n")
+		fmt.Printf("Admin role: No\n")
 	}
 
 	// Show groups if available
