@@ -139,7 +139,7 @@ func (c *OIDCClient) GetUserInfo(ctx context.Context, accessToken string) (*User
 	if err != nil {
 		return nil, fmt.Errorf("failed to get userinfo: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("userinfo request failed with status: %d", resp.StatusCode)
@@ -209,7 +209,7 @@ func (c *OIDCClient) Logout(ctx context.Context, token *Token) error {
 	if err != nil {
 		return fmt.Errorf("failed to perform logout: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return nil
 }

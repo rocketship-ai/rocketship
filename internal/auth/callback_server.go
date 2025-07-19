@@ -157,7 +157,7 @@ func (cs *CallbackServer) writeSuccessResponse(w http.ResponseWriter) {
 	
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, html)
+	_, _ = fmt.Fprint(w, html)
 }
 
 // writeErrorResponse writes an error HTML response
@@ -219,5 +219,5 @@ func (cs *CallbackServer) writeErrorResponse(w http.ResponseWriter, errorMsg str
 	
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
-	fmt.Fprint(w, html)
+	_, _ = fmt.Fprint(w, html)
 }

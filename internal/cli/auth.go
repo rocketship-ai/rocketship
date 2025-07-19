@@ -109,7 +109,7 @@ func runAuthLogin(ctx context.Context) error {
 	if err := callbackServer.Start(); err != nil {
 		return fmt.Errorf("failed to start callback server: %w", err)
 	}
-	defer callbackServer.Shutdown()
+	defer func() { _ = callbackServer.Shutdown() }()
 
 	// Generate auth URL
 	state := generateState()

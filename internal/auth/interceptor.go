@@ -15,6 +15,11 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/tokens"
 )
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+const authContextKey contextKey = "auth_context"
+
 // AuthInterceptor handles authentication for gRPC requests
 type AuthInterceptor struct {
 	authManager   *Manager
@@ -61,7 +66,7 @@ func (a *AuthInterceptor) UnaryInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		// Add auth context to request context
-		ctx = context.WithValue(ctx, "auth_context", authCtx)
+		ctx = context.WithValue(ctx, authContextKey, authCtx)
 
 		return handler(ctx, req)
 	}
@@ -195,12 +200,12 @@ type authContextStream struct {
 
 // Context returns the context with authentication information
 func (s *authContextStream) Context() context.Context {
-	return context.WithValue(s.ServerStream.Context(), "auth_context", s.authCtx)
+	return context.WithValue(s.ServerStream.Context(), authContextKey, s.authCtx)
 }
 
 // GetAuthContext extracts the authentication context from a gRPC context
 func GetAuthContext(ctx context.Context) *rbac.AuthContext {
-	if authCtx, ok := ctx.Value("auth_context").(*rbac.AuthContext); ok {
+	if authCtx, ok := ctx.Value(authContextKey).(*rbac.AuthContext); ok {
 		return authCtx
 	}
 	return nil
