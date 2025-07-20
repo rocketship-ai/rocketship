@@ -48,7 +48,7 @@ type AuthConfig struct {
 	ClientSecret  string
 	RedirectURL   string
 	Scopes        []string
-	AdminGroup    string // Group name that grants admin access
+	AdminEmails   string // Comma-separated list of admin emails
 }
 
 // TokenStorage interface for storing tokens

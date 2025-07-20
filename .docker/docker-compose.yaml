@@ -107,8 +107,21 @@ services:
     depends_on:
       temporal:
         condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
     environment:
       - TEMPORAL_HOST=temporal:7233
+      # Authentication environment variables
+      - ROCKETSHIP_OIDC_ISSUER=${ROCKETSHIP_OIDC_ISSUER}
+      - ROCKETSHIP_OIDC_CLIENT_ID=${ROCKETSHIP_OIDC_CLIENT_ID}
+      - ROCKETSHIP_OIDC_CLIENT_SECRET=${ROCKETSHIP_OIDC_CLIENT_SECRET}
+      - ROCKETSHIP_ADMIN_EMAILS=${ROCKETSHIP_ADMIN_EMAILS}
+      # Database environment variables
+      - ROCKETSHIP_DB_HOST=${ROCKETSHIP_DB_HOST}
+      - ROCKETSHIP_DB_PORT=${ROCKETSHIP_DB_PORT}
+      - ROCKETSHIP_DB_NAME=${ROCKETSHIP_DB_NAME}
+      - ROCKETSHIP_DB_USER=${ROCKETSHIP_DB_USER}
+      - ROCKETSHIP_DB_PASSWORD=${ROCKETSHIP_DB_PASSWORD}
     ports:
       - "${ENGINE_PORT:-7700}:7700"
       - "${ENGINE_METRICS_PORT:-7701}:7701"
@@ -123,8 +136,21 @@ services:
     depends_on:
       temporal:
         condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
     environment:
       - TEMPORAL_HOST=temporal:7233
+      # Authentication environment variables
+      - ROCKETSHIP_OIDC_ISSUER=${ROCKETSHIP_OIDC_ISSUER}
+      - ROCKETSHIP_OIDC_CLIENT_ID=${ROCKETSHIP_OIDC_CLIENT_ID}
+      - ROCKETSHIP_OIDC_CLIENT_SECRET=${ROCKETSHIP_OIDC_CLIENT_SECRET}
+      - ROCKETSHIP_ADMIN_EMAILS=${ROCKETSHIP_ADMIN_EMAILS}
+      # Database environment variables
+      - ROCKETSHIP_DB_HOST=${ROCKETSHIP_DB_HOST}
+      - ROCKETSHIP_DB_PORT=${ROCKETSHIP_DB_PORT}
+      - ROCKETSHIP_DB_NAME=${ROCKETSHIP_DB_NAME}
+      - ROCKETSHIP_DB_USER=${ROCKETSHIP_DB_USER}
+      - ROCKETSHIP_DB_PASSWORD=${ROCKETSHIP_DB_PASSWORD}
     networks:
       - temporal-network
     restart: unless-stopped
@@ -169,6 +195,27 @@ services:
       timeout: 5s
       retries: 5
   ### END OF TEST DATABASES ###
+  ### START OF AUTH SERVICES ###
+  auth-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: authuser
+      POSTGRES_PASSWORD: authpass
+    networks:
+      - temporal-network
+    ports:
+      - "${AUTH_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+      - ./auth-db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authuser -d auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ### END OF AUTH SERVICES ###
 # .
 # .
 # .
@@ -190,4 +237,7 @@ volumes:
   mysql_test_data:
     driver: local
     name: ${COMPOSE_PROJECT_NAME:-rocketship}_mysql_test_data
+  auth_postgres_data:
+    driver: local
+    name: ${COMPOSE_PROJECT_NAME:-rocketship}_auth_postgres_data
 ### END OF VOLUMES ###

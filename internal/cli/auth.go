@@ -260,8 +260,8 @@ func getAuthConfig() (*auth.AuthConfig, error) {
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		RedirectURL:  "http://localhost:8000/callback",
-		Scopes:       []string{"openid", "profile", "email", "groups"},
-		AdminGroup:   os.Getenv("ROCKETSHIP_OIDC_ADMIN_GROUP"),
+		Scopes:       []string{"openid", "profile", "email"},
+		AdminEmails:  os.Getenv("ROCKETSHIP_ADMIN_EMAILS"),
 	}, nil
 }
 

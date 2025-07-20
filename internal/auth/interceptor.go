@@ -141,6 +141,13 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 			return nil, fmt.Errorf("invalid token: %w", err)
 		}
 
+		// Ensure user exists in database and handle initial admin setup
+		if a.rbacRepo != nil {
+			if err := a.ensureUserExists(ctx, userInfo); err != nil {
+				return nil, fmt.Errorf("failed to ensure user exists: %w", err)
+			}
+		}
+
 		// Get user teams
 		var teamMemberships []rbac.TeamMember
 		if a.rbacRepo != nil {
@@ -188,7 +195,7 @@ func isAuthConfigured() bool {
 	clientID := os.Getenv("ROCKETSHIP_OIDC_CLIENT_ID")
 	dbHost := os.Getenv("ROCKETSHIP_DB_HOST")
 	
-	// Auth is considered configured if we have OIDC settings or database settings
+	// Auth is considered configured if we have OIDC settings and database settings
 	return issuer != "" && clientID != "" && dbHost != ""
 }
 
@@ -237,4 +244,28 @@ func RequireAdmin(ctx context.Context) (*rbac.AuthContext, error) {
 	}
 	
 	return authCtx, nil
+}
+
+// ensureUserExists ensures the user exists in the database and handles initial admin setup
+func (a *AuthInterceptor) ensureUserExists(ctx context.Context, userInfo *UserInfo) error {
+	// Check if user already exists
+	_, err := a.rbacRepo.GetUser(ctx, userInfo.Subject)
+	if err == nil {
+		// User exists, nothing to do
+		return nil
+	}
+
+	// User doesn't exist, create them
+	user := &rbac.User{
+		ID:      userInfo.Subject,
+		Email:   userInfo.Email,
+		Name:    userInfo.Name,
+		IsAdmin: userInfo.IsAdmin, // This is already set based on admin emails
+	}
+
+	if err := a.rbacRepo.CreateUser(ctx, user); err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return nil
 }

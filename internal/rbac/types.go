@@ -8,17 +8,38 @@ import (
 type Permission string
 
 const (
-	// Test execution permissions
-	PermissionTestRuns Permission = "test_runs"
+	// Test permissions (Buildkite-inspired)
+	PermissionTestsRead    Permission = "tests:read"    // View test results
+	PermissionTestsWrite   Permission = "tests:write"   // Run tests
+	PermissionTestsManage  Permission = "tests:manage"  // Create/edit test suites
 	
-	// Repository management permissions
-	PermissionRepositoryMgmt Permission = "repository_mgmt"
+	// Workflow permissions
+	PermissionWorkflowsRead    Permission = "workflows:read"    // View workflows
+	PermissionWorkflowsWrite   Permission = "workflows:write"   // Run workflows
+	PermissionWorkflowsManage  Permission = "workflows:manage"  // Create/edit workflows
 	
-	// Team management permissions
-	PermissionTeamMgmt Permission = "team_mgmt"
+	// Repository permissions
+	PermissionRepositoriesRead   Permission = "repositories:read"   // View repository settings
+	PermissionRepositoriesWrite  Permission = "repositories:write"  // Modify repository settings
+	PermissionRepositoriesManage Permission = "repositories:manage" // Add/remove repositories
 	
-	// User management permissions
-	PermissionUserMgmt Permission = "user_mgmt"
+	// Team management permissions (for Team Admins)
+	PermissionTeamMembersRead   Permission = "team:members:read"   // View team members
+	PermissionTeamMembersWrite  Permission = "team:members:write"  // Add/remove team members
+	PermissionTeamMembersManage Permission = "team:members:manage" // Manage member permissions
+	
+	// Global permissions (for Organization Admins)
+	PermissionTeamsRead   Permission = "teams:read"   // View all teams
+	PermissionTeamsWrite  Permission = "teams:write"  // Create/modify teams
+	PermissionTeamsManage Permission = "teams:manage" // Full team management
+	
+	PermissionUsersRead   Permission = "users:read"   // View all users
+	PermissionUsersWrite  Permission = "users:write"  // Modify user settings
+	PermissionUsersManage Permission = "users:manage" // Full user management
+	
+	PermissionSystemRead   Permission = "system:read"   // View system settings
+	PermissionSystemWrite  Permission = "system:write"  // Modify system settings
+	PermissionSystemManage Permission = "system:manage" // Full system administration
 )
 
 // Role represents a role within a team

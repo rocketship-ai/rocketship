@@ -115,18 +115,18 @@ func (c *OIDCClient) RefreshToken(ctx context.Context, refreshToken string) (*To
 
 // GetUserInfo retrieves user information
 func (c *OIDCClient) GetUserInfo(ctx context.Context, accessToken string) (*UserInfo, error) {
-	userInfoURL := c.provider.Endpoint().AuthURL
-	// Replace /auth with /userinfo for Keycloak-style endpoints
-	userInfoURL = strings.Replace(userInfoURL, "/auth", "/userinfo", 1)
-	// For other providers, try standard userinfo endpoint
-	if !strings.Contains(userInfoURL, "/userinfo") {
-		// Try to get userinfo endpoint from provider metadata
-		var claims struct {
-			UserInfoEndpoint string `json:"userinfo_endpoint"`
-		}
-		if err := c.provider.Claims(&claims); err == nil && claims.UserInfoEndpoint != "" {
-			userInfoURL = claims.UserInfoEndpoint
-		}
+	var userInfoURL string
+	
+	// Try to get userinfo endpoint from provider metadata first
+	var claims struct {
+		UserInfoEndpoint string `json:"userinfo_endpoint"`
+	}
+	if err := c.provider.Claims(&claims); err == nil && claims.UserInfoEndpoint != "" {
+		userInfoURL = claims.UserInfoEndpoint
+	} else {
+		// Fallback: construct userinfo URL from issuer
+		issuer := strings.TrimSuffix(c.config.IssuerURL, "/")
+		userInfoURL = issuer + "/userinfo"
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "GET", userInfoURL, nil)
@@ -150,10 +150,13 @@ func (c *OIDCClient) GetUserInfo(ctx context.Context, accessToken string) (*User
 		return nil, fmt.Errorf("failed to decode userinfo: %w", err)
 	}
 
-	// Check if user is admin based on group membership
-	if c.config.AdminGroup != "" {
-		for _, group := range userInfo.Groups {
-			if group == c.config.AdminGroup {
+	// Check if user is admin based on email list
+	if c.config.AdminEmails != "" {
+		adminEmails := strings.Split(c.config.AdminEmails, ",")
+		userEmail := strings.TrimSpace(strings.ToLower(userInfo.Email))
+		
+		for _, adminEmail := range adminEmails {
+			if strings.TrimSpace(strings.ToLower(adminEmail)) == userEmail {
 				userInfo.IsAdmin = true
 				break
 			}
@@ -167,7 +170,16 @@ func (c *OIDCClient) GetUserInfo(ctx context.Context, accessToken string) (*User
 func (c *OIDCClient) ValidateToken(ctx context.Context, accessToken string) (*UserInfo, error) {
 	// For access token validation, we'll use the userinfo endpoint
 	// as OIDC doesn't provide a standard introspection endpoint
-	return c.GetUserInfo(ctx, accessToken)
+	userInfo, err := c.GetUserInfo(ctx, accessToken)
+	if err != nil {
+		// In development, tokens might be issued by external URL but validated by internal URL
+		// If validation fails with 401, log a helpful message
+		if strings.Contains(err.Error(), "401") {
+			return nil, fmt.Errorf("token validation failed (possible issuer mismatch between external/internal URLs): %w", err)
+		}
+		return nil, err
+	}
+	return userInfo, nil
 }
 
 // Logout performs logout operation

@@ -47,10 +47,10 @@ func (e *Enforcer) CanRunTest(ctx context.Context, authCtx *AuthContext, req *Te
 	if authCtx.TokenTeamID != nil {
 		userTeamIDs[*authCtx.TokenTeamID] = true
 		
-		// Check if token has test_runs permission
+		// Check if token has tests:write permission
 		hasTestRunsPermission := false
 		for _, perm := range authCtx.TokenPerms {
-			if perm == PermissionTestRuns {
+			if perm == PermissionTestsWrite {
 				hasTestRunsPermission = true
 				break
 			}
@@ -215,7 +215,7 @@ func (e *Enforcer) CanManageRepository(ctx context.Context, authCtx *AuthContext
 	if authCtx.TokenTeamID != nil {
 		// API tokens with repository_mgmt permission can manage repositories
 		for _, perm := range authCtx.TokenPerms {
-			if perm == PermissionRepositoryMgmt {
+			if perm == PermissionRepositoriesManage {
 				userTeamIDs[*authCtx.TokenTeamID] = true
 				break
 			}
@@ -225,7 +225,7 @@ func (e *Enforcer) CanManageRepository(ctx context.Context, authCtx *AuthContext
 		for _, membership := range authCtx.TeamMemberships {
 			if membership.Role == RoleAdmin {
 				for _, perm := range membership.Permissions {
-					if perm == PermissionRepositoryMgmt {
+					if perm == PermissionRepositoriesManage {
 						userTeamIDs[membership.TeamID] = true
 						break
 					}

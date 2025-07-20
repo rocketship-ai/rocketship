@@ -3,9 +3,11 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
@@ -19,7 +21,33 @@ type EngineClient struct {
 func NewEngineClient(address string) (*EngineClient, error) {
 	Logger.Debug("connecting to engine", "address", address)
 
-	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Base dial options
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	// Check if authentication is configured
+	if isAuthConfigured() {
+		Logger.Debug("authentication is configured, setting up auth interceptor")
+		
+		// Create token provider function
+		tokenProvider := func(ctx context.Context) (string, error) {
+			return getAccessToken(ctx)
+		}
+
+		// Create auth interceptor
+		authInterceptor := auth.NewClientInterceptor(tokenProvider)
+		
+		// Add interceptors to dial options
+		dialOpts = append(dialOpts,
+			grpc.WithUnaryInterceptor(authInterceptor.UnaryClientInterceptor()),
+			grpc.WithStreamInterceptor(authInterceptor.StreamClientInterceptor()),
+		)
+	} else {
+		Logger.Debug("authentication not configured, connecting without auth")
+	}
+
+	conn, err := grpc.NewClient(address, dialOpts...)
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			return nil, fmt.Errorf("connection timed out - is the engine running at %s?", address)
@@ -147,3 +175,57 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 	Logger.Info("Run cancelled successfully", "run_id", runID, "message", resp.Message)
 	return nil
 }
+
+// isAuthConfigured checks if authentication is configured
+func isAuthConfigured() bool {
+	// Use external issuer for CLI clients
+	issuer := os.Getenv("ROCKETSHIP_OIDC_ISSUER_EXTERNAL")
+	if issuer == "" {
+		issuer = os.Getenv("ROCKETSHIP_OIDC_ISSUER")
+	}
+	clientID := os.Getenv("ROCKETSHIP_OIDC_CLIENT_ID")
+	
+	return issuer != "" && clientID != ""
+}
+
+// getAccessToken retrieves the current access token
+func getAccessToken(ctx context.Context) (string, error) {
+	// Get auth configuration
+	config, err := getAuthConfig()
+	if err != nil {
+		// If auth is not configured, return empty token (no auth)
+		return "", nil
+	}
+
+	// Create OIDC client
+	client, err := auth.NewOIDCClient(ctx, config)
+	if err != nil {
+		// If we can't create OIDC client (e.g., OIDC provider not reachable), 
+		// return empty token to allow unauthenticated access
+		Logger.Debug("failed to create OIDC client, proceeding without auth", "error", err)
+		return "", nil
+	}
+
+	// Create keyring storage
+	storage := auth.NewKeyringStorage()
+
+	// Create auth manager
+	manager := auth.NewManager(client, storage)
+
+	// Check if authenticated
+	if !manager.IsAuthenticated(ctx) {
+		// Not authenticated, return empty token
+		return "", nil
+	}
+
+	// Get valid token
+	token, err := manager.GetValidToken(ctx)
+	if err != nil {
+		// If we can't get a valid token, return empty
+		Logger.Debug("failed to get valid token, proceeding without auth", "error", err)
+		return "", nil
+	}
+
+	return token, nil
+}
+

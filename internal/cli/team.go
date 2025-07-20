@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 
+	"github.com/rocketship-ai/rocketship/internal/auth"
 	"github.com/rocketship-ai/rocketship/internal/database"
 	"github.com/rocketship-ai/rocketship/internal/rbac"
 )
@@ -168,25 +169,56 @@ func runTeamAddMember(ctx context.Context, teamName, email, roleStr string, perm
 		return fmt.Errorf("invalid role: %s (must be 'admin' or 'member')", roleStr)
 	}
 
-	// Parse permissions
+	// Parse permissions (Buildkite-style)
 	var permissions []rbac.Permission
 	for _, permStr := range permissionStrs {
 		switch permStr {
+		// Test permissions
+		case "tests:read":
+			permissions = append(permissions, rbac.PermissionTestsRead)
+		case "tests:write":
+			permissions = append(permissions, rbac.PermissionTestsWrite)
+		case "tests:manage":
+			permissions = append(permissions, rbac.PermissionTestsManage)
+		// Workflow permissions
+		case "workflows:read":
+			permissions = append(permissions, rbac.PermissionWorkflowsRead)
+		case "workflows:write":
+			permissions = append(permissions, rbac.PermissionWorkflowsWrite)
+		case "workflows:manage":
+			permissions = append(permissions, rbac.PermissionWorkflowsManage)
+		// Repository permissions
+		case "repositories:read":
+			permissions = append(permissions, rbac.PermissionRepositoriesRead)
+		case "repositories:write":
+			permissions = append(permissions, rbac.PermissionRepositoriesWrite)
+		case "repositories:manage":
+			permissions = append(permissions, rbac.PermissionRepositoriesManage)
+		// Team member permissions (for team admins)
+		case "team:members:read":
+			permissions = append(permissions, rbac.PermissionTeamMembersRead)
+		case "team:members:write":
+			permissions = append(permissions, rbac.PermissionTeamMembersWrite)
+		case "team:members:manage":
+			permissions = append(permissions, rbac.PermissionTeamMembersManage)
+		// Legacy mappings for backwards compatibility
 		case "test_runs":
-			permissions = append(permissions, rbac.PermissionTestRuns)
+			permissions = append(permissions, rbac.PermissionTestsWrite)
 		case "repository_mgmt":
-			permissions = append(permissions, rbac.PermissionRepositoryMgmt)
-		case "team_mgmt":
-			permissions = append(permissions, rbac.PermissionTeamMgmt)
-		case "user_mgmt":
-			permissions = append(permissions, rbac.PermissionUserMgmt)
+			permissions = append(permissions, rbac.PermissionRepositoriesManage)
 		default:
-			return fmt.Errorf("invalid permission: %s", permStr)
+			return fmt.Errorf("invalid permission: %s. Valid permissions: tests:read, tests:write, tests:manage, workflows:read, workflows:write, workflows:manage, repositories:read, repositories:write, repositories:manage, team:members:read, team:members:write, team:members:manage", permStr)
 		}
 	}
 
+	// Get or create user by email
+	user, err := repo.GetOrCreateUserByEmail(ctx, email)
+	if err != nil {
+		return fmt.Errorf("failed to get or create user: %w", err)
+	}
+
 	// Add team member
-	if err := repo.AddTeamMember(ctx, team.ID, email, role, permissions); err != nil {
+	if err := repo.AddTeamMember(ctx, team.ID, user.ID, role, permissions); err != nil {
 		return fmt.Errorf("failed to add team member: %w", err)
 	}
 
@@ -274,9 +306,22 @@ func runTeamList(ctx context.Context) error {
 
 // isAuthenticated checks if user is authenticated
 func isAuthenticated(ctx context.Context) bool {
-	// For now, just check if auth config exists
-	_, err := getAuthConfig()
-	return err == nil
+	// Create auth manager same way as auth commands
+	config, err := getAuthConfig()
+	if err != nil {
+		return false
+	}
+	
+	client, err := auth.NewOIDCClient(ctx, config)
+	if err != nil {
+		return false
+	}
+	
+	storage := auth.NewKeyringStorage()
+	manager := auth.NewManager(client, storage)
+	
+	// Use the manager's built-in authentication check
+	return manager.IsAuthenticated(ctx)
 }
 
 // connectToDatabase connects to the database

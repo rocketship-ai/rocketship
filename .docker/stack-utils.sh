@@ -92,6 +92,7 @@ calculate_ports() {
     local postgres_port=$((5432 + offset))
     local postgres_test_port=$((5433 + offset))
     local mysql_test_port=$((3307 + offset))
+    local auth_postgres_port=$((5434 + offset))
     
     # Return as associative array format (for bash 4+) or simple format
     cat <<EOF
@@ -103,6 +104,7 @@ ELASTICSEARCH_PORT=$elasticsearch_port
 POSTGRES_PORT=$postgres_port
 POSTGRES_TEST_PORT=$postgres_test_port
 MYSQL_TEST_PORT=$mysql_test_port
+AUTH_POSTGRES_PORT=$auth_postgres_port
 EOF
 }
 
@@ -122,7 +124,7 @@ get_stack_status() {
     
     if [[ $container_count -eq 0 ]]; then
         echo "stopped"
-    elif [[ $container_count -eq 9 ]] && [[ $healthy_count -gt 0 ]]; then
+    elif [[ $container_count -eq 11 ]] && [[ $healthy_count -gt 0 ]]; then
         echo "running"
     else
         echo "starting"

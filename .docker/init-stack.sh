@@ -130,6 +130,7 @@ generate_env_file() {
     local postgres_port=$(echo "$ports_info" | grep "^POSTGRES_PORT=" | cut -d'=' -f2)
     local postgres_test_port=$(echo "$ports_info" | grep "^POSTGRES_TEST_PORT=" | cut -d'=' -f2)
     local mysql_test_port=$(echo "$ports_info" | grep "^MYSQL_TEST_PORT=" | cut -d'=' -f2)
+    local auth_postgres_port=$(echo "$ports_info" | grep "^AUTH_POSTGRES_PORT=" | cut -d'=' -f2)
     
     # Generate timestamp
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
@@ -148,6 +149,11 @@ generate_env_file() {
         -e "s/__POSTGRES_PORT__/${postgres_port}/g" \
         -e "s/__POSTGRES_TEST_PORT__/${postgres_test_port}/g" \
         -e "s/__MYSQL_TEST_PORT__/${mysql_test_port}/g" \
+        -e "s/__AUTH_POSTGRES_PORT__/${auth_postgres_port}/g" \
+        -e "s|__ROCKETSHIP_OIDC_ISSUER__|${ROCKETSHIP_OIDC_ISSUER:-}|g" \
+        -e "s/__ROCKETSHIP_OIDC_CLIENT_ID__/${ROCKETSHIP_OIDC_CLIENT_ID:-}/g" \
+        -e "s/__ROCKETSHIP_OIDC_CLIENT_SECRET__/${ROCKETSHIP_OIDC_CLIENT_SECRET}/g" \
+        -e "s/__ROCKETSHIP_ADMIN_EMAILS__/${ROCKETSHIP_ADMIN_EMAILS:-}/g" \
         "$template_file" > "$output_file"
     
     log_success "Environment file created: .env.${stack_name}"

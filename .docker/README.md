@@ -2,6 +2,8 @@
 
 This directory provides a **completely automated multi-stack Docker environment** for Rocketship development. It's designed specifically for **git worktree workflows** where each worktree gets its own isolated Docker environment with **zero configuration required**.
 
+> **🔐 Authentication Support**: This environment now includes full authentication capabilities using external OIDC providers (Auth0, Okta, Azure AD, etc.). See the [Authentication Setup](#authentication-setup) section below.
+
 ## 🎯 Key Features
 
 - **🔍 Auto-Discovery**: Automatically detects your current git worktree/branch
@@ -269,6 +271,61 @@ This multi-stack system integrates seamlessly with the standard Rocketship devel
 5. **Clean up** with `./.docker/rocketship clean` when done
 
 The isolated environment ensures your development doesn't interfere with other work and provides a clean, reproducible testing environment for every feature.
+
+## 🔐 Authentication Setup
+
+### For Testing with External OIDC Providers
+
+If you want to test authentication features, configure environment variables before starting your stack:
+
+```bash
+# Example: Auth0 Configuration
+export ROCKETSHIP_OIDC_ISSUER="https://your-tenant.auth0.com/"
+export ROCKETSHIP_OIDC_CLIENT_ID="your-auth0-client-id"
+export ROCKETSHIP_ADMIN_EMAILS="your-email@gmail.com"
+
+# Example: Enterprise Okta Configuration
+export ROCKETSHIP_OIDC_ISSUER="https://your-company.okta.com/oauth2/default"
+export ROCKETSHIP_OIDC_CLIENT_ID="your-okta-client-id"
+export ROCKETSHIP_ADMIN_EMAILS="admin@company.com,devops@company.com"
+
+# Then start your stack
+./.docker/rocketship start
+
+# Test authentication
+rocketship auth login
+rocketship auth status
+```
+
+### Authentication Features
+
+When authentication is configured, your stack includes:
+- **PostgreSQL auth database** for user and team management
+- **PKCE OAuth2 flow** for secure CLI authentication
+- **Buildkite-inspired RBAC** with teams and granular permissions
+- **Admin API** for team management
+- **Backward compatibility** - works without auth too
+
+### Authentication Commands
+
+```bash
+# Authentication
+rocketship auth login          # Login via OIDC provider
+rocketship auth status         # Show current user
+rocketship auth logout         # Logout
+
+# Team Management (for admins)
+rocketship team create my-team
+rocketship team add-member my-team user@company.com member \
+  --permissions "tests:read,tests:write,workflows:read"
+rocketship team list
+```
+
+For complete authentication documentation, see [AUTH_README.md](../AUTH_README.md).
+
+### Without Authentication
+
+If you don't configure authentication environment variables, the system works exactly as before - no authentication required, full functionality available.
 
 ---
 

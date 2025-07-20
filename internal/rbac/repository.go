@@ -3,6 +3,7 @@ package rbac
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -73,6 +74,42 @@ func (r *Repository) UpdateUser(ctx context.Context, user *User) error {
 	}
 	
 	return nil
+}
+
+// GetOrCreateUserByEmail gets a user by email or creates them if they don't exist
+func (r *Repository) GetOrCreateUserByEmail(ctx context.Context, email string) (*User, error) {
+	// First try to get existing user
+	query := `SELECT id, email, name, is_admin, created_at, last_login FROM users WHERE email = $1`
+	
+	var user User
+	err := r.db.QueryRow(ctx, query, email).Scan(
+		&user.ID, &user.Email, &user.Name, &user.IsAdmin, &user.CreatedAt, &user.LastLogin,
+	)
+	
+	if err == nil {
+		// User exists, return it
+		return &user, nil
+	}
+	
+	if err != pgx.ErrNoRows {
+		return nil, fmt.Errorf("failed to query user: %w", err)
+	}
+	
+	// User doesn't exist, create them
+	newUser := &User{
+		ID:        "external|" + email, // Use email-based ID for external users
+		Email:     email,
+		Name:      email, // Use email as name by default
+		IsAdmin:   false, // External users are not admin by default
+		CreatedAt: time.Now(),
+		LastLogin: nil,
+	}
+	
+	if err := r.CreateUser(ctx, newUser); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+	
+	return newUser, nil
 }
 
 // Team operations
