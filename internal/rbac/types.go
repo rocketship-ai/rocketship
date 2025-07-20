@@ -155,3 +155,24 @@ type TestRunRequest struct {
 	Branch        string `json:"branch"`
 	CommitSHA     string `json:"commit_sha"`
 }
+
+// TestRun represents a test run in the database
+type TestRun struct {
+	ID               string     `json:"id" db:"id"`
+	SuiteName        string     `json:"suite_name" db:"suite_name"`
+	Status           string     `json:"status" db:"status"`
+	RepositoryID     *string    `json:"repository_id" db:"repository_id"`
+	FilePath         string     `json:"file_path" db:"file_path"`
+	Branch           *string    `json:"branch" db:"branch"`
+	CommitSHA        *string    `json:"commit_sha" db:"commit_sha"`
+	TriggeredBy      *string    `json:"triggered_by" db:"triggered_by"`
+	AuthorizedTeams  []string   `json:"authorized_teams" db:"authorized_teams"`
+	Metadata         []byte     `json:"metadata" db:"metadata"`
+	StartedAt        time.Time  `json:"started_at" db:"started_at"`
+	EndedAt          *time.Time `json:"ended_at" db:"ended_at"`
+	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+	
+	// Populated via joins
+	Repository *RepositoryEntity `json:"repository,omitempty"`
+	User       *User             `json:"user,omitempty"`
+}

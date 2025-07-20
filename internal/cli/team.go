@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
@@ -296,8 +297,77 @@ func runTeamList(ctx context.Context) error {
 	}
 	defer db.Close()
 
-	// For now, just print a message
-	fmt.Printf("Team listing not implemented yet\n")
+	// Create repository
+	repo := rbac.NewRepository(db)
+
+	// Get current user to check their teams
+	authConfig, _ := getAuthConfig()
+	authClient, _ := auth.NewOIDCClient(ctx, authConfig)
+	storage := auth.NewKeyringStorage()
+	
+	token, err := storage.GetToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get token: %w", err)
+	}
+	
+	userInfo, err := authClient.GetUserInfo(ctx, token.AccessToken)
+	if err != nil {
+		return fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	// Get all teams
+	teams, err := repo.ListTeams(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list teams: %w", err)
+	}
+
+	if len(teams) == 0 {
+		fmt.Println("No teams found")
+		return nil
+	}
+
+	// Get user's team memberships
+	userTeams, err := repo.GetUserTeams(ctx, userInfo.Subject)
+	if err != nil {
+		// Non-fatal, just won't show membership info
+		userTeams = []rbac.TeamMember{}
+	}
+
+	// Create a map for quick lookup
+	userTeamMap := make(map[string]rbac.TeamMember)
+	for _, tm := range userTeams {
+		userTeamMap[tm.TeamID] = tm
+	}
+
+	fmt.Println("\nTeams:")
+	fmt.Println(strings.Repeat("-", 60))
+	
+	for _, team := range teams {
+		fmt.Printf("• %s\n", color.CyanString(team.Name))
+		fmt.Printf("  ID: %s\n", team.ID)
+		fmt.Printf("  Created: %s\n", team.CreatedAt.Format("2006-01-02 15:04:05"))
+		
+		// Show user's membership if they're in this team
+		if membership, ok := userTeamMap[team.ID]; ok {
+			fmt.Printf("  %s %s\n", 
+				color.GreenString("Your role:"), 
+				color.YellowString(string(membership.Role)))
+		}
+		
+		// Get team member count
+		members, err := repo.GetTeamMembers(ctx, team.ID)
+		if err == nil {
+			fmt.Printf("  Members: %d\n", len(members))
+		}
+		
+		// Get assigned repositories count
+		repos, err := repo.GetTeamRepositories(ctx, team.ID)
+		if err == nil {
+			fmt.Printf("  Repositories: %d\n", len(repos))
+		}
+		
+		fmt.Println()
+	}
 
 	return nil
 }

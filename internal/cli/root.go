@@ -39,6 +39,7 @@ func NewRootCmd() *cobra.Command {
 		NewGetCmd(),
 		NewAuthCmd(),
 		NewTeamCmd(),
+		NewRepoCmd(),
 		NewTokenCmd(),
 	)
 
