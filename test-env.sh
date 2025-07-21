@@ -12,5 +12,9 @@ export ROCKETSHIP_DB_NAME="auth"
 export ROCKETSHIP_DB_USER="authuser"
 export ROCKETSHIP_DB_PASSWORD="authpass"
 
+# HTTPS/TLS Configuration
+export ROCKETSHIP_TLS_ENABLED="true"
+export ROCKETSHIP_TLS_DOMAIN="globalbank.rocketship.sh"
+
 # Run the command passed as arguments
 exec "$@"

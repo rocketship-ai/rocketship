@@ -258,16 +258,22 @@ If multiple agents are working simultaneously:
 # 3. Make code changes to engine/worker/CLI
 # ... edit files ...
 
-# 4. Test your changes (rebuilds images automatically if needed)
+# 4. CRITICAL: Force rebuild Docker images after code changes
+# The system may not detect all changes - always force rebuild to be safe
+./.docker/rocketship stop
+docker rmi rocketship-engine:$(git branch --show-current) rocketship-worker:$(git branch --show-current) 2>/dev/null || true
+./.docker/rocketship start
+
+# 5. Test your changes
 ./.docker/rocketship run -f examples/simple-http/rocketship.yaml
 
-# 5. Run additional tests
+# 6. Run additional tests
 ./.docker/rocketship run -f examples/complex-http/rocketship.yaml
 
-# 6. Check test history
+# 7. Check test history
 ./.docker/rocketship list
 
-# 7. Stop stack when done
+# 8. Stop stack when done
 ./.docker/rocketship stop
 ```
 
@@ -285,6 +291,50 @@ steps:
         X-Test-Session: "{{ .vars.agent_session_id }}"  # Use your unique session
 ```
 
+### Docker Environment Critical Reminders
+
+**🚨 ALWAYS REBUILD IMAGES AFTER CODE CHANGES:**
+```bash
+# Docker may not detect all source code changes, especially:
+# - Changes to internal/ packages
+# - Environment variable updates
+# - Binary embedding changes
+
+# ALWAYS force rebuild when you make changes:
+./.docker/rocketship stop
+docker rmi rocketship-engine:$(git branch --show-current) rocketship-worker:$(git branch --show-current) 2>/dev/null || true
+./.docker/rocketship start
+```
+
+**🚨 ENVIRONMENT VARIABLE GOTCHAS:**
+```bash
+# Environment variables in .docker/.env.{branch} are loaded into Docker containers
+# Changes to .env files require container restart (not just rebuild)
+./.docker/rocketship restart
+
+# TLS environment variables cause `make install` to fail during build
+# Unset them temporarily if needed:
+unset ROCKETSHIP_TLS_ENABLED ROCKETSHIP_TLS_DOMAIN
+make install
+# Then re-export them from your .env file
+```
+
+**🚨 PORT CONFUSION:**
+```bash
+# Docker engine runs on a different port than standalone (e.g., 12100 vs 7700)
+# Always check your .docker/.env.{branch} file for the correct ENGINE_PORT
+# Connect with: rocketship run -f test.yaml --engine localhost:{ENGINE_PORT}
+```
+
+**🚨 VOLUME MOUNT ISSUES:**
+```bash
+# Certificate permissions for HTTPS in Docker:
+chmod -R 755 ~/.rocketship/certs/
+
+# Docker Desktop on macOS may have file sharing restrictions
+# Ensure ~/Projects or wherever rocketship is located is shared in Docker Desktop settings
+```
+
 ### Troubleshooting Docker Environment
 
 **Stack not initialized**: Run `./.docker/rocketship init` first
@@ -293,9 +343,70 @@ steps:
 - Check what's using the port: `lsof -i :PORT_NUMBER`
 - Clean and restart: `./.docker/rocketship clean && ./.docker/rocketship start`
 
-**Images not updating**: The system rebuilds automatically when source changes, but you can force rebuild:
-- Stop stack: `./.docker/rocketship stop`
-- Start again: `./.docker/rocketship start`
+**Images not updating despite rebuild**: 
+- Docker build cache issues: `docker system prune -f && ./.docker/rocketship start`
+- Check if you're in the right git branch: `git branch --show-current`
+
+**Container logs for debugging**:
+```bash
+# View logs for all services
+./.docker/rocketship logs
+
+# View logs for specific service  
+./.docker/rocketship logs engine
+./.docker/rocketship logs worker
+```
+
+**Complete environment reset**:
+```bash
+# Nuclear option - removes everything and starts fresh
+./.docker/rocketship clean
+docker system prune -f
+./.docker/rocketship init
+./.docker/rocketship start
+```
+
+**Docker build hanging**: If `./.docker/rocketship start` hangs during build:
+- Use manual command: `cd .docker && docker-compose --env-file .env.add-auth up -d --build`
+- Force clean rebuild: `./.docker/rocketship clean` then `./.docker/rocketship start`
+
+### HTTPS/TLS Docker Setup Reminders
+
+**🔐 HTTPS is WORKING in Docker Environment:**
+- Engine serves HTTPS on port configured in `.docker/.env.{branch}` (e.g., ENGINE_PORT=12100)
+- Self-signed certificates work perfectly for development/testing
+- Authentication is integrated and working with HTTPS
+
+**🔐 HTTPS Testing Commands:**
+```bash
+# Test HTTPS connection (use correct ENGINE_PORT from .env file)
+ROCKETSHIP_TLS_ENABLED=true ROCKETSHIP_TLS_DOMAIN=globalbank.rocketship.sh \
+rocketship run -f test.yaml --engine localhost:12100
+
+# Check certificate status
+rocketship certs status
+
+# Verify engine logs show TLS enabled
+./.docker/rocketship logs engine | grep -i tls
+# Should see: "level=INFO msg="grpc server listening with TLS""
+```
+
+**🔐 Let's Encrypt Known Issues:**
+- HTTP-01 challenge FAILS with Cloudflare tunnels (use self-signed instead)
+- DNS-01 challenge needs implementation for real domain certificates
+- For production: Generate certificates externally and mount them
+
+**🔐 Certificate Management in Docker:**
+```bash
+# Generate self-signed certificate (works immediately)
+rocketship certs generate --domain globalbank.rocketship.sh --email your@email.com --local
+
+# Fix certificate permissions for Docker
+chmod -R 755 ~/.rocketship/certs/
+
+# Certificates are automatically mounted into Docker containers at:
+# /root/.rocketship/certs (read-only)
+```
 
 ## Running Tests (Legacy Local Mode)
 
@@ -431,3 +542,102 @@ Example session ID patterns:
 - `feature-branch-random-id`
 
 This isolation is particularly important when using the Docker worktree setup where multiple agents may be testing simultaneously.
+
+## 🔒 HTTPS/TLS Implementation Guide
+
+### Certificate Management System
+
+Rocketship includes a complete certificate management system supporting:
+- **Self-signed certificates** for development/demo
+- **Let's Encrypt certificates** for production 
+- **Cloudflared tunnel integration** for local HTTPS validation
+
+### Key Commands
+
+```bash
+# Generate self-signed certificate (works immediately)
+rocketship certs generate --domain globalbank.rocketship.sh --self-signed
+
+# Generate Let's Encrypt certificate with local tunnel
+rocketship certs generate --domain globalbank.rocketship.sh --email admin@company.com --local
+
+# Check certificate status
+rocketship certs status
+
+# Start server with HTTPS
+rocketship start server --https --domain globalbank.rocketship.sh
+```
+
+### Docker HTTPS Configuration
+
+To enable HTTPS in Docker environment:
+
+1. **Generate certificate**: `rocketship certs generate --domain yourdomain --self-signed`
+2. **Configure environment**: Add to `.docker/.env.{branch}`:
+   ```bash
+   ROCKETSHIP_TLS_ENABLED=true
+   ROCKETSHIP_TLS_DOMAIN=yourdomain
+   ROCKETSHIP_LOG=DEBUG  # For TLS debugging
+   ```
+3. **Fix certificate permissions**: `chmod -R 755 ~/.rocketship/certs/`
+4. **Restart stack**: `./.docker/rocketship stop && ./.docker/rocketship start`
+
+### Testing Environment Configuration  
+
+**Critical for Testing**: TLS environment variables affect CLI tests. For `make install`:
+
+```bash
+# Disable TLS for build/test
+unset ROCKETSHIP_TLS_ENABLED
+unset ROCKETSHIP_TLS_DOMAIN
+make install
+
+# Re-enable for runtime
+source test-env.sh  # Contains TLS configuration
+```
+
+### Docker Build Issues
+
+**If Docker images don't reflect code changes**:
+1. **Test fails**: CLI tests fail with TLS handshake errors when `ROCKETSHIP_TLS_ENABLED=true` is set during build
+2. **Solution**: Temporarily unset TLS environment variables before `make install`
+3. **Force rebuild**: Remove Docker images and restart:
+   ```bash
+   docker images | grep rocketship-engine | awk '{print $3}' | xargs docker rmi -f
+   docker images | grep rocketship-worker | awk '{print $3}' | xargs docker rmi -f
+   ./.docker/rocketship start
+   ```
+
+### Certificate Permissions
+
+**Common issue**: Docker containers can't access certificates due to restrictive permissions.
+**Solution**: `chmod -R 755 ~/.rocketship/certs/`
+
+### TLS Debug Verification
+
+Engine logs should show:
+```
+level=DEBUG msg="TLS environment check" raw_enabled=true enabled=true domain=yourdomain
+level=INFO msg="loading TLS certificate" domain=yourdomain  
+level=INFO msg="grpc server listening with TLS" port=:7700 domain=yourdomain
+```
+
+Client logs should show:
+```
+level=DEBUG msg="TLS enabled for gRPC client" domain=yourdomain
+level=DEBUG msg="loading custom certificate for TLS connection" domain=yourdomain
+```
+
+### Let's Encrypt Known Issues
+
+**HTTP-01 Challenge with Cloudflare**: Current implementation doesn't work with Cloudflare tunnels due to proxy interference.
+**Workaround**: Use self-signed certificates for demos, implement DNS-01 challenge for production.
+
+### Production Deployment
+
+For production HTTPS with authentication:
+1. Generate real domain certificate (Let's Encrypt or custom)
+2. Configure Docker environment with TLS enabled
+3. Set authentication environment variables
+4. Mount certificate directory with proper permissions
+5. Test complete flow: certificate → TLS → authentication → testing

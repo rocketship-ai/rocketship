@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"os"
@@ -10,12 +11,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/auth"
+	"github.com/rocketship-ai/rocketship/internal/certs"
 	"github.com/rocketship-ai/rocketship/internal/cli"
 	"github.com/rocketship-ai/rocketship/internal/orchestrator"
 	"github.com/rocketship-ai/rocketship/internal/rbac"
 	"github.com/rocketship-ai/rocketship/internal/tokens"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func main() {
@@ -153,32 +156,83 @@ func isAuthConfigured() bool {
 func startGRPCServer(engine generated.EngineServer, authManager *auth.Manager, tokenManager *tokens.Manager, rbacRepo *rbac.Repository) {
 	logger := cli.Logger
 
-	logger.Debug("starting grpc server", "port", ":7700")
-	lis, err := net.Listen("tcp", ":7700")
-	if err != nil {
-		logger.Error("failed to listen on port 7700", "error", err)
+	// Check if TLS is enabled
+	tlsEnabledRaw := os.Getenv("ROCKETSHIP_TLS_ENABLED")
+	tlsEnabled := tlsEnabledRaw == "true"
+	tlsDomain := os.Getenv("ROCKETSHIP_TLS_DOMAIN")
+	port := ":7700"
+	
+	// Explicit debug of TLS environment variables
+	logger.Debug("TLS environment check", "raw_enabled", tlsEnabledRaw, "enabled", tlsEnabled, "domain", tlsDomain)
+	
+	if tlsEnabled && tlsDomain == "" {
+		logger.Error("ROCKETSHIP_TLS_ENABLED is true but ROCKETSHIP_TLS_DOMAIN is not set")
 		os.Exit(1)
 	}
 
-	// Create gRPC server with authentication interceptor
-	var grpcServer *grpc.Server
+	logger.Debug("starting grpc server", "port", port, "tls", tlsEnabled, "domain", tlsDomain)
+	lis, err := net.Listen("tcp", port)
+	if err != nil {
+		logger.Error("failed to listen", "port", port, "error", err)
+		os.Exit(1)
+	}
+
+	// Create gRPC server options
+	var grpcOpts []grpc.ServerOption
+
+	// Add TLS if enabled
+	if tlsEnabled {
+		logger.Info("loading TLS certificate", "domain", tlsDomain)
+		
+		// Create certificate manager to load certificates
+		certManager, err := certs.NewManager(&certs.Config{})
+		if err != nil {
+			logger.Error("failed to create certificate manager", "error", err)
+			os.Exit(1)
+		}
+
+		// Load certificate for domain
+		cert, err := certManager.GetCertificate(tlsDomain)
+		if err != nil {
+			logger.Error("failed to load certificate", "domain", tlsDomain, "error", err)
+			logger.Info("please generate a certificate first: rocketship certs generate --domain " + tlsDomain)
+			os.Exit(1)
+		}
+
+		// Create TLS config
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{*cert},
+			ClientAuth:   tls.NoClientCert,
+		}
+
+		// Add TLS credentials to gRPC options
+		creds := credentials.NewTLS(tlsConfig)
+		grpcOpts = append(grpcOpts, grpc.Creds(creds))
+		logger.Info("TLS enabled for gRPC server", "domain", tlsDomain)
+	}
+
+	// Add authentication interceptors if configured
 	if authManager != nil || tokenManager != nil {
-		// Authentication is configured, add interceptors
 		authInterceptor := auth.NewAuthInterceptor(authManager, tokenManager, rbacRepo)
-		grpcServer = grpc.NewServer(
+		grpcOpts = append(grpcOpts,
 			grpc.UnaryInterceptor(authInterceptor.UnaryInterceptor()),
 			grpc.StreamInterceptor(authInterceptor.StreamInterceptor()),
 		)
 		logger.Info("grpc server configured with authentication")
 	} else {
-		// No authentication configured
-		grpcServer = grpc.NewServer()
 		logger.Info("grpc server configured in open mode (no authentication)")
 	}
 
+	// Create gRPC server with options
+	grpcServer := grpc.NewServer(grpcOpts...)
 	generated.RegisterEngineServer(grpcServer, engine)
 
-	logger.Info("grpc server listening", "port", ":7700")
+	if tlsEnabled {
+		logger.Info("grpc server listening with TLS", "port", port, "domain", tlsDomain)
+	} else {
+		logger.Info("grpc server listening", "port", port)
+	}
+	
 	if err := grpcServer.Serve(lis); err != nil {
 		logger.Error("failed to serve grpc", "error", err)
 		os.Exit(1)

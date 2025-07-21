@@ -38,12 +38,21 @@ func NewAuthLoginCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Login to Rocketship",
-		Long:  `Login to Rocketship using OIDC authentication`,
+		Long: `Login to Rocketship using OIDC authentication.
+
+If no connection profile is configured, this will automatically connect to the
+Rocketship cloud service at https://app.rocketship.sh.
+
+Examples:
+  rocketship auth login                    # Login to cloud (app.rocketship.sh)
+  rocketship auth login --profile enterprise # Login to specific profile`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthLogin(cmd.Context())
+			profileName, _ := cmd.Flags().GetString("profile")
+			return runAuthLogin(cmd.Context(), profileName)
 		},
 	}
 
+	cmd.Flags().String("profile", "", "Use specific connection profile")
 	return cmd
 }
 
@@ -76,21 +85,56 @@ func NewAuthStatusCmd() *cobra.Command {
 }
 
 // runAuthLogin handles the login flow
-func runAuthLogin(ctx context.Context) error {
-	// Get auth configuration from environment
-	config, err := getAuthConfig()
+func runAuthLogin(ctx context.Context, profileName string) error {
+	// Load CLI config
+	cliConfig, err := LoadConfig()
 	if err != nil {
-		return fmt.Errorf("authentication not configured: %w", err)
+		Logger.Debug("failed to load CLI config, creating default", "error", err)
+		cliConfig = DefaultConfig()
+	}
+	
+	// Determine which profile to use
+	var profile *Profile
+	if profileName != "" {
+		// Use specified profile
+		profile, err = cliConfig.GetProfile(profileName)
+		if err != nil {
+			return fmt.Errorf("profile '%s' not found: %w", profileName, err)
+		}
+	} else {
+		// Check if we have any configured profiles besides local
+		if len(cliConfig.Profiles) == 1 {
+			if _, hasLocal := cliConfig.Profiles["local"]; hasLocal {
+				// Only have local profile, auto-create and use cloud profile
+				fmt.Println("🌐 No connection configured. Connecting to Rocketship Cloud...")
+				cliConfig.CreateCloudProfile()
+				cliConfig.DefaultProfile = "cloud"
+				if err := cliConfig.SaveConfig(); err != nil {
+					return fmt.Errorf("failed to save config: %w", err)
+				}
+				fmt.Println("✅ Connected to https://app.rocketship.sh")
+			}
+		}
+		
+		// Use active profile
+		profile = cliConfig.GetActiveProfile()
+	}
+	
+	// Get auth configuration from profile
+	authConfig := getProfileAuthConfig(profile)
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured for profile '%s'\n\nTo set up authentication:\n  1. Configure OIDC settings in your profile\n  2. Or connect to Rocketship Cloud: rocketship connect https://app.rocketship.sh", profile.Name)
 	}
 
 	// Create OIDC client
-	client, err := auth.NewOIDCClient(ctx, config)
+	client, err := auth.NewOIDCClient(ctx, authConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create OIDC client: %w", err)
 	}
 
-	// Create keyring storage
-	storage := auth.NewKeyringStorage()
+	// Create keyring storage for this profile
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
 
 	// Create auth manager
 	manager := auth.NewManager(client, storage)

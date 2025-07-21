@@ -154,6 +154,8 @@ generate_env_file() {
         -e "s/__ROCKETSHIP_OIDC_CLIENT_ID__/${ROCKETSHIP_OIDC_CLIENT_ID:-}/g" \
         -e "s/__ROCKETSHIP_OIDC_CLIENT_SECRET__/${ROCKETSHIP_OIDC_CLIENT_SECRET}/g" \
         -e "s/__ROCKETSHIP_ADMIN_EMAILS__/${ROCKETSHIP_ADMIN_EMAILS:-}/g" \
+        -e "s/__ROCKETSHIP_TLS_ENABLED__/${ROCKETSHIP_TLS_ENABLED:-false}/g" \
+        -e "s/__ROCKETSHIP_TLS_DOMAIN__/${ROCKETSHIP_TLS_DOMAIN:-}/g" \
         "$template_file" > "$output_file"
     
     log_success "Environment file created: .env.${stack_name}"

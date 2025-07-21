@@ -41,7 +41,13 @@ func NewRootCmd() *cobra.Command {
 		NewTeamCmd(),
 		NewRepoCmd(),
 		NewTokenCmd(),
+		NewCertsCmd(),
+		NewProfileCmd(),
+		NewConnectCmd(),
 	)
+
+	// Add global profile flag
+	cmd.PersistentFlags().String("profile", "", "Use specific connection profile")
 
 	return cmd
 }

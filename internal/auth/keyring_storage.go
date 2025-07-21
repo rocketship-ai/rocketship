@@ -14,11 +14,25 @@ const (
 )
 
 // KeyringStorage implements TokenStorage using system keyring
-type KeyringStorage struct{}
+type KeyringStorage struct{
+	service string
+	user    string
+}
 
 // NewKeyringStorage creates a new keyring-based token storage
 func NewKeyringStorage() *KeyringStorage {
-	return &KeyringStorage{}
+	return &KeyringStorage{
+		service: keyringService,
+		user:    keyringUser,
+	}
+}
+
+// NewKeyringStorageWithKey creates a new keyring-based token storage with custom key
+func NewKeyringStorageWithKey(service, user string) *KeyringStorage {
+	return &KeyringStorage{
+		service: service,
+		user:    user,
+	}
 }
 
 // SaveToken saves a token to the keyring
@@ -28,7 +42,7 @@ func (k *KeyringStorage) SaveToken(ctx context.Context, token *Token) error {
 		return fmt.Errorf("failed to marshal token: %w", err)
 	}
 
-	if err := keyring.Set(keyringService, keyringUser, string(data)); err != nil {
+	if err := keyring.Set(k.service, k.user, string(data)); err != nil {
 		return fmt.Errorf("failed to save token to keyring: %w", err)
 	}
 
@@ -37,7 +51,7 @@ func (k *KeyringStorage) SaveToken(ctx context.Context, token *Token) error {
 
 // GetToken retrieves a token from the keyring
 func (k *KeyringStorage) GetToken(ctx context.Context) (*Token, error) {
-	data, err := keyring.Get(keyringService, keyringUser)
+	data, err := keyring.Get(k.service, k.user)
 	if err != nil {
 		if err == keyring.ErrNotFound {
 			return nil, nil // No token stored
@@ -55,7 +69,7 @@ func (k *KeyringStorage) GetToken(ctx context.Context) (*Token, error) {
 
 // DeleteToken removes a token from the keyring
 func (k *KeyringStorage) DeleteToken(ctx context.Context) error {
-	err := keyring.Delete(keyringService, keyringUser)
+	err := keyring.Delete(k.service, k.user)
 	if err != nil && err != keyring.ErrNotFound {
 		return fmt.Errorf("failed to delete token from keyring: %w", err)
 	}

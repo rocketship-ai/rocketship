@@ -122,9 +122,17 @@ services:
       - ROCKETSHIP_DB_NAME=${ROCKETSHIP_DB_NAME}
       - ROCKETSHIP_DB_USER=${ROCKETSHIP_DB_USER}
       - ROCKETSHIP_DB_PASSWORD=${ROCKETSHIP_DB_PASSWORD}
+      # TLS/HTTPS environment variables
+      - ROCKETSHIP_TLS_ENABLED=${ROCKETSHIP_TLS_ENABLED:-false}
+      - ROCKETSHIP_TLS_DOMAIN=${ROCKETSHIP_TLS_DOMAIN}
+      # Debug logging for TLS troubleshooting
+      - ROCKETSHIP_LOG=${ROCKETSHIP_LOG:-INFO}
     ports:
       - "${ENGINE_PORT:-7700}:7700"
       - "${ENGINE_METRICS_PORT:-7701}:7701"
+    volumes:
+      # Mount certificate directory for HTTPS support
+      - ~/.rocketship/certs:/root/.rocketship/certs:ro
     networks:
       - temporal-network
     restart: unless-stopped
