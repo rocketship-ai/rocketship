@@ -19,8 +19,8 @@ func NewEnforcer(repo *Repository) *Enforcer {
 
 // CanRunTest checks if a user can run tests for a specific repository/path
 func (e *Enforcer) CanRunTest(ctx context.Context, authCtx *AuthContext, req *TestRunRequest) (bool, error) {
-	// Global admins can always run tests
-	if authCtx.IsAdmin {
+	// Organization admins can always run tests
+	if authCtx.IsOrgAdmin() {
 		return true, nil
 	}
 
@@ -47,10 +47,10 @@ func (e *Enforcer) CanRunTest(ctx context.Context, authCtx *AuthContext, req *Te
 	if authCtx.TokenTeamID != nil {
 		userTeamIDs[*authCtx.TokenTeamID] = true
 		
-		// Check if token has tests:write permission
+		// Check if token has tests:run permission
 		hasTestRunsPermission := false
 		for _, perm := range authCtx.TokenPerms {
-			if perm == PermissionTestsWrite {
+			if perm == PermissionTestsRun {
 				hasTestRunsPermission = true
 				break
 			}
@@ -167,8 +167,8 @@ func (e *Enforcer) isUserInOwners(ctx context.Context, authCtx *AuthContext, own
 
 // CanManageTeam checks if a user can manage a team
 func (e *Enforcer) CanManageTeam(ctx context.Context, authCtx *AuthContext, teamID string) (bool, error) {
-	// Global admins can manage any team
-	if authCtx.IsAdmin {
+	// Organization admins can manage any team
+	if authCtx.IsOrgAdmin() {
 		return true, nil
 	}
 
@@ -189,8 +189,8 @@ func (e *Enforcer) CanManageTeam(ctx context.Context, authCtx *AuthContext, team
 
 // CanManageRepository checks if a user can manage a repository
 func (e *Enforcer) CanManageRepository(ctx context.Context, authCtx *AuthContext, repoURL string) (bool, error) {
-	// Global admins can manage any repository
-	if authCtx.IsAdmin {
+	// Organization admins can manage any repository
+	if authCtx.IsOrgAdmin() {
 		return true, nil
 	}
 
@@ -277,4 +277,113 @@ func parseCodeownersCache(data []byte, result *CodeownersData) error {
 		Rules: []CodeownersRule{},
 	}
 	return nil
+}
+
+// EnforceTeamPermission checks if a user has a specific permission on a team
+func (e *Enforcer) EnforceTeamPermission(ctx context.Context, authCtx *AuthContext, teamID string, permission Permission) error {
+	// Organization admins bypass all permission checks
+	if authCtx.IsOrgAdmin() {
+		return nil
+	}
+
+	// API tokens can only perform operations if they have the specific permission
+	if authCtx.TokenTeamID != nil {
+		// Token must be for the same team
+		if *authCtx.TokenTeamID != teamID {
+			return fmt.Errorf("permission denied: token is for a different team")
+		}
+		
+		// Check if token has the required permission
+		for _, perm := range authCtx.TokenPerms {
+			if perm == permission {
+				return nil
+			}
+		}
+		return fmt.Errorf("permission denied: token lacks %s permission", permission)
+	}
+
+	// For users, check team membership and permissions
+	for _, membership := range authCtx.TeamMemberships {
+		if membership.TeamID == teamID {
+			// Team admins get all team permissions automatically
+			if membership.Role == RoleAdmin {
+				return nil
+			}
+			
+			// Team members need specific permissions
+			if membership.HasPermission(permission) {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("permission denied: user lacks %s permission for team", permission)
+}
+
+// EnforceRepositoryPermission checks if a user has a specific permission on a repository
+func (e *Enforcer) EnforceRepositoryPermission(ctx context.Context, authCtx *AuthContext, repoURL string, permission Permission) error {
+	// Organization admins bypass all permission checks
+	if authCtx.IsOrgAdmin() {
+		return nil
+	}
+
+	// Get repository
+	repo, err := e.repo.GetRepository(ctx, repoURL)
+	if err != nil {
+		return fmt.Errorf("failed to get repository: %w", err)
+	}
+	if repo == nil {
+		return fmt.Errorf("repository not found: %s", repoURL)
+	}
+
+	// Get repository teams
+	teams, err := e.repo.GetRepositoryTeams(ctx, repo.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get repository teams: %w", err)
+	}
+
+	// Check if user has permission via any team
+	if authCtx.TokenTeamID != nil {
+		// For API tokens, check if token's team has access to this repository
+		for _, team := range teams {
+			if team.ID == *authCtx.TokenTeamID {
+				// Check if token has the required permission
+				for _, perm := range authCtx.TokenPerms {
+					if perm == permission {
+						return nil
+					}
+				}
+			}
+		}
+		return fmt.Errorf("permission denied: token lacks %s permission for repository", permission)
+	}
+
+	// For users, check team memberships
+	for _, team := range teams {
+		for _, membership := range authCtx.TeamMemberships {
+			if membership.TeamID == team.ID {
+				// Team admins get all repository permissions
+				if membership.Role == RoleAdmin {
+					return nil
+				}
+				
+				// Team members need specific permissions
+				if membership.HasPermission(permission) {
+					return nil
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("permission denied: user lacks %s permission for repository", permission)
+}
+
+// EnforceGlobalPermission checks if a user has a global permission
+func (e *Enforcer) EnforceGlobalPermission(ctx context.Context, authCtx *AuthContext, permission Permission) error {
+	// Only organization admins have global permissions
+	if authCtx.IsOrgAdmin() {
+		return nil
+	}
+	
+	return fmt.Errorf("permission denied: only organization admins can perform this action")
 }

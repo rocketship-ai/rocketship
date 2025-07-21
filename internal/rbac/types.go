@@ -8,15 +8,8 @@ import (
 type Permission string
 
 const (
-	// Test permissions (Buildkite-inspired)
-	PermissionTestsRead    Permission = "tests:read"    // View test results
-	PermissionTestsWrite   Permission = "tests:write"   // Run tests
-	PermissionTestsManage  Permission = "tests:manage"  // Create/edit test suites
-	
-	// Workflow permissions
-	PermissionWorkflowsRead    Permission = "workflows:read"    // View workflows
-	PermissionWorkflowsWrite   Permission = "workflows:write"   // Run workflows
-	PermissionWorkflowsManage  Permission = "workflows:manage"  // Create/edit workflows
+	// Test permissions (simplified - tests are IaC managed)
+	PermissionTestsRun Permission = "tests:run" // Run tests
 	
 	// Repository permissions
 	PermissionRepositoriesRead   Permission = "repositories:read"   // View repository settings
@@ -28,17 +21,15 @@ const (
 	PermissionTeamMembersWrite  Permission = "team:members:write"  // Add/remove team members
 	PermissionTeamMembersManage Permission = "team:members:manage" // Manage member permissions
 	
-	// Global permissions (for Organization Admins)
+	// Test suite schedules (smoke tests)
+	PermissionTestSchedulesManage Permission = "test:schedules:manage" // Manage smoke test schedules
+	
+	// Global permissions (for Organization Admins only)
 	PermissionTeamsRead   Permission = "teams:read"   // View all teams
 	PermissionTeamsWrite  Permission = "teams:write"  // Create/modify teams
 	PermissionTeamsManage Permission = "teams:manage" // Full team management
 	
-	PermissionUsersRead   Permission = "users:read"   // View all users
-	PermissionUsersWrite  Permission = "users:write"  // Modify user settings
-	PermissionUsersManage Permission = "users:manage" // Full user management
-	
-	PermissionSystemRead   Permission = "system:read"   // View system settings
-	PermissionSystemWrite  Permission = "system:write"  // Modify system settings
+	PermissionUsersManage  Permission = "users:manage"  // Full user management
 	PermissionSystemManage Permission = "system:manage" // Full system administration
 )
 
@@ -50,14 +41,22 @@ const (
 	RoleMember Role = "member"
 )
 
+// OrganizationRole represents organization-level roles
+type OrganizationRole string
+
+const (
+	OrgRoleAdmin  OrganizationRole = "org_admin"
+	OrgRoleMember OrganizationRole = "org_member"
+)
+
 // User represents a user in the system
 type User struct {
-	ID        string    `json:"id" db:"id"`
-	Email     string    `json:"email" db:"email"`
-	Name      string    `json:"name" db:"name"`
-	IsAdmin   bool      `json:"is_admin" db:"is_admin"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	LastLogin *time.Time `json:"last_login" db:"last_login"`
+	ID        string            `json:"id" db:"id"`
+	Email     string            `json:"email" db:"email"`
+	Name      string            `json:"name" db:"name"`
+	OrgRole   OrganizationRole  `json:"org_role" db:"org_role"`
+	CreatedAt time.Time         `json:"created_at" db:"created_at"`
+	LastLogin *time.Time        `json:"last_login" db:"last_login"`
 }
 
 // Team represents a team in the system
@@ -80,6 +79,16 @@ type TeamMember struct {
 	
 	// Populated via joins
 	User *User `json:"user,omitempty"`
+}
+
+// HasPermission checks if the team member has a specific permission
+func (tm *TeamMember) HasPermission(perm Permission) bool {
+	for _, p := range tm.Permissions {
+		if p == perm {
+			return true
+		}
+	}
+	return false
 }
 
 // RepositoryEntity represents a repository in the system
@@ -122,10 +131,10 @@ type APIToken struct {
 // AuthContext contains authentication information for a request
 type AuthContext struct {
 	// User information
-	UserID  string `json:"user_id"`
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	IsAdmin bool   `json:"is_admin"`
+	UserID  string           `json:"user_id"`
+	Email   string           `json:"email"`
+	Name    string           `json:"name"`
+	OrgRole OrganizationRole `json:"org_role"`
 	
 	// Token information (for API tokens)
 	TokenID     *string      `json:"token_id,omitempty"`
@@ -134,6 +143,11 @@ type AuthContext struct {
 	
 	// Team memberships (for users)
 	TeamMemberships []TeamMember `json:"team_memberships,omitempty"`
+}
+
+// IsOrgAdmin returns true if the user is an organization admin
+func (a *AuthContext) IsOrgAdmin() bool {
+	return a.OrgRole == OrgRoleAdmin
 }
 
 // CodeownersRule represents a rule from a CODEOWNERS file

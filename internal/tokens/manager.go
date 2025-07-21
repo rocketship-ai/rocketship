@@ -99,7 +99,7 @@ func (m *Manager) ValidateToken(ctx context.Context, token string) (*rbac.AuthCo
 		UserID:          "", // API tokens don't have users
 		Email:           "",
 		Name:            fmt.Sprintf("API Token: %s", apiToken.Name),
-		IsAdmin:         false, // API tokens are never admins
+		OrgRole:         rbac.OrgRoleMember, // API tokens are never org admins
 		TokenID:         &apiToken.ID,
 		TokenTeamID:     &apiToken.TeamID,
 		TokenPerms:      apiToken.Permissions,
@@ -111,12 +111,12 @@ func (m *Manager) ValidateToken(ctx context.Context, token string) (*rbac.AuthCo
 
 // RevokeToken revokes an API token
 func (m *Manager) RevokeToken(ctx context.Context, tokenID string) error {
-	// For now, we'll just set expires_at to now
-	// In a real implementation, you might want a separate revoked status
-	query := `UPDATE api_tokens SET expires_at = NOW() WHERE id = $1`
-	
-	// This is a direct query - in a real implementation, you'd add this to the repository
-	return fmt.Errorf("not implemented - would execute: %s", query)
+	return m.repo.RevokeAPIToken(ctx, tokenID)
+}
+
+// ListTokens lists API tokens for a team
+func (m *Manager) ListTokens(ctx context.Context, teamID string) ([]rbac.APIToken, error) {
+	return m.repo.ListAPITokens(ctx, teamID)
 }
 
 // CreateTokenRequest represents a request to create an API token

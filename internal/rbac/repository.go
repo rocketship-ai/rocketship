@@ -25,11 +25,11 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // GetUser retrieves a user by ID
 func (r *Repository) GetUser(ctx context.Context, userID string) (*User, error) {
-	query := `SELECT id, email, name, is_admin, created_at, last_login FROM users WHERE id = $1`
+	query := `SELECT id, email, name, org_role, created_at, last_login FROM users WHERE id = $1`
 	
 	var user User
 	err := r.db.QueryRow(ctx, query, userID).Scan(
-		&user.ID, &user.Email, &user.Name, &user.IsAdmin,
+		&user.ID, &user.Email, &user.Name, &user.OrgRole,
 		&user.CreatedAt, &user.LastLogin,
 	)
 	if err != nil {
@@ -45,12 +45,12 @@ func (r *Repository) GetUser(ctx context.Context, userID string) (*User, error) 
 // CreateUser creates a new user
 func (r *Repository) CreateUser(ctx context.Context, user *User) error {
 	query := `
-		INSERT INTO users (id, email, name, is_admin, created_at, last_login)
+		INSERT INTO users (id, email, name, org_role, created_at, last_login)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 	
 	_, err := r.db.Exec(ctx, query,
-		user.ID, user.Email, user.Name, user.IsAdmin,
+		user.ID, user.Email, user.Name, user.OrgRole,
 		user.CreatedAt, user.LastLogin,
 	)
 	if err != nil {
@@ -64,12 +64,12 @@ func (r *Repository) CreateUser(ctx context.Context, user *User) error {
 func (r *Repository) UpdateUser(ctx context.Context, user *User) error {
 	query := `
 		UPDATE users 
-		SET email = $2, name = $3, is_admin = $4, last_login = $5
+		SET email = $2, name = $3, org_role = $4, last_login = $5
 		WHERE id = $1
 	`
 	
 	_, err := r.db.Exec(ctx, query,
-		user.ID, user.Email, user.Name, user.IsAdmin, user.LastLogin,
+		user.ID, user.Email, user.Name, user.OrgRole, user.LastLogin,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
@@ -81,11 +81,11 @@ func (r *Repository) UpdateUser(ctx context.Context, user *User) error {
 // GetOrCreateUserByEmail gets a user by email or creates them if they don't exist
 func (r *Repository) GetOrCreateUserByEmail(ctx context.Context, email string) (*User, error) {
 	// First try to get existing user
-	query := `SELECT id, email, name, is_admin, created_at, last_login FROM users WHERE email = $1`
+	query := `SELECT id, email, name, org_role, created_at, last_login FROM users WHERE email = $1`
 	
 	var user User
 	err := r.db.QueryRow(ctx, query, email).Scan(
-		&user.ID, &user.Email, &user.Name, &user.IsAdmin, &user.CreatedAt, &user.LastLogin,
+		&user.ID, &user.Email, &user.Name, &user.OrgRole, &user.CreatedAt, &user.LastLogin,
 	)
 	
 	if err == nil {
@@ -102,7 +102,7 @@ func (r *Repository) GetOrCreateUserByEmail(ctx context.Context, email string) (
 		ID:        "external|" + email, // Use email-based ID for external users
 		Email:     email,
 		Name:      email, // Use email as name by default
-		IsAdmin:   false, // External users are not admin by default
+		OrgRole:   OrgRoleMember, // External users are members by default
 		CreatedAt: time.Now(),
 		LastLogin: nil,
 	}
@@ -445,6 +445,60 @@ func (r *Repository) UpdateAPITokenLastUsed(ctx context.Context, tokenID string)
 	return nil
 }
 
+// ListAPITokens lists all API tokens for a team or user
+func (r *Repository) ListAPITokens(ctx context.Context, teamID string) ([]APIToken, error) {
+	query := `
+		SELECT id, token_hash, team_id, name, permissions, last_used_at, 
+			   expires_at, created_at, created_by
+		FROM api_tokens 
+		WHERE team_id = $1 AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY created_at DESC
+	`
+	
+	rows, err := r.db.Query(ctx, query, teamID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list API tokens: %w", err)
+	}
+	defer rows.Close()
+	
+	var tokens []APIToken
+	for rows.Next() {
+		var token APIToken
+		err := rows.Scan(
+			&token.ID, &token.TokenHash, &token.TeamID, &token.Name,
+			&token.Permissions, &token.LastUsedAt, &token.ExpiresAt,
+			&token.CreatedAt, &token.CreatedBy,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan API token: %w", err)
+		}
+		tokens = append(tokens, token)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating API tokens: %w", err)
+	}
+	
+	return tokens, nil
+}
+
+// RevokeAPIToken revokes an API token by setting its expiry to now
+func (r *Repository) RevokeAPIToken(ctx context.Context, tokenID string) error {
+	query := `UPDATE api_tokens SET expires_at = NOW() WHERE id = $1`
+	
+	result, err := r.db.Exec(ctx, query, tokenID)
+	if err != nil {
+		return fmt.Errorf("failed to revoke API token: %w", err)
+	}
+	
+	rowsAffected := result.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("API token not found")
+	}
+	
+	return nil
+}
+
 // Repository management operations
 
 // GetRepositoryByID retrieves a repository by ID
@@ -640,7 +694,7 @@ func (r *Repository) CheckTestRunPermission(ctx context.Context, userID, reposit
 		return false, fmt.Errorf("failed to get user: %w", err)
 	}
 	
-	if user.IsAdmin {
+	if user.OrgRole == OrgRoleAdmin {
 		// Organization Admins can run tests anywhere
 		return true, nil
 	}

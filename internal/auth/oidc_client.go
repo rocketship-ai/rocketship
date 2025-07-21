@@ -11,6 +11,8 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
+
+	"github.com/rocketship-ai/rocketship/internal/rbac"
 )
 
 // OIDCClient implements the Client interface using OIDC
@@ -157,10 +159,18 @@ func (c *OIDCClient) GetUserInfo(ctx context.Context, accessToken string) (*User
 		
 		for _, adminEmail := range adminEmails {
 			if strings.TrimSpace(strings.ToLower(adminEmail)) == userEmail {
-				userInfo.IsAdmin = true
+				userInfo.OrgRole = rbac.OrgRoleAdmin
 				break
 			}
 		}
+		
+		// Default to member if not admin
+		if userInfo.OrgRole == "" {
+			userInfo.OrgRole = rbac.OrgRoleMember
+		}
+	} else {
+		// If no admin emails configured, default all users to members
+		userInfo.OrgRole = rbac.OrgRoleMember
 	}
 
 	return &userInfo, nil

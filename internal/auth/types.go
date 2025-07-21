@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"time"
+
+	"github.com/rocketship-ai/rocketship/internal/rbac"
 )
 
 // TokenType represents the type of token
@@ -26,12 +28,12 @@ type Token struct {
 
 // UserInfo represents user information from OIDC
 type UserInfo struct {
-	Subject       string   `json:"sub"`
-	Email         string   `json:"email"`
-	EmailVerified bool     `json:"email_verified"`
-	Name          string   `json:"name"`
-	Groups        []string `json:"groups,omitempty"`
-	IsAdmin       bool     `json:"-"` // Determined by group membership
+	Subject       string           `json:"sub"`
+	Email         string           `json:"email"`
+	EmailVerified bool             `json:"email_verified"`
+	Name          string           `json:"name"`
+	Groups        []string         `json:"groups,omitempty"`
+	OrgRole       rbac.OrganizationRole `json:"-"` // Determined by admin email list
 }
 
 // PKCEChallenge represents a PKCE code challenge

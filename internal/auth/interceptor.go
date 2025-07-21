@@ -163,7 +163,7 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 			UserID:          userInfo.Subject,
 			Email:           userInfo.Email,
 			Name:            userInfo.Name,
-			IsAdmin:         userInfo.IsAdmin,
+			OrgRole:         userInfo.OrgRole,
 			TeamMemberships: teamMemberships,
 		}
 
@@ -239,7 +239,7 @@ func RequireAdmin(ctx context.Context) (*rbac.AuthContext, error) {
 		return nil, err
 	}
 	
-	if !authCtx.IsAdmin {
+	if !authCtx.IsOrgAdmin() {
 		return nil, status.Error(codes.PermissionDenied, "admin access required")
 	}
 	
@@ -260,7 +260,7 @@ func (a *AuthInterceptor) ensureUserExists(ctx context.Context, userInfo *UserIn
 		ID:      userInfo.Subject,
 		Email:   userInfo.Email,
 		Name:    userInfo.Name,
-		IsAdmin: userInfo.IsAdmin, // This is already set based on admin emails
+		OrgRole: userInfo.OrgRole, // This is already set based on admin emails
 	}
 
 	if err := a.rbacRepo.CreateUser(ctx, user); err != nil {

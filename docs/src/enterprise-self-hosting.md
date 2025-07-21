@@ -54,39 +54,119 @@ cd rocketship/.docker
 **Purpose**: Get the complete Rocketship platform with authentication support
 **Result**: Local copy with Docker multi-stack environment
 
-### 2. Authentication Configuration
+### 2. OIDC Provider Setup
 
-Configure your enterprise identity provider:
+#### Step 2.1: Create Rocketship Application in Your Identity Provider
 
-#### Enterprise OIDC Integration
+**For Okta (Enterprise):**
+
+1. **Access Okta Admin Console**
+   - Sign in to your Okta organization with administrator account
+   - Navigate to **Applications > Applications**
+
+2. **Create New App Integration**
+   - Click **Create App Integration**
+   - Select **OIDC - OpenID Connect**
+   - Select **Web Application** (for enhanced security)
+
+3. **Configure Application Settings**
+   ```
+   App name: Rocketship Testing Platform
+   Grant type: Authorization Code
+   Sign-in redirect URIs:
+     - https://rocketship.your-enterprise.com/callback
+     - http://localhost:8000/callback (for CLI development)
+   Sign-out redirect URIs:
+     - https://rocketship.your-enterprise.com/logout
+     - http://localhost:8000/logout
+   ```
+
+4. **Configure Group Claims** (Important for RBAC)
+   - Go to **Sign On** tab → **OpenID Connect ID Token**
+   - Set **Groups claim type**: Filter
+   - Set **Groups claim filter**: groups Matches regex `.*`
+
+5. **Assign Users/Groups**
+   - Go to **Assignments** tab
+   - Assign relevant groups or users who need Rocketship access
+
+6. **Copy Credentials**
+   - Note the **Client ID** and **Client Secret** from the General tab
+
+**For Azure AD:**
+
+1. **Access Azure Portal**
+   - Go to **Azure Active Directory > App registrations**
+
+2. **Create New Registration**
+   - Click **New registration**
+   - Name: `Rocketship Testing Platform`
+   - Redirect URI: `Web` → `https://rocketship.your-enterprise.com/callback`
+
+3. **Configure Authentication**
+   - Go to **Authentication** section
+   - Add additional redirect URIs:
+     - `http://localhost:8000/callback` (for CLI)
+   - Under **Implicit grant and hybrid flows**: Check **ID tokens**
+
+4. **Create Client Secret**
+   - Go to **Certificates & secrets** → **Client secrets**
+   - Click **New client secret**
+   - Copy the **Value** (not the Secret ID)
+
+5. **API Permissions**
+   - Go to **API permissions**
+   - Ensure `openid`, `profile`, `email` permissions are granted
+
+**For Auth0:**
+
+1. **Access Auth0 Dashboard**
+   - Go to **Applications** in Auth0 Dashboard
+
+2. **Create Application**
+   - Click **Create Application**
+   - Name: `Rocketship Testing Platform`
+   - Type: **Single Page Applications** (for development/testing)
+
+3. **Configure Settings**
+   - **Allowed Callback URLs**: `http://localhost:8000/callback`
+   - **Allowed Logout URLs**: `http://localhost:8000/logout`
+   - **Allowed Web Origins**: `http://localhost:8000`
+
+4. **Copy Credentials**
+   - Note the **Client ID** (no client secret needed for SPA)
+
+#### Step 2.2: Configure Rocketship Environment
+
+Set the OIDC configuration based on your provider:
 
 ```bash
-# Configure for your enterprise OIDC provider:
+# For Okta (Production):
+export ROCKETSHIP_OIDC_ISSUER="https://your-enterprise.okta.com"
+export ROCKETSHIP_OIDC_CLIENT_ID="0oa1234567890abcdef"
+export ROCKETSHIP_OIDC_CLIENT_SECRET="your-client-secret-from-okta"
+export ROCKETSHIP_ADMIN_EMAILS="admin@your-enterprise.com,devops@your-enterprise.com"
 
-# Auth0 Example:
+# For Azure AD (Production):
+export ROCKETSHIP_OIDC_ISSUER="https://login.microsoftonline.com/your-tenant-id/v2.0"
+export ROCKETSHIP_OIDC_CLIENT_ID="your-azure-client-id"
+export ROCKETSHIP_OIDC_CLIENT_SECRET="your-azure-client-secret"
+export ROCKETSHIP_ADMIN_EMAILS="admin@your-enterprise.com"
+
+# For Auth0 (Development/Testing):
 export ROCKETSHIP_OIDC_ISSUER="https://your-tenant.auth0.com/"
 export ROCKETSHIP_OIDC_CLIENT_ID="your-auth0-client-id"
-export ROCKETSHIP_ADMIN_EMAILS="admin@company.com,devops@company.com"
-
-# Okta Example (Enterprise):
-export ROCKETSHIP_OIDC_ISSUER="https://your-company.okta.com/oauth2/default"
-export ROCKETSHIP_OIDC_CLIENT_ID="your-okta-client-id"
-export ROCKETSHIP_ADMIN_EMAILS="admin@company.com,devops@company.com"
-
-# Azure AD Example:
-export ROCKETSHIP_OIDC_ISSUER="https://login.microsoftonline.com/tenant-id/v2.0"
-export ROCKETSHIP_OIDC_CLIENT_ID="your-azure-client-id"
-export ROCKETSHIP_ADMIN_EMAILS="admin@company.com,devops@company.com"
+export ROCKETSHIP_OIDC_CLIENT_SECRET=""  # Empty for SPA mode
+export ROCKETSHIP_ADMIN_EMAILS="admin@your-enterprise.com"
 ```
 
-**OIDC Provider Configuration Requirements:**
-- **Application Type**: Single Page Application (for PKCE support)
-- **Grant Types**: Authorization Code + PKCE
-- **Redirect URI**: `http://localhost:8000/callback` (for CLI)
-- **Scopes**: `openid profile email`
+**Security Notes:**
+- **Production**: Use Web Application type with client secret for enhanced security
+- **Development**: SPA type with PKCE is acceptable for testing
+- **Client Secret**: Store securely (Kubernetes secrets, environment files, etc.)
 
-**Purpose**: Integrate with company identity management
-**Result**: Single sign-on for all enterprise users
+**Purpose**: Integrate with enterprise identity management
+**Result**: Single sign-on for all enterprise users with proper security
 
 ### 3. Database Configuration
 

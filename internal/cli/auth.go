@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/rocketship-ai/rocketship/internal/auth"
+	"github.com/rocketship-ai/rocketship/internal/rbac"
 )
 
 // NewAuthCmd creates a new auth command
@@ -143,7 +144,7 @@ func runAuthLogin(ctx context.Context) error {
 	// Success
 	fmt.Printf("\n%s Authentication successful!\n", color.GreenString("✓"))
 	fmt.Printf("Welcome, %s (%s)\n", userInfo.Name, userInfo.Email)
-	if userInfo.IsAdmin {
+	if userInfo.OrgRole == rbac.OrgRoleAdmin {
 		fmt.Printf("Admin role: %s\n", color.YellowString("Yes"))
 	}
 
@@ -223,7 +224,7 @@ func runAuthStatus(ctx context.Context) error {
 	fmt.Printf("Status: %s\n", color.GreenString("Authenticated"))
 	fmt.Printf("User: %s (%s)\n", userInfo.Name, userInfo.Email)
 	fmt.Printf("Subject: %s\n", userInfo.Subject)
-	if userInfo.IsAdmin {
+	if userInfo.OrgRole == rbac.OrgRoleAdmin {
 		fmt.Printf("Admin role: %s\n", color.YellowString("Yes"))
 	} else {
 		fmt.Printf("Admin role: No\n")
