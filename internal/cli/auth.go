@@ -63,10 +63,12 @@ func NewAuthLogoutCmd() *cobra.Command {
 		Short: "Logout from Rocketship",
 		Long:  `Logout from Rocketship and remove stored tokens`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthLogout(cmd.Context())
+			profileName, _ := cmd.Flags().GetString("profile")
+			return runAuthLogout(cmd.Context(), profileName)
 		},
 	}
 
+	cmd.Flags().String("profile", "", "Use specific connection profile")
 	return cmd
 }
 
@@ -77,10 +79,12 @@ func NewAuthStatusCmd() *cobra.Command {
 		Short: "Show authentication status",
 		Long:  `Show current authentication status and user information`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuthStatus(cmd.Context())
+			profileName, _ := cmd.Flags().GetString("profile")
+			return runAuthStatus(cmd.Context(), profileName)
 		},
 	}
 
+	cmd.Flags().String("profile", "", "Use specific connection profile")
 	return cmd
 }
 
@@ -196,12 +200,33 @@ func runAuthLogin(ctx context.Context, profileName string) error {
 }
 
 // runAuthLogout handles the logout flow
-func runAuthLogout(ctx context.Context) error {
-	// Get auth configuration from environment
-	config, err := getAuthConfig()
+func runAuthLogout(ctx context.Context, profileName string) error {
+	// Load CLI config
+	cliConfig, err := LoadConfig()
 	if err != nil {
-		// If not configured, just try to clear local storage
-		storage := auth.NewKeyringStorage()
+		Logger.Debug("failed to load CLI config, creating default", "error", err)
+		cliConfig = DefaultConfig()
+	}
+	
+	// Determine which profile to use
+	var profile *Profile
+	if profileName != "" {
+		// Use specified profile
+		profile, err = cliConfig.GetProfile(profileName)
+		if err != nil {
+			return fmt.Errorf("profile '%s' not found: %w", profileName, err)
+		}
+	} else {
+		// Use active profile
+		profile = cliConfig.GetActiveProfile()
+	}
+	
+	// Get auth configuration from profile
+	config := getProfileAuthConfig(profile)
+	if config == nil {
+		// If not configured, just try to clear local storage for this profile
+		keyringKey := GetProfileKeyringKey(profile.Name)
+		storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
 		if err := storage.DeleteToken(ctx); err != nil {
 			return fmt.Errorf("failed to clear local tokens: %w", err)
 		}
@@ -215,8 +240,9 @@ func runAuthLogout(ctx context.Context) error {
 		return fmt.Errorf("failed to create OIDC client: %w", err)
 	}
 
-	// Create keyring storage
-	storage := auth.NewKeyringStorage()
+	// Create keyring storage for this profile
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
 
 	// Create auth manager
 	manager := auth.NewManager(client, storage)
@@ -231,10 +257,30 @@ func runAuthLogout(ctx context.Context) error {
 }
 
 // runAuthStatus shows the current authentication status
-func runAuthStatus(ctx context.Context) error {
-	// Get auth configuration from environment
-	config, err := getAuthConfig()
+func runAuthStatus(ctx context.Context, profileName string) error {
+	// Load CLI config
+	cliConfig, err := LoadConfig()
 	if err != nil {
+		Logger.Debug("failed to load CLI config, creating default", "error", err)
+		cliConfig = DefaultConfig()
+	}
+	
+	// Determine which profile to use
+	var profile *Profile
+	if profileName != "" {
+		// Use specified profile
+		profile, err = cliConfig.GetProfile(profileName)
+		if err != nil {
+			return fmt.Errorf("profile '%s' not found: %w", profileName, err)
+		}
+	} else {
+		// Use active profile
+		profile = cliConfig.GetActiveProfile()
+	}
+	
+	// Get auth configuration from profile
+	config := getProfileAuthConfig(profile)
+	if config == nil {
 		fmt.Printf("Status: %s (authentication not configured)\n", color.RedString("Not authenticated"))
 		return nil
 	}
@@ -245,8 +291,9 @@ func runAuthStatus(ctx context.Context) error {
 		return fmt.Errorf("failed to create OIDC client: %w", err)
 	}
 
-	// Create keyring storage
-	storage := auth.NewKeyringStorage()
+	// Create keyring storage for this profile
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
 
 	// Create auth manager
 	manager := auth.NewManager(client, storage)

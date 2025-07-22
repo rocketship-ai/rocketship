@@ -14,9 +14,10 @@ import (
 
 // GetFlags holds the flags for the get command
 type GetFlags struct {
-	Engine string
-	Format string // table, json, yaml
-	Logs   bool   // Show logs for the run
+	Engine  string
+	Profile string
+	Format  string // table, json, yaml
+	Logs    bool   // Show logs for the run
 }
 
 // NewGetCmd creates a new get command
@@ -42,6 +43,10 @@ Examples:
   rocketship get abc123def456 --format json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Get profile from global flag if not set locally
+			if flags.Profile == "" {
+				flags.Profile = cmd.Root().PersistentFlags().Lookup("profile").Value.String()
+			}
 			runID := args[0]
 			return runGet(runID, flags)
 		},
@@ -49,6 +54,7 @@ Examples:
 
 	// Engine connection
 	cmd.Flags().StringVarP(&flags.Engine, "engine", "e", flags.Engine, "Address of the rocketship engine")
+	cmd.Flags().StringVar(&flags.Profile, "profile", "", "Use specific connection profile")
 
 	// Display options
 	cmd.Flags().StringVar(&flags.Format, "format", flags.Format, "Output format (table, json, yaml)")
@@ -58,8 +64,22 @@ Examples:
 }
 
 func runGet(runID string, flags *GetFlags) error {
-	// Connect to engine
-	client, err := NewEngineClient(flags.Engine)
+	// Connect to engine using profiles if available, fallback to engine address
+	var client *EngineClient
+	var err error
+	
+	engineFlagSet := flags.Engine != "localhost:7700" // Check if engine was explicitly set
+	if !engineFlagSet && flags.Profile != "" {
+		// Use profile-aware connection
+		client, err = NewEngineClientWithProfile("", flags.Profile)
+	} else if !engineFlagSet {
+		// Use default profile-aware connection
+		client, err = NewEngineClientWithProfile("", "")
+	} else {
+		// Use explicit engine address
+		client, err = NewEngineClient(flags.Engine)
+	}
+	
 	if err != nil {
 		return fmt.Errorf("failed to connect to engine: %w", err)
 	}

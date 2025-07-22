@@ -165,7 +165,9 @@ func runProfileList() error {
 	}
 	
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "PROFILE\tSTATUS\tENGINE ADDRESS\tTLS\tTEAM")
+	if _, err := fmt.Fprintln(w, "PROFILE\tSTATUS\tENGINE ADDRESS\tTLS\tTEAM"); err != nil {
+		return fmt.Errorf("failed to write header: %w", err)
+	}
 	
 	for name, profile := range config.Profiles {
 		status := ""
@@ -186,10 +188,14 @@ func runProfileList() error {
 			team = profile.TeamContext.TeamName
 		}
 		
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", name, status, profile.EngineAddress, tlsStatus, team)
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", name, status, profile.EngineAddress, tlsStatus, team); err != nil {
+			return fmt.Errorf("failed to write profile row: %w", err)
+		}
 	}
 	
-	w.Flush()
+	if err := w.Flush(); err != nil {
+		return fmt.Errorf("failed to flush output: %w", err)
+	}
 	return nil
 }
 

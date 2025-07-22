@@ -451,7 +451,7 @@ func getProfileAuthConfig(profile *Profile) *auth.AuthConfig {
 			IssuerURL:    profile.Auth.Issuer,
 			ClientID:     profile.Auth.ClientID,
 			ClientSecret: profile.Auth.ClientSecret,
-			RedirectURL:  "",
+			RedirectURL:  "http://localhost:8000/callback",
 			Scopes:       []string{"openid", "profile", "email"},
 			AdminEmails:  profile.Auth.AdminEmails,
 		}
@@ -477,7 +477,7 @@ func getAuthConfigFromEnv() *auth.AuthConfig {
 		IssuerURL:    issuer,
 		ClientID:     clientID,
 		ClientSecret: os.Getenv("ROCKETSHIP_OIDC_CLIENT_SECRET"),
-		RedirectURL:  "",
+		RedirectURL:  "http://localhost:8000/callback",
 		Scopes:       []string{"openid", "profile", "email"},
 		AdminEmails:  os.Getenv("ROCKETSHIP_ADMIN_EMAILS"),
 	}

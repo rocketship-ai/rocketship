@@ -527,18 +527,47 @@ func isValidEmail(email string) bool {
 
 // isAuthenticated checks if user is authenticated
 func isAuthenticated(ctx context.Context) bool {
-	// Create auth manager same way as auth commands
-	config, err := getAuthConfig()
+	return isAuthenticatedWithProfile(ctx, "")
+}
+
+func isAuthenticatedWithProfile(ctx context.Context, profileName string) bool {
+	// Load CLI config
+	cliConfig, err := LoadConfig()
 	if err != nil {
-		return false
+		Logger.Debug("failed to load CLI config, creating default", "error", err)
+		cliConfig = DefaultConfig()
 	}
 	
+	// Determine which profile to use
+	var profile *Profile
+	if profileName != "" {
+		// Use specified profile
+		profile, err = cliConfig.GetProfile(profileName)
+		if err != nil {
+			return false
+		}
+	} else {
+		// Use active profile
+		profile = cliConfig.GetActiveProfile()
+	}
+	
+	// Get auth configuration from profile
+	config := getProfileAuthConfig(profile)
+	if config == nil {
+		return false
+	}
+
+	// Create OIDC client
 	client, err := auth.NewOIDCClient(ctx, config)
 	if err != nil {
 		return false
 	}
-	
-	storage := auth.NewKeyringStorage()
+
+	// Create keyring storage for this profile
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+
+	// Create auth manager
 	manager := auth.NewManager(client, storage)
 	
 	// Use the manager's built-in authentication check

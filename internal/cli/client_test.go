@@ -81,7 +81,8 @@ func TestNewEngineClient(t *testing.T) {
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 
-	client, err := NewEngineClient(addr)
+	// Use the environment-based fallback directly to avoid profile conflicts
+	client, err := newEngineClientFromEnv(addr)
 	if err != nil {
 		t.Fatalf("NewEngineClient failed: %v", err)
 	}
@@ -141,7 +142,7 @@ func TestEngineClient_HealthCheck(t *testing.T) {
 			// Give server time to start
 			time.Sleep(100 * time.Millisecond)
 
-			client, err := NewEngineClient(addr)
+			client, err := newEngineClientFromEnv(addr)
 			if err != nil {
 				t.Fatalf("NewEngineClient failed: %v", err)
 			}
@@ -214,7 +215,7 @@ func TestEngineClient_RunTest(t *testing.T) {
 			// Give server time to start
 			time.Sleep(100 * time.Millisecond)
 
-			client, err := NewEngineClient(addr)
+			client, err := newEngineClientFromEnv(addr)
 			if err != nil {
 				t.Fatalf("NewEngineClient failed: %v", err)
 			}
@@ -257,7 +258,7 @@ func TestEngineClient_StreamLogs(t *testing.T) {
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 
-	client, err := NewEngineClient(addr)
+	client, err := newEngineClientFromEnv(addr)
 	if err != nil {
 		t.Fatalf("NewEngineClient failed: %v", err)
 	}
@@ -301,7 +302,7 @@ func TestEngineClient_Close(t *testing.T) {
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
 
-	client, err := NewEngineClient(addr)
+	client, err := newEngineClientFromEnv(addr)
 	if err != nil {
 		t.Fatalf("NewEngineClient failed: %v", err)
 	}
