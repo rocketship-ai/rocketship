@@ -443,19 +443,10 @@ func runTeamList(ctx context.Context) error {
 	// Create repository
 	repo := rbac.NewRepository(db)
 
-	// Get current user to check their teams
-	authConfig, _ := getAuthConfig()
-	authClient, _ := auth.NewOIDCClient(ctx, authConfig)
-	storage := auth.NewKeyringStorage()
-	
-	token, err := storage.GetToken(ctx)
+	// Get auth context (now profile-aware)
+	authCtx, err := getAuthContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get token: %w", err)
-	}
-	
-	userInfo, err := authClient.GetUserInfo(ctx, token.AccessToken)
-	if err != nil {
-		return fmt.Errorf("failed to get user info: %w", err)
+		return fmt.Errorf("failed to get auth context: %w", err)
 	}
 
 	// Get all teams
@@ -470,7 +461,7 @@ func runTeamList(ctx context.Context) error {
 	}
 
 	// Get user's team memberships
-	userTeams, err := repo.GetUserTeams(ctx, userInfo.Subject)
+	userTeams, err := repo.GetUserTeams(ctx, authCtx.UserID)
 	if err != nil {
 		// Non-fatal, just won't show membership info
 		userTeams = []rbac.TeamMember{}
@@ -582,18 +573,46 @@ func connectToDatabase(ctx context.Context) (*pgxpool.Pool, error) {
 
 // getAuthContext creates an AuthContext from the current authenticated user
 func getAuthContext(ctx context.Context) (*rbac.AuthContext, error) {
-	// Get authentication config and client
-	config, err := getAuthConfig()
+	return getAuthContextWithProfile(ctx, "")
+}
+
+// getAuthContextWithProfile creates an AuthContext using profile-aware authentication
+func getAuthContextWithProfile(ctx context.Context, profileName string) (*rbac.AuthContext, error) {
+	// Load CLI config
+	cliConfig, err := LoadConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get auth config: %w", err)
+		Logger.Debug("failed to load CLI config, creating default", "error", err)
+		cliConfig = DefaultConfig()
 	}
 	
+	// Determine which profile to use
+	var profile *Profile
+	if profileName != "" {
+		// Use specified profile
+		profile, err = cliConfig.GetProfile(profileName)
+		if err != nil {
+			return nil, fmt.Errorf("profile '%s' not found: %w", profileName, err)
+		}
+	} else {
+		// Use active profile
+		profile = cliConfig.GetActiveProfile()
+	}
+	
+	// Get auth configuration from profile
+	config := getProfileAuthConfig(profile)
+	if config == nil {
+		return nil, fmt.Errorf("authentication not configured for profile '%s'", profile.Name)
+	}
+
+	// Create OIDC client
 	client, err := auth.NewOIDCClient(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OIDC client: %w", err)
 	}
 	
-	storage := auth.NewKeyringStorage()
+	// Create keyring storage for this profile
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
 	
 	// Get token
 	token, err := storage.GetToken(ctx)
