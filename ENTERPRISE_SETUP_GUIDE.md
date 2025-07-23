@@ -43,7 +43,8 @@ If you want to get up and running quickly with Auth0:
 # 1. Clone repository
 git clone https://github.com/rocketship-ai/rocketship.git
 cd rocketship
-git checkout add-auth
+# create and checkout your own local branch (this will be your "stack" name)
+git checkout -b rocketship-enterprise-test
 
 # 2 Wipe out any previous rocketship artifacts
 ./.docker/rocketship clean
@@ -85,7 +86,7 @@ For full production setup with Let's Encrypt certificates, continue with the det
 
 Choose your organization's identity provider and follow the appropriate setup:
 
-### Option A: Auth0 Setup
+### Auth0 Setup Example
 
 1. **Create Auth0 Account**
 
@@ -118,46 +119,62 @@ Choose your organization's identity provider and follow the appropriate setup:
 
 Choose your certificate approach based on your environment:
 
-### Option A: Self-Signed Certificates (Development/Internal)
+### Option A: Self-Signed Certificates (Development)
 
 ```bash
-# Clone and build Rocketship
-git clone https://github.com/rocketship-ai/rocketship.git
-cd rocketship
-git checkout add-auth
-make install
-
 # Generate self-signed certificate
 rocketship certs generate --domain localhost --self-signed
 ```
 
-### Option B: Let's Encrypt Certificates (Production)
+### Option B: Bring Your Own Certificate (BYOC)
 
-**Prerequisites**: You need a domain name (e.g., `rocketship.yourcompany.com`)
+**For enterprises with existing certificates or using different CA providers**
+
+#### Method 1: Free Certificate from ZeroSSL
+
+1. **Get Free Certificate from ZeroSSL:**
+
+   ```bash
+   # Visit https://zerossl.com
+   # Create free account
+   # Generate certificate for your domain
+   # Download certificate files
+   ```
+
+2. **Import Certificate:**
+   ```bash
+   # Import the certificate into Rocketship
+   rocketship certs import \
+     --domain rocketship.yourcompany.com \
+     --cert-file /path/to/certificate.crt \
+     --key-file /path/to/private.key \
+     --chain-file /path/to/ca_bundle.crt
+   ```
+
+#### Method 2: Corporate Certificate Authority
+
+1. **Obtain Certificate from Your CA:**
+
+   - Request certificate for `rocketship.yourcompany.com`
+   - Download certificate and private key files
+   - Ensure certificate includes intermediate chain
+
+2. **Import Certificate:**
+   ```bash
+   rocketship certs import \
+     --domain rocketship.yourcompany.com \
+     --cert-file /path/to/your-cert.pem \
+     --key-file /path/to/your-key.pem \
+     --chain-file /path/to/intermediate-chain.pem
+   ```
+
+**Verify imported certificate:**
 
 ```bash
-# Install cloudflared for local validation
-# macOS:
-brew install cloudflared
-
-# Linux:
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
-sudo dpkg -i cloudflared.deb
-
-# Generate Let's Encrypt certificate with local tunnel
-rocketship certs generate --domain rocketship.yourcompany.com --email it@yourcompany.com --local
-```
-
-**Follow the DNS setup prompts**:
-
-1. Command will show a tunnel URL (e.g., `https://abc123.trycloudflare.com`)
-2. Update your DNS: Create CNAME record `rocketship.yourcompany.com → abc123.trycloudflare.com`
-3. Wait for DNS propagation (1-5 minutes)
-4. Press Enter to complete certificate generation
-
-```bash
-# Verify certificate
+# Check certificate status
 rocketship certs status
+
+# Should show your imported certificate with proper validity dates
 ```
 
 ---
@@ -182,7 +199,7 @@ Create the environment configuration for your deployment:
 cd .docker
 
 # Create environment configuration
-cat > .env.add-auth << 'EOF'
+cat > .env.<YOUR_STACK_NAME> << 'EOF'
 ### BASE CONFIGURATION ###
 COMPOSE_PROJECT_NAME=rocketship-production
 
@@ -221,7 +238,7 @@ EOF
 
 ```bash
 # Update for your domain
-sed -i 's/ROCKETSHIP_TLS_DOMAIN=localhost/ROCKETSHIP_TLS_DOMAIN=rocketship.yourcompany.com/' .env.add-auth
+sed -i 's/ROCKETSHIP_TLS_DOMAIN=localhost/ROCKETSHIP_TLS_DOMAIN=rocketship.yourcompany.com/' .env.<YOUR_STACK_NAME>
 ```
 
 ### 3.3 Initialize and Start Services
@@ -240,7 +257,7 @@ sed -i 's/ROCKETSHIP_TLS_DOMAIN=localhost/ROCKETSHIP_TLS_DOMAIN=rocketship.yourc
 **Expected Output:**
 
 ```
-Stack: rocketship-production
+Stack: <YOUR_STACK_NAME>
 Status: ✓ Running
 Services:
   ✓ temporal (healthy)

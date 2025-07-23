@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ func NewCertsCmd() *cobra.Command {
 	// Add subcommands
 	cmd.AddCommand(
 		NewCertsGenerateCmd(),
+		NewCertsImportCmd(),
 		NewCertsStatusCmd(),
 		NewCertsRenewCmd(),
 	)
@@ -42,8 +44,10 @@ func NewCertsGenerateCmd() *cobra.Command {
 			selfSigned, _ := cmd.Flags().GetBool("self-signed")
 			staging, _ := cmd.Flags().GetBool("staging")
 			local, _ := cmd.Flags().GetBool("local")
+			dns, _ := cmd.Flags().GetBool("dns")
+			dnsProvider, _ := cmd.Flags().GetString("dns-provider")
 			
-			return runCertsGenerate(cmd.Context(), domain, email, selfSigned, staging, local)
+			return runCertsGenerate(cmd.Context(), domain, email, selfSigned, staging, local, dns, dnsProvider)
 		},
 	}
 
@@ -51,9 +55,39 @@ func NewCertsGenerateCmd() *cobra.Command {
 	cmd.Flags().String("email", "", "Contact email for Let's Encrypt")
 	cmd.Flags().Bool("self-signed", false, "Generate self-signed certificate")
 	cmd.Flags().Bool("staging", false, "Use Let's Encrypt staging environment")
-	cmd.Flags().Bool("local", false, "Use cloudflared tunnel for local HTTPS")
+	cmd.Flags().Bool("local", false, "Use cloudflared tunnel for local HTTPS (HTTP-01)")
+	cmd.Flags().Bool("dns", false, "Use DNS-01 challenge instead of HTTP-01")
+	cmd.Flags().String("dns-provider", "cloudflare", "DNS provider for DNS-01 challenge (cloudflare, route53)")
 	
 	_ = cmd.MarkFlagRequired("domain")
+
+	return cmd
+}
+
+// NewCertsImportCmd creates a certificate import command for BYOC
+func NewCertsImportCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "import",
+		Short: "Import existing certificate (BYOC - Bring Your Own Certificate)",
+		Long:  `Import an existing SSL certificate and private key for use with Rocketship`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain, _ := cmd.Flags().GetString("domain")
+			certFile, _ := cmd.Flags().GetString("cert-file")
+			keyFile, _ := cmd.Flags().GetString("key-file")
+			chainFile, _ := cmd.Flags().GetString("chain-file")
+			
+			return runCertsImport(cmd.Context(), domain, certFile, keyFile, chainFile)
+		},
+	}
+
+	cmd.Flags().String("domain", "", "Domain name for the certificate (required)")
+	cmd.Flags().String("cert-file", "", "Path to certificate file (.crt or .pem) (required)")
+	cmd.Flags().String("key-file", "", "Path to private key file (.key or .pem) (required)")
+	cmd.Flags().String("chain-file", "", "Path to certificate chain file (optional)")
+	
+	_ = cmd.MarkFlagRequired("domain")
+	_ = cmd.MarkFlagRequired("cert-file")
+	_ = cmd.MarkFlagRequired("key-file")
 
 	return cmd
 }
@@ -94,12 +128,17 @@ func NewCertsRenewCmd() *cobra.Command {
 }
 
 // runCertsGenerate handles certificate generation
-func runCertsGenerate(ctx context.Context, domain, email string, selfSigned, staging, local bool) error {
+func runCertsGenerate(ctx context.Context, domain, email string, selfSigned, staging, local, dns bool, dnsProvider string) error {
 	fmt.Printf("🚀 Starting certificate generation for %s\n", color.CyanString(domain))
 
 	// Validate inputs
 	if !selfSigned && email == "" {
 		return fmt.Errorf("email is required for Let's Encrypt certificates")
+	}
+
+	// Validate conflicting options
+	if dns && local {
+		return fmt.Errorf("cannot use both --dns and --local flags together")
 	}
 
 	// Create certificate manager config
@@ -110,13 +149,29 @@ func runCertsGenerate(ctx context.Context, domain, email string, selfSigned, sta
 		AutoRenew:  true,
 	}
 
-	// Add tunnel config for local HTTPS
-	if local && !selfSigned {
+	// Configure challenge type
+	if dns && !selfSigned {
+		config.ChallengeType = certs.ChallengeTypeDNS01
+		config.DNSConfig = &certs.DNSConfig{
+			Provider:    dnsProvider,
+			Credentials: make(map[string]string),
+		}
+
+		// Collect DNS provider credentials from environment
+		fmt.Printf("🌐 Using DNS-01 challenge with %s provider\n", color.CyanString(dnsProvider))
+		if err := collectDNSCredentials(config.DNSConfig); err != nil {
+			return fmt.Errorf("failed to configure DNS provider: %w", err)
+		}
+	} else if local && !selfSigned {
+		config.ChallengeType = certs.ChallengeTypeHTTP01
 		config.TunnelConfig = &certs.TunnelConfig{
 			Provider: "cloudflared",
 			Port:     80,
 		}
-		fmt.Println("📡 Local mode: Will create tunnel for HTTPS validation")
+		fmt.Println("📡 Using HTTP-01 challenge with cloudflared tunnel")
+	} else if !selfSigned {
+		config.ChallengeType = certs.ChallengeTypeHTTP01
+		fmt.Println("🌐 Using HTTP-01 challenge (direct)")
 	}
 
 	// Create certificate manager
@@ -149,8 +204,49 @@ func runCertsGenerate(ctx context.Context, domain, email string, selfSigned, sta
 
 	// Show next steps
 	fmt.Printf("\n📋 Next steps:\n")
-	fmt.Printf("1. Start the engine with HTTPS: %s\n", color.CyanString("rocketship start server --https"))
-	fmt.Printf("2. Access the API at: %s\n", color.CyanString(fmt.Sprintf("https://%s:8443", domain)))
+	fmt.Printf("1. Start the engine with HTTPS: %s\n", color.CyanString("rocketship start server --https --domain "+domain))
+	fmt.Printf("2. Access the API at: %s\n", color.CyanString(fmt.Sprintf("https://%s:7700", domain)))
+
+	return nil
+}
+
+// runCertsImport handles certificate import (BYOC)
+func runCertsImport(ctx context.Context, domain, certFile, keyFile, chainFile string) error {
+	fmt.Printf("📥 Importing certificate for %s\n", color.CyanString(domain))
+
+	// Validate files exist
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		return fmt.Errorf("certificate file not found: %s", certFile)
+	}
+	if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		return fmt.Errorf("private key file not found: %s", keyFile)
+	}
+	if chainFile != "" {
+		if _, err := os.Stat(chainFile); os.IsNotExist(err) {
+			return fmt.Errorf("certificate chain file not found: %s", chainFile)
+		}
+	}
+
+	// Create certificate manager to get cert directory
+	config := &certs.Config{}
+	manager, err := certs.NewManager(config)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate manager: %w", err)
+	}
+
+	// Import certificate using manager
+	if err := manager.ImportCertificate(domain, certFile, keyFile, chainFile); err != nil {
+		return fmt.Errorf("failed to import certificate: %w", err)
+	}
+
+	fmt.Printf("%s Certificate imported successfully!\n", color.GreenString("✅"))
+	fmt.Printf("📁 Certificate stored for domain: %s\n", color.CyanString(domain))
+	
+	// Show next steps
+	fmt.Printf("\n📋 Next steps:\n")
+	fmt.Printf("1. Verify certificate: %s\n", color.CyanString("rocketship certs status"))
+	fmt.Printf("2. Start engine with HTTPS: %s\n", color.CyanString("rocketship start server --https --domain "+domain))
+	fmt.Printf("3. Access the API at: %s\n", color.CyanString(fmt.Sprintf("https://%s:7700", domain)))
 
 	return nil
 }
@@ -254,4 +350,64 @@ func formatCertBool(b bool) string {
 		return color.GreenString("Yes")
 	}
 	return color.RedString("No")
+}
+
+// collectDNSCredentials collects DNS provider credentials from environment variables
+func collectDNSCredentials(dnsConfig *certs.DNSConfig) error {
+	switch dnsConfig.Provider {
+	case "cloudflare":
+		// Check for Cloudflare credentials
+		if token := os.Getenv("CF_API_TOKEN"); token != "" {
+			dnsConfig.Credentials["CF_API_TOKEN"] = token
+			fmt.Printf("✅ Found Cloudflare API token\n")
+			return nil
+		}
+		
+		if email := os.Getenv("CF_API_EMAIL"); email != "" {
+			if key := os.Getenv("CF_API_KEY"); key != "" {
+				dnsConfig.Credentials["CF_API_EMAIL"] = email
+				dnsConfig.Credentials["CF_API_KEY"] = key
+				fmt.Printf("✅ Found Cloudflare API email and key\n")
+				return nil
+			}
+		}
+		
+		// Show required environment variables
+		return fmt.Errorf("cloudflare DNS provider requires environment variables:\n" +
+			"  Option 1: CF_API_TOKEN (recommended)\n" +
+			"  Option 2: CF_API_EMAIL and CF_API_KEY\n\n" +
+			"Get your Cloudflare API token:\n" +
+			"  1. Go to https://dash.cloudflare.com/profile/api-tokens\n" +
+			"  2. Create token with 'Zone:DNS:Edit' permissions\n" +
+			"  3. Export CF_API_TOKEN='your-token-here'")
+
+	case "route53":
+		// Check for AWS credentials
+		accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+		
+		if accessKey == "" || secretKey == "" {
+			return fmt.Errorf("Route53 DNS provider requires environment variables:\n" +
+				"  AWS_ACCESS_KEY_ID\n" +
+				"  AWS_SECRET_ACCESS_KEY\n" +
+				"  AWS_REGION (optional, defaults to us-east-1)\n\n" +
+				"Set up AWS credentials:\n" +
+				"  1. Create IAM user with Route53 permissions\n" +
+				"  2. Export AWS_ACCESS_KEY_ID='your-access-key'\n" +
+				"  3. Export AWS_SECRET_ACCESS_KEY='your-secret-key'")
+		}
+		
+		dnsConfig.Credentials["AWS_ACCESS_KEY_ID"] = accessKey
+		dnsConfig.Credentials["AWS_SECRET_ACCESS_KEY"] = secretKey
+		
+		if region := os.Getenv("AWS_REGION"); region != "" {
+			dnsConfig.Credentials["AWS_REGION"] = region
+		}
+		
+		fmt.Printf("✅ Found AWS credentials\n")
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported DNS provider: %s", dnsConfig.Provider)
+	}
 }
