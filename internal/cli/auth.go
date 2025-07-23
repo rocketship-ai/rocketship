@@ -3,14 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc/metadata"
 
+	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/auth"
 	"github.com/rocketship-ai/rocketship/internal/rbac"
 )
@@ -124,10 +124,38 @@ func runAuthLogin(ctx context.Context, profileName string) error {
 		profile = cliConfig.GetActiveProfile()
 	}
 	
-	// Get auth configuration from profile
-	authConfig := getProfileAuthConfig(profile)
+	// First try to get auth configuration from server
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		// Fall back to profile configuration
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
 	if authConfig == nil {
 		return fmt.Errorf("authentication not configured for profile '%s'\n\nTo set up authentication:\n  1. Configure OIDC settings in your profile\n  2. Or connect to Rocketship Cloud: rocketship connect https://app.rocketship.sh", profile.Name)
+	}
+
+	// If auth config came from environment variables and profile doesn't have valid auth configured,
+	// save the configuration to the profile for persistence across sessions
+	if profile.Auth.Issuer == "" || profile.Auth.ClientID == "" {
+		Logger.Debug("saving auth configuration from environment to profile", "profile", profile.Name, "issuer", authConfig.IssuerURL, "clientID", authConfig.ClientID)
+		
+		// Update the profile in the config map directly (since profile is a copy)
+		profileInConfig := cliConfig.Profiles[profile.Name]
+		profileInConfig.Auth.Issuer = authConfig.IssuerURL
+		profileInConfig.Auth.ClientID = authConfig.ClientID
+		profileInConfig.Auth.ClientSecret = authConfig.ClientSecret
+		profileInConfig.Auth.AdminEmails = authConfig.AdminEmails
+		cliConfig.Profiles[profile.Name] = profileInConfig
+		
+		// Save the updated profile configuration
+		if err := cliConfig.SaveConfig(); err != nil {
+			Logger.Warn("failed to save auth configuration to profile", "error", err)
+			// Continue anyway - authentication will still work for this session
+		} else {
+			Logger.Debug("successfully saved auth configuration to profile", "profile", profile.Name)
+		}
 	}
 
 	// Create OIDC client
@@ -278,8 +306,14 @@ func runAuthStatus(ctx context.Context, profileName string) error {
 		profile = cliConfig.GetActiveProfile()
 	}
 	
-	// Get auth configuration from profile
-	config := getProfileAuthConfig(profile)
+	// First try to get auth configuration from server
+	config, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		// Fall back to profile configuration
+		config = getProfileAuthConfig(profile)
+	}
+	
 	if config == nil {
 		fmt.Printf("Status: %s (authentication not configured)\n", color.RedString("Not authenticated"))
 		return nil
@@ -305,59 +339,133 @@ func runAuthStatus(ctx context.Context, profileName string) error {
 		return nil
 	}
 
-	// Get user info
+	// Get user info from local token (for display)
 	userInfo, err := manager.GetCurrentUser(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get current user: %w", err)
+	}
+
+	// Get SERVER-DETERMINED user info (for accurate role)
+	serverUserInfo, err := getServerUserInfo(profile, manager)
+	if err != nil {
+		Logger.Debug("failed to get server user info, using local token data", "error", err)
+		// Fall back to local token data
+		serverUserInfo = nil
 	}
 
 	// Display status
 	fmt.Printf("Status: %s\n", color.GreenString("Authenticated"))
 	fmt.Printf("User: %s (%s)\n", userInfo.Name, userInfo.Email)
 	fmt.Printf("Subject: %s\n", userInfo.Subject)
-	if userInfo.OrgRole == rbac.OrgRoleAdmin {
+	
+	// Use server-determined role if available, otherwise fall back to local
+	var isAdmin bool
+	if serverUserInfo != nil {
+		isAdmin = serverUserInfo.OrgRole == string(rbac.OrgRoleAdmin)
+		Logger.Debug("using server-determined role", "role", serverUserInfo.OrgRole)
+	} else {
+		isAdmin = userInfo.OrgRole == rbac.OrgRoleAdmin
+		Logger.Debug("using local token role", "role", userInfo.OrgRole)
+	}
+	
+	if isAdmin {
 		fmt.Printf("Admin role: %s\n", color.YellowString("Yes"))
 	} else {
 		fmt.Printf("Admin role: No\n")
 	}
 
 	// Show groups if available
-	if len(userInfo.Groups) > 0 {
+	if serverUserInfo != nil && len(serverUserInfo.Groups) > 0 {
+		fmt.Printf("Groups: %s\n", strings.Join(serverUserInfo.Groups, ", "))
+	} else if len(userInfo.Groups) > 0 {
 		fmt.Printf("Groups: %s\n", strings.Join(userInfo.Groups, ", "))
 	}
 
 	return nil
 }
 
-// getAuthConfig gets authentication configuration from environment
-func getAuthConfig() (*auth.AuthConfig, error) {
-	issuerURL := os.Getenv("ROCKETSHIP_OIDC_ISSUER")
-	clientID := os.Getenv("ROCKETSHIP_OIDC_CLIENT_ID")
-	clientSecret := os.Getenv("ROCKETSHIP_OIDC_CLIENT_SECRET")
-
-	if issuerURL == "" {
-		return nil, fmt.Errorf("ROCKETSHIP_OIDC_ISSUER environment variable not set")
-	}
-	if clientID == "" {
-		return nil, fmt.Errorf("ROCKETSHIP_OIDC_CLIENT_ID environment variable not set")
-	}
-
-	// Validate issuer URL
-	if _, err := url.Parse(issuerURL); err != nil {
-		return nil, fmt.Errorf("invalid ROCKETSHIP_OIDC_ISSUER: %w", err)
-	}
-
-	return &auth.AuthConfig{
-		IssuerURL:    issuerURL,
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		RedirectURL:  "http://localhost:8000/callback",
-		Scopes:       []string{"openid", "profile", "email"},
-		AdminEmails:  os.Getenv("ROCKETSHIP_ADMIN_EMAILS"),
-	}, nil
-}
-
 // generateState generates a random state parameter for OAuth
 func generateState() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
+}
+
+// getAuthConfigFromServer fetches authentication configuration from the server
+func getAuthConfigFromServer(profile *Profile) (*auth.AuthConfig, error) {
+	Logger.Debug("fetching auth config from server", "profile", profile.Name, "engine", profile.EngineAddress)
+	
+	// Create gRPC client to the engine using the profile
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+	
+	// Call the auth discovery endpoint
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	
+	response, err := client.client.GetAuthConfig(ctx, &generated.GetAuthConfigRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get auth config from server: %w", err)
+	}
+	
+	Logger.Debug("received auth config from server", "auth_enabled", response.AuthEnabled)
+	
+	// If authentication is not enabled on the server, return nil
+	if !response.AuthEnabled {
+		Logger.Debug("authentication not enabled on server")
+		return nil, nil
+	}
+	
+	// If no OIDC config provided, return error
+	if response.Oidc == nil {
+		return nil, fmt.Errorf("server has auth enabled but no OIDC configuration provided")
+	}
+	
+	Logger.Debug("server provided OIDC config", "issuer", response.Oidc.Issuer, "client_id", response.Oidc.ClientId)
+	
+	// Convert server response to AuthConfig
+	return &auth.AuthConfig{
+		IssuerURL:    response.Oidc.Issuer,
+		ClientID:     response.Oidc.ClientId,
+		ClientSecret: "", // Server doesn't provide client secret for security
+		RedirectURL:  "http://localhost:8000/callback",
+		Scopes:       response.Oidc.Scopes,
+		AdminEmails:  "", // Server doesn't provide admin emails to client
+	}, nil
+}
+
+// getServerUserInfo fetches user information with server-determined role
+func getServerUserInfo(profile *Profile, manager *auth.Manager) (*generated.GetCurrentUserResponse, error) {
+	Logger.Debug("fetching server user info", "profile", profile.Name)
+	
+	// Create authenticated gRPC client 
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+	
+	// Get access token for authentication
+	ctx := context.Background()
+	token, err := manager.GetValidToken(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get access token: %w", err)
+	}
+	
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	
+	// Call the authenticated endpoint
+	response, err := client.client.GetCurrentUser(ctx, &generated.GetCurrentUserRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current user from server: %w", err)
+	}
+	
+	Logger.Debug("received server user info", "user_id", response.UserId, "email", response.Email, "org_role", response.OrgRole)
+	
+	return response, nil
 }

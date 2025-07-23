@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -142,9 +143,17 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 		}
 
 		// Ensure user exists in database and handle initial admin setup
+		var dbUser *rbac.User
 		if a.rbacRepo != nil {
 			if err := a.ensureUserExists(ctx, userInfo); err != nil {
 				return nil, fmt.Errorf("failed to ensure user exists: %w", err)
+			}
+			
+			// Get user from database to get authoritative role information
+			var err error
+			dbUser, err = a.rbacRepo.GetUser(ctx, userInfo.Subject)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get user from database: %w", err)
 			}
 		}
 
@@ -158,12 +167,18 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 			teamMemberships = memberships
 		}
 
+		// Use database user's OrgRole as source of truth, fall back to userInfo if no database
+		orgRole := userInfo.OrgRole
+		if dbUser != nil {
+			orgRole = dbUser.OrgRole
+		}
+
 		// Create auth context
 		authCtx := &rbac.AuthContext{
 			UserID:          userInfo.Subject,
 			Email:           userInfo.Email,
 			Name:            userInfo.Name,
-			OrgRole:         userInfo.OrgRole,
+			OrgRole:         orgRole,
 			TeamMemberships: teamMemberships,
 		}
 
@@ -178,6 +193,7 @@ func isPublicEndpoint(method string) bool {
 	publicEndpoints := []string{
 		"/grpc.health.v1.Health/Check",
 		"/grpc.health.v1.Health/Watch",
+		"/rocketship.v1.Engine/GetAuthConfig", // Allow clients to discover auth configuration
 	}
 
 	for _, endpoint := range publicEndpoints {
@@ -248,24 +264,74 @@ func RequireAdmin(ctx context.Context) (*rbac.AuthContext, error) {
 
 // ensureUserExists ensures the user exists in the database and handles initial admin setup
 func (a *AuthInterceptor) ensureUserExists(ctx context.Context, userInfo *UserInfo) error {
+	log.Printf("INTERCEPTOR DEBUG: ensureUserExists called for user %s", userInfo.Subject)
+	
+	// SECURITY: Determine role on SERVER-SIDE based on server configuration, not client data
+	serverDeterminedRole := a.determineUserRole(userInfo.Email)
+	log.Printf("INTERCEPTOR DEBUG: Server-side role determination for %s: %s", userInfo.Email, serverDeterminedRole)
+	
 	// Check if user already exists
-	_, err := a.rbacRepo.GetUser(ctx, userInfo.Subject)
-	if err == nil {
-		// User exists, nothing to do
+	existingUser, err := a.rbacRepo.GetUser(ctx, userInfo.Subject)
+	if err == nil && existingUser != nil {
+		// User exists, check if role needs updating based on SERVER determination
+		if existingUser.OrgRole != serverDeterminedRole {
+			log.Printf("INTERCEPTOR DEBUG: User %s exists with role %s, updating to %s", userInfo.Subject, existingUser.OrgRole, serverDeterminedRole)
+			existingUser.OrgRole = serverDeterminedRole
+			existingUser.Email = userInfo.Email // Update email in case it changed
+			existingUser.Name = userInfo.Name   // Update name in case it changed
+			if err := a.rbacRepo.UpdateUser(ctx, existingUser); err != nil {
+				log.Printf("INTERCEPTOR DEBUG: Failed to update user %s role: %v", userInfo.Subject, err)
+				return fmt.Errorf("failed to update user role: %w", err)
+			}
+			log.Printf("INTERCEPTOR DEBUG: Successfully updated user %s role to %s", userInfo.Subject, serverDeterminedRole)
+		} else {
+			log.Printf("INTERCEPTOR DEBUG: User %s already exists with correct role %s", userInfo.Subject, existingUser.OrgRole)
+		}
 		return nil
 	}
 
-	// User doesn't exist, create them
+	log.Printf("INTERCEPTOR DEBUG: User %s doesn't exist, creating with role %s", userInfo.Subject, serverDeterminedRole)
+
+	// User doesn't exist, create them with SERVER-DETERMINED role
 	user := &rbac.User{
 		ID:      userInfo.Subject,
 		Email:   userInfo.Email,
 		Name:    userInfo.Name,
-		OrgRole: userInfo.OrgRole, // This is already set based on admin emails
+		OrgRole: serverDeterminedRole, // Use server-determined role for security
 	}
 
 	if err := a.rbacRepo.CreateUser(ctx, user); err != nil {
+		log.Printf("INTERCEPTOR DEBUG: Failed to create user %s: %v", userInfo.Subject, err)
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
+	log.Printf("INTERCEPTOR DEBUG: Successfully created user %s with role %s", userInfo.Subject, serverDeterminedRole)
 	return nil
+}
+
+// determineUserRole determines user role based on SERVER-SIDE configuration (SECURITY)
+func (a *AuthInterceptor) determineUserRole(userEmail string) rbac.OrganizationRole {
+	// Get admin emails from server-side environment variable
+	adminEmailsEnv := os.Getenv("ROCKETSHIP_ADMIN_EMAILS")
+	if adminEmailsEnv == "" {
+		log.Printf("SECURITY DEBUG: No ROCKETSHIP_ADMIN_EMAILS configured, defaulting user %s to org_member", userEmail)
+		return rbac.OrgRoleMember
+	}
+	
+	adminEmails := strings.Split(adminEmailsEnv, ",")
+	userEmailLower := strings.TrimSpace(strings.ToLower(userEmail))
+	
+	log.Printf("SECURITY DEBUG: Checking admin emails server-side - AdminEmails=%q, UserEmail=%q", adminEmailsEnv, userEmailLower)
+	
+	for _, adminEmail := range adminEmails {
+		cleanAdminEmail := strings.TrimSpace(strings.ToLower(adminEmail))
+		log.Printf("SECURITY DEBUG: Comparing %q == %q", cleanAdminEmail, userEmailLower)
+		if cleanAdminEmail == userEmailLower {
+			log.Printf("SECURITY DEBUG: User %s determined to be org_admin by SERVER", userEmail)
+			return rbac.OrgRoleAdmin
+		}
+	}
+	
+	log.Printf("SECURITY DEBUG: User %s determined to be org_member by SERVER", userEmail)
+	return rbac.OrgRoleMember
 }

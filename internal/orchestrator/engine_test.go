@@ -23,7 +23,7 @@ func contains(s, substr string) bool {
 
 func TestNewEngine(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	if engine == nil {
 		t.Fatal("Expected engine to be created, got nil")
@@ -81,7 +81,7 @@ func TestGenerateID(t *testing.T) {
 func TestAddLog(t *testing.T) {
 	t.Run("successful log addition", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:     "test-run-id",
@@ -111,7 +111,7 @@ func TestAddLog(t *testing.T) {
 
 	t.Run("multiple log additions", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:     "test-run-id",
@@ -134,7 +134,7 @@ func TestAddLog(t *testing.T) {
 
 	t.Run("nonexistent run", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		// Should not panic when run doesn't exist
 		engine.addLog("nonexistent-run-id", "Test log message", "green", true)
@@ -145,7 +145,7 @@ func TestAddLog(t *testing.T) {
 func TestGetTestStatusCounts(t *testing.T) {
 	t.Run("empty run", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:    "test-run-id",
@@ -165,7 +165,7 @@ func TestGetTestStatusCounts(t *testing.T) {
 
 	t.Run("various test statuses", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID: "test-run-id",
@@ -203,7 +203,7 @@ func TestGetTestStatusCounts(t *testing.T) {
 
 	t.Run("nonexistent run", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		_, err := engine.getTestStatusCounts("nonexistent-run-id")
 		if err == nil {
@@ -214,7 +214,7 @@ func TestGetTestStatusCounts(t *testing.T) {
 
 func TestCreateRunValidation(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 	ctx := context.Background()
 
 	t.Run("nil request", func(t *testing.T) {
@@ -270,7 +270,7 @@ tests: []`
 
 func TestHealthEndpoint(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 	ctx := context.Background()
 
 	resp, err := engine.Health(ctx, &generated.HealthRequest{})
@@ -287,7 +287,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 func TestConcurrentAddLog(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	runInfo := &RunInfo{
 		ID:     "test-run-id",
@@ -322,7 +322,7 @@ func TestConcurrentAddLog(t *testing.T) {
 
 func TestConcurrentGetTestStatusCounts(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	runInfo := &RunInfo{
 		ID: "test-run-id",
@@ -365,7 +365,7 @@ func TestConcurrentGetTestStatusCounts(t *testing.T) {
 
 func TestConcurrentReadWriteOperations(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	runInfo := &RunInfo{
 		ID: "test-run-id",
@@ -425,7 +425,7 @@ func TestConcurrentReadWriteOperations(t *testing.T) {
 
 func TestUpdateTestStatusConcurrency(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	runInfo := &RunInfo{
 		ID: "test-run-id",
@@ -471,7 +471,7 @@ func TestUpdateTestStatusConcurrency(t *testing.T) {
 
 func TestNoDeadlockInMixedOperations(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	// Setup multiple runs to increase complexity
 	for i := 0; i < 5; i++ {
@@ -534,7 +534,7 @@ func TestNoDeadlockInMixedOperations(t *testing.T) {
 func TestStreamLogsNonBlocking(t *testing.T) {
 	// This test ensures that StreamLogs doesn't hold locks for too long
 	mockClient := &MockTemporalClient{}
-	engine := NewEngine(mockClient)
+	engine := NewEngine(mockClient, nil)
 
 	runInfo := &RunInfo{
 		ID:     "test-run-id",
@@ -585,7 +585,7 @@ func TestStreamLogsNonBlocking(t *testing.T) {
 func TestCheckIfRunFinished(t *testing.T) {
 	t.Run("all tests passed", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:     "test-run-id",
@@ -614,7 +614,7 @@ func TestCheckIfRunFinished(t *testing.T) {
 
 	t.Run("some tests failed", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:     "test-run-id",
@@ -637,7 +637,7 @@ func TestCheckIfRunFinished(t *testing.T) {
 
 	t.Run("tests with timeout", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:     "test-run-id",
@@ -660,7 +660,7 @@ func TestCheckIfRunFinished(t *testing.T) {
 
 	t.Run("pending tests - should not finish", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:     "test-run-id",
@@ -686,7 +686,7 @@ func TestCheckIfRunFinished(t *testing.T) {
 
 	t.Run("nonexistent run", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		// Should not panic when run doesn't exist
 		engine.checkIfRunFinished("nonexistent-run-id")
@@ -697,7 +697,7 @@ func TestCheckIfRunFinished(t *testing.T) {
 func TestUpdateTestStatusEdgeCases(t *testing.T) {
 	t.Run("nonexistent run", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		// Should not panic when run doesn't exist
 		engine.updateTestStatus("nonexistent-run-id", "test-id", nil)
@@ -706,7 +706,7 @@ func TestUpdateTestStatusEdgeCases(t *testing.T) {
 
 	t.Run("nonexistent test", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID:    "test-run-id",
@@ -722,7 +722,7 @@ func TestUpdateTestStatusEdgeCases(t *testing.T) {
 
 	t.Run("timeout error handling", func(t *testing.T) {
 		mockClient := &MockTemporalClient{}
-		engine := NewEngine(mockClient)
+		engine := NewEngine(mockClient, nil)
 
 		runInfo := &RunInfo{
 			ID: "test-run-id",

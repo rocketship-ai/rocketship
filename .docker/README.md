@@ -43,11 +43,10 @@ This command will:
 # Start your isolated stack
 ./.docker/rocketship start
 
-# Run tests in your environment
-./.docker/rocketship run -f test.yaml
-
-# Check status
-./.docker/rocketship status
+# Use rocketship CLI directly with profiles
+rocketship profile list                    # See available profiles
+rocketship run -f test.yaml                # Run tests
+rocketship team list                       # Manage teams
 
 # Stop when done
 ./.docker/rocketship stop
@@ -82,24 +81,38 @@ If you have multiple worktrees:
 
 ## 📋 Available Commands
 
-### Environment Management
+### Essential Docker Commands
 ```bash
-./rocketship init                    # Initialize stack for current worktree
-./rocketship start                   # Start the current stack
-./rocketship stop                    # Stop the current stack
-./rocketship restart                 # Restart the current stack
-./rocketship status                  # Show status of current stack
-./rocketship info                    # Show detailed stack information
-./rocketship logs [service]          # Show logs (optionally for specific service)
-./rocketship clean                   # Stop and remove all containers and volumes
+./.docker/rocketship init           # Initialize stack for current worktree
+./.docker/rocketship start          # Start the current stack
+./.docker/rocketship stop           # Stop the current stack
+./.docker/rocketship logs [service] # Show recent logs (never hangs)
+./.docker/rocketship clean          # Stop and remove all containers and volumes
 ```
 
-### Test Commands
+### Use Rocketship CLI Directly
+After starting your stack, use the rocketship CLI with profiles:
 ```bash
-./rocketship validate <file>         # Validate test file
-./rocketship run [options]           # Run tests (pass options to rocketship CLI)
-./rocketship list                    # List test runs
-./rocketship get <run-id>            # Get test run details
+rocketship profile list             # See available profiles
+rocketship auth login               # Authenticate if needed
+rocketship run -f test.yaml         # Run tests
+rocketship team list                # Manage teams
+rocketship validate test.yaml       # Validate test files
+rocketship list                     # List test runs
+rocketship get <run-id>             # Get test run details
+```
+
+### Removed Commands (Use Direct CLI)
+These commands have been removed to simplify the Docker script:
+```bash
+# Old → New
+restart  → ./.docker/rocketship stop && ./.docker/rocketship start
+status   → docker ps | grep rocketship
+info     → rocketship profile list
+validate → rocketship validate <file>
+run      → rocketship run [options]
+list     → rocketship list
+get      → rocketship get <run-id>
 ```
 
 ## 🎯 Git Worktree Workflow Examples

@@ -3,18 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc/metadata"
 
+	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/auth"
-	"github.com/rocketship-ai/rocketship/internal/database"
-	"github.com/rocketship-ai/rocketship/internal/rbac"
 )
 
 // NewRepoCmd creates a new repository command
@@ -133,50 +129,73 @@ func NewRepoShowCmd() *cobra.Command {
 
 // runRepoAdd handles adding a repository
 func runRepoAdd(ctx context.Context, repoURL string, enforceCodeowners bool) error {
-	// Check if authenticated and admin
-	if !isRepoAuthenticated(ctx) {
+	// Load CLI config to get active profile
+	cliConfig, err := LoadConfig()
+	if err != nil {
+		Logger.Debug("failed to load CLI config", "error", err)
+		return fmt.Errorf("failed to load CLI config: %w", err)
+	}
+	
+	profile := cliConfig.GetActiveProfile()
+	
+	// Create authenticated gRPC client to engine
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Get access token for authentication
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured")
+	}
+
+	// Create OIDC client and auth manager
+	oidcClient, err := auth.NewOIDCClient(ctx, authConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create OIDC client: %w", err)
+	}
+
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+	manager := auth.NewManager(oidcClient, storage)
+
+	if !manager.IsAuthenticated(ctx) {
 		return fmt.Errorf("authentication required. Run 'rocketship auth login'")
 	}
 
-	// Validate repository URL
-	if err := validateRepositoryURL(repoURL); err != nil {
-		return fmt.Errorf("invalid repository URL: %w", err)
-	}
-
-	// Connect to database
-	db, err := connectToRepoDatabase(ctx)
+	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
-
-	// Create repository
-	repo := rbac.NewRepository(db)
-
-	// Check if repository already exists
-	existing, err := repo.GetRepository(ctx, repoURL)
-	if err != nil {
-		return fmt.Errorf("failed to check existing repository: %w", err)
-	}
-	if existing != nil {
-		return fmt.Errorf("repository already exists: %s", repoURL)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
 
-	// Create new repository entity
-	repoEntity := &rbac.RepositoryEntity{
-		ID:                uuid.New().String(),
-		URL:               repoURL,
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	// Call the AddRepository gRPC endpoint
+	response, err := client.client.AddRepository(ctx, &generated.AddRepositoryRequest{
+		RepositoryUrl:     repoURL,
 		EnforceCodeowners: enforceCodeowners,
-		CreatedAt:         time.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add repository: %w", err)
 	}
 
-	// Create repository
-	if err := repo.CreateRepository(ctx, repoEntity); err != nil {
-		return fmt.Errorf("failed to create repository: %w", err)
+	if !response.Success {
+		return fmt.Errorf("failed to add repository: %s", response.Message)
 	}
 
-	fmt.Printf("%s Repository '%s' added successfully\n", color.GreenString("✓"), repoURL)
-	fmt.Printf("Repository ID: %s\n", repoEntity.ID)
+	fmt.Printf("%s %s\n", color.GreenString("✓"), response.Message)
+	fmt.Printf("Repository ID: %s\n", response.RepositoryId)
 	if enforceCodeowners {
 		fmt.Printf("CODEOWNERS enforcement: %s\n", color.YellowString("enabled"))
 	}
@@ -186,51 +205,82 @@ func runRepoAdd(ctx context.Context, repoURL string, enforceCodeowners bool) err
 
 // runRepoList handles listing repositories
 func runRepoList(ctx context.Context) error {
-	// Check if authenticated
-	if !isRepoAuthenticated(ctx) {
+	// Load CLI config to get active profile
+	cliConfig, err := LoadConfig()
+	if err != nil {
+		Logger.Debug("failed to load CLI config", "error", err)
+		return fmt.Errorf("failed to load CLI config: %w", err)
+	}
+	
+	profile := cliConfig.GetActiveProfile()
+	
+	// Create authenticated gRPC client to engine
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Get access token for authentication
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured")
+	}
+
+	// Create OIDC client and auth manager
+	oidcClient, err := auth.NewOIDCClient(ctx, authConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create OIDC client: %w", err)
+	}
+
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+	manager := auth.NewManager(oidcClient, storage)
+
+	if !manager.IsAuthenticated(ctx) {
 		return fmt.Errorf("authentication required. Run 'rocketship auth login'")
 	}
 
-	// Connect to database
-	db, err := connectToRepoDatabase(ctx)
+	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
-	defer db.Close()
 
-	// Create repository
-	repo := rbac.NewRepository(db)
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// List repositories
-	repositories, err := repo.ListRepositories(ctx)
+	// Call the ListRepositories gRPC endpoint
+	response, err := client.client.ListRepositories(ctx, &generated.ListRepositoriesRequest{})
 	if err != nil {
 		return fmt.Errorf("failed to list repositories: %w", err)
 	}
 
-	if len(repositories) == 0 {
+	if len(response.Repositories) == 0 {
 		fmt.Println("No repositories found")
 		return nil
 	}
 
-	fmt.Printf("\nRepositories (%d):\n", len(repositories))
-	for _, r := range repositories {
-		fmt.Printf("\n• %s\n", color.CyanString(r.URL))
-		fmt.Printf("  ID: %s\n", r.ID)
-		fmt.Printf("  CODEOWNERS: %s\n", formatBool(r.EnforceCodeowners))
-		fmt.Printf("  Created: %s\n", r.CreatedAt.Format(time.RFC3339))
+	fmt.Printf("\nRepositories (%d):\n", len(response.Repositories))
+	fmt.Println(strings.Repeat("-", 60))
+	
+	for _, repo := range response.Repositories {
+		fmt.Printf("\n• %s\n", color.CyanString(repo.Url))
+		fmt.Printf("  ID: %s\n", repo.Id)
+		fmt.Printf("  CODEOWNERS: %s\n", formatBool(repo.EnforceCodeowners))
+		fmt.Printf("  Created: %s\n", repo.CreatedAt)
 
-		// Get assigned teams
-		teams, err := repo.GetRepositoryTeamsDetailed(ctx, r.ID)
-		if err != nil {
-			fmt.Printf("  Teams: %s\n", color.RedString("error fetching teams"))
-		} else if len(teams) == 0 {
+		if repo.TeamCount == 0 {
 			fmt.Printf("  Teams: %s\n", color.YellowString("none"))
 		} else {
-			teamNames := make([]string, len(teams))
-			for i, team := range teams {
-				teamNames[i] = team.Name
-			}
-			fmt.Printf("  Teams: %s\n", strings.Join(teamNames, ", "))
+			fmt.Printf("  Teams (%d): %s\n", repo.TeamCount, strings.Join(repo.TeamNames, ", "))
 		}
 	}
 
@@ -239,182 +289,299 @@ func runRepoList(ctx context.Context) error {
 
 // runRepoAssign handles assigning a team to a repository
 func runRepoAssign(ctx context.Context, repoURL, teamName string) error {
-	// Check if authenticated and admin
-	if !isRepoAuthenticated(ctx) {
+	// Load CLI config to get active profile
+	cliConfig, err := LoadConfig()
+	if err != nil {
+		Logger.Debug("failed to load CLI config", "error", err)
+		return fmt.Errorf("failed to load CLI config: %w", err)
+	}
+	
+	profile := cliConfig.GetActiveProfile()
+	
+	// Create authenticated gRPC client to engine
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Get access token for authentication
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured")
+	}
+
+	// Create OIDC client and auth manager
+	oidcClient, err := auth.NewOIDCClient(ctx, authConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create OIDC client: %w", err)
+	}
+
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+	manager := auth.NewManager(oidcClient, storage)
+
+	if !manager.IsAuthenticated(ctx) {
 		return fmt.Errorf("authentication required. Run 'rocketship auth login'")
 	}
 
-	// Connect to database
-	db, err := connectToRepoDatabase(ctx)
+	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
-	defer db.Close()
 
-	// Create repository
-	repo := rbac.NewRepository(db)
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// Get repository
-	repository, err := repo.GetRepository(ctx, repoURL)
+	// Call the AssignTeamToRepository gRPC endpoint
+	response, err := client.client.AssignTeamToRepository(ctx, &generated.AssignTeamToRepositoryRequest{
+		RepositoryUrl: repoURL,
+		TeamName:      teamName,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to get repository: %w", err)
-	}
-	if repository == nil {
-		return fmt.Errorf("repository not found: %s", repoURL)
-	}
-
-	// Get team
-	team, err := repo.GetTeamByName(ctx, teamName)
-	if err != nil {
-		return fmt.Errorf("failed to get team: %w", err)
-	}
-	if team == nil {
-		return fmt.Errorf("team not found: %s", teamName)
-	}
-
-	// Assign team to repository
-	if err := repo.AddTeamRepository(ctx, team.ID, repository.ID); err != nil {
 		return fmt.Errorf("failed to assign team to repository: %w", err)
 	}
 
-	fmt.Printf("%s Team '%s' assigned to repository '%s'\n", 
-		color.GreenString("✓"), teamName, repoURL)
+	if !response.Success {
+		return fmt.Errorf("failed to assign team: %s", response.Message)
+	}
+
+	fmt.Printf("%s %s\n", color.GreenString("✓"), response.Message)
 
 	return nil
 }
 
 // runRepoUnassign handles removing a team from a repository
 func runRepoUnassign(ctx context.Context, repoURL, teamName string) error {
-	// Check if authenticated and admin
-	if !isRepoAuthenticated(ctx) {
+	// Load CLI config to get active profile
+	cliConfig, err := LoadConfig()
+	if err != nil {
+		Logger.Debug("failed to load CLI config", "error", err)
+		return fmt.Errorf("failed to load CLI config: %w", err)
+	}
+	
+	profile := cliConfig.GetActiveProfile()
+	
+	// Create authenticated gRPC client to engine
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Get access token for authentication
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured")
+	}
+
+	// Create OIDC client and auth manager
+	oidcClient, err := auth.NewOIDCClient(ctx, authConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create OIDC client: %w", err)
+	}
+
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+	manager := auth.NewManager(oidcClient, storage)
+
+	if !manager.IsAuthenticated(ctx) {
 		return fmt.Errorf("authentication required. Run 'rocketship auth login'")
 	}
 
-	// Connect to database
-	db, err := connectToRepoDatabase(ctx)
+	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
-	defer db.Close()
 
-	// Create repository
-	repo := rbac.NewRepository(db)
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// Get repository
-	repository, err := repo.GetRepository(ctx, repoURL)
+	// Call the UnassignTeamFromRepository gRPC endpoint
+	response, err := client.client.UnassignTeamFromRepository(ctx, &generated.UnassignTeamFromRepositoryRequest{
+		RepositoryUrl: repoURL,
+		TeamName:      teamName,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to get repository: %w", err)
-	}
-	if repository == nil {
-		return fmt.Errorf("repository not found: %s", repoURL)
+		return fmt.Errorf("failed to unassign team from repository: %w", err)
 	}
 
-	// Get team
-	team, err := repo.GetTeamByName(ctx, teamName)
-	if err != nil {
-		return fmt.Errorf("failed to get team: %w", err)
-	}
-	if team == nil {
-		return fmt.Errorf("team not found: %s", teamName)
+	if !response.Success {
+		return fmt.Errorf("failed to unassign team: %s", response.Message)
 	}
 
-	// Remove team from repository
-	if err := repo.RemoveTeamFromRepository(ctx, team.ID, repository.ID); err != nil {
-		return fmt.Errorf("failed to remove team from repository: %w", err)
-	}
-
-	fmt.Printf("%s Team '%s' removed from repository '%s'\n", 
-		color.GreenString("✓"), teamName, repoURL)
+	fmt.Printf("%s %s\n", color.GreenString("✓"), response.Message)
 
 	return nil
 }
 
 // runRepoRemove handles removing a repository
 func runRepoRemove(ctx context.Context, repoURL string) error {
-	// Check if authenticated and admin
-	if !isRepoAuthenticated(ctx) {
+	// Load CLI config to get active profile
+	cliConfig, err := LoadConfig()
+	if err != nil {
+		Logger.Debug("failed to load CLI config", "error", err)
+		return fmt.Errorf("failed to load CLI config: %w", err)
+	}
+	
+	profile := cliConfig.GetActiveProfile()
+	
+	// Create authenticated gRPC client to engine
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Get access token for authentication
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured")
+	}
+
+	// Create OIDC client and auth manager
+	oidcClient, err := auth.NewOIDCClient(ctx, authConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create OIDC client: %w", err)
+	}
+
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+	manager := auth.NewManager(oidcClient, storage)
+
+	if !manager.IsAuthenticated(ctx) {
 		return fmt.Errorf("authentication required. Run 'rocketship auth login'")
 	}
 
-	// Connect to database
-	db, err := connectToRepoDatabase(ctx)
+	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
-	defer db.Close()
 
-	// Create repository
-	repo := rbac.NewRepository(db)
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// Get repository
-	repository, err := repo.GetRepository(ctx, repoURL)
+	// Call the RemoveRepository gRPC endpoint
+	response, err := client.client.RemoveRepository(ctx, &generated.RemoveRepositoryRequest{
+		RepositoryUrl: repoURL,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to get repository: %w", err)
-	}
-	if repository == nil {
-		return fmt.Errorf("repository not found: %s", repoURL)
+		return fmt.Errorf("failed to remove repository: %w", err)
 	}
 
-	// Delete repository (cascade will remove team assignments)
-	if err := repo.DeleteRepository(ctx, repository.ID); err != nil {
-		return fmt.Errorf("failed to delete repository: %w", err)
+	if !response.Success {
+		return fmt.Errorf("failed to remove repository: %s", response.Message)
 	}
 
-	fmt.Printf("%s Repository '%s' removed successfully\n", 
-		color.GreenString("✓"), repoURL)
+	fmt.Printf("%s %s\n", color.GreenString("✓"), response.Message)
 
 	return nil
 }
 
 // runRepoShow handles showing repository details
 func runRepoShow(ctx context.Context, repoURL string) error {
-	// Check if authenticated
-	if !isRepoAuthenticated(ctx) {
+	// Load CLI config to get active profile
+	cliConfig, err := LoadConfig()
+	if err != nil {
+		Logger.Debug("failed to load CLI config", "error", err)
+		return fmt.Errorf("failed to load CLI config: %w", err)
+	}
+	
+	profile := cliConfig.GetActiveProfile()
+	
+	// Create authenticated gRPC client to engine
+	client, err := NewEngineClientWithProfile(profile.EngineAddress, profile.Name)
+	if err != nil {
+		return fmt.Errorf("failed to create engine client: %w", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	// Get access token for authentication
+	authConfig, err := getAuthConfigFromServer(profile)
+	if err != nil {
+		Logger.Debug("failed to fetch auth config from server, falling back to profile config", "error", err)
+		authConfig = getProfileAuthConfig(profile)
+	}
+	
+	if authConfig == nil {
+		return fmt.Errorf("authentication not configured")
+	}
+
+	// Create OIDC client and auth manager
+	oidcClient, err := auth.NewOIDCClient(ctx, authConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create OIDC client: %w", err)
+	}
+
+	keyringKey := GetProfileKeyringKey(profile.Name)
+	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
+	manager := auth.NewManager(oidcClient, storage)
+
+	if !manager.IsAuthenticated(ctx) {
 		return fmt.Errorf("authentication required. Run 'rocketship auth login'")
 	}
 
-	// Connect to database
-	db, err := connectToRepoDatabase(ctx)
+	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return fmt.Errorf("failed to get access token: %w", err)
 	}
-	defer db.Close()
 
-	// Create repository
-	repo := rbac.NewRepository(db)
+	// Add authorization header as gRPC metadata
+	md := metadata.New(map[string]string{
+		"authorization": "Bearer " + token,
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// Get repository
-	repository, err := repo.GetRepository(ctx, repoURL)
+	// Call the GetRepository gRPC endpoint
+	response, err := client.client.GetRepository(ctx, &generated.GetRepositoryRequest{
+		RepositoryUrl: repoURL,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to get repository: %w", err)
 	}
-	if repository == nil {
-		return fmt.Errorf("repository not found: %s", repoURL)
-	}
-
-	// Get assigned teams
-	teams, err := repo.GetRepositoryTeamsDetailed(ctx, repository.ID)
-	if err != nil {
-		return fmt.Errorf("failed to get repository teams: %w", err)
-	}
 
 	// Display repository details
-	fmt.Printf("\n%s\n", color.CyanString("Repository Details"))
-	fmt.Printf("URL: %s\n", repository.URL)
-	fmt.Printf("ID: %s\n", repository.ID)
-	fmt.Printf("CODEOWNERS Enforcement: %s\n", formatBool(repository.EnforceCodeowners))
-	fmt.Printf("Created: %s\n", repository.CreatedAt.Format(time.RFC3339))
+	green := color.New(color.FgGreen).SprintFunc()
+	blue := color.New(color.FgBlue).SprintFunc()
+	
+	fmt.Printf("\n%s\n", green("Repository Details"))
+	fmt.Println(strings.Repeat("-", 60))
+	fmt.Printf("• %s: %s\n", blue("URL"), response.Repository.Url)
+	fmt.Printf("• %s: %s\n", blue("ID"), response.Repository.Id)
+	fmt.Printf("• %s: %s\n", blue("CODEOWNERS"), formatBool(response.Repository.EnforceCodeowners))
+	fmt.Printf("• %s: %s\n", blue("Created"), response.Repository.CreatedAt)
 
-	if repository.CodeownersCachedAt != nil {
-		fmt.Printf("CODEOWNERS Cache: %s\n", repository.CodeownersCachedAt.Format(time.RFC3339))
-	}
-
-	fmt.Printf("\n%s (%d):\n", color.CyanString("Assigned Teams"), len(teams))
-	if len(teams) == 0 {
-		fmt.Printf("  %s\n", color.YellowString("No teams assigned"))
+	fmt.Printf("\n%s (%d)\n", green("Assigned Teams"), len(response.Teams))
+	fmt.Println(strings.Repeat("-", 60))
+	if len(response.Teams) == 0 {
+		fmt.Printf("No teams assigned.\n")
 	} else {
-		for _, team := range teams {
-			fmt.Printf("• %s (ID: %s)\n", team.Name, team.ID)
+		for _, team := range response.Teams {
+			fmt.Printf("• %s (ID: %s)\n", team.Name, team.Id)
 		}
 	}
 
@@ -422,88 +589,6 @@ func runRepoShow(ctx context.Context, repoURL string) error {
 }
 
 // Helper functions
-
-// validateRepositoryURL validates a repository URL
-func validateRepositoryURL(repoURL string) error {
-	// Parse URL
-	u, err := url.Parse(repoURL)
-	if err != nil {
-		return fmt.Errorf("invalid URL format: %w", err)
-	}
-
-	// Check scheme
-	if u.Scheme != "https" && u.Scheme != "http" {
-		return fmt.Errorf("URL must use http or https scheme")
-	}
-
-	// Check if it looks like a GitHub URL
-	if !strings.Contains(u.Host, "github") {
-		return fmt.Errorf("currently only GitHub repositories are supported")
-	}
-
-	// Check path format
-	pathParts := strings.Split(strings.Trim(u.Path, "/"), "/")
-	if len(pathParts) < 2 {
-		return fmt.Errorf("URL must include owner and repository name")
-	}
-
-	return nil
-}
-
-// isRepoAuthenticated checks if user is authenticated (reusing team auth logic)
-func isRepoAuthenticated(ctx context.Context) bool {
-	return isRepoAuthenticatedWithProfile(ctx, "")
-}
-
-func isRepoAuthenticatedWithProfile(ctx context.Context, profileName string) bool {
-	// Load CLI config
-	cliConfig, err := LoadConfig()
-	if err != nil {
-		Logger.Debug("failed to load CLI config, creating default", "error", err)
-		cliConfig = DefaultConfig()
-	}
-	
-	// Determine which profile to use
-	var profile *Profile
-	if profileName != "" {
-		// Use specified profile
-		profile, err = cliConfig.GetProfile(profileName)
-		if err != nil {
-			return false
-		}
-	} else {
-		// Use active profile
-		profile = cliConfig.GetActiveProfile()
-	}
-	
-	// Get auth configuration from profile
-	config := getProfileAuthConfig(profile)
-	if config == nil {
-		return false
-	}
-
-	// Create OIDC client
-	client, err := auth.NewOIDCClient(ctx, config)
-	if err != nil {
-		return false
-	}
-
-	// Create keyring storage for this profile
-	keyringKey := GetProfileKeyringKey(profile.Name)
-	storage := auth.NewKeyringStorageWithKey("rocketship", keyringKey)
-
-	// Create auth manager
-	manager := auth.NewManager(client, storage)
-	
-	// Use the manager's built-in authentication check
-	return manager.IsAuthenticated(ctx)
-}
-
-// connectToRepoDatabase connects to the database (reusing team database logic)
-func connectToRepoDatabase(ctx context.Context) (*pgxpool.Pool, error) {
-	config := database.DefaultConfig()
-	return database.Connect(ctx, config)
-}
 
 // formatBool formats boolean for display
 func formatBool(b bool) string {

@@ -282,25 +282,30 @@ func isAuthConfigured() bool {
 	return issuer != "" && clientID != ""
 }
 
-// getAccessToken retrieves the current access token
+// getAccessToken retrieves the current access token (DEPRECATED: use getAccessTokenForProfile)
 func getAccessToken(ctx context.Context) (string, error) {
-	// Get auth configuration
-	config, err := getAuthConfig()
-	if err != nil {
-		// If auth is not configured, return empty token (no auth)
+	// Try to load config to use profile-aware auth
+	config, err := LoadConfig()
+	if err == nil {
+		// Use profile-aware authentication
+		profile := config.GetActiveProfile()
+		return getAccessTokenForProfile(ctx, profile)
+	}
+	
+	// Fallback to environment-only auth for backward compatibility
+	authConfig := getAuthConfigFromEnv()
+	if authConfig == nil {
 		return "", nil
 	}
 
 	// Create OIDC client
-	client, err := auth.NewOIDCClient(ctx, config)
+	client, err := auth.NewOIDCClient(ctx, authConfig)
 	if err != nil {
-		// If we can't create OIDC client (e.g., OIDC provider not reachable), 
-		// return empty token to allow unauthenticated access
 		Logger.Debug("failed to create OIDC client, proceeding without auth", "error", err)
 		return "", nil
 	}
 
-	// Create keyring storage
+	// Use default keyring storage for fallback
 	storage := auth.NewKeyringStorage()
 
 	// Create auth manager
@@ -308,14 +313,12 @@ func getAccessToken(ctx context.Context) (string, error) {
 
 	// Check if authenticated
 	if !manager.IsAuthenticated(ctx) {
-		// Not authenticated, return empty token
 		return "", nil
 	}
 
 	// Get valid token
 	token, err := manager.GetValidToken(ctx)
 	if err != nil {
-		// If we can't get a valid token, return empty
 		Logger.Debug("failed to get valid token, proceeding without auth", "error", err)
 		return "", nil
 	}
@@ -407,7 +410,7 @@ func newEngineClientFromEnv(address string) (*EngineClient, error) {
 	if isAuthConfigured() {
 		Logger.Debug("authentication is configured, setting up auth interceptor")
 		
-		// Create token provider function
+		// Create token provider function using profile-aware auth fallback
 		tokenProvider := func(ctx context.Context) (string, error) {
 			return getAccessToken(ctx)
 		}

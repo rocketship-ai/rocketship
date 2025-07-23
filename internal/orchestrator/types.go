@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/rbac"
 	"go.temporal.io/sdk/client"
 )
 
 type Engine struct {
 	generated.UnimplementedEngineServer
 	temporal client.Client
+	rbacRepo *rbac.Repository
 	runs     map[string]*RunInfo
 	mu       sync.RWMutex
 }

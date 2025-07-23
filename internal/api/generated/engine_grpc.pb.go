@@ -19,13 +19,31 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Engine_CreateRun_FullMethodName  = "/rocketship.v1.Engine/CreateRun"
-	Engine_StreamLogs_FullMethodName = "/rocketship.v1.Engine/StreamLogs"
-	Engine_AddLog_FullMethodName     = "/rocketship.v1.Engine/AddLog"
-	Engine_ListRuns_FullMethodName   = "/rocketship.v1.Engine/ListRuns"
-	Engine_GetRun_FullMethodName     = "/rocketship.v1.Engine/GetRun"
-	Engine_CancelRun_FullMethodName  = "/rocketship.v1.Engine/CancelRun"
-	Engine_Health_FullMethodName     = "/rocketship.v1.Engine/Health"
+	Engine_CreateRun_FullMethodName                  = "/rocketship.v1.Engine/CreateRun"
+	Engine_StreamLogs_FullMethodName                 = "/rocketship.v1.Engine/StreamLogs"
+	Engine_AddLog_FullMethodName                     = "/rocketship.v1.Engine/AddLog"
+	Engine_ListRuns_FullMethodName                   = "/rocketship.v1.Engine/ListRuns"
+	Engine_GetRun_FullMethodName                     = "/rocketship.v1.Engine/GetRun"
+	Engine_CancelRun_FullMethodName                  = "/rocketship.v1.Engine/CancelRun"
+	Engine_Health_FullMethodName                     = "/rocketship.v1.Engine/Health"
+	Engine_GetAuthConfig_FullMethodName              = "/rocketship.v1.Engine/GetAuthConfig"
+	Engine_GetCurrentUser_FullMethodName             = "/rocketship.v1.Engine/GetCurrentUser"
+	Engine_CreateTeam_FullMethodName                 = "/rocketship.v1.Engine/CreateTeam"
+	Engine_ListTeams_FullMethodName                  = "/rocketship.v1.Engine/ListTeams"
+	Engine_AddTeamMember_FullMethodName              = "/rocketship.v1.Engine/AddTeamMember"
+	Engine_AddTeamRepository_FullMethodName          = "/rocketship.v1.Engine/AddTeamRepository"
+	Engine_RemoveTeamRepository_FullMethodName       = "/rocketship.v1.Engine/RemoveTeamRepository"
+	Engine_GetTeam_FullMethodName                    = "/rocketship.v1.Engine/GetTeam"
+	Engine_RemoveTeamMember_FullMethodName           = "/rocketship.v1.Engine/RemoveTeamMember"
+	Engine_AddRepository_FullMethodName              = "/rocketship.v1.Engine/AddRepository"
+	Engine_ListRepositories_FullMethodName           = "/rocketship.v1.Engine/ListRepositories"
+	Engine_GetRepository_FullMethodName              = "/rocketship.v1.Engine/GetRepository"
+	Engine_RemoveRepository_FullMethodName           = "/rocketship.v1.Engine/RemoveRepository"
+	Engine_AssignTeamToRepository_FullMethodName     = "/rocketship.v1.Engine/AssignTeamToRepository"
+	Engine_UnassignTeamFromRepository_FullMethodName = "/rocketship.v1.Engine/UnassignTeamFromRepository"
+	Engine_CreateToken_FullMethodName                = "/rocketship.v1.Engine/CreateToken"
+	Engine_ListTokens_FullMethodName                 = "/rocketship.v1.Engine/ListTokens"
+	Engine_RevokeToken_FullMethodName                = "/rocketship.v1.Engine/RevokeToken"
 )
 
 // EngineClient is the client API for Engine service.
@@ -39,6 +57,29 @@ type EngineClient interface {
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error)
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
+	// Authentication Discovery
+	GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error)
+	// User Info
+	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*GetCurrentUserResponse, error)
+	// Team Management
+	CreateTeam(ctx context.Context, in *CreateTeamRequest, opts ...grpc.CallOption) (*CreateTeamResponse, error)
+	ListTeams(ctx context.Context, in *ListTeamsRequest, opts ...grpc.CallOption) (*ListTeamsResponse, error)
+	AddTeamMember(ctx context.Context, in *AddTeamMemberRequest, opts ...grpc.CallOption) (*AddTeamMemberResponse, error)
+	AddTeamRepository(ctx context.Context, in *AddTeamRepositoryRequest, opts ...grpc.CallOption) (*AddTeamRepositoryResponse, error)
+	RemoveTeamRepository(ctx context.Context, in *RemoveTeamRepositoryRequest, opts ...grpc.CallOption) (*RemoveTeamRepositoryResponse, error)
+	GetTeam(ctx context.Context, in *GetTeamRequest, opts ...grpc.CallOption) (*GetTeamResponse, error)
+	RemoveTeamMember(ctx context.Context, in *RemoveTeamMemberRequest, opts ...grpc.CallOption) (*RemoveTeamMemberResponse, error)
+	// Repository Management
+	AddRepository(ctx context.Context, in *AddRepositoryRequest, opts ...grpc.CallOption) (*AddRepositoryResponse, error)
+	ListRepositories(ctx context.Context, in *ListRepositoriesRequest, opts ...grpc.CallOption) (*ListRepositoriesResponse, error)
+	GetRepository(ctx context.Context, in *GetRepositoryRequest, opts ...grpc.CallOption) (*GetRepositoryResponse, error)
+	RemoveRepository(ctx context.Context, in *RemoveRepositoryRequest, opts ...grpc.CallOption) (*RemoveRepositoryResponse, error)
+	AssignTeamToRepository(ctx context.Context, in *AssignTeamToRepositoryRequest, opts ...grpc.CallOption) (*AssignTeamToRepositoryResponse, error)
+	UnassignTeamFromRepository(ctx context.Context, in *UnassignTeamFromRepositoryRequest, opts ...grpc.CallOption) (*UnassignTeamFromRepositoryResponse, error)
+	// API Token Management
+	CreateToken(ctx context.Context, in *CreateTokenRequest, opts ...grpc.CallOption) (*CreateTokenResponse, error)
+	ListTokens(ctx context.Context, in *ListTokensRequest, opts ...grpc.CallOption) (*ListTokensResponse, error)
+	RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*RevokeTokenResponse, error)
 }
 
 type engineClient struct {
@@ -128,6 +169,186 @@ func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...gr
 	return out, nil
 }
 
+func (c *engineClient) GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAuthConfigResponse)
+	err := c.cc.Invoke(ctx, Engine_GetAuthConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*GetCurrentUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCurrentUserResponse)
+	err := c.cc.Invoke(ctx, Engine_GetCurrentUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) CreateTeam(ctx context.Context, in *CreateTeamRequest, opts ...grpc.CallOption) (*CreateTeamResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateTeamResponse)
+	err := c.cc.Invoke(ctx, Engine_CreateTeam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) ListTeams(ctx context.Context, in *ListTeamsRequest, opts ...grpc.CallOption) (*ListTeamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTeamsResponse)
+	err := c.cc.Invoke(ctx, Engine_ListTeams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) AddTeamMember(ctx context.Context, in *AddTeamMemberRequest, opts ...grpc.CallOption) (*AddTeamMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddTeamMemberResponse)
+	err := c.cc.Invoke(ctx, Engine_AddTeamMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) AddTeamRepository(ctx context.Context, in *AddTeamRepositoryRequest, opts ...grpc.CallOption) (*AddTeamRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddTeamRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_AddTeamRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) RemoveTeamRepository(ctx context.Context, in *RemoveTeamRepositoryRequest, opts ...grpc.CallOption) (*RemoveTeamRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveTeamRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_RemoveTeamRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) GetTeam(ctx context.Context, in *GetTeamRequest, opts ...grpc.CallOption) (*GetTeamResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTeamResponse)
+	err := c.cc.Invoke(ctx, Engine_GetTeam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) RemoveTeamMember(ctx context.Context, in *RemoveTeamMemberRequest, opts ...grpc.CallOption) (*RemoveTeamMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveTeamMemberResponse)
+	err := c.cc.Invoke(ctx, Engine_RemoveTeamMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) AddRepository(ctx context.Context, in *AddRepositoryRequest, opts ...grpc.CallOption) (*AddRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_AddRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) ListRepositories(ctx context.Context, in *ListRepositoriesRequest, opts ...grpc.CallOption) (*ListRepositoriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRepositoriesResponse)
+	err := c.cc.Invoke(ctx, Engine_ListRepositories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) GetRepository(ctx context.Context, in *GetRepositoryRequest, opts ...grpc.CallOption) (*GetRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_GetRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) RemoveRepository(ctx context.Context, in *RemoveRepositoryRequest, opts ...grpc.CallOption) (*RemoveRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_RemoveRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) AssignTeamToRepository(ctx context.Context, in *AssignTeamToRepositoryRequest, opts ...grpc.CallOption) (*AssignTeamToRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssignTeamToRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_AssignTeamToRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) UnassignTeamFromRepository(ctx context.Context, in *UnassignTeamFromRepositoryRequest, opts ...grpc.CallOption) (*UnassignTeamFromRepositoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnassignTeamFromRepositoryResponse)
+	err := c.cc.Invoke(ctx, Engine_UnassignTeamFromRepository_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) CreateToken(ctx context.Context, in *CreateTokenRequest, opts ...grpc.CallOption) (*CreateTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateTokenResponse)
+	err := c.cc.Invoke(ctx, Engine_CreateToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) ListTokens(ctx context.Context, in *ListTokensRequest, opts ...grpc.CallOption) (*ListTokensResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTokensResponse)
+	err := c.cc.Invoke(ctx, Engine_ListTokens_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *engineClient) RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*RevokeTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeTokenResponse)
+	err := c.cc.Invoke(ctx, Engine_RevokeToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EngineServer is the server API for Engine service.
 // All implementations must embed UnimplementedEngineServer
 // for forward compatibility.
@@ -139,6 +360,29 @@ type EngineServer interface {
 	GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error)
 	CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
+	// Authentication Discovery
+	GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error)
+	// User Info
+	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error)
+	// Team Management
+	CreateTeam(context.Context, *CreateTeamRequest) (*CreateTeamResponse, error)
+	ListTeams(context.Context, *ListTeamsRequest) (*ListTeamsResponse, error)
+	AddTeamMember(context.Context, *AddTeamMemberRequest) (*AddTeamMemberResponse, error)
+	AddTeamRepository(context.Context, *AddTeamRepositoryRequest) (*AddTeamRepositoryResponse, error)
+	RemoveTeamRepository(context.Context, *RemoveTeamRepositoryRequest) (*RemoveTeamRepositoryResponse, error)
+	GetTeam(context.Context, *GetTeamRequest) (*GetTeamResponse, error)
+	RemoveTeamMember(context.Context, *RemoveTeamMemberRequest) (*RemoveTeamMemberResponse, error)
+	// Repository Management
+	AddRepository(context.Context, *AddRepositoryRequest) (*AddRepositoryResponse, error)
+	ListRepositories(context.Context, *ListRepositoriesRequest) (*ListRepositoriesResponse, error)
+	GetRepository(context.Context, *GetRepositoryRequest) (*GetRepositoryResponse, error)
+	RemoveRepository(context.Context, *RemoveRepositoryRequest) (*RemoveRepositoryResponse, error)
+	AssignTeamToRepository(context.Context, *AssignTeamToRepositoryRequest) (*AssignTeamToRepositoryResponse, error)
+	UnassignTeamFromRepository(context.Context, *UnassignTeamFromRepositoryRequest) (*UnassignTeamFromRepositoryResponse, error)
+	// API Token Management
+	CreateToken(context.Context, *CreateTokenRequest) (*CreateTokenResponse, error)
+	ListTokens(context.Context, *ListTokensRequest) (*ListTokensResponse, error)
+	RevokeToken(context.Context, *RevokeTokenRequest) (*RevokeTokenResponse, error)
 	mustEmbedUnimplementedEngineServer()
 }
 
@@ -169,6 +413,60 @@ func (UnimplementedEngineServer) CancelRun(context.Context, *CancelRunRequest) (
 }
 func (UnimplementedEngineServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
+}
+func (UnimplementedEngineServer) GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAuthConfig not implemented")
+}
+func (UnimplementedEngineServer) GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentUser not implemented")
+}
+func (UnimplementedEngineServer) CreateTeam(context.Context, *CreateTeamRequest) (*CreateTeamResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTeam not implemented")
+}
+func (UnimplementedEngineServer) ListTeams(context.Context, *ListTeamsRequest) (*ListTeamsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTeams not implemented")
+}
+func (UnimplementedEngineServer) AddTeamMember(context.Context, *AddTeamMemberRequest) (*AddTeamMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddTeamMember not implemented")
+}
+func (UnimplementedEngineServer) AddTeamRepository(context.Context, *AddTeamRepositoryRequest) (*AddTeamRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddTeamRepository not implemented")
+}
+func (UnimplementedEngineServer) RemoveTeamRepository(context.Context, *RemoveTeamRepositoryRequest) (*RemoveTeamRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveTeamRepository not implemented")
+}
+func (UnimplementedEngineServer) GetTeam(context.Context, *GetTeamRequest) (*GetTeamResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTeam not implemented")
+}
+func (UnimplementedEngineServer) RemoveTeamMember(context.Context, *RemoveTeamMemberRequest) (*RemoveTeamMemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveTeamMember not implemented")
+}
+func (UnimplementedEngineServer) AddRepository(context.Context, *AddRepositoryRequest) (*AddRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddRepository not implemented")
+}
+func (UnimplementedEngineServer) ListRepositories(context.Context, *ListRepositoriesRequest) (*ListRepositoriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListRepositories not implemented")
+}
+func (UnimplementedEngineServer) GetRepository(context.Context, *GetRepositoryRequest) (*GetRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRepository not implemented")
+}
+func (UnimplementedEngineServer) RemoveRepository(context.Context, *RemoveRepositoryRequest) (*RemoveRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveRepository not implemented")
+}
+func (UnimplementedEngineServer) AssignTeamToRepository(context.Context, *AssignTeamToRepositoryRequest) (*AssignTeamToRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AssignTeamToRepository not implemented")
+}
+func (UnimplementedEngineServer) UnassignTeamFromRepository(context.Context, *UnassignTeamFromRepositoryRequest) (*UnassignTeamFromRepositoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnassignTeamFromRepository not implemented")
+}
+func (UnimplementedEngineServer) CreateToken(context.Context, *CreateTokenRequest) (*CreateTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateToken not implemented")
+}
+func (UnimplementedEngineServer) ListTokens(context.Context, *ListTokensRequest) (*ListTokensResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTokens not implemented")
+}
+func (UnimplementedEngineServer) RevokeToken(context.Context, *RevokeTokenRequest) (*RevokeTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevokeToken not implemented")
 }
 func (UnimplementedEngineServer) mustEmbedUnimplementedEngineServer() {}
 func (UnimplementedEngineServer) testEmbeddedByValue()                {}
@@ -310,6 +608,330 @@ func _Engine_Health_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Engine_GetAuthConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAuthConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).GetAuthConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_GetAuthConfig_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).GetAuthConfig(ctx, req.(*GetAuthConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_GetCurrentUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCurrentUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).GetCurrentUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_GetCurrentUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).GetCurrentUser(ctx, req.(*GetCurrentUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_CreateTeam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTeamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).CreateTeam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_CreateTeam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).CreateTeam(ctx, req.(*CreateTeamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_ListTeams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTeamsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).ListTeams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_ListTeams_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).ListTeams(ctx, req.(*ListTeamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_AddTeamMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddTeamMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).AddTeamMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_AddTeamMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).AddTeamMember(ctx, req.(*AddTeamMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_AddTeamRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddTeamRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).AddTeamRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_AddTeamRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).AddTeamRepository(ctx, req.(*AddTeamRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_RemoveTeamRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveTeamRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).RemoveTeamRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_RemoveTeamRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).RemoveTeamRepository(ctx, req.(*RemoveTeamRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_GetTeam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTeamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).GetTeam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_GetTeam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).GetTeam(ctx, req.(*GetTeamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_RemoveTeamMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveTeamMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).RemoveTeamMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_RemoveTeamMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).RemoveTeamMember(ctx, req.(*RemoveTeamMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_AddRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).AddRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_AddRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).AddRepository(ctx, req.(*AddRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_ListRepositories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRepositoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).ListRepositories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_ListRepositories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).ListRepositories(ctx, req.(*ListRepositoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_GetRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).GetRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_GetRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).GetRepository(ctx, req.(*GetRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_RemoveRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).RemoveRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_RemoveRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).RemoveRepository(ctx, req.(*RemoveRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_AssignTeamToRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignTeamToRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).AssignTeamToRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_AssignTeamToRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).AssignTeamToRepository(ctx, req.(*AssignTeamToRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_UnassignTeamFromRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnassignTeamFromRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).UnassignTeamFromRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_UnassignTeamFromRepository_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).UnassignTeamFromRepository(ctx, req.(*UnassignTeamFromRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_CreateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).CreateToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_CreateToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).CreateToken(ctx, req.(*CreateTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_ListTokens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTokensRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).ListTokens(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_ListTokens_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).ListTokens(ctx, req.(*ListTokensRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Engine_RevokeToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).RevokeToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_RevokeToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).RevokeToken(ctx, req.(*RevokeTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Engine_ServiceDesc is the grpc.ServiceDesc for Engine service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -340,6 +962,78 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Health",
 			Handler:    _Engine_Health_Handler,
+		},
+		{
+			MethodName: "GetAuthConfig",
+			Handler:    _Engine_GetAuthConfig_Handler,
+		},
+		{
+			MethodName: "GetCurrentUser",
+			Handler:    _Engine_GetCurrentUser_Handler,
+		},
+		{
+			MethodName: "CreateTeam",
+			Handler:    _Engine_CreateTeam_Handler,
+		},
+		{
+			MethodName: "ListTeams",
+			Handler:    _Engine_ListTeams_Handler,
+		},
+		{
+			MethodName: "AddTeamMember",
+			Handler:    _Engine_AddTeamMember_Handler,
+		},
+		{
+			MethodName: "AddTeamRepository",
+			Handler:    _Engine_AddTeamRepository_Handler,
+		},
+		{
+			MethodName: "RemoveTeamRepository",
+			Handler:    _Engine_RemoveTeamRepository_Handler,
+		},
+		{
+			MethodName: "GetTeam",
+			Handler:    _Engine_GetTeam_Handler,
+		},
+		{
+			MethodName: "RemoveTeamMember",
+			Handler:    _Engine_RemoveTeamMember_Handler,
+		},
+		{
+			MethodName: "AddRepository",
+			Handler:    _Engine_AddRepository_Handler,
+		},
+		{
+			MethodName: "ListRepositories",
+			Handler:    _Engine_ListRepositories_Handler,
+		},
+		{
+			MethodName: "GetRepository",
+			Handler:    _Engine_GetRepository_Handler,
+		},
+		{
+			MethodName: "RemoveRepository",
+			Handler:    _Engine_RemoveRepository_Handler,
+		},
+		{
+			MethodName: "AssignTeamToRepository",
+			Handler:    _Engine_AssignTeamToRepository_Handler,
+		},
+		{
+			MethodName: "UnassignTeamFromRepository",
+			Handler:    _Engine_UnassignTeamFromRepository_Handler,
+		},
+		{
+			MethodName: "CreateToken",
+			Handler:    _Engine_CreateToken_Handler,
+		},
+		{
+			MethodName: "ListTokens",
+			Handler:    _Engine_ListTokens_Handler,
+		},
+		{
+			MethodName: "RevokeToken",
+			Handler:    _Engine_RevokeToken_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

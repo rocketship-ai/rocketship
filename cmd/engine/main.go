@@ -46,7 +46,7 @@ func main() {
 	authManager, tokenManager, rbacRepo := initializeAuth()
 
 	logger.Debug("creating engine orchestrator")
-	engine := orchestrator.NewEngine(c)
+	engine := orchestrator.NewEngine(c, rbacRepo)
 	startGRPCServer(engine, authManager, tokenManager, rbacRepo)
 }
 
