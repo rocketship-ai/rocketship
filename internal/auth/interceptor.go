@@ -151,7 +151,7 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 			
 			// Get user from database to get authoritative role information
 			var err error
-			dbUser, err = a.rbacRepo.GetUser(ctx, userInfo.Subject)
+			dbUser, err = a.rbacRepo.GetUser(ctx, userInfo.Email)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get user from database: %w", err)
 			}
@@ -160,7 +160,7 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 		// Get user teams
 		var teamMemberships []rbac.TeamMember
 		if a.rbacRepo != nil {
-			memberships, err := a.rbacRepo.GetUserTeams(ctx, userInfo.Subject)
+			memberships, err := a.rbacRepo.GetUserTeams(ctx, userInfo.Email)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get user teams: %w", err)
 			}
@@ -175,7 +175,7 @@ func (a *AuthInterceptor) extractAuthContext(ctx context.Context) (*rbac.AuthCon
 
 		// Create auth context
 		authCtx := &rbac.AuthContext{
-			UserID:          userInfo.Subject,
+			UserID:          userInfo.Email, // Use email as primary key
 			Email:           userInfo.Email,
 			Name:            userInfo.Name,
 			OrgRole:         orgRole,
@@ -270,42 +270,41 @@ func (a *AuthInterceptor) ensureUserExists(ctx context.Context, userInfo *UserIn
 	serverDeterminedRole := a.determineUserRole(userInfo.Email)
 	log.Printf("INTERCEPTOR DEBUG: Server-side role determination for %s: %s", userInfo.Email, serverDeterminedRole)
 	
-	// Check if user already exists
-	existingUser, err := a.rbacRepo.GetUser(ctx, userInfo.Subject)
+	// Check if user already exists by email
+	existingUser, err := a.rbacRepo.GetUser(ctx, userInfo.Email)
 	if err == nil && existingUser != nil {
 		// User exists, check if role needs updating based on SERVER determination
 		if existingUser.OrgRole != serverDeterminedRole {
-			log.Printf("INTERCEPTOR DEBUG: User %s exists with role %s, updating to %s", userInfo.Subject, existingUser.OrgRole, serverDeterminedRole)
+			log.Printf("INTERCEPTOR DEBUG: User %s exists with role %s, updating to %s", userInfo.Email, existingUser.OrgRole, serverDeterminedRole)
 			existingUser.OrgRole = serverDeterminedRole
-			existingUser.Email = userInfo.Email // Update email in case it changed
 			existingUser.Name = userInfo.Name   // Update name in case it changed
 			if err := a.rbacRepo.UpdateUser(ctx, existingUser); err != nil {
-				log.Printf("INTERCEPTOR DEBUG: Failed to update user %s role: %v", userInfo.Subject, err)
+				log.Printf("INTERCEPTOR DEBUG: Failed to update user %s role: %v", userInfo.Email, err)
 				return fmt.Errorf("failed to update user role: %w", err)
 			}
-			log.Printf("INTERCEPTOR DEBUG: Successfully updated user %s role to %s", userInfo.Subject, serverDeterminedRole)
+			log.Printf("INTERCEPTOR DEBUG: Successfully updated user %s role to %s", userInfo.Email, serverDeterminedRole)
 		} else {
-			log.Printf("INTERCEPTOR DEBUG: User %s already exists with correct role %s", userInfo.Subject, existingUser.OrgRole)
+			log.Printf("INTERCEPTOR DEBUG: User %s already exists with correct role %s", userInfo.Email, existingUser.OrgRole)
 		}
 		return nil
 	}
 
-	log.Printf("INTERCEPTOR DEBUG: User %s doesn't exist, creating with role %s", userInfo.Subject, serverDeterminedRole)
+	log.Printf("INTERCEPTOR DEBUG: User %s doesn't exist, creating with role %s", userInfo.Email, serverDeterminedRole)
 
 	// User doesn't exist, create them with SERVER-DETERMINED role
 	user := &rbac.User{
-		ID:      userInfo.Subject,
+		ID:      userInfo.Email, // Use email as primary key
 		Email:   userInfo.Email,
 		Name:    userInfo.Name,
 		OrgRole: serverDeterminedRole, // Use server-determined role for security
 	}
 
 	if err := a.rbacRepo.CreateUser(ctx, user); err != nil {
-		log.Printf("INTERCEPTOR DEBUG: Failed to create user %s: %v", userInfo.Subject, err)
+		log.Printf("INTERCEPTOR DEBUG: Failed to create user %s: %v", userInfo.Email, err)
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	log.Printf("INTERCEPTOR DEBUG: Successfully created user %s with role %s", userInfo.Subject, serverDeterminedRole)
+	log.Printf("INTERCEPTOR DEBUG: Successfully created user %s with role %s", userInfo.Email, serverDeterminedRole)
 	return nil
 }
 

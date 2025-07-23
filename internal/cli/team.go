@@ -242,12 +242,36 @@ func runTeamAddMember(ctx context.Context, teamName, email, roleStr string, perm
 		return fmt.Errorf("invalid email address: %s", email)
 	}
 
+	// Set role-appropriate default permissions if using defaults
+	finalPermissions := permissionStrs
+	if len(permissionStrs) == 1 && permissionStrs[0] == "tests:run" {
+		// User didn't specify custom permissions, use role defaults
+		switch roleStr {
+		case "admin":
+			finalPermissions = []string{
+				"tests:run",
+				"repositories:read",
+				"repositories:write", 
+				"repositories:manage",
+				"team:members:read",
+				"team:members:write",
+				"team:members:manage",
+			}
+		case "member":
+			finalPermissions = []string{
+				"tests:run",
+				"team:members:read",
+				"repositories:read",  // NEW - can see all repositories
+			}
+		}
+	}
+
 	// Call the AddTeamMember gRPC endpoint
 	response, err := client.client.AddTeamMember(ctx, &generated.AddTeamMemberRequest{
 		TeamName:    teamName,
 		Email:       email,
 		Role:        roleStr,
-		Permissions: permissionStrs,
+		Permissions: finalPermissions,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to add team member: %w", err)
@@ -258,7 +282,7 @@ func runTeamAddMember(ctx context.Context, teamName, email, roleStr string, perm
 	}
 
 	fmt.Printf("%s %s\n", color.GreenString("✓"), response.Message)
-	fmt.Printf("Permissions: %v\n", permissionStrs)
+	fmt.Printf("Permissions: %v\n", finalPermissions)
 
 	return nil
 }

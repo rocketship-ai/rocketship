@@ -72,7 +72,7 @@ rocketship team create "Engineering"
 rocketship repo connect https://github.com/rocketship-ai/rocketship.git --team "Engineering"
 
 # 10. Add a team member
-rocketship team add-member "Engineering" "admin@yourcompany.com" admin
+rocketship team add-member "Engineering" "admin@yourcompany.com"
 
 # 11. Run a test
 rocketship run -f examples/simple-http/rocketship.yaml
@@ -409,25 +409,25 @@ rocketship team list
 
 ```bash
 # Create production CI token for backend
-./rocketship token create "Backend-CI-Production" \
+rocketship token create "Backend-CI-Production" \
   --team "Backend Development" \
   --permissions "tests:write" \
   --expires-in 90d
 
 # Create staging CI token for frontend
-./rocketship token create "Frontend-CI-Staging" \
+rocketship token create "Frontend-CI-Staging" \
   --team "Frontend Development" \
   --permissions "tests:write" \
   --expires-in 60d
 
 # Create QA automation token
-./rocketship token create "QA-Automation" \
+rocketship token create "QA-Automation" \
   --team "QA Engineering" \
   --permissions "tests:read,tests:write,tests:manage" \
   --expires-in 180d
 
 # List all tokens
-./rocketship token list
+rocketship token list
 ```
 
 ### 6.2 CI/CD Integration

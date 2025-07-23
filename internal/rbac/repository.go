@@ -99,7 +99,7 @@ func (r *Repository) GetOrCreateUserByEmail(ctx context.Context, email string) (
 	
 	// User doesn't exist, create them
 	newUser := &User{
-		ID:        "external|" + email, // Use email-based ID for external users
+		ID:        email, // Use email as primary key
 		Email:     email,
 		Name:      email, // Use email as name by default
 		OrgRole:   OrgRoleMember, // External users are members by default
@@ -688,8 +688,8 @@ func (r *Repository) GetTeamRepositories(ctx context.Context, teamID string) ([]
 // CheckTestRunPermission implements the complete permissions resolution flow
 // This is the central method that determines if a user can run tests on a specific file path
 func (r *Repository) CheckTestRunPermission(ctx context.Context, userID, repositoryURL, filePath string) (bool, error) {
-	// Step a: Check if user is an Organization Admin
-	user, err := r.GetOrCreateUserByEmail(ctx, userID)
+	// Step a: Check if user is an Organization Admin (userID is now email)
+	user, err := r.GetUser(ctx, userID)
 	if err != nil {
 		return false, fmt.Errorf("failed to get user: %w", err)
 	}
