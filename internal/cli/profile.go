@@ -376,6 +376,12 @@ func runConnect(urlStr, name, team string, port int, setDefault bool) error {
 }
 
 func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error) {
+	// Handle raw host:port format (e.g., localhost:12100)
+	if !strings.Contains(urlStr, "://") {
+		// Add http:// scheme for parsing
+		urlStr = "http://" + urlStr
+	}
+	
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return Profile{}, fmt.Errorf("invalid URL: %w", err)
@@ -422,20 +428,37 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 		}
 	}
 	
+	// Note: Authentication configuration will be auto-detected on first use
+	// The auth config is queried from the server when needed, not during profile creation
+	
 	return profile, nil
 }
 
 func generateProfileName(urlStr string) string {
+	// Handle raw host:port format (e.g., localhost:12100)
+	if !strings.Contains(urlStr, "://") {
+		urlStr = "http://" + urlStr
+	}
+	
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return "custom"
 	}
 	
 	host := parsedURL.Hostname()
+	port := parsedURL.Port()
 	
 	// Special cases for known domains
 	if host == "app.rocketship.sh" {
 		return "cloud"
+	}
+	
+	// Special case for localhost
+	if host == "localhost" || host == "127.0.0.1" {
+		if port != "" && port != "7700" {
+			return fmt.Sprintf("local-%s", port)
+		}
+		return "local"
 	}
 	
 	if strings.Contains(host, "rocketship.sh") {
@@ -451,3 +474,4 @@ func generateProfileName(urlStr string) string {
 	name = strings.ReplaceAll(name, "_", "-")
 	return name
 }
+
