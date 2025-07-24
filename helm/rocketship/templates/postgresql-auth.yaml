@@ -1,0 +1,163 @@
+{{- if .Values.authPostgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.authPostgresql.fullnameOverride }}
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth-database
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgresql
+      protocol: TCP
+      name: postgresql
+  selector:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/instance: {{ .Release.Name }}-auth
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.authPostgresql.fullnameOverride }}
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth-database
+spec:
+  serviceName: {{ .Values.authPostgresql.fullnameOverride }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/instance: {{ .Release.Name }}-auth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgresql
+        app.kubernetes.io/instance: {{ .Release.Name }}-auth
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:{{ .Values.authPostgresql.image.tag | default "16" }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.authPostgresql.auth.database }}
+            - name: POSTGRES_USER
+              value: {{ .Values.authPostgresql.auth.username }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.authPostgresql.auth.password }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U {{ .Values.authPostgresql.auth.username }} -d {{ .Values.authPostgresql.auth.database }} -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U {{ .Values.authPostgresql.auth.username }} -d {{ .Values.authPostgresql.auth.database }} -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          resources:
+            {{- toYaml .Values.authPostgresql.primary.resources | nindent 12 }}
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: {{ include "rocketship.fullname" . }}-auth-postgres-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.global.storageClass }}
+        storageClassName: {{ .Values.global.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.authPostgresql.primary.persistence.size }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rocketship.fullname" . }}-auth-postgres-init
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+data:
+  init.sql: |
+    -- Auth database initialization
+    CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR(255) PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        org_role VARCHAR(50) NOT NULL DEFAULT 'member',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE TABLE IF NOT EXISTS teams (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE TABLE IF NOT EXISTS team_members (
+        id VARCHAR(255) PRIMARY KEY,
+        team_id VARCHAR(255) NOT NULL,
+        user_id VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'member',
+        permissions TEXT[],
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(team_id, user_id)
+    );
+    
+    CREATE TABLE IF NOT EXISTS repositories (
+        id VARCHAR(255) PRIMARY KEY,
+        team_id VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+    );
+    
+    CREATE TABLE IF NOT EXISTS tokens (
+        id VARCHAR(255) PRIMARY KEY,
+        team_id VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        token_hash VARCHAR(255) NOT NULL,
+        permissions TEXT[],
+        created_by VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    );
+{{- end }}

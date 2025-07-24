@@ -34,15 +34,50 @@ When self-hosted, Rocketship consists of these components:
 
 ## Prerequisites
 
+### Docker Deployment
 - Docker and Docker Compose
 - DNS configuration capability
 - SSL certificates for production
 - Existing OIDC provider (Auth0, Okta, Azure AD, Google Workspace, etc.)
 - PostgreSQL database (optional - included in stack)
 
+### Kubernetes Deployment (Recommended for Production)
+- Kubernetes cluster (1.19+)
+- Helm 3.8+
+- kubectl configured
+- NGINX Ingress Controller
+- cert-manager (optional, for automatic TLS)
+- Persistent Volume support
+
 ## Step-by-Step Setup
 
-### 1. Infrastructure Preparation
+Choose your deployment method based on your infrastructure:
+
+### Option A: Kubernetes Deployment (Production Recommended)
+
+#### 1. Infrastructure Preparation
+
+Clone the repository and prepare Helm chart:
+
+```bash
+git clone https://github.com/rocketship-ai/rocketship.git
+cd rocketship/helm/rocketship
+
+# Add required Helm repositories
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add temporal https://go.temporal.io/helm-charts
+helm repo update
+
+# Install dependencies
+helm dependency update
+```
+
+**Purpose**: Enterprise-grade Kubernetes deployment with high availability
+**Result**: Scalable, production-ready infrastructure
+
+### Option B: Docker Deployment
+
+#### 1. Infrastructure Preparation
 
 Clone the repository and navigate to the Docker configuration:
 
@@ -138,6 +173,51 @@ cd rocketship/.docker
 
 #### Step 2.2: Configure Rocketship Environment
 
+**For Kubernetes Deployment:**
+
+Create Kubernetes secrets for OIDC configuration:
+
+```bash
+# Create namespace
+kubectl create namespace rocketship
+
+# Create OIDC secret
+kubectl create secret generic rocketship-oidc-secret \
+  --from-literal=issuer="https://your-enterprise.okta.com" \
+  --from-literal=client-id="0oa1234567890abcdef" \
+  --from-literal=client-secret="your-client-secret-from-okta" \
+  --namespace rocketship
+
+# Create custom values file
+cat > values-production.yaml <<EOF
+auth:
+  oidc:
+    existingSecret: "rocketship-oidc-secret"
+  adminEmails: "admin@your-enterprise.com,devops@your-enterprise.com"
+
+tls:
+  enabled: true
+  domain: "rocketship.your-enterprise.com"
+  certificate:
+    existingSecret: "rocketship-tls-secret"  # Create this with your certificates
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: rocketship.your-enterprise.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: rocketship-tls-secret
+      hosts:
+        - rocketship.your-enterprise.com
+EOF
+```
+
+**For Docker Deployment:**
+
 Set the OIDC configuration based on your provider:
 
 ```bash
@@ -218,6 +298,34 @@ upstream temporal_ui {
 **Result**: Production-ready HTTPS access
 
 ### 5. Initialize the Platform
+
+**For Kubernetes Deployment:**
+
+Deploy using Helm with enterprise configuration:
+
+```bash
+# Create TLS secret with your certificates
+kubectl create secret tls rocketship-tls-secret \
+  --cert=path/to/your/certificate.crt \
+  --key=path/to/your/private.key \
+  --namespace rocketship
+
+# Deploy Rocketship with production values
+helm install rocketship ./helm/rocketship \
+  -f values-production.yaml \
+  --namespace rocketship
+
+# Verify deployment
+kubectl get pods -n rocketship
+kubectl get services -n rocketship
+kubectl get ingress -n rocketship
+
+# Check application logs
+kubectl logs -n rocketship deployment/rocketship-engine
+kubectl logs -n rocketship deployment/rocketship-worker
+```
+
+**For Docker Deployment:**
 
 Start the complete authentication-enabled stack:
 
@@ -459,6 +567,27 @@ docker exec -it rocketship-auth-postgres-1 \
 ## Scaling Considerations
 
 ### Horizontal Scaling
+
+**Kubernetes (Recommended):**
+```bash
+# Scale workers for increased throughput
+kubectl scale deployment rocketship-worker --replicas=10 -n rocketship
+
+# Scale engines for high availability
+kubectl scale deployment rocketship-engine --replicas=3 -n rocketship
+
+# Enable horizontal pod autoscaling
+kubectl autoscale deployment rocketship-worker \
+  --cpu-percent=70 --min=3 --max=20 -n rocketship
+
+# Configure resource requests and limits in values.yaml
+helm upgrade rocketship ./helm/rocketship \
+  --set rocketship.worker.replicas=5 \
+  --set rocketship.engine.replicas=2 \
+  --namespace rocketship
+```
+
+**Docker:**
 - **Worker scaling**: Add more worker containers for parallel execution
 - **Engine replicas**: Multiple engine instances behind load balancer
 - **Database clustering**: PostgreSQL read replicas for high availability

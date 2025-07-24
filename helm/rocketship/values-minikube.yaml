@@ -1,0 +1,228 @@
+# Minikube values for Rocketship deployment with HTTPS
+# Replace all values in <> with your specific configuration
+
+global:
+  imageRegistry: ""
+  storageClass: "standard"
+
+rocketship:
+  engine:
+    enabled: true
+    replicas: 1
+    image:
+      repository: "rocketship/engine"  # Replace with your image when available
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    # Disable health checks if using placeholder images
+    livenessProbe:
+      enabled: true  # Set to false if using nginx/placeholder images
+    readinessProbe:
+      enabled: true  # Set to false if using nginx/placeholder images
+    
+  worker:
+    replicas: 1
+    image:
+      repository: "rocketship/worker"  # Replace with your image when available
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# Authentication configuration
+auth:
+  oidc:
+    # Option 1: Use existing secret (recommended)
+    existingSecret: "<your-oidc-secret-name>"  # e.g., "rocketship-oidc-secret"
+    
+    # Option 2: Specify values directly (values will be base64 encoded)
+    # Uncomment these if not using existingSecret:
+    # issuer: "<your-oidc-issuer>"              # e.g., "https://dev-xyz.auth0.com/"
+    # clientId: "<your-oidc-client-id>"         # e.g., "cq3sxA5rupwsvE4XIf86HXXaI7Ymc4aL"
+    # clientSecret: ""                          # Empty for PKCE flow
+    
+  adminEmails: "<your-admin-email>"             # e.g., "admin@company.com"
+
+# TLS/HTTPS configuration
+tls:
+  enabled: true
+  domain: "<your-domain>"                       # e.g., "globalbank.rocketship.sh"
+  certificate:
+    # Option 1: Use existing TLS secret (recommended)
+    existingSecret: "<your-tls-secret-name>"    # e.g., "rocketship-tls"
+    
+    # Option 2: Specify certificate and key directly
+    # Uncomment these if not using existingSecret:
+    # cert: |
+    #   -----BEGIN CERTIFICATE-----
+    #   <your-certificate-content>
+    #   -----END CERTIFICATE-----
+    # key: |
+    #   -----BEGIN PRIVATE KEY-----
+    #   <your-private-key-content>
+    #   -----END PRIVATE KEY-----
+
+# Ingress configuration for HTTPS access
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"  # Use "HTTP" if testing with nginx placeholder
+  hosts:
+    - host: "<your-domain>"                     # e.g., "globalbank.rocketship.sh"
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: rocketship-engine
+            port: 7700
+  tls:
+    - secretName: "<your-tls-secret-name>"      # e.g., "rocketship-tls"
+      hosts:
+        - "<your-domain>"                       # e.g., "globalbank.rocketship.sh"
+
+# PostgreSQL for Temporal (minimal resources for minikube)
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 2Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+# Auth PostgreSQL database (minimal resources for minikube)
+authPostgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 1Gi
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+
+# Elasticsearch for Temporal visibility (minimal resources for minikube)
+elasticsearch:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "200m"
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 2Gi
+
+# Temporal workflow engine (minimal resources for minikube)
+temporal:
+  enabled: true
+  server:
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+    config:
+      persistence:
+        default:
+          driver: "sql"
+          sql:
+            driver: "postgres12"
+            host: "rocketship-postgresql"
+            port: 5432
+            database: "temporal"
+            user: "temporal"
+            password: "temporal"
+        visibility:
+          driver: "elasticsearch"
+          elasticsearch:
+            version: "v7"
+            url:
+              scheme: "http"
+              host: "rocketship-elasticsearch-master:9200"
+  web:
+    enabled: true
+    service:
+      type: ClusterIP
+      port: 8080
+    # Optionally enable ingress for Temporal UI
+    ingress:
+      enabled: false  # Set to true if you want https://temporal.<your-domain>
+      className: "nginx"
+      hosts:
+        - host: "temporal.<your-domain>"        # e.g., "temporal.globalbank.rocketship.sh"
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: "<your-tls-secret-name>"  # e.g., "rocketship-tls"
+          hosts:
+            - "temporal.<your-domain>"          # e.g., "temporal.globalbank.rocketship.sh"
+
+# Test databases for SQL plugin testing (minimal resources for minikube)
+testDatabases:
+  postgresql:
+    enabled: true
+    primary:
+      persistence:
+        size: 500Mi
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "128Mi"
+          cpu: "100m"
+
+  mysql:
+    enabled: true
+    primary:
+      persistence:
+        size: 500Mi
+      resources:
+        requests:
+          memory: "64Mi"
+          cpu: "50m"
+        limits:
+          memory: "128Mi"
+          cpu: "100m"
+
+# Disable resource-intensive features for minikube
+serviceMonitor:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+networkPolicy:
+  enabled: false

@@ -1,0 +1,117 @@
+{{- if .Values.rocketship.worker.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rocketship.fullname" . }}-worker
+  labels:
+    {{- include "rocketship.worker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.rocketship.worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rocketship.worker.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+      labels:
+        {{- include "rocketship.worker.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.rocketship.worker.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.rocketship.worker.podSecurityContext | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          {{- if .Values.rocketship.worker.securityContext }}
+          securityContext:
+            {{- toYaml .Values.rocketship.worker.securityContext | nindent 12 }}
+          {{- end }}
+          image: {{ include "rocketship.worker.image" . }}
+          imagePullPolicy: {{ .Values.rocketship.worker.image.pullPolicy }}
+          env:
+            # Temporal configuration
+            - name: TEMPORAL_HOST
+              value: {{ include "rocketship.temporal.host" . }}
+            
+            # Authentication configuration
+            - name: ROCKETSHIP_OIDC_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.oidc.secretName" . }}
+                  key: issuer
+            - name: ROCKETSHIP_OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.oidc.secretName" . }}
+                  key: {{ .Values.auth.oidc.secretKeys.clientId }}
+            - name: ROCKETSHIP_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.oidc.secretName" . }}
+                  key: {{ .Values.auth.oidc.secretKeys.clientSecret }}
+            - name: ROCKETSHIP_ADMIN_EMAILS
+              value: {{ .Values.auth.adminEmails | quote }}
+            
+            # Database configuration
+            - name: ROCKETSHIP_DB_HOST
+              value: {{ include "rocketship.auth.database.host" . }}
+            - name: ROCKETSHIP_DB_PORT
+              value: {{ .Values.auth.database.port | quote }}
+            - name: ROCKETSHIP_DB_NAME
+              value: {{ .Values.auth.database.name }}
+            - name: ROCKETSHIP_DB_USER
+              value: {{ .Values.auth.database.user }}
+            - name: ROCKETSHIP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.database.secretName" . }}
+                  key: {{ .Values.auth.database.secretKeys.password }}
+            
+            # Logging configuration
+            - name: ROCKETSHIP_LOG
+              value: "INFO"
+            
+            # Test database configurations (for SQL plugin testing)
+            - name: POSTGRES_TEST_HOST
+              value: {{ .Values.testDatabases.postgresql.fullnameOverride | default "rocketship-postgres-test" }}
+            - name: POSTGRES_TEST_PORT
+              value: "5432"
+            - name: POSTGRES_TEST_USER
+              value: {{ .Values.testDatabases.postgresql.auth.username }}
+            - name: POSTGRES_TEST_PASSWORD
+              value: {{ .Values.testDatabases.postgresql.auth.password }}
+            - name: POSTGRES_TEST_DATABASE
+              value: {{ .Values.testDatabases.postgresql.auth.database }}
+            
+            - name: MYSQL_TEST_HOST
+              value: {{ .Values.testDatabases.mysql.fullnameOverride | default "rocketship-mysql-test" }}
+            - name: MYSQL_TEST_PORT
+              value: "3306"
+            - name: MYSQL_TEST_USER
+              value: {{ .Values.testDatabases.mysql.auth.username }}
+            - name: MYSQL_TEST_PASSWORD
+              value: {{ .Values.testDatabases.mysql.auth.password }}
+            - name: MYSQL_TEST_DATABASE
+              value: {{ .Values.testDatabases.mysql.auth.database }}
+          
+          resources:
+            {{- toYaml .Values.rocketship.worker.resources | nindent 12 }}
+      
+      {{- with .Values.rocketship.worker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rocketship.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rocketship.worker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

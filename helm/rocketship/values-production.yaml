@@ -1,0 +1,230 @@
+# Production values for Rocketship
+# Replace all values in <> with your specific configuration
+
+global:
+  imageRegistry: "<your-registry>"                      # e.g., "your-company.azurecr.io"
+  imagePullSecrets:
+    - name: registry-secret
+  storageClass: "<your-storage-class>"                  # e.g., "fast-ssd" or "gp3"
+
+rocketship:
+  engine:
+    replicas: 3
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - rocketship-engine
+            topologyKey: kubernetes.io/hostname
+    
+  worker:
+    replicas: 5
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "750m"
+      limits:
+        memory: "2Gi"
+        cpu: "1500m"
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - rocketship-worker
+            topologyKey: kubernetes.io/hostname
+
+# Production authentication
+auth:
+  oidc:
+    # Use existing secrets in production (recommended)
+    existingSecret: "<your-oidc-secret-name>"           # e.g., "rocketship-oidc-secret"
+  adminEmails: "<your-admin-emails>"                    # e.g., "admin@company.com,devops@company.com"
+  database:
+    existingSecret: "<your-db-secret-name>"             # e.g., "rocketship-db-secret"
+
+# Production TLS with real certificates
+tls:
+  enabled: true
+  domain: "<your-production-domain>"                    # e.g., "rocketship.company.com"
+  certificate:
+    existingSecret: "<your-tls-secret-name>"            # e.g., "rocketship-tls-secret"
+
+# Production ingress with Load Balancer
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+  hosts:
+    - host: "<your-production-domain>"                  # e.g., "rocketship.company.com"
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: rocketship-engine
+            port: 7700
+  tls:
+    - secretName: "<your-tls-secret-name>"              # e.g., "rocketship-tls-secret"
+      hosts:
+        - "<your-production-domain>"                    # e.g., "rocketship.company.com"
+
+# Production monitoring
+serviceMonitor:
+  enabled: true
+  namespace: "monitoring"
+  labels:
+    release: prometheus
+
+# Production databases with high availability
+postgresql:
+  enabled: true
+  architecture: "replication"
+  primary:
+    persistence:
+      size: 100Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      size: 100Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+
+authPostgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 50Gi
+      storageClass: "fast-ssd"
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+
+elasticsearch:
+  enabled: true
+  replicas: 3
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "1000m"
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 50Gi
+        storageClass: "fast-ssd"
+
+temporal:
+  enabled: true
+  server:
+    replicas: 3
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  web:
+    enabled: true
+    replicas: 2
+    ingress:
+      enabled: true
+      className: "nginx"
+      annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      hosts:
+        - host: temporal.company.com
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: temporal-tls-secret
+          hosts:
+            - temporal.company.com
+
+# Production test databases (optional, may use external)
+testDatabases:
+  postgresql:
+    enabled: false  # Use external test database in production
+  mysql:
+    enabled: false  # Use external test database in production
+
+# Production network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 7700
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: temporal
+      ports:
+        - protocol: TCP
+          port: 7233
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: database
+      ports:
+        - protocol: TCP
+          port: 5432
+
+# Production disruption budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+# Production autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80

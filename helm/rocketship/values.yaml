@@ -1,0 +1,422 @@
+# Default values for rocketship
+# This is a YAML-formatted file with enterprise-grade production defaults
+
+global:
+  # Global image registry
+  imageRegistry: "docker.io"
+  # Global image pull secrets
+  imagePullSecrets: []
+  # Global storage class
+  storageClass: ""
+
+# Rocketship configuration
+rocketship:
+  # Engine configuration
+  engine:
+    enabled: true
+    image:
+      repository: rocketship/engine
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    replicas: 2
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+    service:
+      type: ClusterIP
+      port: 7700
+      metricsPort: 7701
+    # Health check configuration
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    podSecurityContext:
+      fsGroup: 1000
+    # Node selector and affinity
+    nodeSelector: {}
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - rocketship-engine
+              topologyKey: kubernetes.io/hostname
+
+  # Worker configuration
+  worker:
+    enabled: true
+    image:
+      repository: rocketship/worker
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    replicas: 3
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+    podSecurityContext:
+      fsGroup: 1000
+    # Node selector and affinity
+    nodeSelector: {}
+    tolerations: []
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - rocketship-worker
+              topologyKey: kubernetes.io/hostname
+
+# Authentication configuration
+auth:
+  # OIDC configuration
+  oidc:
+    issuer: "https://dev-example.auth0.com/"
+    clientId: ""
+    clientSecret: ""
+    # Existing secret with OIDC credentials
+    existingSecret: ""
+    secretKeys:
+      clientId: "client-id"
+      clientSecret: "client-secret"
+  
+  # Admin configuration
+  adminEmails: "admin@company.com"
+  
+  # Database configuration for auth
+  database:
+    host: "rocketship-auth-postgresql"
+    port: 5432
+    name: "auth"
+    user: "authuser"
+    password: "authpass"
+    # Existing secret with database credentials
+    existingSecret: ""
+    secretKeys:
+      password: "password"
+
+# TLS/HTTPS configuration
+tls:
+  enabled: true
+  domain: "globalbank.rocketship.sh"
+  # Certificate configuration
+  certificate:
+    # Use existing certificate secret
+    existingSecret: ""
+    # Or provide certificate and key directly
+    cert: ""
+    key: ""
+    # Auto-generate self-signed certificate
+    selfSigned: true
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: globalbank.rocketship.sh
+      paths:
+        - path: /
+          pathType: Prefix
+          service:
+            name: rocketship-engine
+            port: 7700
+  tls:
+    - secretName: rocketship-tls
+      hosts:
+        - globalbank.rocketship.sh
+
+# Service Monitor for Prometheus (if using Prometheus operator)
+serviceMonitor:
+  enabled: false
+  namespace: ""
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+
+# PostgreSQL dependency configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "temporal"
+    username: "temporal"
+    password: "temporal"
+    database: "temporal"
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# Auth PostgreSQL configuration (separate from main temporal database)
+authPostgresql:
+  enabled: true
+  fullnameOverride: "rocketship-auth-postgresql"
+  auth:
+    postgresPassword: "authpass"
+    username: "authuser"
+    password: "authpass"
+    database: "auth"
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    initdb:
+      scripts:
+        init.sql: |
+          -- Auth database initialization
+          CREATE TABLE IF NOT EXISTS users (
+              id VARCHAR(255) PRIMARY KEY,
+              email VARCHAR(255) UNIQUE NOT NULL,
+              name VARCHAR(255) NOT NULL,
+              org_role VARCHAR(50) NOT NULL DEFAULT 'member',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS teams (
+              id VARCHAR(255) PRIMARY KEY,
+              name VARCHAR(255) NOT NULL,
+              description TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE TABLE IF NOT EXISTS team_members (
+              id VARCHAR(255) PRIMARY KEY,
+              team_id VARCHAR(255) NOT NULL,
+              user_id VARCHAR(255) NOT NULL,
+              role VARCHAR(50) NOT NULL DEFAULT 'member',
+              permissions TEXT[],
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+              UNIQUE(team_id, user_id)
+          );
+          
+          CREATE TABLE IF NOT EXISTS repositories (
+              id VARCHAR(255) PRIMARY KEY,
+              team_id VARCHAR(255) NOT NULL,
+              name VARCHAR(255) NOT NULL,
+              description TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+          );
+          
+          CREATE TABLE IF NOT EXISTS tokens (
+              id VARCHAR(255) PRIMARY KEY,
+              team_id VARCHAR(255) NOT NULL,
+              name VARCHAR(255) NOT NULL,
+              token_hash VARCHAR(255) NOT NULL,
+              permissions TEXT[],
+              created_by VARCHAR(255) NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              expires_at TIMESTAMP,
+              FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+              FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+          );
+
+# Elasticsearch dependency configuration  
+elasticsearch:
+  enabled: true
+  clusterName: "rocketship-es"
+  replicas: 1
+  minimumMasterNodes: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  volumeClaimTemplate:
+    resources:
+      requests:
+        storage: 10Gi
+  esConfig:
+    elasticsearch.yml: |
+      cluster.routing.allocation.disk.threshold_enabled: true
+      cluster.routing.allocation.disk.watermark.low: 512mb
+      cluster.routing.allocation.disk.watermark.high: 256mb
+      cluster.routing.allocation.disk.watermark.flood_stage: 128mb
+      discovery.type: single-node
+      xpack.security.enabled: false
+
+# Temporal dependency configuration
+temporal:
+  enabled: true
+  server:
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    config:
+      persistence:
+        default:
+          driver: "sql"
+          sql:
+            driver: "postgres12"
+            host: "rocketship-postgresql"
+            port: 5432
+            database: "temporal"
+            user: "temporal"
+            password: "temporal"
+            maxConns: 20
+            maxIdleConns: 20
+            maxConnLifetime: "1h"
+        visibility:
+          driver: "elasticsearch"
+          elasticsearch:
+            version: "v7"
+            url:
+              scheme: "http"
+              host: "rocketship-elasticsearch-master:9200"
+            indices:
+              visibility: "temporal_visibility_v1_dev"
+            closeTimeout: 200ms
+  web:
+    enabled: true
+    service:
+      type: ClusterIP
+      port: 8080
+    ingress:
+      enabled: true
+      className: "nginx"
+      hosts:
+        - host: temporal.globalbank.rocketship.sh
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: temporal-tls
+          hosts:
+            - temporal.globalbank.rocketship.sh
+
+# Test databases for SQL plugin testing
+testDatabases:
+  postgresql:
+    enabled: true
+    fullnameOverride: "rocketship-postgres-test"
+    auth:
+      postgresPassword: "testpass"
+      username: "testuser"
+      password: "testpass"
+      database: "testdb"
+    primary:
+      persistence:
+        enabled: true
+        size: 2Gi
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "256Mi"
+          cpu: "250m"
+
+  mysql:
+    enabled: true
+    fullnameOverride: "rocketship-mysql-test"
+    auth:
+      rootPassword: "testpass"
+      username: "testuser"
+      password: "testpass"
+      database: "testdb"
+    primary:
+      persistence:
+        enabled: true
+        size: 2Gi
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "100m"
+        limits:
+          memory: "256Mi"
+          cpu: "250m"
+
+# Network policies (if supported by cluster)
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80

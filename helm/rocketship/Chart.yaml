@@ -1,0 +1,34 @@
+apiVersion: v2
+name: rocketship
+description: Enterprise-grade Rocketship testing framework with Temporal workflow orchestration
+version: 1.0.0
+appVersion: "1.0.0"
+type: application
+home: https://docs.rocketship.sh
+sources:
+  - https://github.com/rocketship-ai/rocketship
+maintainers:
+  - name: Rocketship Team
+    email: support@rocketship.sh
+keywords:
+  - testing
+  - temporal
+  - workflow
+  - api
+  - browser
+  - automation
+annotations:
+  category: Testing
+dependencies:
+  - name: postgresql
+    version: "15.5.17"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: postgresql.enabled
+  - name: elasticsearch
+    version: "21.3.15"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: elasticsearch.enabled
+  - name: temporal
+    version: "0.46.0"
+    repository: "https://go.temporal.io/helm-charts"
+    condition: temporal.enabled

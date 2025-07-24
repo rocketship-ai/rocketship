@@ -24,3 +24,6 @@ honeyruns/
 tmp/
 cli-introspection.json
 *.log
+
+# helm things to ignore
+helm/rocketship/charts/
