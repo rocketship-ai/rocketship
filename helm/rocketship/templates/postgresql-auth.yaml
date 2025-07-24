@@ -39,7 +39,7 @@ spec:
     spec:
       containers:
         - name: postgresql
-          image: postgres:{{ .Values.authPostgresql.image.tag | default "16" }}
+          image: postgres:{{ if .Values.authPostgresql.image }}{{ .Values.authPostgresql.image.tag | default "16" }}{{ else }}16{{ end }}
           imagePullPolicy: IfNotPresent
           ports:
             - name: postgresql

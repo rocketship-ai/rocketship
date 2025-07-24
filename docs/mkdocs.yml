@@ -82,8 +82,8 @@ nav:
   - MCP Server: mcp-server.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
-      - Enterprise Self-Hosting: enterprise-self-hosting.md
-      - Kubernetes: deploy-on-kubernetes.md
+      - Docker Deployment: docker-deployment.md
+      - Kubernetes Deployment: kubernetes-deployment.md
   - Command Reference:
       - Overview: reference/rocketship.md
       - run: reference/rocketship_run.md

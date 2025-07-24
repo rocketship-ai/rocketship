@@ -10,9 +10,9 @@ rocketship:
     enabled: true
     replicas: 1
     image:
-      repository: "rocketship/engine"  # Replace with your image when available
+      repository: "rocketshipio/engine"
       tag: "latest"
-      pullPolicy: IfNotPresent
+      pullPolicy: Never
     resources:
       requests:
         memory: "128Mi"
@@ -20,18 +20,17 @@ rocketship:
       limits:
         memory: "256Mi"
         cpu: "250m"
-    # Disable health checks if using placeholder images
     livenessProbe:
-      enabled: true  # Set to false if using nginx/placeholder images
+      enabled: true
     readinessProbe:
-      enabled: true  # Set to false if using nginx/placeholder images
-    
+      enabled: true
+
   worker:
     replicas: 1
     image:
-      repository: "rocketship/worker"  # Replace with your image when available
+      repository: "rocketshipio/worker"
       tag: "latest"
-      pullPolicy: IfNotPresent
+      pullPolicy: Never
     resources:
       requests:
         memory: "256Mi"
@@ -43,25 +42,34 @@ rocketship:
 # Authentication configuration
 auth:
   oidc:
-    # Option 1: Use existing secret (recommended)
-    existingSecret: "<your-oidc-secret-name>"  # e.g., "rocketship-oidc-secret"
-    
-    # Option 2: Specify values directly (values will be base64 encoded)
-    # Uncomment these if not using existingSecret:
-    # issuer: "<your-oidc-issuer>"              # e.g., "https://dev-xyz.auth0.com/"
-    # clientId: "<your-oidc-client-id>"         # e.g., "cq3sxA5rupwsvE4XIf86HXXaI7Ymc4aL"
-    # clientSecret: ""                          # Empty for PKCE flow
-    
-  adminEmails: "<your-admin-email>"             # e.g., "admin@company.com"
+    # Specify values directly for minikube testing
+    issuer: "https://dev-0ankenxegmh7xfjm.us.auth0.com/"
+    clientId: "cq3sxA5rupwsvE4XIf86HXXaI7Ymc4aL"
+    clientSecret: "" # Empty for PKCE flow
+    secretKeys:
+      clientId: "client-id"
+      clientSecret: "client-secret"
+
+  adminEmails: "magiusdarrigo@gmail.com"
+  
+  # Database configuration for auth
+  database:
+    host: "rocketship-auth-postgresql"
+    port: 5432
+    name: "auth"
+    user: "authuser"
+    password: "authpass"
+    secretKeys:
+      password: "password"
 
 # TLS/HTTPS configuration
 tls:
   enabled: true
-  domain: "<your-domain>"                       # e.g., "globalbank.rocketship.sh"
+  domain: "globalbank.rocketship.sh" # e.g., "globalbank.rocketship.sh"
   certificate:
     # Option 1: Use existing TLS secret (recommended)
-    existingSecret: "<your-tls-secret-name>"    # e.g., "rocketship-tls"
-    
+    existingSecret: "rocketship-tls" # e.g., "rocketship-tls"
+
     # Option 2: Specify certificate and key directly
     # Uncomment these if not using existingSecret:
     # cert: |
@@ -80,9 +88,9 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"  # Use "HTTP" if testing with nginx placeholder
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC" # Use "HTTP" if testing with nginx placeholder
   hosts:
-    - host: "<your-domain>"                     # e.g., "globalbank.rocketship.sh"
+    - host: "globalbank.rocketship.sh" # e.g., "globalbank.rocketship.sh"
       paths:
         - path: /
           pathType: Prefix
@@ -90,9 +98,9 @@ ingress:
             name: rocketship-engine
             port: 7700
   tls:
-    - secretName: "<your-tls-secret-name>"      # e.g., "rocketship-tls"
+    - secretName: "rocketship-tls" # e.g., "rocketship-tls"
       hosts:
-        - "<your-domain>"                       # e.g., "globalbank.rocketship.sh"
+        - "globalbank.rocketship.sh" # e.g., "globalbank.rocketship.sh"
 
 # PostgreSQL for Temporal (minimal resources for minikube)
 postgresql:
@@ -111,6 +119,13 @@ postgresql:
 # Auth PostgreSQL database (minimal resources for minikube)
 authPostgresql:
   enabled: true
+  fullnameOverride: "rocketship-auth-postgresql"
+  image:
+    tag: "16"
+  auth:
+    database: "auth"
+    username: "authuser"
+    password: "authpass"
   primary:
     persistence:
       size: 1Gi
@@ -155,10 +170,10 @@ temporal:
           driver: "sql"
           sql:
             driver: "postgres12"
-            host: "rocketship-postgresql"
+            host: "rocketship-test-postgresql"
             port: 5432
             database: "temporal"
-            user: "temporal"
+            user: "postgres"
             password: "temporal"
         visibility:
           driver: "elasticsearch"
@@ -166,7 +181,7 @@ temporal:
             version: "v7"
             url:
               scheme: "http"
-              host: "rocketship-elasticsearch-master:9200"
+              host: "rocketship-test-elasticsearch-master:9200"
   web:
     enabled: true
     service:
@@ -174,17 +189,17 @@ temporal:
       port: 8080
     # Optionally enable ingress for Temporal UI
     ingress:
-      enabled: false  # Set to true if you want https://temporal.<your-domain>
+      enabled: false # Set to true if you want https://temporal.<your-domain>
       className: "nginx"
       hosts:
-        - host: "temporal.<your-domain>"        # e.g., "temporal.globalbank.rocketship.sh"
+        - host: "temporal.<your-domain>" # e.g., "temporal.globalbank.rocketship.sh"
           paths:
             - path: /
               pathType: Prefix
       tls:
-        - secretName: "<your-tls-secret-name>"  # e.g., "rocketship-tls"
+        - secretName: "<your-tls-secret-name>" # e.g., "rocketship-tls"
           hosts:
-            - "temporal.<your-domain>"          # e.g., "temporal.globalbank.rocketship.sh"
+            - "temporal.<your-domain>" # e.g., "temporal.globalbank.rocketship.sh"
 
 # Test databases for SQL plugin testing (minimal resources for minikube)
 testDatabases:

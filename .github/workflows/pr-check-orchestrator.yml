@@ -1,0 +1,28 @@
+name: Pull Request Check - Orchestrator
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # This job waits for all other workflows to complete
+  pr-check-complete:
+    name: All PR Checks Complete
+    runs-on: ubuntu-latest
+    needs: []  # This will be empty as we can't reference other workflows directly
+    
+    steps:
+      - name: PR Checks Status
+        run: |
+          echo "This workflow serves as an orchestrator for PR checks."
+          echo "Individual checks run in separate workflow files:"
+          echo "- build-test.yml: Build and test Go code + Docker images"
+          echo "- cli-integration.yml: CLI integration tests with databases and examples"
+          echo "- docs-validation.yml: Documentation validation and sync checks"
+          echo "- mcp-integration.yml: MCP server integration tests"
+          echo "- helm-chart-tests.yml: Helm chart deployment and validation tests"
+          echo ""
+          echo "All individual workflow files will run based on their path triggers."
+          echo "Check the 'Actions' tab to see the status of each workflow."
+          echo ""
+          echo "✅ PR check orchestrator completed"

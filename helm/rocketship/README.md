@@ -2,17 +2,26 @@
 
 This Helm chart deploys an enterprise-grade Rocketship testing framework on Kubernetes with Temporal workflow orchestration.
 
+## Quick Reference
+
+For complete deployment instructions, see the **[Kubernetes Deployment Guide](../../docs/src/kubernetes-deployment.md)** which includes:
+- Prerequisites and cluster setup
+- Authentication configuration
+- TLS/HTTPS setup
+- Production deployment examples
+- Team management
+- Monitoring and scaling
+- Troubleshooting
+
 ## Prerequisites
 
 - Kubernetes 1.19+
 - Helm 3.8+
-- PV provisioner support in the underlying infrastructure
-- NGINX Ingress Controller (for ingress)
-- cert-manager (optional, for automatic TLS certificates)
+- PV provisioner support
+- NGINX Ingress Controller
+- cert-manager (optional, for automatic TLS)
 
-## Installation
-
-### Quick Start with Minikube
+## Quick Install
 
 ```bash
 # Add required Helm repositories
@@ -20,46 +29,11 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo add temporal https://go.temporal.io/helm-charts
 helm repo update
 
-# Install NGINX Ingress Controller in minikube
-minikube addons enable ingress
+# Install chart dependencies
+helm dependency update
 
-# Edit values file with your configuration
-# Replace all <placeholders> with your specific values
-nano ./helm/rocketship/values-minikube.yaml
-
-# Deploy Rocketship with minikube configuration
-helm install rocketship ./helm/rocketship -f ./helm/rocketship/values-minikube.yaml
-
-# Add domain to /etc/hosts for local testing
-echo "$(minikube ip) <your-domain> temporal.<your-domain>" | sudo tee -a /etc/hosts
-```
-
-### Production Deployment
-
-```bash
-# Add required Helm repositories
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo add temporal https://go.temporal.io/helm-charts
-helm repo update
-
-# Create namespace
-kubectl create namespace rocketship
-
-# Create secrets for production
-kubectl create secret generic rocketship-oidc-secret \
-  --from-literal=issuer="https://your-company.auth0.com/" \
-  --from-literal=client-id="your-client-id" \
-  --from-literal=client-secret="your-client-secret" \
-  --namespace rocketship
-
-kubectl create secret generic rocketship-db-secret \
-  --from-literal=password="your-secure-database-password" \
-  --namespace rocketship
-
-# Deploy with production values
-helm install rocketship ./helm/rocketship \
-  -f ./helm/rocketship/values-production.yaml \
-  --namespace rocketship
+# Deploy with your values file
+helm install rocketship . -f values-production.yaml
 ```
 
 ## Configuration
