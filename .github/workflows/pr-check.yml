@@ -337,6 +337,16 @@ jobs:
             exit 1
           fi
 
+          echo "Running s3 example..."
+          OUTPUT=$(rocketship run -af examples/s3-testing/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ S3 plugin tests passed"
+          else
+            echo "❌ S3 plugin tests had failures"
+            exit 1
+          fi
+
           echo "Running SQL testing example..."
           OUTPUT=$(rocketship run -af examples/sql-testing/rocketship.yaml --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
           echo "$OUTPUT"
