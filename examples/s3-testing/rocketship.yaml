@@ -1,11 +1,11 @@
 name: "Simple S3 Test Suite"
 description: "A simple test suite that demonstrates basic S3 operations"
 vars:
-  s3_bucket: "rahul-girman-bucket"
-  aws_access_key: ""
-  aws_secret_key: ""
-  aws_region: "ap-south-1"
-  
+  s3_bucket: "test-bucket"
+  aws_access_key: "test"
+  aws_secret_key: "test"
+  aws_region: "us-east-1"
+  local_stack_endpoint: "http://localhost:4566"  # Used only for local testing with LocalStack
 tests:
   - name: "Upload File to S3"
     steps:
@@ -24,6 +24,7 @@ tests:
           bucket: "{{ .vars.s3_bucket }}"
           key_prefix: "uploads"
           aws_region: "{{ .vars.aws_region }}"
+          endpoint: "{{ .vars.local_stack_endpoint }}"  # Use LocalStack endpoint for local testing
         assertions:
           - type: "json_path"
             path: ".status"
@@ -56,6 +57,7 @@ tests:
           aws_region: "{{ .vars.aws_region }}"
           key_prefix: "uploads"
           file_path: "/home/rahul/{{file_name}}" # Path to save the downloaded file if provided
+          endpoint: "{{ .vars.local_stack_endpoint }}"  # Use LocalStack endpoint for local testing
 
       - name: "Log end of S3 download test"
         plugin: "log"
@@ -77,6 +79,7 @@ tests:
           bucket: "{{ .vars.s3_bucket }}"
           key_prefix: "uploads"
           aws_region: "{{ .vars.aws_region }}"
+          endpoint: "{{ .vars.local_stack_endpoint }}"  # Use LocalStack endpoint for local testing
 
       - name: "Log end of S3 delete test"
         plugin: "log"

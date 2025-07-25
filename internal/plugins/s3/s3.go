@@ -126,6 +126,11 @@ func (p *S3Plugin) Activity(ctx context.Context, params map[string]interface{}) 
 		return nil, err
 	}
 
+	localStackEndpoint, ok := cfg["endpoint"].(string)
+	if !ok {
+		localStackEndpoint = ""
+	}
+
 	// Setup AWS config
 	awsCfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(awsRegion),
@@ -135,8 +140,13 @@ func (p *S3Plugin) Activity(ctx context.Context, params map[string]interface{}) 
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	client := s3.NewFromConfig(awsCfg)
-
+	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+		if localStackEndpoint !=""{
+			o.BaseEndpoint = aws.String(localStackEndpoint) // Use LocalStack endpoint if provided
+		}
+	})
+	
 	switch operation {
 		case "PUT":
 			return handlePut(ctx, cfg, params, client, state)

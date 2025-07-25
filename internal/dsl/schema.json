@@ -780,6 +780,10 @@
                           "aws_region": {
                             "type": "string",
                             "description": "AWS region"
+                          },
+                          "endpoint": {
+                            "type": "string",
+                            "description": "S3 endpoint URL (optional, for local testing with LocalStack)"
                           }
                         },
                         "required": [
