@@ -25,6 +25,10 @@ spec:
       securityContext:
         {{- toYaml .Values.rocketship.worker.podSecurityContext | nindent 8 }}
       {{- end }}
+      initContainers:
+        - name: wait-for-temporal
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "rocketship.temporal.host" . | replace ":7233" "" }} 7233; do echo "Waiting for Temporal..."; sleep 5; done']
       containers:
         - name: worker
           {{- if .Values.rocketship.worker.securityContext }}

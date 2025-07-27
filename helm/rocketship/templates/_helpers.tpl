@@ -180,7 +180,7 @@ Temporal host
 */}}
 {{- define "rocketship.temporal.host" -}}
 {{- if .Values.temporal.enabled }}
-{{- printf "%s-frontend:7233" .Release.Name }}
+{{- printf "%s-temporal-frontend:7233" .Release.Name }}
 {{- else }}
 {{- .Values.temporal.externalHost | default "temporal:7233" }}
 {{- end }}

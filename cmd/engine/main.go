@@ -185,7 +185,12 @@ func startGRPCServer(engine generated.EngineServer, authManager *auth.Manager, t
 		logger.Info("loading TLS certificate", "domain", tlsDomain)
 		
 		// Create certificate manager to load certificates
-		certManager, err := certs.NewManager(&certs.Config{})
+		certConfig := &certs.Config{}
+		if certDir := os.Getenv("ROCKETSHIP_CERT_DIR"); certDir != "" {
+			certConfig.CertDir = certDir
+			logger.Debug("using certificate directory from environment", "cert_dir", certDir)
+		}
+		certManager, err := certs.NewManager(certConfig)
 		if err != nil {
 			logger.Error("failed to create certificate manager", "error", err)
 			os.Exit(1)

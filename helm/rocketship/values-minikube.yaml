@@ -1,9 +1,16 @@
 # Minikube values for Rocketship deployment with HTTPS
-# Replace all values in <> with your specific configuration
+# Minimal configuration following Temporal Helm Chart README
 
 global:
   imageRegistry: ""
   storageClass: "standard"
+
+# Enable TLS for HTTPS testing
+tls:
+  enabled: true
+  domain: "globalbank.rocketship.sh"
+  certificate:
+    existingSecret: "rocketship-test-tls"
 
 rocketship:
   engine:
@@ -20,10 +27,6 @@ rocketship:
       limits:
         memory: "256Mi"
         cpu: "250m"
-    livenessProbe:
-      enabled: true
-    readinessProbe:
-      enabled: true
 
   worker:
     replicas: 1
@@ -42,19 +45,14 @@ rocketship:
 # Authentication configuration
 auth:
   oidc:
-    # Specify values directly for minikube testing
     issuer: "https://dev-0ankenxegmh7xfjm.us.auth0.com/"
     clientId: "cq3sxA5rupwsvE4XIf86HXXaI7Ymc4aL"
-    clientSecret: "" # Empty for PKCE flow
+    clientSecret: " " # Empty for PKCE flow
     secretKeys:
       clientId: "client-id"
       clientSecret: "client-secret"
-
-  adminEmails: "magiusdarrigo@gmail.com"
-  
-  # Database configuration for auth
   database:
-    host: "rocketship-auth-postgresql"
+    host: "rocketship-test-postgresql"
     port: 5432
     name: "auth"
     user: "authuser"
@@ -62,47 +60,7 @@ auth:
     secretKeys:
       password: "password"
 
-# TLS/HTTPS configuration
-tls:
-  enabled: true
-  domain: "globalbank.rocketship.sh" # e.g., "globalbank.rocketship.sh"
-  certificate:
-    # Option 1: Use existing TLS secret (recommended)
-    existingSecret: "rocketship-tls" # e.g., "rocketship-tls"
-
-    # Option 2: Specify certificate and key directly
-    # Uncomment these if not using existingSecret:
-    # cert: |
-    #   -----BEGIN CERTIFICATE-----
-    #   <your-certificate-content>
-    #   -----END CERTIFICATE-----
-    # key: |
-    #   -----BEGIN PRIVATE KEY-----
-    #   <your-private-key-content>
-    #   -----END PRIVATE KEY-----
-
-# Ingress configuration for HTTPS access
-ingress:
-  enabled: true
-  className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC" # Use "HTTP" if testing with nginx placeholder
-  hosts:
-    - host: "globalbank.rocketship.sh" # e.g., "globalbank.rocketship.sh"
-      paths:
-        - path: /
-          pathType: Prefix
-          service:
-            name: rocketship-engine
-            port: 7700
-  tls:
-    - secretName: "rocketship-tls" # e.g., "rocketship-tls"
-      hosts:
-        - "globalbank.rocketship.sh" # e.g., "globalbank.rocketship.sh"
-
-# PostgreSQL for Temporal (minimal resources for minikube)
+# PostgreSQL for both auth and Temporal persistence
 postgresql:
   enabled: true
   primary:
@@ -115,48 +73,35 @@ postgresql:
       limits:
         memory: "256Mi"
         cpu: "200m"
-
-# Auth PostgreSQL database (minimal resources for minikube)
-authPostgresql:
-  enabled: true
-  fullnameOverride: "rocketship-auth-postgresql"
-  image:
-    tag: "16"
   auth:
-    database: "auth"
-    username: "authuser"
-    password: "authpass"
-  primary:
-    persistence:
-      size: 1Gi
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
-        memory: "128Mi"
-        cpu: "100m"
+    username: "temporal"
+    password: "temporal"
+    database: "temporal"
+    existingSecret: ""
 
-# Elasticsearch for Temporal visibility (minimal resources for minikube)
+# Disable Elasticsearch chart dependency entirely
 elasticsearch:
-  enabled: true
-  replicas: 1
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "200m"
-  volumeClaimTemplate:
-    resources:
-      requests:
-        storage: 2Gi
+  enabled: false
 
-# Temporal workflow engine (minimal resources for minikube)
+# Temporal workflow engine - MINIMAL configuration following README
 temporal:
   enabled: true
+  
+  # Disable all optional components for minimal installation
+  cassandra:
+    enabled: false
+  mysql:
+    enabled: false
+  elasticsearch:
+    enabled: false
+  grafana:
+    enabled: false
+  prometheus:
+    enabled: false
+  
+  # Single replica for minikube
   server:
+    replicaCount: 1
     resources:
       requests:
         memory: "256Mi"
@@ -164,6 +109,8 @@ temporal:
       limits:
         memory: "512Mi"
         cpu: "200m"
+    
+    # Use PostgreSQL for both persistence and visibility
     config:
       persistence:
         default:
@@ -173,61 +120,32 @@ temporal:
             host: "rocketship-test-postgresql"
             port: 5432
             database: "temporal"
-            user: "postgres"
+            user: "temporal"
             password: "temporal"
+            maxConns: 20
+            maxConnLifetime: "1h"
         visibility:
-          driver: "elasticsearch"
-          elasticsearch:
-            version: "v7"
-            url:
-              scheme: "http"
-              host: "rocketship-test-elasticsearch-master:9200"
+          driver: "sql"
+          sql:
+            driver: "postgres12"
+            host: "rocketship-test-postgresql"
+            port: 5432
+            database: "temporal_visibility"
+            user: "temporal"
+            password: "temporal"
+            maxConns: 20
+            maxConnLifetime: "1h"
+
+  # Enable web UI
   web:
     enabled: true
     service:
       type: ClusterIP
       port: 8080
-    # Optionally enable ingress for Temporal UI
     ingress:
-      enabled: false # Set to true if you want https://temporal.<your-domain>
-      className: "nginx"
-      hosts:
-        - host: "temporal.<your-domain>" # e.g., "temporal.globalbank.rocketship.sh"
-          paths:
-            - path: /
-              pathType: Prefix
-      tls:
-        - secretName: "<your-tls-secret-name>" # e.g., "rocketship-tls"
-          hosts:
-            - "temporal.<your-domain>" # e.g., "temporal.globalbank.rocketship.sh"
+      enabled: false
 
-# Test databases for SQL plugin testing (minimal resources for minikube)
-testDatabases:
-  postgresql:
-    enabled: true
-    primary:
-      persistence:
-        size: 500Mi
-      resources:
-        requests:
-          memory: "64Mi"
-          cpu: "50m"
-        limits:
-          memory: "128Mi"
-          cpu: "100m"
-
-  mysql:
-    enabled: true
-    primary:
-      persistence:
-        size: 500Mi
-      resources:
-        requests:
-          memory: "64Mi"
-          cpu: "50m"
-        limits:
-          memory: "128Mi"
-          cpu: "100m"
+# Test databases removed - not needed for core rocketship functionality
 
 # Disable resource-intensive features for minikube
 serviceMonitor:

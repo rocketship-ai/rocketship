@@ -16,6 +16,7 @@ This guide covers deploying Rocketship on Kubernetes using Helm charts. You'll g
 ## Prerequisites
 
 ### Infrastructure Requirements
+
 - Kubernetes cluster (v1.19+)
 - kubectl configured and connected to your cluster
 - Helm 3.8+ installed
@@ -24,17 +25,10 @@ This guide covers deploying Rocketship on Kubernetes using Helm charts. You'll g
 - cert-manager (optional, for automatic TLS certificates)
 
 ### Access Requirements
+
 - Admin access to your identity provider (Auth0, Okta, etc.)
 - DNS management for your domain
 - SSL certificates (or ability to generate via cert-manager)
-
-### Resource Requirements
-
-**Minimum (Development/Testing):**
-- 2 CPU cores, 4GB RAM, 10GB storage
-
-**Production:**
-- 8+ CPU cores, 16+ GB RAM, 100+ GB storage (fast SSDs recommended)
 
 ## Quick Start (Minikube Testing)
 
@@ -60,30 +54,29 @@ helm repo update
 helm dependency update
 
 # Build Rocketship images for minikube
+cd ../..
 eval $(minikube docker-env)  # Use minikube's Docker daemon
 make install                 # Build binaries first
 docker build -f .docker/Dockerfile.engine -t rocketshipio/engine:latest .
 docker build -f .docker/Dockerfile.worker -t rocketshipio/worker:latest .
 
 # Create test TLS secret (self-signed)
-kubectl create secret tls rocketship-tls \
-  --cert=<(openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /dev/stdout -out /dev/stdout -subj "/CN=globalbank.rocketship.sh") \
-  --key=<(openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /dev/stdout -out /dev/stdout -subj "/CN=globalbank.rocketship.sh")
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /tmp/tls.key -out /tmp/tls.crt \
+  -subj "/CN=globalbank.rocketship.sh"
+kubectl create secret tls rocketship-test-tls --cert=/tmp/tls.crt --key=/tmp/tls.key
+rm /tmp/tls.key /tmp/tls.crt
 
 # Deploy complete Rocketship system
+cd helm/rocketship
 helm install rocketship-test . -f values-minikube.yaml
 
-# Add to hosts file for HTTPS testing
+# Add to hosts file for HTTPS testing (removes old entries first)
+sudo sed -i '/globalbank\.rocketship\.sh/d' /etc/hosts
 echo "$(minikube ip) globalbank.rocketship.sh" | sudo tee -a /etc/hosts
 
 # Start tunnel for ingress (in separate terminal)
 minikube tunnel
-
-# Wait for infrastructure to be ready (may take 5-10 minutes)
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql --timeout=300s
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=elasticsearch --timeout=300s
 
 # Check deployment status
 kubectl get pods | grep rocketship-test
@@ -159,11 +152,13 @@ helm install cert-manager jetstack/cert-manager \
 **For Auth0:**
 
 1. **Create Application**
+
    - Go to Auth0 Dashboard → Applications → Create Application
    - Name: `Rocketship Enterprise`
    - Type: `Web Application`
 
 2. **Configure Settings**
+
    ```
    Allowed Callback URLs: https://rocketship.your-domain.com/auth/callback
    Allowed Logout URLs: https://rocketship.your-domain.com/logout
@@ -177,11 +172,13 @@ helm install cert-manager jetstack/cert-manager \
 **For Okta:**
 
 1. **Create App Integration**
+
    - Okta Admin Console → Applications → Create App Integration
    - Sign-in method: `OIDC - OpenID Connect`
    - Application type: `Web Application`
 
 2. **Configure Application**
+
    ```
    App name: Rocketship Enterprise
    Grant type: Authorization Code
@@ -223,9 +220,9 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
-    - http01:
-        ingress:
-          class: nginx
+      - http01:
+          ingress:
+            class: nginx
 ```
 
 ```bash
@@ -265,7 +262,7 @@ Create `values-production.yaml`:
 ```yaml
 # Production configuration for your domain
 global:
-  imageRegistry: "your-registry.com"  # Optional: your private registry
+  imageRegistry: "your-registry.com" # Optional: your private registry
   storageClass: "fast-ssd"
 
 rocketship:
@@ -287,7 +284,7 @@ rocketship:
                   operator: In
                   values: [rocketship-engine]
             topologyKey: kubernetes.io/hostname
-  
+
   worker:
     replicas: 5
     resources:
@@ -309,7 +306,7 @@ tls:
   enabled: true
   domain: "rocketship.your-domain.com"
   certificate:
-    existingSecret: "rocketship-tls"  # If using BYOC
+    existingSecret: "rocketship-tls" # If using BYOC
     # Use cert-manager instead:
     # certManager:
     #   issuer: "letsencrypt-prod"
@@ -506,7 +503,7 @@ serviceMonitor:
   enabled: true
   namespace: "monitoring"
   labels:
-    release: prometheus  # Match your Prometheus operator labels
+    release: prometheus # Match your Prometheus operator labels
 
 # Available metrics endpoints:
 # - rocketship-engine:7701/metrics (engine metrics)
@@ -625,6 +622,7 @@ helm upgrade rocketship . \
 ### Minikube-Specific Issues
 
 **Engine/Worker pods showing "Error" or "CrashLoopBackOff":**
+
 ```bash
 # Check pod status
 kubectl get pods | grep -E "(engine|worker)"
@@ -637,6 +635,7 @@ kubectl logs deployment/rocketship-test-worker
 ```
 
 **Elasticsearch pods pending or not ready:**
+
 ```bash
 # Check resource constraints
 kubectl top nodes
@@ -652,6 +651,7 @@ minikube start --memory=10240 --cpus=6
 ```
 
 **Temporal schema initialization failing:**
+
 ```bash
 # Check temporal schema job logs
 kubectl logs job/rocketship-test-temporal-schema
@@ -665,6 +665,7 @@ helm upgrade rocketship-test . -f values-minikube.yaml
 ```
 
 **"ImagePullBackOff" for rocketshipio/engine:latest:**
+
 ```bash
 # Images may not be available yet in the registry
 # Build them locally instead:
@@ -682,24 +683,28 @@ kubectl rollout restart deployment rocketship-test-worker
 ### General Issues
 
 **Pods not starting:**
+
 ```bash
 kubectl describe pod [pod-name]
 kubectl logs [pod-name]
 ```
 
 **Ingress not working:**
+
 ```bash
 kubectl describe ingress rocketship-test
 kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
 ```
 
 **Database connection issues:**
+
 ```bash
 kubectl exec deployment/rocketship-test-engine -- nc -zv rocketship-test-postgresql 5432
 kubectl logs deployment/rocketship-test-engine | grep -i database
 ```
 
 **Certificate issues:**
+
 ```bash
 kubectl describe certificate rocketship-tls
 kubectl logs -n cert-manager deployment/cert-manager
@@ -732,62 +737,6 @@ kill %1
 
 echo "6. Checking recent events..."
 kubectl get events -n rocketship --sort-by='.metadata.creationTimestamp' | tail -10
-```
-
-## CI/CD Integration
-
-### GitHub Actions Example
-
-```yaml
-# .github/workflows/rocketship-tests.yml
-name: Rocketship Tests
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run Rocketship Tests
-        env:
-          ROCKETSHIP_API_TOKEN: ${{ secrets.ROCKETSHIP_TOKEN }}
-        run: |
-          # Install Rocketship CLI
-          curl -L https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64 -o rocketship
-          chmod +x rocketship
-          
-          # Run tests against production deployment
-          ./rocketship run -f tests/integration.yaml \
-            --engine https://rocketship.your-domain.com
-```
-
-### Jenkins Pipeline Example
-
-```groovy
-pipeline {
-    agent any
-    environment {
-        ROCKETSHIP_API_TOKEN = credentials('rocketship-token')
-        ROCKETSHIP_ENGINE = 'https://rocketship.your-domain.com'
-    }
-    stages {
-        stage('Test') {
-            steps {
-                sh '''
-                    curl -L https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-linux-amd64 -o rocketship
-                    chmod +x rocketship
-                    ./rocketship run -f tests/api-tests.yaml
-                '''
-            }
-        }
-    }
-    post {
-        always {
-            sh './rocketship list'
-        }
-    }
-}
 ```
 
 This Kubernetes deployment guide provides a complete, production-ready setup for Rocketship with enterprise features, security, monitoring, and scalability built-in.

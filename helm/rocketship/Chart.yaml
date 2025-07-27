@@ -8,8 +8,8 @@ home: https://docs.rocketship.sh
 sources:
   - https://github.com/rocketship-ai/rocketship
 maintainers:
-  - name: Rocketship Team
-    email: support@rocketship.sh
+  - name: Matteo Agius-D'Arrigo
+    email: magiusdarrigo@gmail.com
 keywords:
   - testing
   - temporal
