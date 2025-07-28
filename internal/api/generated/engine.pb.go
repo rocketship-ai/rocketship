@@ -1213,6 +1213,2355 @@ func (x *HealthResponse) GetStatus() string {
 	return ""
 }
 
+// Team Management Messages
+type CreateTeamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTeamRequest) Reset() {
+	*x = CreateTeamRequest{}
+	mi := &file_engine_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTeamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTeamRequest) ProtoMessage() {}
+
+func (x *CreateTeamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTeamRequest.ProtoReflect.Descriptor instead.
+func (*CreateTeamRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CreateTeamRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type CreateTeamResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamId        string                 `protobuf:"bytes,1,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTeamResponse) Reset() {
+	*x = CreateTeamResponse{}
+	mi := &file_engine_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTeamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTeamResponse) ProtoMessage() {}
+
+func (x *CreateTeamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTeamResponse.ProtoReflect.Descriptor instead.
+func (*CreateTeamResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CreateTeamResponse) GetTeamId() string {
+	if x != nil {
+		return x.TeamId
+	}
+	return ""
+}
+
+func (x *CreateTeamResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+type ListTeamsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTeamsRequest) Reset() {
+	*x = ListTeamsRequest{}
+	mi := &file_engine_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTeamsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTeamsRequest) ProtoMessage() {}
+
+func (x *ListTeamsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTeamsRequest.ProtoReflect.Descriptor instead.
+func (*ListTeamsRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{20}
+}
+
+type ListTeamsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Teams         []*Team                `protobuf:"bytes,1,rep,name=teams,proto3" json:"teams,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTeamsResponse) Reset() {
+	*x = ListTeamsResponse{}
+	mi := &file_engine_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTeamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTeamsResponse) ProtoMessage() {}
+
+func (x *ListTeamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTeamsResponse.ProtoReflect.Descriptor instead.
+func (*ListTeamsResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ListTeamsResponse) GetTeams() []*Team {
+	if x != nil {
+		return x.Teams
+	}
+	return nil
+}
+
+type Team struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name            string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	CreatedAt       string                 `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	MemberCount     int32                  `protobuf:"varint,4,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"`
+	RepositoryCount int32                  `protobuf:"varint,5,opt,name=repository_count,json=repositoryCount,proto3" json:"repository_count,omitempty"`
+	UserRole        string                 `protobuf:"bytes,6,opt,name=user_role,json=userRole,proto3" json:"user_role,omitempty"` // Role of requesting user in this team
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Team) Reset() {
+	*x = Team{}
+	mi := &file_engine_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Team) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Team) ProtoMessage() {}
+
+func (x *Team) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Team.ProtoReflect.Descriptor instead.
+func (*Team) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *Team) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Team) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Team) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *Team) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
+}
+
+func (x *Team) GetRepositoryCount() int32 {
+	if x != nil {
+		return x.RepositoryCount
+	}
+	return 0
+}
+
+func (x *Team) GetUserRole() string {
+	if x != nil {
+		return x.UserRole
+	}
+	return ""
+}
+
+type AddTeamMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamName      string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"` // "admin" | "member"
+	Permissions   []string               `protobuf:"bytes,4,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddTeamMemberRequest) Reset() {
+	*x = AddTeamMemberRequest{}
+	mi := &file_engine_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddTeamMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTeamMemberRequest) ProtoMessage() {}
+
+func (x *AddTeamMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTeamMemberRequest.ProtoReflect.Descriptor instead.
+func (*AddTeamMemberRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *AddTeamMemberRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *AddTeamMemberRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *AddTeamMemberRequest) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *AddTeamMemberRequest) GetPermissions() []string {
+	if x != nil {
+		return x.Permissions
+	}
+	return nil
+}
+
+type AddTeamMemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddTeamMemberResponse) Reset() {
+	*x = AddTeamMemberResponse{}
+	mi := &file_engine_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddTeamMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTeamMemberResponse) ProtoMessage() {}
+
+func (x *AddTeamMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTeamMemberResponse.ProtoReflect.Descriptor instead.
+func (*AddTeamMemberResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *AddTeamMemberResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AddTeamMemberResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type AddTeamRepositoryRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TeamName          string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	RepositoryUrl     string                 `protobuf:"bytes,2,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	EnforceCodeowners bool                   `protobuf:"varint,3,opt,name=enforce_codeowners,json=enforceCodeowners,proto3" json:"enforce_codeowners,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AddTeamRepositoryRequest) Reset() {
+	*x = AddTeamRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddTeamRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTeamRepositoryRequest) ProtoMessage() {}
+
+func (x *AddTeamRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTeamRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*AddTeamRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *AddTeamRepositoryRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *AddTeamRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *AddTeamRepositoryRequest) GetEnforceCodeowners() bool {
+	if x != nil {
+		return x.EnforceCodeowners
+	}
+	return false
+}
+
+type AddTeamRepositoryResponse struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Success            bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message            string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	RepositoryFullName string                 `protobuf:"bytes,3,opt,name=repository_full_name,json=repositoryFullName,proto3" json:"repository_full_name,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AddTeamRepositoryResponse) Reset() {
+	*x = AddTeamRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddTeamRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddTeamRepositoryResponse) ProtoMessage() {}
+
+func (x *AddTeamRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddTeamRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*AddTeamRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *AddTeamRepositoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AddTeamRepositoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *AddTeamRepositoryResponse) GetRepositoryFullName() string {
+	if x != nil {
+		return x.RepositoryFullName
+	}
+	return ""
+}
+
+type RemoveTeamRepositoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamName      string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	RepositoryUrl string                 `protobuf:"bytes,2,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveTeamRepositoryRequest) Reset() {
+	*x = RemoveTeamRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTeamRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTeamRepositoryRequest) ProtoMessage() {}
+
+func (x *RemoveTeamRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTeamRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*RemoveTeamRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *RemoveTeamRepositoryRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *RemoveTeamRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+type RemoveTeamRepositoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveTeamRepositoryResponse) Reset() {
+	*x = RemoveTeamRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTeamRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTeamRepositoryResponse) ProtoMessage() {}
+
+func (x *RemoveTeamRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTeamRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*RemoveTeamRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *RemoveTeamRepositoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RemoveTeamRepositoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type GetTeamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamName      string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTeamRequest) Reset() {
+	*x = GetTeamRequest{}
+	mi := &file_engine_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTeamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTeamRequest) ProtoMessage() {}
+
+func (x *GetTeamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTeamRequest.ProtoReflect.Descriptor instead.
+func (*GetTeamRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetTeamRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+type GetTeamResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Team          *Team                  `protobuf:"bytes,1,opt,name=team,proto3" json:"team,omitempty"`
+	Members       []*TeamMember          `protobuf:"bytes,2,rep,name=members,proto3" json:"members,omitempty"`
+	Repositories  []*TeamRepository      `protobuf:"bytes,3,rep,name=repositories,proto3" json:"repositories,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTeamResponse) Reset() {
+	*x = GetTeamResponse{}
+	mi := &file_engine_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTeamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTeamResponse) ProtoMessage() {}
+
+func (x *GetTeamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTeamResponse.ProtoReflect.Descriptor instead.
+func (*GetTeamResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetTeamResponse) GetTeam() *Team {
+	if x != nil {
+		return x.Team
+	}
+	return nil
+}
+
+func (x *GetTeamResponse) GetMembers() []*TeamMember {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+func (x *GetTeamResponse) GetRepositories() []*TeamRepository {
+	if x != nil {
+		return x.Repositories
+	}
+	return nil
+}
+
+type TeamMember struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"` // "admin" | "member"
+	Permissions   []string               `protobuf:"bytes,4,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	JoinedAt      string                 `protobuf:"bytes,5,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TeamMember) Reset() {
+	*x = TeamMember{}
+	mi := &file_engine_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TeamMember) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TeamMember) ProtoMessage() {}
+
+func (x *TeamMember) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TeamMember.ProtoReflect.Descriptor instead.
+func (*TeamMember) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *TeamMember) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *TeamMember) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *TeamMember) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *TeamMember) GetPermissions() []string {
+	if x != nil {
+		return x.Permissions
+	}
+	return nil
+}
+
+func (x *TeamMember) GetJoinedAt() string {
+	if x != nil {
+		return x.JoinedAt
+	}
+	return ""
+}
+
+type TeamRepository struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryUrl  string                 `protobuf:"bytes,1,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	RepositoryName string                 `protobuf:"bytes,2,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"`
+	AddedAt        string                 `protobuf:"bytes,3,opt,name=added_at,json=addedAt,proto3" json:"added_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *TeamRepository) Reset() {
+	*x = TeamRepository{}
+	mi := &file_engine_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TeamRepository) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TeamRepository) ProtoMessage() {}
+
+func (x *TeamRepository) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TeamRepository.ProtoReflect.Descriptor instead.
+func (*TeamRepository) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *TeamRepository) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *TeamRepository) GetRepositoryName() string {
+	if x != nil {
+		return x.RepositoryName
+	}
+	return ""
+}
+
+func (x *TeamRepository) GetAddedAt() string {
+	if x != nil {
+		return x.AddedAt
+	}
+	return ""
+}
+
+type RemoveTeamMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamName      string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveTeamMemberRequest) Reset() {
+	*x = RemoveTeamMemberRequest{}
+	mi := &file_engine_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTeamMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTeamMemberRequest) ProtoMessage() {}
+
+func (x *RemoveTeamMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTeamMemberRequest.ProtoReflect.Descriptor instead.
+func (*RemoveTeamMemberRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *RemoveTeamMemberRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *RemoveTeamMemberRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+type RemoveTeamMemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveTeamMemberResponse) Reset() {
+	*x = RemoveTeamMemberResponse{}
+	mi := &file_engine_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveTeamMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveTeamMemberResponse) ProtoMessage() {}
+
+func (x *RemoveTeamMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveTeamMemberResponse.ProtoReflect.Descriptor instead.
+func (*RemoveTeamMemberResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *RemoveTeamMemberResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RemoveTeamMemberResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+// Authentication Discovery Messages
+type GetAuthConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuthConfigRequest) Reset() {
+	*x = GetAuthConfigRequest{}
+	mi := &file_engine_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuthConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuthConfigRequest) ProtoMessage() {}
+
+func (x *GetAuthConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuthConfigRequest.ProtoReflect.Descriptor instead.
+func (*GetAuthConfigRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{35}
+}
+
+type GetAuthConfigResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AuthEnabled   bool                   `protobuf:"varint,1,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
+	Oidc          *OIDCConfig            `protobuf:"bytes,2,opt,name=oidc,proto3" json:"oidc,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAuthConfigResponse) Reset() {
+	*x = GetAuthConfigResponse{}
+	mi := &file_engine_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAuthConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAuthConfigResponse) ProtoMessage() {}
+
+func (x *GetAuthConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAuthConfigResponse.ProtoReflect.Descriptor instead.
+func (*GetAuthConfigResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *GetAuthConfigResponse) GetAuthEnabled() bool {
+	if x != nil {
+		return x.AuthEnabled
+	}
+	return false
+}
+
+func (x *GetAuthConfigResponse) GetOidc() *OIDCConfig {
+	if x != nil {
+		return x.Oidc
+	}
+	return nil
+}
+
+type OIDCConfig struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Issuer        string                 `protobuf:"bytes,1,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	ClientId      string                 `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	Scopes        []string               `protobuf:"bytes,3,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OIDCConfig) Reset() {
+	*x = OIDCConfig{}
+	mi := &file_engine_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OIDCConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OIDCConfig) ProtoMessage() {}
+
+func (x *OIDCConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OIDCConfig.ProtoReflect.Descriptor instead.
+func (*OIDCConfig) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *OIDCConfig) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
+	}
+	return ""
+}
+
+func (x *OIDCConfig) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
+}
+
+func (x *OIDCConfig) GetScopes() []string {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+// User Info Messages
+type GetCurrentUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserRequest) Reset() {
+	*x = GetCurrentUserRequest{}
+	mi := &file_engine_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserRequest) ProtoMessage() {}
+
+func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
+func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{38}
+}
+
+type GetCurrentUserResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	OrgRole       string                 `protobuf:"bytes,4,opt,name=org_role,json=orgRole,proto3" json:"org_role,omitempty"` // Server-determined role
+	Groups        []string               `protobuf:"bytes,5,rep,name=groups,proto3" json:"groups,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserResponse) Reset() {
+	*x = GetCurrentUserResponse{}
+	mi := &file_engine_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserResponse) ProtoMessage() {}
+
+func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentUserResponse.ProtoReflect.Descriptor instead.
+func (*GetCurrentUserResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *GetCurrentUserResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetCurrentUserResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GetCurrentUserResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetCurrentUserResponse) GetOrgRole() string {
+	if x != nil {
+		return x.OrgRole
+	}
+	return ""
+}
+
+func (x *GetCurrentUserResponse) GetGroups() []string {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+// Repository Management Messages
+type AddRepositoryRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryUrl     string                 `protobuf:"bytes,1,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	EnforceCodeowners bool                   `protobuf:"varint,2,opt,name=enforce_codeowners,json=enforceCodeowners,proto3" json:"enforce_codeowners,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *AddRepositoryRequest) Reset() {
+	*x = AddRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddRepositoryRequest) ProtoMessage() {}
+
+func (x *AddRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*AddRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *AddRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *AddRepositoryRequest) GetEnforceCodeowners() bool {
+	if x != nil {
+		return x.EnforceCodeowners
+	}
+	return false
+}
+
+type AddRepositoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryId  string                 `protobuf:"bytes,1,opt,name=repository_id,json=repositoryId,proto3" json:"repository_id,omitempty"`
+	RepositoryUrl string                 `protobuf:"bytes,2,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	Success       bool                   `protobuf:"varint,3,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddRepositoryResponse) Reset() {
+	*x = AddRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddRepositoryResponse) ProtoMessage() {}
+
+func (x *AddRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*AddRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *AddRepositoryResponse) GetRepositoryId() string {
+	if x != nil {
+		return x.RepositoryId
+	}
+	return ""
+}
+
+func (x *AddRepositoryResponse) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *AddRepositoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AddRepositoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type ListRepositoriesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRepositoriesRequest) Reset() {
+	*x = ListRepositoriesRequest{}
+	mi := &file_engine_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRepositoriesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRepositoriesRequest) ProtoMessage() {}
+
+func (x *ListRepositoriesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRepositoriesRequest.ProtoReflect.Descriptor instead.
+func (*ListRepositoriesRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{42}
+}
+
+type ListRepositoriesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Repositories  []*Repository          `protobuf:"bytes,1,rep,name=repositories,proto3" json:"repositories,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRepositoriesResponse) Reset() {
+	*x = ListRepositoriesResponse{}
+	mi := &file_engine_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRepositoriesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRepositoriesResponse) ProtoMessage() {}
+
+func (x *ListRepositoriesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRepositoriesResponse.ProtoReflect.Descriptor instead.
+func (*ListRepositoriesResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ListRepositoriesResponse) GetRepositories() []*Repository {
+	if x != nil {
+		return x.Repositories
+	}
+	return nil
+}
+
+type Repository struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Url               string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	EnforceCodeowners bool                   `protobuf:"varint,3,opt,name=enforce_codeowners,json=enforceCodeowners,proto3" json:"enforce_codeowners,omitempty"`
+	CreatedAt         string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TeamNames         []string               `protobuf:"bytes,5,rep,name=team_names,json=teamNames,proto3" json:"team_names,omitempty"`
+	TeamCount         int32                  `protobuf:"varint,6,opt,name=team_count,json=teamCount,proto3" json:"team_count,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *Repository) Reset() {
+	*x = Repository{}
+	mi := &file_engine_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Repository) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Repository) ProtoMessage() {}
+
+func (x *Repository) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Repository.ProtoReflect.Descriptor instead.
+func (*Repository) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *Repository) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Repository) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *Repository) GetEnforceCodeowners() bool {
+	if x != nil {
+		return x.EnforceCodeowners
+	}
+	return false
+}
+
+func (x *Repository) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *Repository) GetTeamNames() []string {
+	if x != nil {
+		return x.TeamNames
+	}
+	return nil
+}
+
+func (x *Repository) GetTeamCount() int32 {
+	if x != nil {
+		return x.TeamCount
+	}
+	return 0
+}
+
+type GetRepositoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryUrl string                 `protobuf:"bytes,1,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRepositoryRequest) Reset() {
+	*x = GetRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRepositoryRequest) ProtoMessage() {}
+
+func (x *GetRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*GetRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *GetRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+type GetRepositoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Repository    *Repository            `protobuf:"bytes,1,opt,name=repository,proto3" json:"repository,omitempty"`
+	Teams         []*Team                `protobuf:"bytes,2,rep,name=teams,proto3" json:"teams,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRepositoryResponse) Reset() {
+	*x = GetRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRepositoryResponse) ProtoMessage() {}
+
+func (x *GetRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*GetRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GetRepositoryResponse) GetRepository() *Repository {
+	if x != nil {
+		return x.Repository
+	}
+	return nil
+}
+
+func (x *GetRepositoryResponse) GetTeams() []*Team {
+	if x != nil {
+		return x.Teams
+	}
+	return nil
+}
+
+type RemoveRepositoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryUrl string                 `protobuf:"bytes,1,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveRepositoryRequest) Reset() {
+	*x = RemoveRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveRepositoryRequest) ProtoMessage() {}
+
+func (x *RemoveRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*RemoveRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *RemoveRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+type RemoveRepositoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveRepositoryResponse) Reset() {
+	*x = RemoveRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveRepositoryResponse) ProtoMessage() {}
+
+func (x *RemoveRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*RemoveRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *RemoveRepositoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RemoveRepositoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type AssignTeamToRepositoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryUrl string                 `protobuf:"bytes,1,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	TeamName      string                 `protobuf:"bytes,2,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssignTeamToRepositoryRequest) Reset() {
+	*x = AssignTeamToRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssignTeamToRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssignTeamToRepositoryRequest) ProtoMessage() {}
+
+func (x *AssignTeamToRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssignTeamToRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*AssignTeamToRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *AssignTeamToRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *AssignTeamToRepositoryRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+type AssignTeamToRepositoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AssignTeamToRepositoryResponse) Reset() {
+	*x = AssignTeamToRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AssignTeamToRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AssignTeamToRepositoryResponse) ProtoMessage() {}
+
+func (x *AssignTeamToRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AssignTeamToRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*AssignTeamToRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *AssignTeamToRepositoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AssignTeamToRepositoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type UnassignTeamFromRepositoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RepositoryUrl string                 `protobuf:"bytes,1,opt,name=repository_url,json=repositoryUrl,proto3" json:"repository_url,omitempty"`
+	TeamName      string                 `protobuf:"bytes,2,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnassignTeamFromRepositoryRequest) Reset() {
+	*x = UnassignTeamFromRepositoryRequest{}
+	mi := &file_engine_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnassignTeamFromRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnassignTeamFromRepositoryRequest) ProtoMessage() {}
+
+func (x *UnassignTeamFromRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnassignTeamFromRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*UnassignTeamFromRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *UnassignTeamFromRepositoryRequest) GetRepositoryUrl() string {
+	if x != nil {
+		return x.RepositoryUrl
+	}
+	return ""
+}
+
+func (x *UnassignTeamFromRepositoryRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+type UnassignTeamFromRepositoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnassignTeamFromRepositoryResponse) Reset() {
+	*x = UnassignTeamFromRepositoryResponse{}
+	mi := &file_engine_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnassignTeamFromRepositoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnassignTeamFromRepositoryResponse) ProtoMessage() {}
+
+func (x *UnassignTeamFromRepositoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnassignTeamFromRepositoryResponse.ProtoReflect.Descriptor instead.
+func (*UnassignTeamFromRepositoryResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *UnassignTeamFromRepositoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *UnassignTeamFromRepositoryResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+// API Token Management Messages
+type CreateTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamName      string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Permissions   []string               `protobuf:"bytes,3,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	ExpiresAt     string                 `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // Optional: YYYY-MM-DD format
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTokenRequest) Reset() {
+	*x = CreateTokenRequest{}
+	mi := &file_engine_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTokenRequest) ProtoMessage() {}
+
+func (x *CreateTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTokenRequest.ProtoReflect.Descriptor instead.
+func (*CreateTokenRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *CreateTokenRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *CreateTokenRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateTokenRequest) GetPermissions() []string {
+	if x != nil {
+		return x.Permissions
+	}
+	return nil
+}
+
+func (x *CreateTokenRequest) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+type CreateTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TokenId       string                 `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"` // The actual token string (only shown once)
+	TeamName      string                 `protobuf:"bytes,3,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	Permissions   []string               `protobuf:"bytes,4,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	ExpiresAt     string                 `protobuf:"bytes,5,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // Empty if never expires
+	Success       bool                   `protobuf:"varint,6,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,7,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTokenResponse) Reset() {
+	*x = CreateTokenResponse{}
+	mi := &file_engine_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTokenResponse) ProtoMessage() {}
+
+func (x *CreateTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTokenResponse.ProtoReflect.Descriptor instead.
+func (*CreateTokenResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *CreateTokenResponse) GetTokenId() string {
+	if x != nil {
+		return x.TokenId
+	}
+	return ""
+}
+
+func (x *CreateTokenResponse) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *CreateTokenResponse) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *CreateTokenResponse) GetPermissions() []string {
+	if x != nil {
+		return x.Permissions
+	}
+	return nil
+}
+
+func (x *CreateTokenResponse) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+func (x *CreateTokenResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *CreateTokenResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type ListTokensRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TeamName      string                 `protobuf:"bytes,1,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"` // Optional: filter by team name
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTokensRequest) Reset() {
+	*x = ListTokensRequest{}
+	mi := &file_engine_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTokensRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTokensRequest) ProtoMessage() {}
+
+func (x *ListTokensRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTokensRequest.ProtoReflect.Descriptor instead.
+func (*ListTokensRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *ListTokensRequest) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+type ListTokensResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tokens        []*ApiToken            `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTokensResponse) Reset() {
+	*x = ListTokensResponse{}
+	mi := &file_engine_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTokensResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTokensResponse) ProtoMessage() {}
+
+func (x *ListTokensResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTokensResponse.ProtoReflect.Descriptor instead.
+func (*ListTokensResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *ListTokensResponse) GetTokens() []*ApiToken {
+	if x != nil {
+		return x.Tokens
+	}
+	return nil
+}
+
+type ApiToken struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	TeamId        string                 `protobuf:"bytes,3,opt,name=team_id,json=teamId,proto3" json:"team_id,omitempty"`
+	TeamName      string                 `protobuf:"bytes,4,opt,name=team_name,json=teamName,proto3" json:"team_name,omitempty"`
+	Permissions   []string               `protobuf:"bytes,5,rep,name=permissions,proto3" json:"permissions,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	LastUsedAt    string                 `protobuf:"bytes,7,opt,name=last_used_at,json=lastUsedAt,proto3" json:"last_used_at,omitempty"` // Empty if never used
+	ExpiresAt     string                 `protobuf:"bytes,8,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`      // Empty if never expires
+	CreatedBy     string                 `protobuf:"bytes,9,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApiToken) Reset() {
+	*x = ApiToken{}
+	mi := &file_engine_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApiToken) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApiToken) ProtoMessage() {}
+
+func (x *ApiToken) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApiToken.ProtoReflect.Descriptor instead.
+func (*ApiToken) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *ApiToken) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ApiToken) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ApiToken) GetTeamId() string {
+	if x != nil {
+		return x.TeamId
+	}
+	return ""
+}
+
+func (x *ApiToken) GetTeamName() string {
+	if x != nil {
+		return x.TeamName
+	}
+	return ""
+}
+
+func (x *ApiToken) GetPermissions() []string {
+	if x != nil {
+		return x.Permissions
+	}
+	return nil
+}
+
+func (x *ApiToken) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *ApiToken) GetLastUsedAt() string {
+	if x != nil {
+		return x.LastUsedAt
+	}
+	return ""
+}
+
+func (x *ApiToken) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+func (x *ApiToken) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
+	}
+	return ""
+}
+
+type RevokeTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TokenId       string                 `protobuf:"bytes,1,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeTokenRequest) Reset() {
+	*x = RevokeTokenRequest{}
+	mi := &file_engine_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeTokenRequest) ProtoMessage() {}
+
+func (x *RevokeTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeTokenRequest.ProtoReflect.Descriptor instead.
+func (*RevokeTokenRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *RevokeTokenRequest) GetTokenId() string {
+	if x != nil {
+		return x.TokenId
+	}
+	return ""
+}
+
+type RevokeTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeTokenResponse) Reset() {
+	*x = RevokeTokenResponse{}
+	mi := &file_engine_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeTokenResponse) ProtoMessage() {}
+
+func (x *RevokeTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeTokenResponse.ProtoReflect.Descriptor instead.
+func (*RevokeTokenResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *RevokeTokenResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *RevokeTokenResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -1327,7 +3676,168 @@ const file_engine_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"\x0f\n" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2\x93\x04\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\"'\n" +
+	"\x11CreateTeamRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"A\n" +
+	"\x12CreateTeamResponse\x12\x17\n" +
+	"\ateam_id\x18\x01 \x01(\tR\x06teamId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\"\x12\n" +
+	"\x10ListTeamsRequest\">\n" +
+	"\x11ListTeamsResponse\x12)\n" +
+	"\x05teams\x18\x01 \x03(\v2\x13.rocketship.v1.TeamR\x05teams\"\xb4\x01\n" +
+	"\x04Team\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x03 \x01(\tR\tcreatedAt\x12!\n" +
+	"\fmember_count\x18\x04 \x01(\x05R\vmemberCount\x12)\n" +
+	"\x10repository_count\x18\x05 \x01(\x05R\x0frepositoryCount\x12\x1b\n" +
+	"\tuser_role\x18\x06 \x01(\tR\buserRole\"\x7f\n" +
+	"\x14AddTeamMemberRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12 \n" +
+	"\vpermissions\x18\x04 \x03(\tR\vpermissions\"K\n" +
+	"\x15AddTeamMemberResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x8d\x01\n" +
+	"\x18AddTeamRepositoryRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\x12%\n" +
+	"\x0erepository_url\x18\x02 \x01(\tR\rrepositoryUrl\x12-\n" +
+	"\x12enforce_codeowners\x18\x03 \x01(\bR\x11enforceCodeowners\"\x81\x01\n" +
+	"\x19AddTeamRepositoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x120\n" +
+	"\x14repository_full_name\x18\x03 \x01(\tR\x12repositoryFullName\"a\n" +
+	"\x1bRemoveTeamRepositoryRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\x12%\n" +
+	"\x0erepository_url\x18\x02 \x01(\tR\rrepositoryUrl\"R\n" +
+	"\x1cRemoveTeamRepositoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"-\n" +
+	"\x0eGetTeamRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\"\xb2\x01\n" +
+	"\x0fGetTeamResponse\x12'\n" +
+	"\x04team\x18\x01 \x01(\v2\x13.rocketship.v1.TeamR\x04team\x123\n" +
+	"\amembers\x18\x02 \x03(\v2\x19.rocketship.v1.TeamMemberR\amembers\x12A\n" +
+	"\frepositories\x18\x03 \x03(\v2\x1d.rocketship.v1.TeamRepositoryR\frepositories\"\x8e\x01\n" +
+	"\n" +
+	"TeamMember\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12 \n" +
+	"\vpermissions\x18\x04 \x03(\tR\vpermissions\x12\x1b\n" +
+	"\tjoined_at\x18\x05 \x01(\tR\bjoinedAt\"{\n" +
+	"\x0eTeamRepository\x12%\n" +
+	"\x0erepository_url\x18\x01 \x01(\tR\rrepositoryUrl\x12'\n" +
+	"\x0frepository_name\x18\x02 \x01(\tR\x0erepositoryName\x12\x19\n" +
+	"\badded_at\x18\x03 \x01(\tR\aaddedAt\"L\n" +
+	"\x17RemoveTeamMemberRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\"N\n" +
+	"\x18RemoveTeamMemberResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x16\n" +
+	"\x14GetAuthConfigRequest\"i\n" +
+	"\x15GetAuthConfigResponse\x12!\n" +
+	"\fauth_enabled\x18\x01 \x01(\bR\vauthEnabled\x12-\n" +
+	"\x04oidc\x18\x02 \x01(\v2\x19.rocketship.v1.OIDCConfigR\x04oidc\"Y\n" +
+	"\n" +
+	"OIDCConfig\x12\x16\n" +
+	"\x06issuer\x18\x01 \x01(\tR\x06issuer\x12\x1b\n" +
+	"\tclient_id\x18\x02 \x01(\tR\bclientId\x12\x16\n" +
+	"\x06scopes\x18\x03 \x03(\tR\x06scopes\"\x17\n" +
+	"\x15GetCurrentUserRequest\"\x8e\x01\n" +
+	"\x16GetCurrentUserResponse\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x19\n" +
+	"\borg_role\x18\x04 \x01(\tR\aorgRole\x12\x16\n" +
+	"\x06groups\x18\x05 \x03(\tR\x06groups\"l\n" +
+	"\x14AddRepositoryRequest\x12%\n" +
+	"\x0erepository_url\x18\x01 \x01(\tR\rrepositoryUrl\x12-\n" +
+	"\x12enforce_codeowners\x18\x02 \x01(\bR\x11enforceCodeowners\"\x97\x01\n" +
+	"\x15AddRepositoryResponse\x12#\n" +
+	"\rrepository_id\x18\x01 \x01(\tR\frepositoryId\x12%\n" +
+	"\x0erepository_url\x18\x02 \x01(\tR\rrepositoryUrl\x12\x18\n" +
+	"\asuccess\x18\x03 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\"\x19\n" +
+	"\x17ListRepositoriesRequest\"Y\n" +
+	"\x18ListRepositoriesResponse\x12=\n" +
+	"\frepositories\x18\x01 \x03(\v2\x19.rocketship.v1.RepositoryR\frepositories\"\xba\x01\n" +
+	"\n" +
+	"Repository\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12-\n" +
+	"\x12enforce_codeowners\x18\x03 \x01(\bR\x11enforceCodeowners\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"team_names\x18\x05 \x03(\tR\tteamNames\x12\x1d\n" +
+	"\n" +
+	"team_count\x18\x06 \x01(\x05R\tteamCount\"=\n" +
+	"\x14GetRepositoryRequest\x12%\n" +
+	"\x0erepository_url\x18\x01 \x01(\tR\rrepositoryUrl\"}\n" +
+	"\x15GetRepositoryResponse\x129\n" +
+	"\n" +
+	"repository\x18\x01 \x01(\v2\x19.rocketship.v1.RepositoryR\n" +
+	"repository\x12)\n" +
+	"\x05teams\x18\x02 \x03(\v2\x13.rocketship.v1.TeamR\x05teams\"@\n" +
+	"\x17RemoveRepositoryRequest\x12%\n" +
+	"\x0erepository_url\x18\x01 \x01(\tR\rrepositoryUrl\"N\n" +
+	"\x18RemoveRepositoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"c\n" +
+	"\x1dAssignTeamToRepositoryRequest\x12%\n" +
+	"\x0erepository_url\x18\x01 \x01(\tR\rrepositoryUrl\x12\x1b\n" +
+	"\tteam_name\x18\x02 \x01(\tR\bteamName\"T\n" +
+	"\x1eAssignTeamToRepositoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"g\n" +
+	"!UnassignTeamFromRepositoryRequest\x12%\n" +
+	"\x0erepository_url\x18\x01 \x01(\tR\rrepositoryUrl\x12\x1b\n" +
+	"\tteam_name\x18\x02 \x01(\tR\bteamName\"X\n" +
+	"\"UnassignTeamFromRepositoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x86\x01\n" +
+	"\x12CreateTokenRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vpermissions\x18\x03 \x03(\tR\vpermissions\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\tR\texpiresAt\"\xd8\x01\n" +
+	"\x13CreateTokenResponse\x12\x19\n" +
+	"\btoken_id\x18\x01 \x01(\tR\atokenId\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1b\n" +
+	"\tteam_name\x18\x03 \x01(\tR\bteamName\x12 \n" +
+	"\vpermissions\x18\x04 \x03(\tR\vpermissions\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x05 \x01(\tR\texpiresAt\x12\x18\n" +
+	"\asuccess\x18\x06 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\a \x01(\tR\amessage\"0\n" +
+	"\x11ListTokensRequest\x12\x1b\n" +
+	"\tteam_name\x18\x01 \x01(\tR\bteamName\"E\n" +
+	"\x12ListTokensResponse\x12/\n" +
+	"\x06tokens\x18\x01 \x03(\v2\x17.rocketship.v1.ApiTokenR\x06tokens\"\x85\x02\n" +
+	"\bApiToken\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x17\n" +
+	"\ateam_id\x18\x03 \x01(\tR\x06teamId\x12\x1b\n" +
+	"\tteam_name\x18\x04 \x01(\tR\bteamName\x12 \n" +
+	"\vpermissions\x18\x05 \x03(\tR\vpermissions\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\tR\tcreatedAt\x12 \n" +
+	"\flast_used_at\x18\a \x01(\tR\n" +
+	"lastUsedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\b \x01(\tR\texpiresAt\x12\x1d\n" +
+	"\n" +
+	"created_by\x18\t \x01(\tR\tcreatedBy\"/\n" +
+	"\x12RevokeTokenRequest\x12\x19\n" +
+	"\btoken_id\x18\x01 \x01(\tR\atokenId\"I\n" +
+	"\x13RevokeTokenResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage2\xd1\x11\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +
@@ -1336,7 +3846,27 @@ const file_engine_proto_rawDesc = "" +
 	"\bListRuns\x12\x1e.rocketship.v1.ListRunsRequest\x1a\x1f.rocketship.v1.ListRunsResponse\x12E\n" +
 	"\x06GetRun\x12\x1c.rocketship.v1.GetRunRequest\x1a\x1d.rocketship.v1.GetRunResponse\x12N\n" +
 	"\tCancelRun\x12\x1f.rocketship.v1.CancelRunRequest\x1a .rocketship.v1.CancelRunResponse\x12E\n" +
-	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
+	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponse\x12Z\n" +
+	"\rGetAuthConfig\x12#.rocketship.v1.GetAuthConfigRequest\x1a$.rocketship.v1.GetAuthConfigResponse\x12]\n" +
+	"\x0eGetCurrentUser\x12$.rocketship.v1.GetCurrentUserRequest\x1a%.rocketship.v1.GetCurrentUserResponse\x12Q\n" +
+	"\n" +
+	"CreateTeam\x12 .rocketship.v1.CreateTeamRequest\x1a!.rocketship.v1.CreateTeamResponse\x12N\n" +
+	"\tListTeams\x12\x1f.rocketship.v1.ListTeamsRequest\x1a .rocketship.v1.ListTeamsResponse\x12Z\n" +
+	"\rAddTeamMember\x12#.rocketship.v1.AddTeamMemberRequest\x1a$.rocketship.v1.AddTeamMemberResponse\x12f\n" +
+	"\x11AddTeamRepository\x12'.rocketship.v1.AddTeamRepositoryRequest\x1a(.rocketship.v1.AddTeamRepositoryResponse\x12o\n" +
+	"\x14RemoveTeamRepository\x12*.rocketship.v1.RemoveTeamRepositoryRequest\x1a+.rocketship.v1.RemoveTeamRepositoryResponse\x12H\n" +
+	"\aGetTeam\x12\x1d.rocketship.v1.GetTeamRequest\x1a\x1e.rocketship.v1.GetTeamResponse\x12c\n" +
+	"\x10RemoveTeamMember\x12&.rocketship.v1.RemoveTeamMemberRequest\x1a'.rocketship.v1.RemoveTeamMemberResponse\x12Z\n" +
+	"\rAddRepository\x12#.rocketship.v1.AddRepositoryRequest\x1a$.rocketship.v1.AddRepositoryResponse\x12c\n" +
+	"\x10ListRepositories\x12&.rocketship.v1.ListRepositoriesRequest\x1a'.rocketship.v1.ListRepositoriesResponse\x12Z\n" +
+	"\rGetRepository\x12#.rocketship.v1.GetRepositoryRequest\x1a$.rocketship.v1.GetRepositoryResponse\x12c\n" +
+	"\x10RemoveRepository\x12&.rocketship.v1.RemoveRepositoryRequest\x1a'.rocketship.v1.RemoveRepositoryResponse\x12u\n" +
+	"\x16AssignTeamToRepository\x12,.rocketship.v1.AssignTeamToRepositoryRequest\x1a-.rocketship.v1.AssignTeamToRepositoryResponse\x12\x81\x01\n" +
+	"\x1aUnassignTeamFromRepository\x120.rocketship.v1.UnassignTeamFromRepositoryRequest\x1a1.rocketship.v1.UnassignTeamFromRepositoryResponse\x12T\n" +
+	"\vCreateToken\x12!.rocketship.v1.CreateTokenRequest\x1a\".rocketship.v1.CreateTokenResponse\x12Q\n" +
+	"\n" +
+	"ListTokens\x12 .rocketship.v1.ListTokensRequest\x1a!.rocketship.v1.ListTokensResponse\x12T\n" +
+	"\vRevokeToken\x12!.rocketship.v1.RevokeTokenRequest\x1a\".rocketship.v1.RevokeTokenResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -1350,55 +3880,142 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
 var file_engine_proto_goTypes = []any{
-	(*CreateRunRequest)(nil),  // 0: rocketship.v1.CreateRunRequest
-	(*RunContext)(nil),        // 1: rocketship.v1.RunContext
-	(*CreateRunResponse)(nil), // 2: rocketship.v1.CreateRunResponse
-	(*LogStreamRequest)(nil),  // 3: rocketship.v1.LogStreamRequest
-	(*LogLine)(nil),           // 4: rocketship.v1.LogLine
-	(*ListRunsRequest)(nil),   // 5: rocketship.v1.ListRunsRequest
-	(*ListRunsResponse)(nil),  // 6: rocketship.v1.ListRunsResponse
-	(*RunSummary)(nil),        // 7: rocketship.v1.RunSummary
-	(*GetRunRequest)(nil),     // 8: rocketship.v1.GetRunRequest
-	(*GetRunResponse)(nil),    // 9: rocketship.v1.GetRunResponse
-	(*RunDetails)(nil),        // 10: rocketship.v1.RunDetails
-	(*TestDetails)(nil),       // 11: rocketship.v1.TestDetails
-	(*AddLogRequest)(nil),     // 12: rocketship.v1.AddLogRequest
-	(*AddLogResponse)(nil),    // 13: rocketship.v1.AddLogResponse
-	(*CancelRunRequest)(nil),  // 14: rocketship.v1.CancelRunRequest
-	(*CancelRunResponse)(nil), // 15: rocketship.v1.CancelRunResponse
-	(*HealthRequest)(nil),     // 16: rocketship.v1.HealthRequest
-	(*HealthResponse)(nil),    // 17: rocketship.v1.HealthResponse
-	nil,                       // 18: rocketship.v1.RunContext.MetadataEntry
+	(*CreateRunRequest)(nil),                   // 0: rocketship.v1.CreateRunRequest
+	(*RunContext)(nil),                         // 1: rocketship.v1.RunContext
+	(*CreateRunResponse)(nil),                  // 2: rocketship.v1.CreateRunResponse
+	(*LogStreamRequest)(nil),                   // 3: rocketship.v1.LogStreamRequest
+	(*LogLine)(nil),                            // 4: rocketship.v1.LogLine
+	(*ListRunsRequest)(nil),                    // 5: rocketship.v1.ListRunsRequest
+	(*ListRunsResponse)(nil),                   // 6: rocketship.v1.ListRunsResponse
+	(*RunSummary)(nil),                         // 7: rocketship.v1.RunSummary
+	(*GetRunRequest)(nil),                      // 8: rocketship.v1.GetRunRequest
+	(*GetRunResponse)(nil),                     // 9: rocketship.v1.GetRunResponse
+	(*RunDetails)(nil),                         // 10: rocketship.v1.RunDetails
+	(*TestDetails)(nil),                        // 11: rocketship.v1.TestDetails
+	(*AddLogRequest)(nil),                      // 12: rocketship.v1.AddLogRequest
+	(*AddLogResponse)(nil),                     // 13: rocketship.v1.AddLogResponse
+	(*CancelRunRequest)(nil),                   // 14: rocketship.v1.CancelRunRequest
+	(*CancelRunResponse)(nil),                  // 15: rocketship.v1.CancelRunResponse
+	(*HealthRequest)(nil),                      // 16: rocketship.v1.HealthRequest
+	(*HealthResponse)(nil),                     // 17: rocketship.v1.HealthResponse
+	(*CreateTeamRequest)(nil),                  // 18: rocketship.v1.CreateTeamRequest
+	(*CreateTeamResponse)(nil),                 // 19: rocketship.v1.CreateTeamResponse
+	(*ListTeamsRequest)(nil),                   // 20: rocketship.v1.ListTeamsRequest
+	(*ListTeamsResponse)(nil),                  // 21: rocketship.v1.ListTeamsResponse
+	(*Team)(nil),                               // 22: rocketship.v1.Team
+	(*AddTeamMemberRequest)(nil),               // 23: rocketship.v1.AddTeamMemberRequest
+	(*AddTeamMemberResponse)(nil),              // 24: rocketship.v1.AddTeamMemberResponse
+	(*AddTeamRepositoryRequest)(nil),           // 25: rocketship.v1.AddTeamRepositoryRequest
+	(*AddTeamRepositoryResponse)(nil),          // 26: rocketship.v1.AddTeamRepositoryResponse
+	(*RemoveTeamRepositoryRequest)(nil),        // 27: rocketship.v1.RemoveTeamRepositoryRequest
+	(*RemoveTeamRepositoryResponse)(nil),       // 28: rocketship.v1.RemoveTeamRepositoryResponse
+	(*GetTeamRequest)(nil),                     // 29: rocketship.v1.GetTeamRequest
+	(*GetTeamResponse)(nil),                    // 30: rocketship.v1.GetTeamResponse
+	(*TeamMember)(nil),                         // 31: rocketship.v1.TeamMember
+	(*TeamRepository)(nil),                     // 32: rocketship.v1.TeamRepository
+	(*RemoveTeamMemberRequest)(nil),            // 33: rocketship.v1.RemoveTeamMemberRequest
+	(*RemoveTeamMemberResponse)(nil),           // 34: rocketship.v1.RemoveTeamMemberResponse
+	(*GetAuthConfigRequest)(nil),               // 35: rocketship.v1.GetAuthConfigRequest
+	(*GetAuthConfigResponse)(nil),              // 36: rocketship.v1.GetAuthConfigResponse
+	(*OIDCConfig)(nil),                         // 37: rocketship.v1.OIDCConfig
+	(*GetCurrentUserRequest)(nil),              // 38: rocketship.v1.GetCurrentUserRequest
+	(*GetCurrentUserResponse)(nil),             // 39: rocketship.v1.GetCurrentUserResponse
+	(*AddRepositoryRequest)(nil),               // 40: rocketship.v1.AddRepositoryRequest
+	(*AddRepositoryResponse)(nil),              // 41: rocketship.v1.AddRepositoryResponse
+	(*ListRepositoriesRequest)(nil),            // 42: rocketship.v1.ListRepositoriesRequest
+	(*ListRepositoriesResponse)(nil),           // 43: rocketship.v1.ListRepositoriesResponse
+	(*Repository)(nil),                         // 44: rocketship.v1.Repository
+	(*GetRepositoryRequest)(nil),               // 45: rocketship.v1.GetRepositoryRequest
+	(*GetRepositoryResponse)(nil),              // 46: rocketship.v1.GetRepositoryResponse
+	(*RemoveRepositoryRequest)(nil),            // 47: rocketship.v1.RemoveRepositoryRequest
+	(*RemoveRepositoryResponse)(nil),           // 48: rocketship.v1.RemoveRepositoryResponse
+	(*AssignTeamToRepositoryRequest)(nil),      // 49: rocketship.v1.AssignTeamToRepositoryRequest
+	(*AssignTeamToRepositoryResponse)(nil),     // 50: rocketship.v1.AssignTeamToRepositoryResponse
+	(*UnassignTeamFromRepositoryRequest)(nil),  // 51: rocketship.v1.UnassignTeamFromRepositoryRequest
+	(*UnassignTeamFromRepositoryResponse)(nil), // 52: rocketship.v1.UnassignTeamFromRepositoryResponse
+	(*CreateTokenRequest)(nil),                 // 53: rocketship.v1.CreateTokenRequest
+	(*CreateTokenResponse)(nil),                // 54: rocketship.v1.CreateTokenResponse
+	(*ListTokensRequest)(nil),                  // 55: rocketship.v1.ListTokensRequest
+	(*ListTokensResponse)(nil),                 // 56: rocketship.v1.ListTokensResponse
+	(*ApiToken)(nil),                           // 57: rocketship.v1.ApiToken
+	(*RevokeTokenRequest)(nil),                 // 58: rocketship.v1.RevokeTokenRequest
+	(*RevokeTokenResponse)(nil),                // 59: rocketship.v1.RevokeTokenResponse
+	nil,                                        // 60: rocketship.v1.RunContext.MetadataEntry
 }
 var file_engine_proto_depIdxs = []int32{
 	1,  // 0: rocketship.v1.CreateRunRequest.context:type_name -> rocketship.v1.RunContext
-	18, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
+	60, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
 	7,  // 2: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
 	1,  // 3: rocketship.v1.RunSummary.context:type_name -> rocketship.v1.RunContext
 	10, // 4: rocketship.v1.GetRunResponse.run:type_name -> rocketship.v1.RunDetails
 	1,  // 5: rocketship.v1.RunDetails.context:type_name -> rocketship.v1.RunContext
 	11, // 6: rocketship.v1.RunDetails.tests:type_name -> rocketship.v1.TestDetails
-	0,  // 7: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
-	3,  // 8: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
-	12, // 9: rocketship.v1.Engine.AddLog:input_type -> rocketship.v1.AddLogRequest
-	5,  // 10: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
-	8,  // 11: rocketship.v1.Engine.GetRun:input_type -> rocketship.v1.GetRunRequest
-	14, // 12: rocketship.v1.Engine.CancelRun:input_type -> rocketship.v1.CancelRunRequest
-	16, // 13: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
-	2,  // 14: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
-	4,  // 15: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
-	13, // 16: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
-	6,  // 17: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
-	9,  // 18: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
-	15, // 19: rocketship.v1.Engine.CancelRun:output_type -> rocketship.v1.CancelRunResponse
-	17, // 20: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	22, // 7: rocketship.v1.ListTeamsResponse.teams:type_name -> rocketship.v1.Team
+	22, // 8: rocketship.v1.GetTeamResponse.team:type_name -> rocketship.v1.Team
+	31, // 9: rocketship.v1.GetTeamResponse.members:type_name -> rocketship.v1.TeamMember
+	32, // 10: rocketship.v1.GetTeamResponse.repositories:type_name -> rocketship.v1.TeamRepository
+	37, // 11: rocketship.v1.GetAuthConfigResponse.oidc:type_name -> rocketship.v1.OIDCConfig
+	44, // 12: rocketship.v1.ListRepositoriesResponse.repositories:type_name -> rocketship.v1.Repository
+	44, // 13: rocketship.v1.GetRepositoryResponse.repository:type_name -> rocketship.v1.Repository
+	22, // 14: rocketship.v1.GetRepositoryResponse.teams:type_name -> rocketship.v1.Team
+	57, // 15: rocketship.v1.ListTokensResponse.tokens:type_name -> rocketship.v1.ApiToken
+	0,  // 16: rocketship.v1.Engine.CreateRun:input_type -> rocketship.v1.CreateRunRequest
+	3,  // 17: rocketship.v1.Engine.StreamLogs:input_type -> rocketship.v1.LogStreamRequest
+	12, // 18: rocketship.v1.Engine.AddLog:input_type -> rocketship.v1.AddLogRequest
+	5,  // 19: rocketship.v1.Engine.ListRuns:input_type -> rocketship.v1.ListRunsRequest
+	8,  // 20: rocketship.v1.Engine.GetRun:input_type -> rocketship.v1.GetRunRequest
+	14, // 21: rocketship.v1.Engine.CancelRun:input_type -> rocketship.v1.CancelRunRequest
+	16, // 22: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
+	35, // 23: rocketship.v1.Engine.GetAuthConfig:input_type -> rocketship.v1.GetAuthConfigRequest
+	38, // 24: rocketship.v1.Engine.GetCurrentUser:input_type -> rocketship.v1.GetCurrentUserRequest
+	18, // 25: rocketship.v1.Engine.CreateTeam:input_type -> rocketship.v1.CreateTeamRequest
+	20, // 26: rocketship.v1.Engine.ListTeams:input_type -> rocketship.v1.ListTeamsRequest
+	23, // 27: rocketship.v1.Engine.AddTeamMember:input_type -> rocketship.v1.AddTeamMemberRequest
+	25, // 28: rocketship.v1.Engine.AddTeamRepository:input_type -> rocketship.v1.AddTeamRepositoryRequest
+	27, // 29: rocketship.v1.Engine.RemoveTeamRepository:input_type -> rocketship.v1.RemoveTeamRepositoryRequest
+	29, // 30: rocketship.v1.Engine.GetTeam:input_type -> rocketship.v1.GetTeamRequest
+	33, // 31: rocketship.v1.Engine.RemoveTeamMember:input_type -> rocketship.v1.RemoveTeamMemberRequest
+	40, // 32: rocketship.v1.Engine.AddRepository:input_type -> rocketship.v1.AddRepositoryRequest
+	42, // 33: rocketship.v1.Engine.ListRepositories:input_type -> rocketship.v1.ListRepositoriesRequest
+	45, // 34: rocketship.v1.Engine.GetRepository:input_type -> rocketship.v1.GetRepositoryRequest
+	47, // 35: rocketship.v1.Engine.RemoveRepository:input_type -> rocketship.v1.RemoveRepositoryRequest
+	49, // 36: rocketship.v1.Engine.AssignTeamToRepository:input_type -> rocketship.v1.AssignTeamToRepositoryRequest
+	51, // 37: rocketship.v1.Engine.UnassignTeamFromRepository:input_type -> rocketship.v1.UnassignTeamFromRepositoryRequest
+	53, // 38: rocketship.v1.Engine.CreateToken:input_type -> rocketship.v1.CreateTokenRequest
+	55, // 39: rocketship.v1.Engine.ListTokens:input_type -> rocketship.v1.ListTokensRequest
+	58, // 40: rocketship.v1.Engine.RevokeToken:input_type -> rocketship.v1.RevokeTokenRequest
+	2,  // 41: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
+	4,  // 42: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
+	13, // 43: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
+	6,  // 44: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
+	9,  // 45: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
+	15, // 46: rocketship.v1.Engine.CancelRun:output_type -> rocketship.v1.CancelRunResponse
+	17, // 47: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
+	36, // 48: rocketship.v1.Engine.GetAuthConfig:output_type -> rocketship.v1.GetAuthConfigResponse
+	39, // 49: rocketship.v1.Engine.GetCurrentUser:output_type -> rocketship.v1.GetCurrentUserResponse
+	19, // 50: rocketship.v1.Engine.CreateTeam:output_type -> rocketship.v1.CreateTeamResponse
+	21, // 51: rocketship.v1.Engine.ListTeams:output_type -> rocketship.v1.ListTeamsResponse
+	24, // 52: rocketship.v1.Engine.AddTeamMember:output_type -> rocketship.v1.AddTeamMemberResponse
+	26, // 53: rocketship.v1.Engine.AddTeamRepository:output_type -> rocketship.v1.AddTeamRepositoryResponse
+	28, // 54: rocketship.v1.Engine.RemoveTeamRepository:output_type -> rocketship.v1.RemoveTeamRepositoryResponse
+	30, // 55: rocketship.v1.Engine.GetTeam:output_type -> rocketship.v1.GetTeamResponse
+	34, // 56: rocketship.v1.Engine.RemoveTeamMember:output_type -> rocketship.v1.RemoveTeamMemberResponse
+	41, // 57: rocketship.v1.Engine.AddRepository:output_type -> rocketship.v1.AddRepositoryResponse
+	43, // 58: rocketship.v1.Engine.ListRepositories:output_type -> rocketship.v1.ListRepositoriesResponse
+	46, // 59: rocketship.v1.Engine.GetRepository:output_type -> rocketship.v1.GetRepositoryResponse
+	48, // 60: rocketship.v1.Engine.RemoveRepository:output_type -> rocketship.v1.RemoveRepositoryResponse
+	50, // 61: rocketship.v1.Engine.AssignTeamToRepository:output_type -> rocketship.v1.AssignTeamToRepositoryResponse
+	52, // 62: rocketship.v1.Engine.UnassignTeamFromRepository:output_type -> rocketship.v1.UnassignTeamFromRepositoryResponse
+	54, // 63: rocketship.v1.Engine.CreateToken:output_type -> rocketship.v1.CreateTokenResponse
+	56, // 64: rocketship.v1.Engine.ListTokens:output_type -> rocketship.v1.ListTokensResponse
+	59, // 65: rocketship.v1.Engine.RevokeToken:output_type -> rocketship.v1.RevokeTokenResponse
+	41, // [41:66] is the sub-list for method output_type
+	16, // [16:41] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -1412,7 +4029,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   61,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

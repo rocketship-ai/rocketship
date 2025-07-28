@@ -1,5 +1,5 @@
 #!/bin/bash
-# Rocketship Multi-Stack CLI
+# Rocketship Multi-Stack CLI - Simplified
 # Auto-detects git worktree and manages isolated Docker environments
 
 set -e
@@ -20,24 +20,20 @@ usage() {
     echo "  init                    Initialize stack for current worktree"
     echo "  start                   Start the current stack"
     echo "  stop                    Stop the current stack"
-    echo "  restart                 Restart the current stack"
-    echo "  status                  Show status of current stack"
-    echo "  info                    Show detailed stack information"
-    echo "  logs [service]          Show logs (optionally for specific service)"
+    echo "  logs [service]          Show recent logs (never hangs)"
     echo "  clean                   Stop and remove all containers and volumes"
-    echo ""
-    echo "Test Commands:"
-    echo "  validate <file>         Validate test file"
-    echo "  run [options]           Run tests (pass options to rocketship CLI)"
-    echo "  list                    List test runs"
-    echo "  get <run-id>            Get test run details"
     echo ""
     echo "Examples:"
     echo "  $0 init                 # Initialize environment for current worktree"
     echo "  $0 start                # Start the stack"
-    echo "  $0 run -f test.yaml     # Run tests"
-    echo "  $0 status               # Check stack status"
-    echo "  $0 logs engine          # Show engine logs"
+    echo "  $0 stop                 # Stop the stack"
+    echo "  $0 logs engine          # Show recent engine logs"
+    echo "  $0 clean                # Complete cleanup"
+    echo ""
+    echo "After starting, use rocketship CLI directly with profiles:"
+    echo "  rocketship profile list                    # See available profiles"
+    echo "  rocketship run -f test.yaml                # Run tests"
+    echo "  rocketship team list                       # Manage teams"
     echo ""
     echo "The CLI auto-detects your current git worktree and manages an isolated"
     echo "Docker environment with unique ports to avoid conflicts."
@@ -51,17 +47,6 @@ ensure_initialized() {
     if needs_initialization "$stack_name"; then
         log_error "Stack not initialized for current worktree."
         log_info "Run '$0 init' first to set up the environment."
-        exit 1
-    fi
-}
-
-# Function to ensure stack is running
-ensure_running() {
-    local stack_name=$(get_stack_name)
-    
-    if ! is_stack_running "$stack_name"; then
-        log_error "Stack '$stack_name' is not running."
-        log_info "Run '$0 start' to start the stack."
         exit 1
     fi
 }
@@ -93,6 +78,11 @@ cmd_start() {
     log_info "Access Points:"
     echo "  📱 Temporal UI: http://localhost:${temporal_ui_port}"
     echo "  🔧 Engine API: localhost:${engine_port}"
+    echo ""
+    log_info "Next Steps:"
+    echo "  rocketship profile list    # Check your profiles"
+    echo "  rocketship auth login      # Authenticate if needed"
+    echo "  rocketship run -f test.yaml # Run tests"
 }
 
 cmd_stop() {
@@ -109,45 +99,6 @@ cmd_stop() {
     log_success "Stack stopped successfully!"
 }
 
-cmd_restart() {
-    cmd_stop
-    cmd_start
-}
-
-cmd_status() {
-    ensure_initialized
-    
-    local stack_name=$(get_stack_name)
-    local status=$(get_stack_status "$stack_name")
-    
-    echo "📊 Stack Status: $stack_name"
-    echo "   Status: $status"
-    echo ""
-    
-    if [[ "$status" != "stopped" ]]; then
-        local project_name="rocketship-${stack_name}"
-        docker ps --filter "name=${project_name}" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-    else
-        log_warn "Stack is not running. Use '$0 start' to start it."
-    fi
-}
-
-cmd_info() {
-    local stack_name=$(get_stack_name)
-    show_stack_info "$stack_name"
-    
-    echo ""
-    echo "🏗️  Environment:"
-    if env_file_exists "$stack_name"; then
-        log_success "Initialized (.env.${stack_name})"
-    else
-        log_warn "Not initialized - run '$0 init'"
-    fi
-    
-    local status=$(get_stack_status "$stack_name")
-    echo "   Status: $status"
-}
-
 cmd_logs() {
     ensure_initialized
     
@@ -158,11 +109,11 @@ cmd_logs() {
     cd "$SCRIPT_DIR"
     
     if [[ -n "$service" ]]; then
-        log_info "Showing logs for service: $service"
-        docker-compose --env-file "$env_file" logs -f "$service"
+        log_info "Showing recent logs for service: $service"
+        docker-compose --env-file "$env_file" logs --tail=100 "$service"
     else
-        log_info "Showing logs for all services"
-        docker-compose --env-file "$env_file" logs -f
+        log_info "Showing recent logs for all services"
+        docker-compose --env-file "$env_file" logs --tail=50
     fi
 }
 
@@ -172,88 +123,124 @@ cmd_clean() {
     local stack_name=$(get_stack_name)
     local env_file=".env.${stack_name}"
     
-    log_warn "This will stop and remove all containers and volumes for stack: $stack_name"
-    read -p "Are you sure? (y/N): " -n 1 -r
-    echo
+    log_warn "🧹 COMPLETE ROCKETSHIP CLEANUP"
+    log_warn "Removing ALL rocketship data from your system:"
+    echo "  • Docker containers and volumes for stack: $stack_name"
+    echo "  • CLI configuration and profiles (~/.rocketship/)"
+    echo "  • HTTPS certificates (~/.rocketship/certs/)"
+    echo "  • Stored authentication tokens (keyring)"
+    echo "  • Rocketship binary executable"
+    echo "  • Build artifacts and cache"
+    echo "  • Environment variables (ROCKETSHIP_*)"
+    echo "  • Docker images"
+    echo ""
     
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Cleaning stack: $stack_name"
+    log_info "🚀 Starting complete rocketship cleanup..."
         
+        # 1. Clean Docker stack
+        log_info "🐳 Cleaning Docker stack: $stack_name"
         cd "$SCRIPT_DIR"
-        docker-compose --env-file "$env_file" down -v --remove-orphans
+        docker-compose --env-file "$env_file" down -v --remove-orphans 2>/dev/null || true
         
-        log_success "Stack cleaned successfully!"
-    else
-        log_info "Operation cancelled."
-    fi
-}
-
-# Test command functions
-cmd_validate() {
-    ensure_initialized
-    ensure_running
-    
-    local stack_name=$(get_stack_name)
-    run_cli_command validate "$@"
-}
-
-cmd_run() {
-    ensure_initialized
-    ensure_running
-    
-    local stack_name=$(get_stack_name)
-    run_cli_command run "$@"
-}
-
-cmd_list() {
-    ensure_initialized
-    ensure_running
-    
-    local stack_name=$(get_stack_name)
-    run_cli_command list "$@"
-}
-
-cmd_get() {
-    ensure_initialized
-    ensure_running
-    
-    local stack_name=$(get_stack_name)
-    run_cli_command get "$@"
-}
-
-# Function to run CLI commands in container
-run_cli_command() {
-    local command="$1"
-    shift
-    
-    local stack_name=$(get_stack_name)
-    local network="rocketship-${stack_name}-network"
-    local engine_host="rocketship-${stack_name}-engine-1:7700"
-    local image="rocketship-cli:${stack_name}"
-    
-    # Build CLI image if it doesn't exist
-    if ! docker image inspect "$image" > /dev/null 2>&1; then
-        log_info "Building Rocketship CLI image..."
-        docker build -f "$SCRIPT_DIR/Dockerfile.cli" -t "$image" "$SCRIPT_DIR/.." || {
-            log_error "Failed to build CLI image"
-            exit 1
-        }
-    fi
-    
-    # Determine if we need engine host parameter
-    local engine_param=""
-    case "$command" in
-        run|get|list|start|stop)
-            engine_param="--engine $engine_host"
-            ;;
-    esac
-    
-    # Run the command
-    docker run --rm \
-        --network "$network" \
-        -v "$(pwd)":/workspace \
-        -w /workspace \
-        "$image" "$command" "$@" $engine_param
+        # 2. Clean CLI configuration and profiles
+        if [ -d "$HOME/.rocketship" ]; then
+            log_info "🗂️  Removing CLI configuration and profiles"
+            rm -rf "$HOME/.rocketship"
+        fi
+        
+        # 3. Clean certificates
+        if [ -d "$HOME/.rocketship/certs" ]; then
+            log_info "🔐 Removing HTTPS certificates"
+            rm -rf "$HOME/.rocketship/certs"
+        fi
+        
+        # 4. Clean keyring tokens (attempt different methods)
+        log_info "🔑 Cleaning authentication tokens"
+        # macOS keychain
+        if command -v security >/dev/null 2>&1; then
+            security delete-generic-password -s "rocketship" 2>/dev/null || true
+            security delete-generic-password -s "rocketship-profile-local" 2>/dev/null || true  
+            security delete-generic-password -s "rocketship-profile-self-hosted" 2>/dev/null || true
+            security delete-generic-password -s "rocketship-profile-cloud" 2>/dev/null || true
+        fi
+        # Linux keyring
+        if command -v secret-tool >/dev/null 2>&1; then
+            secret-tool clear service rocketship 2>/dev/null || true
+        fi
+        
+        # 5. Remove rocketship binary
+        log_info "🗑️  Removing rocketship executable"
+        # Check common locations
+        local binary_locations=(
+            "/usr/local/bin/rocketship"
+            "$HOME/go/bin/rocketship"
+            "$GOPATH/bin/rocketship"
+            "$(command -v rocketship 2>/dev/null)"
+        )
+        
+        for location in "${binary_locations[@]}"; do
+            if [ -n "$location" ] && [ -f "$location" ]; then
+                rm -f "$location" 2>/dev/null || true
+                log_info "  ✓ Removed: $location"
+            fi
+        done
+        
+        # 6. Clean build artifacts
+        log_info "🧹 Cleaning build artifacts"
+        cd "$SCRIPT_DIR/.."
+        if [ -d "bin" ]; then
+            rm -rf bin/
+        fi
+        if [ -d "tmp" ]; then
+            rm -rf tmp/  
+        fi
+        if [ -d ".docker/.env.*" ]; then
+            rm -f .docker/.env.*
+        fi
+        
+        # 7. Clean environment variables (create unset script)
+        log_info "🌍 Creating environment variable cleanup script"
+        local env_vars_to_clean=($(env | grep '^ROCKETSHIP_' | cut -d'=' -f1))
+        local unset_script="$SCRIPT_DIR/../tmp_unset_rocketship.sh"
+        
+        if [ ${#env_vars_to_clean[@]} -gt 0 ]; then
+            echo "#!/bin/bash" > "$unset_script"
+            echo "# Auto-generated script to unset ROCKETSHIP environment variables" >> "$unset_script"
+            echo "# Usage: source $unset_script" >> "$unset_script"
+            echo "" >> "$unset_script"
+            
+            for var in "${env_vars_to_clean[@]}"; do
+                echo "unset $var" >> "$unset_script"
+                log_info "  ✓ Will unset: $var"
+            done
+            
+            chmod +x "$unset_script"
+            log_warn "📝 Environment variable cleanup script created:"
+            log_warn "   Run: source $unset_script"
+            log_warn "   (Script will auto-delete after use)"
+            
+            # Add self-deletion to the script
+            echo "" >> "$unset_script"
+            echo "# Self-delete this script after use" >> "$unset_script"
+            echo "rm -f \"$unset_script\"" >> "$unset_script"
+        else
+            log_info "  ✓ No ROCKETSHIP_ environment variables found"
+        fi
+        
+        # 8. Clean Docker images
+        log_info "🗑️  Removing rocketship Docker images"
+        docker images --format "table {{.Repository}}:{{.Tag}}" | grep rocketship | awk '{print $1}' | xargs -r docker rmi -f 2>/dev/null || true
+        
+        log_success "✅ Complete rocketship cleanup finished!"
+        log_info "💡 To reinstall: git clone, cd rocketship, make install"
+        
+        # Check if unset script was created
+        local unset_script="$SCRIPT_DIR/../tmp_unset_rocketship.sh"
+        if [ -f "$unset_script" ]; then
+            echo ""
+            log_warn "🌍 IMPORTANT: To complete environment cleanup, run:"
+            log_warn "   source $unset_script"
+        fi
 }
 
 # Main command dispatcher
@@ -275,38 +262,26 @@ main() {
         stop)
             cmd_stop "$@"
             ;;
-        restart)
-            cmd_restart "$@"
-            ;;
-        status)
-            cmd_status "$@"
-            ;;
-        info)
-            cmd_info "$@"
-            ;;
         logs)
             cmd_logs "$@"
             ;;
         clean)
             cmd_clean "$@"
             ;;
-        validate)
-            cmd_validate "$@"
-            ;;
-        run)
-            cmd_run "$@"
-            ;;
-        list)
-            cmd_list "$@"
-            ;;
-        get)
-            cmd_get "$@"
-            ;;
         -h|--help|help)
             usage
             ;;
         *)
             log_error "Unknown command: $command"
+            echo ""
+            log_info "Removed commands (use rocketship CLI directly):"
+            echo "  restart  → ./.docker/rocketship stop && ./.docker/rocketship start"
+            echo "  status   → docker ps | grep rocketship"
+            echo "  info     → rocketship profile list"
+            echo "  validate → rocketship validate <file>"
+            echo "  run      → rocketship run [options]"
+            echo "  list     → rocketship list"
+            echo "  get      → rocketship get <run-id>"
             echo ""
             usage
             ;;

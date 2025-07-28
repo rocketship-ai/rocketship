@@ -1,0 +1,27 @@
+{{- if .Values.rocketship.engine.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rocketship.fullname" . }}-engine
+  labels:
+    {{- include "rocketship.engine.labels" . | nindent 4 }}
+  {{- if .Values.serviceMonitor.enabled }}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "{{ .Values.rocketship.engine.service.metricsPort }}"
+    prometheus.io/path: "/metrics"
+  {{- end }}
+spec:
+  type: {{ .Values.rocketship.engine.service.type }}
+  ports:
+    - port: {{ .Values.rocketship.engine.service.port }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+    - port: {{ .Values.rocketship.engine.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "rocketship.engine.selectorLabels" . | nindent 4 }}
+{{- end }}

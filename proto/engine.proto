@@ -11,6 +11,34 @@ service Engine {
   rpc GetRun(GetRunRequest) returns (GetRunResponse);
   rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
+  
+  // Authentication Discovery
+  rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
+  
+  // User Info
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse);
+  
+  // Team Management
+  rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse);
+  rpc ListTeams(ListTeamsRequest) returns (ListTeamsResponse);
+  rpc AddTeamMember(AddTeamMemberRequest) returns (AddTeamMemberResponse);
+  rpc AddTeamRepository(AddTeamRepositoryRequest) returns (AddTeamRepositoryResponse);
+  rpc RemoveTeamRepository(RemoveTeamRepositoryRequest) returns (RemoveTeamRepositoryResponse);
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse);
+  rpc RemoveTeamMember(RemoveTeamMemberRequest) returns (RemoveTeamMemberResponse);
+  
+  // Repository Management
+  rpc AddRepository(AddRepositoryRequest) returns (AddRepositoryResponse);
+  rpc ListRepositories(ListRepositoriesRequest) returns (ListRepositoriesResponse);
+  rpc GetRepository(GetRepositoryRequest) returns (GetRepositoryResponse);
+  rpc RemoveRepository(RemoveRepositoryRequest) returns (RemoveRepositoryResponse);
+  rpc AssignTeamToRepository(AssignTeamToRepositoryRequest) returns (AssignTeamToRepositoryResponse);
+  rpc UnassignTeamFromRepository(UnassignTeamFromRepositoryRequest) returns (UnassignTeamFromRepositoryResponse);
+  
+  // API Token Management
+  rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse);
+  rpc ListTokens(ListTokensRequest) returns (ListTokensResponse);
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
 }
 
 message CreateRunRequest {
@@ -126,4 +154,237 @@ message CancelRunResponse {
 message HealthRequest {}
 message HealthResponse {
   string status = 1;  // "ok" | "error"
+}
+
+// Team Management Messages
+message CreateTeamRequest {
+  string name = 1;
+}
+
+message CreateTeamResponse {
+  string team_id = 1;
+  string name = 2;
+}
+
+message ListTeamsRequest {}
+
+message ListTeamsResponse {
+  repeated Team teams = 1;
+}
+
+message Team {
+  string id = 1;
+  string name = 2;
+  string created_at = 3;
+  int32 member_count = 4;
+  int32 repository_count = 5;
+  string user_role = 6; // Role of requesting user in this team
+}
+
+message AddTeamMemberRequest {
+  string team_name = 1;
+  string email = 2;
+  string role = 3; // "admin" | "member"
+  repeated string permissions = 4;
+}
+
+message AddTeamMemberResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AddTeamRepositoryRequest {
+  string team_name = 1;
+  string repository_url = 2;
+  bool enforce_codeowners = 3;
+}
+
+message AddTeamRepositoryResponse {
+  bool success = 1;
+  string message = 2;
+  string repository_full_name = 3;
+}
+
+message RemoveTeamRepositoryRequest {
+  string team_name = 1;
+  string repository_url = 2;
+}
+
+message RemoveTeamRepositoryResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetTeamRequest {
+  string team_name = 1;
+}
+
+message GetTeamResponse {
+  Team team = 1;
+  repeated TeamMember members = 2;
+  repeated TeamRepository repositories = 3;
+}
+
+message TeamMember {
+  string user_id = 1;
+  string email = 2;
+  string role = 3; // "admin" | "member" 
+  repeated string permissions = 4;
+  string joined_at = 5;
+}
+
+message TeamRepository {
+  string repository_url = 1;
+  string repository_name = 2;
+  string added_at = 3;
+}
+
+message RemoveTeamMemberRequest {
+  string team_name = 1;
+  string email = 2;
+}
+
+message RemoveTeamMemberResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Authentication Discovery Messages
+message GetAuthConfigRequest {}
+
+message GetAuthConfigResponse {
+  bool auth_enabled = 1;
+  OIDCConfig oidc = 2;
+}
+
+message OIDCConfig {
+  string issuer = 1;
+  string client_id = 2;
+  repeated string scopes = 3;
+}
+
+// User Info Messages
+message GetCurrentUserRequest {}
+
+message GetCurrentUserResponse {
+  string user_id = 1;
+  string email = 2;
+  string name = 3;
+  string org_role = 4; // Server-determined role
+  repeated string groups = 5;
+}
+
+// Repository Management Messages
+message AddRepositoryRequest {
+  string repository_url = 1;
+  bool enforce_codeowners = 2;
+}
+
+message AddRepositoryResponse {
+  string repository_id = 1;
+  string repository_url = 2;
+  bool success = 3;
+  string message = 4;
+}
+
+message ListRepositoriesRequest {
+  // No filters for now
+}
+
+message ListRepositoriesResponse {
+  repeated Repository repositories = 1;
+}
+
+message Repository {
+  string id = 1;
+  string url = 2;
+  bool enforce_codeowners = 3;
+  string created_at = 4;
+  repeated string team_names = 5;
+  int32 team_count = 6;
+}
+
+message GetRepositoryRequest {
+  string repository_url = 1;
+}
+
+message GetRepositoryResponse {
+  Repository repository = 1;
+  repeated Team teams = 2;
+}
+
+message RemoveRepositoryRequest {
+  string repository_url = 1;
+}
+
+message RemoveRepositoryResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message AssignTeamToRepositoryRequest {
+  string repository_url = 1;
+  string team_name = 2;
+}
+
+message AssignTeamToRepositoryResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UnassignTeamFromRepositoryRequest {
+  string repository_url = 1;
+  string team_name = 2;
+}
+
+message UnassignTeamFromRepositoryResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// API Token Management Messages
+message CreateTokenRequest {
+  string team_name = 1;
+  string name = 2;
+  repeated string permissions = 3;
+  string expires_at = 4; // Optional: YYYY-MM-DD format
+}
+
+message CreateTokenResponse {
+  string token_id = 1;
+  string token = 2; // The actual token string (only shown once)
+  string team_name = 3;
+  repeated string permissions = 4;
+  string expires_at = 5; // Empty if never expires
+  bool success = 6;
+  string message = 7;
+}
+
+message ListTokensRequest {
+  string team_name = 1; // Optional: filter by team name
+}
+
+message ListTokensResponse {
+  repeated ApiToken tokens = 1;
+}
+
+message ApiToken {
+  string id = 1;
+  string name = 2;
+  string team_id = 3;
+  string team_name = 4;
+  repeated string permissions = 5;
+  string created_at = 6;
+  string last_used_at = 7; // Empty if never used
+  string expires_at = 8; // Empty if never expires
+  string created_by = 9;
+}
+
+message RevokeTokenRequest {
+  string token_id = 1;
+}
+
+message RevokeTokenResponse {
+  bool success = 1;
+  string message = 2;
 }

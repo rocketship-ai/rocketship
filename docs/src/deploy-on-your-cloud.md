@@ -1,67 +1,134 @@
-# Deploying Rocketship on Your Cloud
+# Deploy Rocketship on Your Cloud
 
-Rocketship can be deployed in your cloud environment to run tests at scale, persist test history, and leverage all of Temporal's durable execution features. This guide covers the different deployment options and considerations.
-
-## Architecture Overview
-
-Rocketship consists of three main components:
-
-1. **Engine**: The central service that receives test requests and coordinates test execution with Temporal
-2. **Worker**: Executes test steps and reports results back to Temporal
-3. **Temporal**: Handles workflow orchestration and state management
+Choose the right deployment option for your needs. Rocketship can be deployed on your infrastructure with enterprise-grade features including authentication, HTTPS, team management, and monitoring.
 
 ## Deployment Options
 
-### Docker Compose
+### 🐳 Docker Deployment
+**Best for: Development, testing, and small-to-medium production deployments**
 
-The simplest way to deploy Rocketship is using Docker Compose. This is ideal for:
+Deploy Rocketship using Docker Compose with full enterprise features:
+- ✅ Quick setup (30 minutes)
+- ✅ Enterprise authentication (Auth0, Okta, Azure AD)
+- ✅ HTTPS with SSL certificates
+- ✅ Team-based access control
+- ✅ Multi-stack isolation for parallel environments
+- ✅ Perfect for teams without Kubernetes expertise
 
-- Development environments
-- Small-scale deployments
-- Testing and evaluation
+**[→ Docker Deployment Guide](./docker-deployment.md)**
 
-See the [Docker Compose Setup](#docker-compose-setup) section for details.
+### ⚓ Kubernetes Deployment  
+**Best for: Large-scale production deployments**
 
-### Kubernetes
+Deploy Rocketship on Kubernetes using Helm charts for maximum scalability:
+- ✅ Enterprise-grade high availability
+- ✅ Automatic scaling and resource management
+- ✅ Production monitoring with Prometheus
+- ✅ Advanced networking and security
+- ✅ Multi-region support
+- ✅ Integration with existing Kubernetes infrastructure
 
-For production deployments, we recommend using Kubernetes. This provides:
+**[→ Kubernetes Deployment Guide](./kubernetes-deployment.md)**
 
-- High availability
-- Automatic scaling
-- Better resource management
-- Production-grade monitoring
+## Architecture Overview
 
-See the [Kubernetes Deployment](deploy-on-kubernetes.md) guide for details.
+Both deployment options provide the same core Rocketship architecture:
 
-## Docker Compose Setup
-
-Clone the Rocketship repository, navigate to the `.docker` directory, and run the following command:
-
-```bash
-docker compose up -d
+```
+┌─────────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Users/Teams   │────▶│  Rocketship  │────▶│  Test APIs  │
+│  (OIDC Login)   │     │   Platform   │     │  & Browser  │
+└─────────────────┘     └──────────────┘     └─────────────┘
+                               │
+┌─────────────────┐            │              ┌─────────────┐
+│    CI/CD Bot    │────────────┘         ┌───▶│   Reports   │
+│  (API Tokens)   │                      │    └─────────────┘
+└─────────────────┘     ┌──────────────┐ │
+                        │   Temporal   │─┘
+                        │  (Workflow)  │
+                        └──────────────┘
 ```
 
-Verify the deployment:
+**Core Components:**
+- **Engine**: gRPC API server that orchestrates test execution
+- **Worker**: Executes tests using various plugins (HTTP, Browser, SQL, etc.)
+- **Temporal**: Workflow orchestration and durability
+- **PostgreSQL**: Stores authentication data and Temporal state
+- **External OIDC**: Your existing identity provider
 
-```bash
-# Check service status
-docker-compose ps
+## Decision Matrix
 
-# Check engine logs
-docker-compose logs engine
+| Feature | Docker | Kubernetes |
+|---------|--------|------------|
+| **Setup Time** | 30 minutes | 1-2 hours |
+| **Kubernetes Knowledge** | Not required | Required |
+| **Scalability** | Medium (1-50 concurrent tests) | High (100+ concurrent tests) |
+| **High Availability** | Manual | Automatic |
+| **Resource Management** | Basic | Advanced |
+| **Monitoring** | Basic | Production-grade |
+| **Multi-region** | Manual | Built-in |
+| **Maintenance** | Simple | Moderate |
 
-# Check worker logs
-docker-compose logs worker
-```
+## Quick Comparison
 
-Run a test:
+### Choose Docker if you:
+- Want to get started quickly (under 30 minutes)
+- Have small to medium testing needs
+- Prefer simple deployment and maintenance
+- Don't have Kubernetes expertise
+- Need development or testing environments
 
-```bash
-rocketship run -f your-test.yaml -e localhost:7700
-```
+### Choose Kubernetes if you:
+- Need large-scale production deployment
+- Require high availability and automatic scaling
+- Have existing Kubernetes infrastructure
+- Need advanced monitoring and observability
+- Plan to run 100+ concurrent tests
+- Need multi-region deployment
+
+## Enterprise Features (Both Options)
+
+Both deployment options include complete enterprise capabilities:
+
+### 🔐 Authentication & Security
+- **Enterprise SSO**: Auth0, Okta, Azure AD, Google Workspace
+- **PKCE OAuth2 flow** for enhanced security
+- **Team-based RBAC** with granular permissions
+- **API token management** for CI/CD integration
+
+### 🏢 Team Management
+- **Organization structure** with teams and roles
+- **Repository management** with CODEOWNERS enforcement
+- **User permissions** aligned with your org structure
+- **Audit trail** for all actions
+
+### 🔒 Production Security
+- **HTTPS/TLS encryption** with custom certificates
+- **Certificate management** (self-signed, Let's Encrypt, BYOC)
+- **Network isolation** between environments
+- **Secure token storage** with rotation capabilities
+
+### 📊 Monitoring & Observability
+- **Real-time workflow monitoring** via Temporal UI
+- **Test execution metrics** and performance data
+- **Service health monitoring** and alerting
+- **Audit logs** for compliance and troubleshooting
 
 ## Next Steps
 
-- [Deploy on Kubernetes](./deploy-on-kubernetes.md) for production-grade deployment
-- [Command Reference](./reference/rocketship.md) for CLI usage
-- [Examples](./examples.md) for test suite examples
+1. **Choose your deployment option** based on your needs
+2. **Follow the detailed guide** for your chosen platform
+3. **Configure authentication** with your identity provider
+4. **Set up teams and permissions** for your organization
+5. **Integrate with CI/CD** for automated testing
+
+## Support and Resources
+
+- **Documentation**: Complete guides for both deployment options
+- **Examples**: Real-world test specifications and use cases
+- **Command Reference**: Complete CLI documentation
+- **Community**: GitHub discussions and issue tracking
+
+Ready to deploy? Choose your path:
+
+**[🐳 Docker Deployment →](./docker-deployment.md)** | **[⚓ Kubernetes Deployment →](./kubernetes-deployment.md)**

@@ -352,6 +352,15 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
+			// Get profile from flag or global flag
+			profileName, err := cmd.Flags().GetString("profile")
+			if err != nil {
+				return err
+			}
+			if profileName == "" {
+				profileName = cmd.Root().PersistentFlags().Lookup("profile").Value.String()
+			}
+
 			// Validate flags - cannot use both --auto and --engine (when explicitly set)
 			engineFlagSet := cmd.Flags().Changed("engine")
 			if isAuto && engineFlagSet {
@@ -381,8 +390,15 @@ func NewRunCmd() *cobra.Command {
 				defer cleanup()
 			}
 
-			// Create engine client using the engine address
-			client, err := NewEngineClient(engineAddr)
+			// Create engine client using profiles if available, fallback to engine address
+			var client *EngineClient
+			if !isAuto && !engineFlagSet {
+				// Use profile-aware connection
+				client, err = NewEngineClientWithProfile("", profileName)
+			} else {
+				// Use explicit engine address (auto mode or explicit --engine flag)
+				client, err = NewEngineClient(engineAddr)
+			}
 			if err != nil {
 				return fmt.Errorf("failed to create engine client: %w", err)
 			}
@@ -536,6 +552,7 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
 	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
 	cmd.Flags().StringP("engine", "e", "localhost:7700", "Address of the rocketship engine")
+	cmd.Flags().String("profile", "", "Use specific connection profile")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")

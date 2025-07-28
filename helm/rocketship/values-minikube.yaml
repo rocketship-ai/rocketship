@@ -1,0 +1,161 @@
+# Minikube values for Rocketship deployment with HTTPS
+# Minimal configuration following Temporal Helm Chart README
+
+global:
+  imageRegistry: ""
+  storageClass: "standard"
+
+# Enable TLS for HTTPS testing
+tls:
+  enabled: true
+  domain: "globalbank.rocketship.sh"
+  certificate:
+    existingSecret: "rocketship-test-tls"
+
+rocketship:
+  engine:
+    enabled: true
+    replicas: 1
+    image:
+      repository: "rocketshipio/engine"
+      tag: "latest"
+      pullPolicy: Never
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+
+  worker:
+    replicas: 1
+    image:
+      repository: "rocketshipio/worker"
+      tag: "latest"
+      pullPolicy: Never
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "200m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+# Authentication configuration
+auth:
+  oidc:
+    issuer: "https://dev-0ankenxegmh7xfjm.us.auth0.com/"
+    clientId: "cq3sxA5rupwsvE4XIf86HXXaI7Ymc4aL"
+    clientSecret: " " # Empty for PKCE flow
+    secretKeys:
+      clientId: "client-id"
+      clientSecret: "client-secret"
+  database:
+    host: "rocketship-test-postgresql"
+    port: 5432
+    name: "auth"
+    user: "authuser"
+    password: "authpass"
+    secretKeys:
+      password: "password"
+
+# PostgreSQL for both auth and Temporal persistence
+postgresql:
+  enabled: true
+  primary:
+    persistence:
+      size: 2Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+  auth:
+    username: "temporal"
+    password: "temporal"
+    database: "temporal"
+    existingSecret: ""
+
+# Disable Elasticsearch chart dependency entirely
+elasticsearch:
+  enabled: false
+
+# Temporal workflow engine - MINIMAL configuration following README
+temporal:
+  enabled: true
+  
+  # Disable all optional components for minimal installation
+  cassandra:
+    enabled: false
+  mysql:
+    enabled: false
+  elasticsearch:
+    enabled: false
+  grafana:
+    enabled: false
+  prometheus:
+    enabled: false
+  
+  # Single replica for minikube
+  server:
+    replicaCount: 1
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+    
+    # Use PostgreSQL for both persistence and visibility
+    config:
+      persistence:
+        default:
+          driver: "sql"
+          sql:
+            driver: "postgres12"
+            host: "rocketship-test-postgresql"
+            port: 5432
+            database: "temporal"
+            user: "temporal"
+            password: "temporal"
+            maxConns: 20
+            maxConnLifetime: "1h"
+        visibility:
+          driver: "sql"
+          sql:
+            driver: "postgres12"
+            host: "rocketship-test-postgresql"
+            port: 5432
+            database: "temporal_visibility"
+            user: "temporal"
+            password: "temporal"
+            maxConns: 20
+            maxConnLifetime: "1h"
+
+  # Enable web UI
+  web:
+    enabled: true
+    service:
+      type: ClusterIP
+      port: 8080
+    ingress:
+      enabled: false
+
+# Test databases removed - not needed for core rocketship functionality
+
+# Disable resource-intensive features for minikube
+serviceMonitor:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+networkPolicy:
+  enabled: false

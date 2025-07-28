@@ -34,6 +34,7 @@ func newStartServerCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			
 
 			// Check if server is already running
 			if running, components := IsServerRunning(); running {
@@ -97,7 +98,10 @@ func setupLocalServer() error {
 
 // waitForEngine attempts to connect to the engine with exponential backoff
 func waitForEngine(ctx context.Context) error {
-	client, err := NewEngineClient("localhost:7700")
+	// Engine always serves plain gRPC on localhost:7700
+	address := "localhost:7700"
+	
+	client, err := NewEngineClient(address)
 	if err != nil {
 		return fmt.Errorf("failed to create engine client: %w", err)
 	}

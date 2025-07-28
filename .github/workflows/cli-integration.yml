@@ -1,0 +1,265 @@
+name: CLI Integration Tests
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  cli-integration:
+    name: CLI Integration Tests
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      # Environment variables for environment-variables example
+      API_BASE_URL: https://tryme.rocketship.sh
+      API_TOKEN: ci-test-token
+      API_KEY: ci-test-key-123
+      ENVIRONMENT: ci
+      NODE_ENV: test
+      APP_NAME: Rocketship CI Tests
+      MAX_RETRIES: 3
+      TIMEOUT_SECONDS: 30
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testdb
+          MYSQL_ROOT_PASSWORD: testpass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          check-latest: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install browser dependencies
+        run: |
+          echo "Installing Python packages..."
+          pip install browser-use playwright langchain-openai
+
+          echo "Installing Playwright browsers with system dependencies..."
+          playwright install --with-deps chromium
+
+          echo "✅ Browser dependencies installed"
+
+      - name: Wait for databases
+        run: ./.github/scripts/wait-for-databases.sh
+
+      - name: Setup PostgreSQL
+        run: ./.github/scripts/setup-postgres.sh
+
+      - name: Setup MySQL
+        run: ./.github/scripts/setup-mysql.sh
+
+      - name: Verify database setup
+        run: ./.github/scripts/verify-databases.sh
+
+      - name: Install Temporal CLI
+        run: |
+          echo "Downloading Temporal CLI..."
+          curl -sSf https://temporal.download/cli.sh | sh || { echo "Failed to download Temporal CLI"; exit 1; }
+
+          # The installation script places the binary at ~/.temporalio/bin/temporal
+          TEMPORAL_PATH="$HOME/.temporalio/bin/temporal"
+          if [ -f "$TEMPORAL_PATH" ]; then
+            echo "Temporal CLI downloaded successfully to $TEMPORAL_PATH"
+            chmod +x "$TEMPORAL_PATH"
+            sudo cp "$TEMPORAL_PATH" /usr/local/bin/
+          else
+            echo "Error: 'temporal' binary not found at expected location: $TEMPORAL_PATH"
+            echo "Looking for temporal files in home directory:"
+            find "$HOME" -name "*temporal*" -type f 2>/dev/null || echo "No temporal files found"
+            exit 1
+          fi
+
+          # Verify installation
+          temporal --version
+
+      - name: Install Claude Code CLI
+        run: |
+          echo "Installing Claude Code CLI..."
+          npm install -g @anthropic-ai/claude-code
+
+          # Verify installation
+          claude --version
+
+          # Verify API keys are available
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ ANTHROPIC_API_KEY not set - agent tests will fail"
+            exit 1
+          else
+            echo "✅ ANTHROPIC_API_KEY is available"
+          fi
+
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY not set - browser tests will fail"
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY is available"
+          fi
+
+      - name: Build and install Rocketship CLI
+        run: |
+          make install
+
+      - name: Warm up test server
+        run: |
+          echo "Warming up test server at tryme.rocketship.sh..."
+
+          # Make initial request to wake up the server
+          echo "Making initial request to wake up server..."
+          curl -s https://tryme.rocketship.sh/ || echo "Initial request completed (expected to fail)"
+
+          # Wait for server to be ready with retries
+          echo "Waiting for server to be ready..."
+          max_attempts=10
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt/$max_attempts..."
+            
+            # Test a simple endpoint that should return 200
+            if curl -s -f https://tryme.rocketship.sh/users > /dev/null 2>&1; then
+              echo "✅ Test server is ready!"
+              break
+            fi
+            
+            if [ $attempt -eq $max_attempts ]; then
+              echo "❌ Test server failed to respond after $max_attempts attempts"
+              exit 1
+            fi
+            
+            echo "Server not ready yet, waiting 3 seconds..."
+            sleep 3
+            attempt=$((attempt + 1))
+          done
+
+      - name: Test CLI commands
+        run: |
+          echo "Testing CLI help and version commands..."
+          rocketship --help
+          rocketship version
+
+          echo "Testing validate command..."
+          rocketship validate examples/
+          rocketship validate examples/simple-http/rocketship.yaml
+
+          echo "Testing individual example file..."
+          echo "Running simple-delay example..."
+          OUTPUT=$(rocketship run -af examples/simple-delay/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ simple-delay tests passed"
+          else
+            echo "❌ simple-delay tests had failures"
+            exit 1
+          fi
+
+          echo "Running SQL testing example..."
+          OUTPUT=$(rocketship run -af examples/sql-testing/rocketship.yaml --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ SQL tests passed"
+          else
+            echo "❌ SQL tests had failures"
+            exit 1
+          fi
+
+          ./.github/scripts/test-log-plugin.sh
+          ./.github/scripts/test-log-plugin-validation.sh
+          ./.github/scripts/test-env-file.sh
+          ./.github/scripts/test-retry-functionality.sh
+
+          echo "Testing browser plugin integration..."
+          OUTPUT=$(rocketship run -af examples/browser-testing/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✓ Passed Tests: 2"; then
+            echo "✅ Browser plugin integration tests passed"
+            # Verify that the tests are working as expected by checking the logged results
+            if echo "$OUTPUT" | grep -q "Max steps test success (should be false): false"; then
+              echo "✅ Max steps limitation is working correctly"
+            else
+              echo "⚠️  Max steps test may not be working as expected"
+            fi
+          else
+            echo "❌ Browser plugin integration tests failed"
+            exit 1
+          fi
+
+          echo "Testing browser plugin assertion failure behavior..."
+          ./.github/scripts/test-browser-assertion-failures.sh
+
+          echo "Testing all examples directory..."
+          OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ All example tests passed"
+          else
+            echo "❌ Some example tests failed - this indicates a regression"
+            exit 1
+          fi
+
+          echo "Testing start/stop commands..."
+          rocketship start server --background &
+          sleep 5
+          rocketship stop server
+
+      - name: Test run persistence and management
+        run: |
+          ./.github/scripts/test-run-persistence.sh
+
+      - name: Test auto mode cancellation
+        run: |
+          ./.github/scripts/test-auto-mode-cancellation.sh
+
+      - name: Test CLI error handling
+        run: |
+          echo "Testing error scenarios..."
+          ! rocketship validate nonexistent.yaml
+          ! rocketship run -f nonexistent.yaml
+          ! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
+          
+          echo "Testing run persistence error scenarios..."
+          # Test list without server running
+          ! rocketship list -e localhost:7700
+          
+          # Test get without server running  
+          ! rocketship get abc123 -e localhost:7700
+          
+          # Test get with invalid run ID (when server is running)
+          rocketship start server --background
+          sleep 3
+          ! rocketship get invalid-run-id -e localhost:7700
+          rocketship stop server

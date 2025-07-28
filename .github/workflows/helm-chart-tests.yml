@@ -1,0 +1,418 @@
+name: Helm Chart Tests
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  helm-chart-tests:
+    name: Helm Chart Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          check-latest: true
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.14.0'
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.29.0'
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: rocketship-test
+          config: |
+            kind: Cluster
+            apiVersion: kind.x-k8s.io/v1alpha4
+            nodes:
+            - role: control-plane
+              kubeadmConfigPatches:
+              - |
+                kind: InitConfiguration
+                localAPIEndpoint:
+                  advertiseAddress: "127.0.0.1"
+                  bindPort: 6443
+              - |
+                kind: ClusterConfiguration
+                apiServer:
+                  extraArgs:
+                    enable-admission-plugins: NodeRestriction,MutatingAdmissionWebhook,ValidatingAdmissionWebhook
+              extraPortMappings:
+              - containerPort: 80
+                hostPort: 8080
+                protocol: TCP
+              - containerPort: 443
+                hostPort: 8443
+                protocol: TCP
+
+      - name: Install NGINX Ingress Controller
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.4/deploy/static/provider/kind/deploy.yaml
+          
+          # Wait for NGINX controller to be ready
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=300s
+
+      - name: Add Helm repositories
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo add temporal https://go.temporal.io/helm-charts
+          helm repo update
+
+      - name: Install Helm chart dependencies
+        run: |
+          cd helm/rocketship
+          helm dependency update
+
+      - name: Lint Helm chart
+        run: |
+          cd helm/rocketship
+          helm lint .
+          helm lint . -f values-minikube.yaml
+          helm lint . -f values-production.yaml
+
+      - name: Validate Helm templates
+        run: |
+          cd helm/rocketship
+          
+          # Test template generation with minikube values
+          helm template rocketship-test . -f values-minikube.yaml --validate > /tmp/minikube-templates.yaml
+          echo "✅ Minikube templates generated successfully"
+          
+          # Test template generation with production values (with placeholders filled in)
+          # Create a temporary production values file with placeholders filled
+          cp values-production.yaml /tmp/test-prod-values.yaml
+          sed -i 's/<your-registry>/test-registry.io/g' /tmp/test-prod-values.yaml
+          sed -i 's/<your-storage-class>/standard/g' /tmp/test-prod-values.yaml
+          sed -i 's/<your-oidc-secret-name>/test-oidc-secret/g' /tmp/test-prod-values.yaml
+          sed -i 's/<your-admin-emails>/admin@test.com/g' /tmp/test-prod-values.yaml
+          sed -i 's/<your-db-secret-name>/test-db-secret/g' /tmp/test-prod-values.yaml
+          sed -i 's/<your-production-domain>/test.company.com/g' /tmp/test-prod-values.yaml
+          sed -i 's/<your-tls-secret-name>/test-tls-secret/g' /tmp/test-prod-values.yaml
+          
+          helm template rocketship-prod . -f /tmp/test-prod-values.yaml --validate > /tmp/production-templates.yaml
+          echo "✅ Production templates generated successfully"
+
+      - name: Build test Docker images
+        run: |
+          # Build lightweight test images for Helm deployment
+          echo "Building test engine image..."
+          docker build -f .docker/Dockerfile.engine -t rocketship/engine:ci-test .
+          
+          echo "Building test worker image..."
+          docker build -f .docker/Dockerfile.worker -t rocketship/worker:ci-test .
+          
+          # Load images into kind cluster
+          kind load docker-image rocketship/engine:ci-test --name rocketship-test
+          kind load docker-image rocketship/worker:ci-test --name rocketship-test
+
+      - name: Create test secrets
+        run: |
+          # Create a minimal TLS secret for testing
+          kubectl create secret tls rocketship-tls \
+            --cert=<(echo "-----BEGIN CERTIFICATE-----
+          MIIBkTCB+wIJAK7VwjVQn7ClMA0GCSqGSIb3DQEBCwUAMBQxEjAQBgNVBAMMCXRl
+          c3QtY2VydDAeFw0yNDAxMDEwMDAwMDBaFw0yNTAxMDEwMDAwMDBaMBQxEjAQBgNV
+          BAMMCXRlc3QtY2VydDBcMA0GCSqGSIb3DQEBAQUAA0sAMEgCQQC5z8QzVOy1vLUH
+          example-cert-data-not-real
+          -----END CERTIFICATE-----") \
+            --key=<(echo "-----BEGIN PRIVATE KEY-----
+          MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAuc/EM1TstbJHexample
+          example-key-data-not-real
+          -----END PRIVATE KEY-----")
+          
+          # Create OIDC secret for testing
+          kubectl create secret generic rocketship-oidc-secret \
+            --from-literal=issuer="https://test.auth0.com/" \
+            --from-literal=client-id="test-client-id" \
+            --from-literal=client-secret=""
+
+      - name: Create test values file
+        run: |
+          cd helm/rocketship
+          # Create a test-specific values file with CI configurations
+          cat > values-ci-test.yaml << 'EOF'
+          global:
+            imageRegistry: ""
+            storageClass: "standard"
+          
+          rocketship:
+            engine:
+              replicas: 1
+              image:
+                repository: "rocketship/engine"
+                tag: "ci-test"
+                pullPolicy: Never
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+              livenessProbe:
+                enabled: false
+              readinessProbe:
+                enabled: false
+            
+            worker:
+              replicas: 1
+              image:
+                repository: "rocketship/worker"
+                tag: "ci-test"
+                pullPolicy: Never
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+          
+          auth:
+            oidc:
+              existingSecret: "rocketship-oidc-secret"
+            adminEmails: "admin@test.com"
+          
+          tls:
+            enabled: true
+            domain: "test.rocketship.sh"
+            certificate:
+              existingSecret: "rocketship-tls"
+          
+          ingress:
+            enabled: true
+            className: "nginx"
+            annotations:
+              nginx.ingress.kubernetes.io/ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+              nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+            hosts:
+              - host: "test.rocketship.sh"
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    service:
+                      name: rocketship-engine
+                      port: 7700
+            tls:
+              - secretName: "rocketship-tls"
+                hosts:
+                  - "test.rocketship.sh"
+          
+          # Minimal resource configuration for CI
+          postgresql:
+            enabled: true
+            primary:
+              persistence:
+                size: 1Gi
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+          
+          authPostgresql:
+            enabled: true
+            fullnameOverride: "rocketship-auth-postgresql"
+            image:
+              tag: "16"
+            auth:
+              database: "auth"
+              username: "authuser"
+              password: "authpass"
+            primary:
+              persistence:
+                size: 1Gi
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+          
+          elasticsearch:
+            enabled: true
+            replicas: 1
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "50m"
+              limits:
+                memory: "256Mi"
+                cpu: "100m"
+            volumeClaimTemplate:
+              resources:
+                requests:
+                  storage: 1Gi
+          
+          temporal:
+            enabled: true
+            server:
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "100m"
+              config:
+                persistence:
+                  default:
+                    driver: "sql"
+                    sql:
+                      driver: "postgres12"
+                      host: "rocketship-postgresql"
+                      port: 5432
+                      database: "temporal"
+                      user: "temporal"
+                      password: "temporal"
+                  visibility:
+                    driver: "elasticsearch"
+                    elasticsearch:
+                      version: "v7"
+                      url:
+                        scheme: "http"
+                        host: "rocketship-elasticsearch-master:9200"
+            web:
+              enabled: false
+          
+          # Disable resource-intensive features for CI
+          testDatabases:
+            postgresql:
+              enabled: false
+            mysql:
+              enabled: false
+          
+          serviceMonitor:
+            enabled: false
+          
+          autoscaling:
+            enabled: false
+          
+          podDisruptionBudget:
+            enabled: false
+          
+          networkPolicy:
+            enabled: false
+          EOF
+
+      - name: Deploy Helm chart
+        run: |
+          cd helm/rocketship
+          
+          # Install the chart
+          helm install rocketship-ci-test . -f values-ci-test.yaml --timeout=10m --wait
+          
+          # Verify the installation
+          helm status rocketship-ci-test
+          helm get values rocketship-ci-test
+
+      - name: Verify deployment
+        run: |
+          echo "Checking pod status..."
+          kubectl get pods -o wide
+          
+          echo "Checking services..."
+          kubectl get services
+          
+          echo "Checking ingress..."
+          kubectl get ingress
+          
+          echo "Checking deployments..."
+          kubectl get deployments
+          
+          # Wait for core components to be ready (allowing some to fail due to test images)
+          echo "Waiting for auth database to be ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql,app.kubernetes.io/instance=rocketship-ci-test-auth --timeout=300s
+          
+          echo "Waiting for main database to be ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql,app.kubernetes.io/instance=rocketship-ci-test --timeout=300s
+          
+          echo "✅ Core infrastructure components are ready"
+
+      - name: Test Helm chart upgrade
+        run: |
+          cd helm/rocketship
+          
+          # Test upgrade by changing a simple value
+          echo "Testing Helm upgrade..."
+          helm upgrade rocketship-ci-test . -f values-ci-test.yaml \
+            --set rocketship.engine.replicas=2 \
+            --timeout=5m --wait
+          
+          # Verify upgrade
+          helm status rocketship-ci-test
+          echo "✅ Helm upgrade successful"
+
+      - name: Test chart uninstall
+        run: |
+          echo "Testing Helm uninstall..."
+          helm uninstall rocketship-ci-test --timeout=5m
+          
+          # Verify cleanup
+          echo "Checking for remaining resources..."
+          kubectl get pods | grep rocketship || echo "✅ No rocketship pods remaining"
+          kubectl get pvc | grep rocketship || echo "✅ No rocketship PVCs remaining"
+          
+          echo "✅ Helm chart uninstall successful"
+
+      - name: Verify Helm chart documentation
+        run: |
+          echo "Verifying Helm chart README and documentation..."
+          
+          # Check that README exists and has required sections
+          if [ ! -f helm/rocketship/README.md ]; then
+            echo "❌ helm/rocketship/README.md is missing"
+            exit 1
+          fi
+          
+          # Check for required sections in README
+          required_sections=("Installation" "Configuration" "Authentication" "TLS/HTTPS" "Troubleshooting")
+          for section in "${required_sections[@]}"; do
+            if ! grep -q "$section" helm/rocketship/README.md; then
+              echo "❌ README.md is missing section: $section"
+              exit 1
+            fi
+          done
+          
+          # Check that deployment guide exists
+          if [ ! -f MINIKUBE_DEPLOYMENT_GUIDE.md ]; then
+            echo "❌ MINIKUBE_DEPLOYMENT_GUIDE.md is missing"
+            exit 1
+          fi
+          
+          echo "✅ Helm chart documentation is complete"
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== Pod Status ==="
+          kubectl get pods -o wide
+          
+          echo "=== Pod Descriptions ==="
+          kubectl describe pods
+          
+          echo "=== Recent Events ==="
+          kubectl get events --sort-by='.metadata.creationTimestamp' -A
+          
+          echo "=== Helm Status ==="
+          helm status rocketship-ci-test || echo "Helm release not found"
+          
+          echo "=== Ingress Controller Logs ==="
+          kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=100 || echo "No ingress controller logs"

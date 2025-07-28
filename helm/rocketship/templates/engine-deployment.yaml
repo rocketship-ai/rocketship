@@ -1,0 +1,141 @@
+{{- if .Values.rocketship.engine.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rocketship.fullname" . }}-engine
+  labels:
+    {{- include "rocketship.engine.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.rocketship.engine.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rocketship.engine.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }}
+      labels:
+        {{- include "rocketship.engine.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.rocketship.engine.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.rocketship.engine.podSecurityContext | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-temporal
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "rocketship.temporal.host" . | replace ":7233" "" }} 7233; do echo "Waiting for Temporal..."; sleep 5; done']
+      containers:
+        - name: engine
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            {{- if .Values.rocketship.engine.securityContext }}
+            {{- toYaml .Values.rocketship.engine.securityContext | nindent 12 }}
+            {{- end }}
+          image: {{ include "rocketship.engine.image" . }}
+          imagePullPolicy: {{ .Values.rocketship.engine.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: 7700
+              protocol: TCP
+            - name: metrics
+              containerPort: 7701
+              protocol: TCP
+          {{- if .Values.rocketship.engine.livenessProbe.enabled }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "grpc_health_probe -addr=localhost:7700"
+            initialDelaySeconds: {{ .Values.rocketship.engine.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.rocketship.engine.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.rocketship.engine.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.rocketship.engine.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.rocketship.engine.readinessProbe.enabled }}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "grpc_health_probe -addr=localhost:7700"
+            initialDelaySeconds: {{ .Values.rocketship.engine.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.rocketship.engine.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.rocketship.engine.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.rocketship.engine.readinessProbe.failureThreshold }}
+          {{- end }}
+          env:
+            # Temporal configuration
+            - name: TEMPORAL_HOST
+              value: {{ include "rocketship.temporal.host" . }}
+            
+            # Authentication configuration
+            - name: ROCKETSHIP_OIDC_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.oidc.secretName" . }}
+                  key: issuer
+            - name: ROCKETSHIP_OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.oidc.secretName" . }}
+                  key: {{ .Values.auth.oidc.secretKeys.clientId }}
+            - name: ROCKETSHIP_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.oidc.secretName" . }}
+                  key: {{ .Values.auth.oidc.secretKeys.clientSecret }}
+            - name: ROCKETSHIP_ADMIN_EMAILS
+              value: {{ .Values.auth.adminEmails | quote }}
+            
+            # Database configuration
+            - name: ROCKETSHIP_DB_HOST
+              value: {{ include "rocketship.auth.database.host" . }}
+            - name: ROCKETSHIP_DB_PORT
+              value: {{ .Values.auth.database.port | quote }}
+            - name: ROCKETSHIP_DB_NAME
+              value: {{ .Values.auth.database.name }}
+            - name: ROCKETSHIP_DB_USER
+              value: {{ .Values.auth.database.user }}
+            - name: ROCKETSHIP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rocketship.auth.database.secretName" . }}
+                  key: {{ .Values.auth.database.secretKeys.password }}
+            
+            # TLS configuration
+            # Ensure HOME is set correctly for certificate directory
+            - name: HOME
+              value: "/root"
+            
+            
+            # Logging configuration
+            - name: ROCKETSHIP_LOG
+              value: "INFO"
+          
+          
+          resources:
+            {{- toYaml .Values.rocketship.engine.resources | nindent 12 }}
+      
+      
+      {{- with .Values.rocketship.engine.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rocketship.engine.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.rocketship.engine.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
