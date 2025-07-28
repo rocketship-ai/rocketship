@@ -312,11 +312,8 @@ docker rmi rocketship-engine:$(git branch --show-current) rocketship-worker:$(gi
 # Changes to .env files require container restart (not just rebuild)
 ./.docker/rocketship restart
 
-# TLS environment variables cause `make install` to fail during build
-# Unset them temporarily if needed:
-unset ROCKETSHIP_TLS_ENABLED ROCKETSHIP_TLS_DOMAIN
+# Build and install CLI
 make install
-# Then re-export them from your .env file
 ```
 
 **🚨 PORT CONFUSION:**
@@ -377,18 +374,15 @@ docker system prune -f
 - Self-signed certificates work perfectly for development/testing
 - Authentication is integrated and working with HTTPS
 
-**🔐 HTTPS Testing Commands:**
+**🔐 HTTPS Architecture:**
 ```bash
-# Test HTTPS connection (use correct ENGINE_PORT from .env file)
-ROCKETSHIP_TLS_ENABLED=true ROCKETSHIP_TLS_DOMAIN=globalbank.rocketship.sh \
-rocketship run -f test.yaml --engine localhost:12100
+# Engine serves plain gRPC internally (no TLS)
+./.docker/rocketship logs engine | grep "grpc server listening"
+# Should see: "level=INFO msg="grpc server listening" port=:7700"
 
-# Check certificate status
-rocketship certs status
-
-# Verify engine logs show TLS enabled
-./.docker/rocketship logs engine | grep -i tls
-# Should see: "level=INFO msg="grpc server listening with TLS""
+# TLS termination happens at ingress (enterprise pattern)
+# CLI connects to HTTPS ingress using system CA certificates
+rocketship run -f test.yaml --engine https://globalbank.rocketship.sh
 ```
 
 **🔐 Let's Encrypt Known Issues:**

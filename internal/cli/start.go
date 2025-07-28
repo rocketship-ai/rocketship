@@ -35,30 +35,6 @@ func newStartServerCmd() *cobra.Command {
 				return err
 			}
 			
-			https, err := cmd.Flags().GetBool("https")
-			if err != nil {
-				return err
-			}
-			
-			domain, err := cmd.Flags().GetString("domain")
-			if err != nil {
-				return err
-			}
-
-			// Configure TLS if HTTPS is enabled
-			if https {
-				if domain == "" {
-					return fmt.Errorf("--domain is required when --https is enabled")
-				}
-				
-				// Set TLS environment variables
-				_ = os.Setenv("ROCKETSHIP_TLS_ENABLED", "true")
-				_ = os.Setenv("ROCKETSHIP_TLS_DOMAIN", domain)
-				Logger.Info("HTTPS enabled", "domain", domain)
-			} else {
-				// Ensure TLS is disabled
-				_ = os.Setenv("ROCKETSHIP_TLS_ENABLED", "false")
-			}
 
 			// Check if server is already running
 			if running, components := IsServerRunning(); running {
@@ -78,8 +54,6 @@ func newStartServerCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolP("background", "b", false, "Start server in background mode")
-	cmd.Flags().Bool("https", false, "Enable HTTPS using generated certificates")
-	cmd.Flags().String("domain", "", "Domain name for HTTPS certificate (required with --https)")
 	return cmd
 }
 
@@ -124,12 +98,8 @@ func setupLocalServer() error {
 
 // waitForEngine attempts to connect to the engine with exponential backoff
 func waitForEngine(ctx context.Context) error {
-	// Use appropriate address based on TLS configuration
+	// Engine always serves plain gRPC on localhost:7700
 	address := "localhost:7700"
-	if os.Getenv("ROCKETSHIP_TLS_ENABLED") == "true" {
-		// TLS typically uses port 443, but we'll keep 7700 for consistency
-		address = "localhost:7700" 
-	}
 	
 	client, err := NewEngineClient(address)
 	if err != nil {

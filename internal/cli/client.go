@@ -10,7 +10,6 @@ import (
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/auth"
-	"github.com/rocketship-ai/rocketship/internal/certs"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -54,68 +53,25 @@ func NewEngineClientWithProfile(address, profileName string) (*EngineClient, err
 	
 	Logger.Debug("using profile for connection", "profile", profile.Name, "address", address)
 	
-	// Get TLS settings from profile or environment
-	tlsEnabled := profile.TLS.Enabled
-	tlsDomain := profile.TLS.Domain
-	
-	// Environment variables can override profile settings
-	if os.Getenv("ROCKETSHIP_TLS_ENABLED") != "" {
-		tlsEnabled = os.Getenv("ROCKETSHIP_TLS_ENABLED") == "true"
-	}
-	if os.Getenv("ROCKETSHIP_TLS_DOMAIN") != "" {
-		tlsDomain = os.Getenv("ROCKETSHIP_TLS_DOMAIN")
-	}
+	// Determine TLS settings
+	tlsEnabled := shouldUseTLS(address, profile)
+	tlsDomain := extractDomain(address)
 	
 	// Base dial options
 	var dialOpts []grpc.DialOption
 	
 	if tlsEnabled {
-		Logger.Debug("TLS enabled for gRPC client", "domain", tlsDomain)
+		Logger.Debug("using TLS connection with system CA", "domain", tlsDomain)
 		
-		if tlsDomain == "" {
-			return nil, fmt.Errorf("ROCKETSHIP_TLS_ENABLED is true but ROCKETSHIP_TLS_DOMAIN is not set")
+		// Always use system CA certificates for enterprise compatibility
+		tlsConfig := &tls.Config{
+			ServerName: tlsDomain,
 		}
 		
-		// Determine if we should use custom certificate or system CA
-		useCustomCert := shouldUseCustomCert(tlsDomain)
-		
-		if useCustomCert {
-			Logger.Debug("loading custom certificate for TLS connection", "domain", tlsDomain)
-			
-			// Create certificate manager to load certificates
-			certManager, err := certs.NewManager(&certs.Config{})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create certificate manager: %w", err)
-			}
-			
-			// Load certificate for domain
-			cert, err := certManager.GetCertificate(tlsDomain)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load certificate for domain %s: %w", tlsDomain, err)
-			}
-			
-			// Create TLS config with custom certificate
-			tlsConfig := &tls.Config{
-				Certificates:       []tls.Certificate{*cert},
-				InsecureSkipVerify: true, // Skip verification for self-signed certs
-				ServerName:         tlsDomain,
-			}
-			
-			creds := credentials.NewTLS(tlsConfig)
-			dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
-		} else {
-			Logger.Debug("using system CA for TLS connection", "domain", tlsDomain)
-			
-			// Use system CA certificates
-			tlsConfig := &tls.Config{
-				ServerName: tlsDomain,
-			}
-			
-			creds := credentials.NewTLS(tlsConfig)
-			dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
-		}
+		creds := credentials.NewTLS(tlsConfig)
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
 	} else {
-		Logger.Debug("TLS disabled, using insecure connection")
+		Logger.Debug("using insecure connection")
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 
@@ -326,83 +282,72 @@ func getAccessToken(ctx context.Context) (string, error) {
 	return token, nil
 }
 
-// shouldUseCustomCert determines if we should use a custom certificate
-// Returns true for localhost, self-signed domains, or when we have custom certs
-func shouldUseCustomCert(domain string) bool {
-	// Always use custom certs for localhost
-	if strings.HasPrefix(domain, "localhost") || domain == "127.0.0.1" {
+// shouldUseTLS determines if TLS should be used based on address and profile
+func shouldUseTLS(address string, profile *Profile) bool {
+	// Check explicit scheme
+	if strings.HasPrefix(address, "https://") {
 		return true
 	}
-	
-	// Check if we have a custom certificate directory
-	certManager, err := certs.NewManager(&certs.Config{})
-	if err != nil {
+	if strings.HasPrefix(address, "http://") {
 		return false
 	}
 	
-	// Try to load the certificate - if it exists, use it
-	_, err = certManager.GetCertificate(domain)
-	return err == nil
+	// Check profile TLS setting
+	if profile != nil && profile.TLS.Enabled {
+		return true
+	}
+	
+	// Check port - if 443, assume TLS
+	if strings.Contains(address, ":443") {
+		return true
+	}
+	
+	// Default to secure for enterprise domains
+	return !strings.Contains(address, "localhost") && !strings.Contains(address, "127.0.0.1")
+}
+
+// extractDomain extracts the domain name from an address
+func extractDomain(address string) string {
+	// Remove scheme
+	domain := strings.TrimPrefix(address, "https://")
+	domain = strings.TrimPrefix(domain, "http://")
+	
+	// Remove port if present
+	if idx := strings.Index(domain, ":"); idx != -1 {
+		domain = domain[:idx]
+	}
+	
+	// Remove path if present
+	if idx := strings.Index(domain, "/"); idx != -1 {
+		domain = domain[:idx]
+	}
+	
+	return domain
 }
 
 // newEngineClientFromEnv creates a client using only environment variables (fallback)
 func newEngineClientFromEnv(address string) (*EngineClient, error) {
 	Logger.Debug("creating client from environment variables")
 	
-	// Check if TLS is enabled
-	tlsEnabled := os.Getenv("ROCKETSHIP_TLS_ENABLED") == "true"
-	tlsDomain := os.Getenv("ROCKETSHIP_TLS_DOMAIN")
+	// Determine TLS settings
+	tlsEnabled := shouldUseTLS(address, nil)
+	tlsDomain := extractDomain(address)
 	
 	// Base dial options
 	var dialOpts []grpc.DialOption
 	
 	if tlsEnabled {
-		Logger.Debug("TLS enabled for gRPC client", "domain", tlsDomain)
+		Logger.Debug("using TLS connection with system CA", "domain", tlsDomain)
 		
-		if tlsDomain == "" {
-			return nil, fmt.Errorf("ROCKETSHIP_TLS_ENABLED is true but ROCKETSHIP_TLS_DOMAIN is not set")
+		// Always use system CA certificates for enterprise compatibility
+		tlsConfig := &tls.Config{
+			ServerName: tlsDomain,
 		}
 		
-		// Determine if we should use custom certificate or system CA
-		useCustomCert := shouldUseCustomCert(tlsDomain)
-		
-		if useCustomCert {
-			Logger.Debug("loading custom certificate for TLS connection", "domain", tlsDomain)
-			
-			// Create certificate manager to load certificates
-			certManager, err := certs.NewManager(&certs.Config{})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create certificate manager: %w", err)
-			}
-			
-			// Load certificate for domain
-			cert, err := certManager.GetCertificate(tlsDomain)
-			if err != nil {
-				return nil, fmt.Errorf("failed to load certificate for domain %s: %w", tlsDomain, err)
-			}
-			
-			// Create TLS config with custom certificate
-			tlsConfig := &tls.Config{
-				Certificates:       []tls.Certificate{*cert},
-				InsecureSkipVerify: true, // Skip verification for self-signed certs
-				ServerName:         tlsDomain,
-			}
-			
-			creds := credentials.NewTLS(tlsConfig)
-			dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
-		} else {
-			Logger.Debug("using system CA for TLS connection", "domain", tlsDomain)
-			
-			// Use system CA certificates
-			tlsConfig := &tls.Config{
-				ServerName: tlsDomain,
-			}
-			
-			creds := credentials.NewTLS(tlsConfig)
-			dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
-		}
+		creds := credentials.NewTLS(tlsConfig)
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(creds))
 	} else {
-		Logger.Debug("TLS disabled, using insecure connection")
+		Logger.Debug("using insecure connection")
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	}
 

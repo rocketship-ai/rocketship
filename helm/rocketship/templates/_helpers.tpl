@@ -164,16 +164,6 @@ OIDC secret name
 {{- end }}
 {{- end }}
 
-{{/*
-TLS secret name
-*/}}
-{{- define "rocketship.tls.secretName" -}}
-{{- if .Values.tls.certificate.existingSecret }}
-{{- .Values.tls.certificate.existingSecret }}
-{{- else }}
-{{- include "rocketship.fullname" . }}-tls
-{{- end }}
-{{- end }}
 
 {{/*
 Temporal host

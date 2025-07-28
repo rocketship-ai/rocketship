@@ -29,30 +29,6 @@ spec:
         - name: wait-for-temporal
           image: busybox:1.36
           command: ['sh', '-c', 'until nc -z {{ include "rocketship.temporal.host" . | replace ":7233" "" }} 7233; do echo "Waiting for Temporal..."; sleep 5; done']
-        {{- if .Values.tls.enabled }}
-        - name: prepare-certificates
-          image: busybox:1.36
-          securityContext:
-            runAsUser: 0
-            runAsGroup: 0
-          command: 
-            - sh
-            - -c
-            - |
-              mkdir -p /tmp/certs/{{ .Values.tls.domain }}
-              cp /tls-source/tls.crt /tmp/certs/{{ .Values.tls.domain }}/cert.pem
-              cp /tls-source/tls.key /tmp/certs/{{ .Values.tls.domain }}/key.pem
-              chmod 644 /tmp/certs/{{ .Values.tls.domain }}/cert.pem
-              chmod 644 /tmp/certs/{{ .Values.tls.domain }}/key.pem
-              chown -R 0:0 /tmp/certs
-              echo "Certificates prepared for domain {{ .Values.tls.domain }}"
-          volumeMounts:
-            - name: tls-certificates
-              mountPath: /tls-source
-              readOnly: true
-            - name: cert-workspace
-              mountPath: /tmp/certs
-        {{- end }}
       containers:
         - name: engine
           securityContext:
@@ -140,37 +116,15 @@ spec:
             - name: HOME
               value: "/root"
             
-            {{- if .Values.tls.enabled }}
-            - name: ROCKETSHIP_TLS_ENABLED
-              value: "true"
-            - name: ROCKETSHIP_TLS_DOMAIN
-              value: {{ .Values.tls.domain | quote }}
-            - name: ROCKETSHIP_CERT_DIR
-              value: "/tmp/certs"
-            {{- end }}
             
             # Logging configuration
             - name: ROCKETSHIP_LOG
               value: "INFO"
           
-          {{- if .Values.tls.enabled }}
-          volumeMounts:
-            - name: cert-workspace
-              mountPath: /tmp/certs
-          {{- end }}
           
           resources:
             {{- toYaml .Values.rocketship.engine.resources | nindent 12 }}
       
-      {{- if .Values.tls.enabled }}
-      volumes:
-        - name: tls-certificates
-          secret:
-            secretName: {{ include "rocketship.tls.secretName" . }}
-            defaultMode: 0644
-        - name: cert-workspace
-          emptyDir: {}
-      {{- end }}
       
       {{- with .Values.rocketship.engine.nodeSelector }}
       nodeSelector:

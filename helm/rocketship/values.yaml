@@ -142,19 +142,6 @@ auth:
     secretKeys:
       password: "password"
 
-# TLS/HTTPS configuration
-tls:
-  enabled: true
-  domain: "globalbank.rocketship.sh"
-  # Certificate configuration
-  certificate:
-    # Use existing certificate secret
-    existingSecret: ""
-    # Or provide certificate and key directly
-    cert: ""
-    key: ""
-    # Auto-generate self-signed certificate
-    selfSigned: true
 
 # Ingress configuration
 ingress:
