@@ -537,6 +537,16 @@ func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*gen
 	}, nil
 }
 
+// GetAuthConfig implements server discovery endpoint
+func (e *Engine) GetAuthConfig(ctx context.Context, req *generated.GetAuthConfigRequest) (*generated.GetAuthConfigResponse, error) {
+	return &generated.GetAuthConfigResponse{
+		AuthEnabled:   false,          // Phase 1: No auth yet
+		AuthType:      "none",         // Will be "cloud", "oidc", "token" in later phases
+		ServerVersion: "v0.8.0-dev",   // TODO: Get from version package
+		Features:      []string{"local"}, // Just local execution for now
+	}, nil
+}
+
 // ListRuns implements the list runs endpoint - Phase 1 with in-memory data
 // sortRuns sorts a slice of RunSummary based on the specified field and direction
 func sortRuns(runs []*generated.RunSummary, orderBy string, ascending bool) {

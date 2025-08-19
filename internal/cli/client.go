@@ -147,3 +147,41 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 	Logger.Info("Run cancelled successfully", "run_id", runID, "message", resp.Message)
 	return nil
 }
+
+// ServerInfo represents server capabilities
+type ServerInfo struct {
+	AuthEnabled   bool
+	AuthType     string   // "none", "cloud", "oidc", "token"
+	ServerVersion string
+	Features     []string
+}
+
+// GetServerInfo gets server capabilities and configuration
+func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
+	infoCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	
+	resp, err := c.client.GetAuthConfig(infoCtx, &generated.GetAuthConfigRequest{})
+	if err != nil {
+		// Gracefully handle engines that don't support GetAuthConfig (pre-profile system)
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == 12 { // UNIMPLEMENTED
+				Logger.Debug("Engine doesn't support GetAuthConfig, assuming local-only")
+				return &ServerInfo{
+					AuthEnabled:   false,
+					AuthType:     "none",
+					ServerVersion: "unknown",
+					Features:     []string{"local"},
+				}, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to get server info: %w", err)
+	}
+	
+	return &ServerInfo{
+		AuthEnabled:   resp.AuthEnabled,
+		AuthType:     resp.AuthType,
+		ServerVersion: resp.ServerVersion,
+		Features:     resp.Features,
+	}, nil
+}

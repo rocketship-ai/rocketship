@@ -24,3 +24,6 @@ honeyruns/
 tmp/
 cli-introspection.json
 *.log
+
+# Claude Code informative .md files
+AUTHENTICATION_STRATEGY.md
