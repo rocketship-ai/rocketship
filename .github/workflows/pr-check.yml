@@ -370,7 +370,7 @@ jobs:
           fi
 
           # Test profile routing (should attempt connection to cloud.rocketship.sh and fail gracefully)
-          OUTPUT=$(rocketship run -f examples/simple-delay/rocketship.yaml 2>&1) || true
+          OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -f examples/simple-delay/rocketship.yaml 2>&1) || true
           if echo "$OUTPUT" | grep -q "Using engine address from active profile"; then
             echo "✅ Profile routing middleware working"
           else
