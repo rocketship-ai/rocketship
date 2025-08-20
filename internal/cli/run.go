@@ -359,8 +359,11 @@ func NewRunCmd() *cobra.Command {
 			}
 
 			var cleanup func()
-			// Handle server management based on flags
+			var clientAddress string
+
+			// Handle server management and address resolution based on flags
 			if isAuto {
+				// Auto mode - start local server and force localhost address
 				// Check if server is already running
 				if running, components := IsServerRunning(); running {
 					componentNames := make([]string, len(components))
@@ -373,16 +376,22 @@ func NewRunCmd() *cobra.Command {
 				if err := setupLocalServerBackground(); err != nil {
 					return fmt.Errorf("failed to start local server: %w", err)
 				}
-				engineAddr = "localhost:7700"
+				clientAddress = "localhost:7700" // Force localhost for auto mode
 				cleanup = func() {
 					pm := GetProcessManager()
 					pm.Cleanup()
 				}
 				defer cleanup()
+			} else if engineFlagSet {
+				// Explicit engine address provided - use it directly
+				clientAddress = engineAddr
+			} else {
+				// No flags set - let the client middleware handle profile resolution
+				clientAddress = "" // Empty string triggers profile resolution
 			}
 
-			// Create engine client using the engine address
-			client, err := NewEngineClient(engineAddr)
+			// Create engine client - middleware will handle address resolution
+			client, err := NewEngineClient(clientAddress)
 			if err != nil {
 				return fmt.Errorf("failed to create engine client: %w", err)
 			}

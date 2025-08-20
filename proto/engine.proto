@@ -11,6 +11,9 @@ service Engine {
   rpc GetRun(GetRunRequest) returns (GetRunResponse);
   rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
+  
+  // Server Discovery
+  rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
 }
 
 message CreateRunRequest {
@@ -126,4 +129,12 @@ message CancelRunResponse {
 message HealthRequest {}
 message HealthResponse {
   string status = 1;  // "ok" | "error"
+}
+
+// Server Discovery Messages
+message GetAuthConfigRequest {}
+
+message GetAuthConfigResponse {
+  bool auth_enabled = 1;
+  string auth_type = 2;        // "none", "cloud", "oidc", "token"
 }

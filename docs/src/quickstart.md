@@ -79,16 +79,16 @@ List your recent test runs:
 
 ```bash
 # List all recent runs
-rocketship list
+rocketship list --engine localhost:7700
 
 # Filter by project
-rocketship list --project-id "my-app"
+rocketship list --engine localhost:7700 --project-id "my-app"
 
 # Filter by status
-rocketship list --status FAILED
+rocketship list --engine localhost:7700 --status FAILED
 
 # Get detailed information about a specific run
-rocketship get <run-id>
+rocketship get <run-id> --engine localhost:7700
 ```
 
 ## Next Steps

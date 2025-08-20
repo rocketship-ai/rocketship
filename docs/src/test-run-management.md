@@ -72,10 +72,10 @@ The `rocketship list` command provides powerful filtering and sorting capabiliti
 
 ```bash
 # List all recent runs (default: 20 most recent)
-rocketship list
+rocketship list --engine localhost:7700
 
 # Limit results
-rocketship list --limit 50
+rocketship list --engine localhost:7700 --limit 50
 ```
 
 ### Filtering
@@ -84,23 +84,23 @@ Filter runs by various criteria:
 
 ```bash
 # By project
-rocketship list --project-id "my-app"
+rocketship list --engine localhost:7700 --project-id "my-app"
 
 # By status
-rocketship list --status FAILED
-rocketship list --status PASSED
+rocketship list --engine localhost:7700 --status FAILED
+rocketship list --engine localhost:7700 --status PASSED
 
 # By source
-rocketship list --source "ci-branch"
+rocketship list --engine localhost:7700 --source "ci-branch"
 
 # By git branch
-rocketship list --branch "main"
+rocketship list --engine localhost:7700 --branch "main"
 
 # By schedule name (for scheduled runs)
-rocketship list --schedule-name "nightly-tests"
+rocketship list --engine localhost:7700 --schedule-name "nightly-tests"
 
 # Combine filters
-rocketship list --project-id "my-app" --status FAILED --branch "main"
+rocketship list --engine localhost:7700 --project-id "my-app" --status FAILED --branch "main"
 ```
 
 ### Sorting
@@ -109,13 +109,13 @@ Control the order of results:
 
 ```bash
 # Sort by start time (default: newest first)
-rocketship list --order-by started_at
+rocketship list --engine localhost:7700 --order-by started_at
 
 # Sort by duration (longest first)
-rocketship list --order-by duration
+rocketship list --engine localhost:7700 --order-by duration
 
 # Sort in ascending order
-rocketship list --order-by duration --ascending
+rocketship list --engine localhost:7700 --order-by duration --ascending
 ```
 
 ## Getting Run Details
@@ -124,7 +124,7 @@ Use `rocketship get` to view detailed information about a specific run:
 
 ```bash
 # Get run details (accepts truncated run IDs)
-rocketship get abc123def456
+rocketship get abc123def456 --engine localhost:7700
 
 # Full run details include:
 # - Run metadata (ID, suite name, status, timing)
@@ -206,11 +206,11 @@ When running multiple tests or in CI environments, you can manage the server sep
 rocketship start server --local --background
 
 # Run tests against existing server
-rocketship run -f test1.yaml --project-id "my-app"
-rocketship run -f test2.yaml --project-id "my-app"
+rocketship run -f test1.yaml --engine localhost:7700 --project-id "my-app"
+rocketship run -f test2.yaml --engine localhost:7700 --project-id "my-app"
 
 # List results
-rocketship list --project-id "my-app"
+rocketship list --engine localhost:7700 --project-id "my-app"
 
 # Stop server
 rocketship stop server
@@ -225,7 +225,7 @@ Future versions will support additional output formats:
 rocketship list --format json
 
 # YAML output (planned)
-rocketship get abc123 --format yaml
+rocketship get abc123 --engine localhost:7700 --format yaml
 ```
 
 ## Best Practices
@@ -249,6 +249,6 @@ rocketship get abc123 --format yaml
 Use debug logging to troubleshoot:
 
 ```bash
-ROCKETSHIP_LOG=DEBUG rocketship list
-ROCKETSHIP_LOG=DEBUG rocketship get abc123
+ROCKETSHIP_LOG=DEBUG rocketship list --engine localhost:7700
+ROCKETSHIP_LOG=DEBUG rocketship get abc123 --engine localhost:7700
 ```
