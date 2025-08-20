@@ -543,8 +543,6 @@ func (e *Engine) GetAuthConfig(ctx context.Context, req *generated.GetAuthConfig
 		AuthEnabled:   false,               // Phase 1: No auth yet
 		AuthType:      "none",              // Will be "cloud", "oidc", "token" in later phases
 		AuthEndpoint:  "",                  // No auth endpoint for local server
-		WorkspaceId:   "",                  // No workspace concept in local mode
-		UserId:        "",                  // No user concept in local mode
 	}, nil
 }
 

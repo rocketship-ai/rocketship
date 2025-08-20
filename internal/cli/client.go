@@ -194,8 +194,6 @@ type ServerInfo struct {
 	AuthEnabled   bool
 	AuthType      string // "none", "cloud", "oidc", "token"
 	AuthEndpoint  string // OAuth/OIDC endpoint for authentication flows
-	WorkspaceId   string // Current workspace/tenant ID (if authenticated)
-	UserId        string // Current user ID (if authenticated)
 }
 
 // GetServerInfo gets server capabilities and configuration
@@ -213,8 +211,6 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 					AuthEnabled:  false,
 					AuthType:     "none",
 					AuthEndpoint: "",
-					WorkspaceId:  "",
-					UserId:       "",
 				}, nil
 			}
 		}
@@ -225,7 +221,5 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 		AuthEnabled:  resp.AuthEnabled,
 		AuthType:     resp.AuthType,
 		AuthEndpoint: resp.AuthEndpoint,
-		WorkspaceId:  resp.WorkspaceId,
-		UserId:       resp.UserId,
 	}, nil
 }

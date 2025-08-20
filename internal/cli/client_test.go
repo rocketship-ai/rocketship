@@ -192,8 +192,6 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 				AuthEnabled:  false,
 				AuthType:     "none",
 				AuthEndpoint: "",
-				WorkspaceId:  "",
-				UserId:       "",
 			},
 			wantErr: false,
 		},
@@ -203,8 +201,6 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 				AuthEnabled:  true,
 				AuthType:     "cloud",
 				AuthEndpoint: "https://cloud.rocketship.sh/auth",
-				WorkspaceId:  "workspace-123",
-				UserId:       "user-456",
 			},
 			wantErr: false,
 		},
@@ -220,8 +216,6 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 				AuthEnabled:  false,
 				AuthType:     "none", 
 				AuthEndpoint: "",
-				WorkspaceId:  "",
-				UserId:       "",
 			}, // Should return default values
 			wantErr: false,
 		},
@@ -273,12 +267,6 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			}
 			if serverInfo.AuthEndpoint != tt.response.AuthEndpoint {
 				t.Errorf("AuthEndpoint = %s, want %s", serverInfo.AuthEndpoint, tt.response.AuthEndpoint)
-			}
-			if serverInfo.WorkspaceId != tt.response.WorkspaceId {
-				t.Errorf("WorkspaceId = %s, want %s", serverInfo.WorkspaceId, tt.response.WorkspaceId)
-			}
-			if serverInfo.UserId != tt.response.UserId {
-				t.Errorf("UserId = %s, want %s", serverInfo.UserId, tt.response.UserId)
 			}
 		})
 	}
