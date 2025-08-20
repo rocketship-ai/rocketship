@@ -16,13 +16,54 @@ type EngineClient struct {
 	conn   *grpc.ClientConn
 }
 
-func NewEngineClient(address string) (*EngineClient, error) {
-	Logger.Debug("connecting to engine", "address", address)
+// ResolveEngineAddress determines the engine address to use based on:
+// 1. Explicit address (if provided)
+// 2. Active profile's engine address
+// 3. Default localhost:7700
+func ResolveEngineAddress(explicitAddress string) (string, error) {
+	// If an explicit address is provided, use it
+	if explicitAddress != "" {
+		Logger.Debug("Using explicitly provided engine address", "address", explicitAddress)
+		return explicitAddress, nil
+	}
 
-	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// Try to load config and use active profile
+	config, err := LoadConfig()
+	if err != nil {
+		// Config load failed, use default
+		Logger.Debug("Failed to load config, using default address", "error", err, "address", "localhost:7700")
+		return "localhost:7700", nil
+	}
+
+	// Check if there's an active profile
+	if config.DefaultProfile != "" {
+		profile, exists := config.GetProfile(config.DefaultProfile)
+		if exists && profile.EngineAddress != "" {
+			Logger.Debug("Using engine address from active profile", "profile", profile.Name, "address", profile.EngineAddress)
+			return profile.EngineAddress, nil
+		} else {
+			Logger.Debug("Active profile has no engine address, using default", "profile", config.DefaultProfile, "address", "localhost:7700")
+		}
+	} else {
+		Logger.Debug("No active profile, using default address", "address", "localhost:7700")
+	}
+
+	return "localhost:7700", nil
+}
+
+func NewEngineClient(address string) (*EngineClient, error) {
+	// Resolve the actual address to use
+	resolvedAddress, err := ResolveEngineAddress(address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve engine address: %w", err)
+	}
+
+	Logger.Debug("connecting to engine", "address", resolvedAddress)
+
+	conn, err := grpc.NewClient(resolvedAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			return nil, fmt.Errorf("connection timed out - is the engine running at %s?", address)
+			return nil, fmt.Errorf("connection timed out - is the engine running at %s?", resolvedAddress)
 		}
 		return nil, fmt.Errorf("failed to connect to engine: %w", err)
 	}
@@ -148,12 +189,10 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 	return nil
 }
 
-// ServerInfo represents server capabilities
+// ServerInfo represents server auth capabilities
 type ServerInfo struct {
-	AuthEnabled   bool
-	AuthType     string   // "none", "cloud", "oidc", "token"
-	ServerVersion string
-	Features     []string
+	AuthEnabled bool
+	AuthType   string // "none", "cloud", "oidc", "token"
 }
 
 // GetServerInfo gets server capabilities and configuration
@@ -168,10 +207,8 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 			if s.Code() == 12 { // UNIMPLEMENTED
 				Logger.Debug("Engine doesn't support GetAuthConfig, assuming local-only")
 				return &ServerInfo{
-					AuthEnabled:   false,
-					AuthType:     "none",
-					ServerVersion: "unknown",
-					Features:     []string{"local"},
+					AuthEnabled: false,
+					AuthType:   "none",
 				}, nil
 			}
 		}
@@ -179,9 +216,7 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	}
 	
 	return &ServerInfo{
-		AuthEnabled:   resp.AuthEnabled,
-		AuthType:     resp.AuthType,
-		ServerVersion: resp.ServerVersion,
-		Features:     resp.Features,
+		AuthEnabled: resp.AuthEnabled,
+		AuthType:   resp.AuthType,
 	}, nil
 }

@@ -359,6 +359,26 @@ jobs:
             exit 1
           fi
 
+          echo "Testing profile system..."
+          # Test profile list shows default built-in profile
+          OUTPUT=$(rocketship profile list)
+          if echo "$OUTPUT" | grep -q "default.*cloud.rocketship.sh"; then
+            echo "✅ Default profile configured correctly"
+          else
+            echo "❌ Default profile missing or misconfigured"
+            exit 1
+          fi
+
+          # Test profile routing (should attempt connection to cloud.rocketship.sh and fail gracefully)
+          OUTPUT=$(rocketship run -f examples/simple-delay/rocketship.yaml 2>&1) || true
+          if echo "$OUTPUT" | grep -q "Using engine address from active profile"; then
+            echo "✅ Profile routing middleware working"
+          else
+            echo "❌ Profile routing not working"
+            echo "Output: $OUTPUT"
+            exit 1
+          fi
+
           echo "Testing start/stop commands..."
           rocketship start server --background &
           sleep 5

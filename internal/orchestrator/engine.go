@@ -540,10 +540,8 @@ func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*gen
 // GetAuthConfig implements server discovery endpoint
 func (e *Engine) GetAuthConfig(ctx context.Context, req *generated.GetAuthConfigRequest) (*generated.GetAuthConfigResponse, error) {
 	return &generated.GetAuthConfigResponse{
-		AuthEnabled:   false,          // Phase 1: No auth yet
-		AuthType:      "none",         // Will be "cloud", "oidc", "token" in later phases
-		ServerVersion: "v0.8.0-dev",   // TODO: Get from version package
-		Features:      []string{"local"}, // Just local execution for now
+		AuthEnabled: false, // Phase 1: No auth yet
+		AuthType:    "none", // Will be "cloud", "oidc", "token" in later phases
 	}, nil
 }
 

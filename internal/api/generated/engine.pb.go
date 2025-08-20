@@ -1253,9 +1253,7 @@ func (*GetAuthConfigRequest) Descriptor() ([]byte, []int) {
 type GetAuthConfigResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuthEnabled   bool                   `protobuf:"varint,1,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
-	AuthType      string                 `protobuf:"bytes,2,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`                // "none", "cloud", "oidc", "token"
-	ServerVersion string                 `protobuf:"bytes,3,opt,name=server_version,json=serverVersion,proto3" json:"server_version,omitempty"` // e.g., "v0.8.0"
-	Features      []string               `protobuf:"bytes,4,rep,name=features,proto3" json:"features,omitempty"`                                // ["local", "persistence", "teams"]
+	AuthType      string                 `protobuf:"bytes,2,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"` // "none", "cloud", "oidc", "token"
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1302,20 +1300,6 @@ func (x *GetAuthConfigResponse) GetAuthType() string {
 		return x.AuthType
 	}
 	return ""
-}
-
-func (x *GetAuthConfigResponse) GetServerVersion() string {
-	if x != nil {
-		return x.ServerVersion
-	}
-	return ""
-}
-
-func (x *GetAuthConfigResponse) GetFeatures() []string {
-	if x != nil {
-		return x.Features
-	}
-	return nil
 }
 
 var File_engine_proto protoreflect.FileDescriptor
@@ -1433,12 +1417,10 @@ const file_engine_proto_rawDesc = "" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"\x16\n" +
-	"\x14GetAuthConfigRequest\"\x9a\x01\n" +
+	"\x14GetAuthConfigRequest\"W\n" +
 	"\x15GetAuthConfigResponse\x12!\n" +
 	"\fauth_enabled\x18\x01 \x01(\bR\vauthEnabled\x12\x1b\n" +
-	"\tauth_type\x18\x02 \x01(\tR\bauthType\x12%\n" +
-	"\x0eserver_version\x18\x03 \x01(\tR\rserverVersion\x12\x1a\n" +
-	"\bfeatures\x18\x04 \x03(\tR\bfeatures2\xef\x04\n" +
+	"\tauth_type\x18\x02 \x01(\tR\bauthType2\xef\x04\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +

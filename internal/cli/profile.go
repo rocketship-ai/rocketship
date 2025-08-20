@@ -103,32 +103,6 @@ var profileShowCmd = &cobra.Command{
 	},
 }
 
-var connectCmd = &cobra.Command{
-	Use:   "connect <url>",
-	Short: "Connect to a Rocketship deployment",
-	Long: `Connect to a Rocketship deployment by creating or updating a connection profile.
-
-If no profile name is specified, this will create or update a profile based on
-the URL hostname. For example:
-  rocketship connect https://rocketship.company.com  # Creates/updates "rocketship-company-com" profile
-  rocketship connect https://app.rocketship.sh       # Creates/updates "cloud" profile
-
-Examples:
-  rocketship connect https://globalbank.rocketship.sh
-  rocketship connect https://rocketship.company.com --name enterprise
-  rocketship connect https://app.rocketship.sh`,
-	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		urlStr := args[0]
-		
-		name, _ := cmd.Flags().GetString("name")
-		team, _ := cmd.Flags().GetString("team")
-		port, _ := cmd.Flags().GetInt("port")
-		setDefault, _ := cmd.Flags().GetBool("set-default")
-		
-		return runConnect(urlStr, name, team, port, setDefault)
-	},
-}
 
 func init() {
 	// Add profile subcommands
@@ -142,16 +116,8 @@ func init() {
 	profileCreateCmd.Flags().String("team", "", "Associate profile with a specific team")
 	profileCreateCmd.Flags().Int("port", 0, "Override the port number")
 	
-	connectCmd.Flags().String("name", "", "Name for the profile (auto-generated if not provided)")
-	connectCmd.Flags().String("team", "", "Associate profile with a specific team")
-	connectCmd.Flags().Int("port", 0, "Override the port number")
-	connectCmd.Flags().Bool("set-default", true, "Set this profile as the default")
 }
 
-// NewConnectCmd returns the connect command  
-func NewConnectCmd() *cobra.Command {
-	return connectCmd
-}
 
 func runProfileList() error {
 	config, err := LoadConfig()
@@ -159,17 +125,14 @@ func runProfileList() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	
-	if len(config.Profiles) == 0 {
-		fmt.Println("No profiles found.")
-		return nil
-	}
+	allProfiles := config.ListAllProfiles()
 	
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	if _, err := fmt.Fprintln(w, "PROFILE\tSTATUS\tENGINE ADDRESS\tTLS\tTEAM"); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
 	
-	for name, profile := range config.Profiles {
+	for name, profile := range allProfiles {
 		status := ""
 		if name == config.DefaultProfile {
 			status = "*"
@@ -327,53 +290,6 @@ func runProfileShow(name string) error {
 	return nil
 }
 
-func runConnect(urlStr, name, team string, port int, setDefault bool) error {
-	config, err := LoadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-	
-	// Generate profile name if not provided
-	if name == "" {
-		name = generateProfileName(urlStr)
-	}
-	
-	profile, err := createProfileFromURL(name, urlStr, port)
-	if err != nil {
-		return err
-	}
-	
-	// Add team context if specified
-	if team != "" {
-		profile.TeamContext = &TeamContext{
-			TeamName: team,
-		}
-	}
-	
-	config.AddProfile(profile)
-	
-	// Set as default if requested
-	if setDefault {
-		config.DefaultProfile = profile.Name
-	}
-	
-	if err := config.SaveConfig(); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-	
-	fmt.Printf("✅ Connected to %s\n", urlStr)
-	fmt.Printf("   Profile: %s", profile.Name)
-	if setDefault {
-		fmt.Printf(" (default)")
-	}
-	fmt.Println()
-	fmt.Printf("   Engine: %s\n", profile.EngineAddress)
-	if profile.TLS.Enabled {
-		fmt.Printf("   TLS: enabled (%s)\n", profile.TLS.Domain)
-	}
-	
-	return nil
-}
 
 func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error) {
 	// Handle raw host:port format (e.g., localhost:12100)
@@ -434,44 +350,4 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 	return profile, nil
 }
 
-func generateProfileName(urlStr string) string {
-	// Handle raw host:port format (e.g., localhost:12100)
-	if !strings.Contains(urlStr, "://") {
-		urlStr = "http://" + urlStr
-	}
-	
-	parsedURL, err := url.Parse(urlStr)
-	if err != nil {
-		return "custom"
-	}
-	
-	host := parsedURL.Hostname()
-	port := parsedURL.Port()
-	
-	// Special cases for known domains
-	if host == "app.rocketship.sh" {
-		return "cloud"
-	}
-	
-	// Special case for localhost
-	if host == "localhost" || host == "127.0.0.1" {
-		if port != "" && port != "7700" {
-			return fmt.Sprintf("local-%s", port)
-		}
-		return "local"
-	}
-	
-	if strings.Contains(host, "rocketship.sh") {
-		// For subdomains of rocketship.sh, use the subdomain
-		parts := strings.Split(host, ".")
-		if len(parts) > 2 {
-			return parts[0]
-		}
-	}
-	
-	// Generate name from hostname
-	name := strings.ReplaceAll(host, ".", "-")
-	name = strings.ReplaceAll(name, "_", "-")
-	return name
-}
 
