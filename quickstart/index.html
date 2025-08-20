@@ -1952,16 +1952,16 @@
 <h3 id="viewing-test-history">Viewing Test History</h3>
 <p>List your recent test runs:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># List all recent runs</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>list
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>list<span class="w"> </span>--engine<span class="w"> </span>localhost:7700
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Filter by project</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>rocketship<span class="w"> </span>list<span class="w"> </span>--project-id<span class="w"> </span><span class="s2">&quot;my-app&quot;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>rocketship<span class="w"> </span>list<span class="w"> </span>--engine<span class="w"> </span>localhost:7700<span class="w"> </span>--project-id<span class="w"> </span><span class="s2">&quot;my-app&quot;</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Filter by status</span>
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>rocketship<span class="w"> </span>list<span class="w"> </span>--status<span class="w"> </span>FAILED
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>rocketship<span class="w"> </span>list<span class="w"> </span>--engine<span class="w"> </span>localhost:7700<span class="w"> </span>--status<span class="w"> </span>FAILED
 <a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
 <a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1"># Get detailed information about a specific run</span>
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>rocketship<span class="w"> </span>get<span class="w"> </span>&lt;run-id&gt;
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>rocketship<span class="w"> </span>get<span class="w"> </span>&lt;run-id&gt;<span class="w"> </span>--engine<span class="w"> </span>localhost:7700
 </code></pre></div>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
