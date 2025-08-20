@@ -1253,7 +1253,10 @@ func (*GetAuthConfigRequest) Descriptor() ([]byte, []int) {
 type GetAuthConfigResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuthEnabled   bool                   `protobuf:"varint,1,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
-	AuthType      string                 `protobuf:"bytes,2,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"` // "none", "cloud", "oidc", "token"
+	AuthType      string                 `protobuf:"bytes,2,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`             // "none", "cloud", "oidc", "token"
+	AuthEndpoint  string                 `protobuf:"bytes,3,opt,name=auth_endpoint,json=authEndpoint,proto3" json:"auth_endpoint,omitempty"` // OAuth/OIDC endpoint for authentication flows
+	WorkspaceId   string                 `protobuf:"bytes,4,opt,name=workspace_id,json=workspaceId,proto3" json:"workspace_id,omitempty"`    // Current workspace/tenant ID (if authenticated)
+	UserId        string                 `protobuf:"bytes,5,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`                   // Current user ID (if authenticated)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1298,6 +1301,27 @@ func (x *GetAuthConfigResponse) GetAuthEnabled() bool {
 func (x *GetAuthConfigResponse) GetAuthType() string {
 	if x != nil {
 		return x.AuthType
+	}
+	return ""
+}
+
+func (x *GetAuthConfigResponse) GetAuthEndpoint() string {
+	if x != nil {
+		return x.AuthEndpoint
+	}
+	return ""
+}
+
+func (x *GetAuthConfigResponse) GetWorkspaceId() string {
+	if x != nil {
+		return x.WorkspaceId
+	}
+	return ""
+}
+
+func (x *GetAuthConfigResponse) GetUserId() string {
+	if x != nil {
+		return x.UserId
 	}
 	return ""
 }
@@ -1417,10 +1441,13 @@ const file_engine_proto_rawDesc = "" +
 	"\rHealthRequest\"(\n" +
 	"\x0eHealthResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"\x16\n" +
-	"\x14GetAuthConfigRequest\"W\n" +
+	"\x14GetAuthConfigRequest\"\xb8\x01\n" +
 	"\x15GetAuthConfigResponse\x12!\n" +
 	"\fauth_enabled\x18\x01 \x01(\bR\vauthEnabled\x12\x1b\n" +
-	"\tauth_type\x18\x02 \x01(\tR\bauthType2\xef\x04\n" +
+	"\tauth_type\x18\x02 \x01(\tR\bauthType\x12#\n" +
+	"\rauth_endpoint\x18\x03 \x01(\tR\fauthEndpoint\x12!\n" +
+	"\fworkspace_id\x18\x04 \x01(\tR\vworkspaceId\x12\x17\n" +
+	"\auser_id\x18\x05 \x01(\tR\x06userId2\xef\x04\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +

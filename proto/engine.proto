@@ -137,4 +137,7 @@ message GetAuthConfigRequest {}
 message GetAuthConfigResponse {
   bool auth_enabled = 1;
   string auth_type = 2;        // "none", "cloud", "oidc", "token"
+  string auth_endpoint = 3;    // OAuth/OIDC endpoint for authentication flows
+  string workspace_id = 4;     // Current workspace/tenant ID (if authenticated)
+  string user_id = 5;          // Current user ID (if authenticated)
 }

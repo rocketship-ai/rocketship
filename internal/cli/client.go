@@ -191,8 +191,11 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 
 // ServerInfo represents server auth capabilities
 type ServerInfo struct {
-	AuthEnabled bool
-	AuthType   string // "none", "cloud", "oidc", "token"
+	AuthEnabled   bool
+	AuthType      string // "none", "cloud", "oidc", "token"
+	AuthEndpoint  string // OAuth/OIDC endpoint for authentication flows
+	WorkspaceId   string // Current workspace/tenant ID (if authenticated)
+	UserId        string // Current user ID (if authenticated)
 }
 
 // GetServerInfo gets server capabilities and configuration
@@ -207,8 +210,11 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 			if s.Code() == 12 { // UNIMPLEMENTED
 				Logger.Debug("Engine doesn't support GetAuthConfig, assuming local-only")
 				return &ServerInfo{
-					AuthEnabled: false,
-					AuthType:   "none",
+					AuthEnabled:  false,
+					AuthType:     "none",
+					AuthEndpoint: "",
+					WorkspaceId:  "",
+					UserId:       "",
 				}, nil
 			}
 		}
@@ -216,7 +222,10 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	}
 	
 	return &ServerInfo{
-		AuthEnabled: resp.AuthEnabled,
-		AuthType:   resp.AuthType,
+		AuthEnabled:  resp.AuthEnabled,
+		AuthType:     resp.AuthType,
+		AuthEndpoint: resp.AuthEndpoint,
+		WorkspaceId:  resp.WorkspaceId,
+		UserId:       resp.UserId,
 	}, nil
 }
