@@ -222,20 +222,65 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
     if profile.EngineAddress == "" {
         return "localhost:7700", insecure.NewCredentials(), nil
     }
-    // Use TLS if profile indicates so
+    Logger.Debug("Using engine address from active profile", "profile", profile.Name, "address", profile.EngineAddress)
+    // Parse profile.EngineAddress which may be a URL or bare host[:port]
     if profile.TLS.Enabled {
+        // TLS path
+        var host, port string
+        if hasScheme(profile.EngineAddress) {
+            u, perr := url.Parse(profile.EngineAddress)
+            if perr != nil {
+                return "", nil, fmt.Errorf("invalid profile engine address: %w", perr)
+            }
+            host = u.Hostname()
+            port = u.Port()
+            if port == "" {
+                port = "443"
+            }
+        } else {
+            h, p, errSplit := net.SplitHostPort(profile.EngineAddress)
+            if errSplit != nil {
+                // Assume missing port, default 443
+                host = profile.EngineAddress
+                port = "443"
+            } else {
+                host = h
+                port = p
+            }
+        }
         sni := profile.TLS.Domain
-        // If domain empty, attempt to extract from host
         if sni == "" {
-            host, _, _ := net.SplitHostPort(profile.EngineAddress)
             sni = host
         }
+        target := net.JoinHostPort(host, port)
         tlsCfg := &tls.Config{ServerName: sni}
-        Logger.Debug("TLS enabled from profile", "address", profile.EngineAddress, "server_name", sni)
-        return profile.EngineAddress, credentials.NewTLS(tlsCfg), nil
+        Logger.Debug("TLS enabled from profile", "address", target, "server_name", sni)
+        return target, credentials.NewTLS(tlsCfg), nil
     }
-    Logger.Debug("Using insecure transport from profile", "address", profile.EngineAddress)
-    return profile.EngineAddress, insecure.NewCredentials(), nil
+    // Insecure path
+    if hasScheme(profile.EngineAddress) {
+        u, perr := url.Parse(profile.EngineAddress)
+        if perr != nil {
+            return "", nil, fmt.Errorf("invalid profile engine address: %w", perr)
+        }
+        host := u.Hostname()
+        port := u.Port()
+        if port == "" {
+            port = "7700"
+        }
+        target := net.JoinHostPort(host, port)
+        Logger.Debug("Using insecure transport from profile", "address", target)
+        return target, insecure.NewCredentials(), nil
+    }
+    // Bare host[:port]
+    host, port, errSplit := net.SplitHostPort(profile.EngineAddress)
+    if errSplit != nil {
+        host = profile.EngineAddress
+        port = "7700"
+    }
+    target := net.JoinHostPort(host, port)
+    Logger.Debug("Using insecure transport from profile", "address", target)
+    return target, insecure.NewCredentials(), nil
 }
 
 // parseExplicitAddress parses an explicit address which may be a URL with a scheme
