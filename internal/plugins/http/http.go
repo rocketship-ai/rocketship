@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
@@ -179,7 +181,12 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	}
 	logger.Info("=== END HTTP REQUEST DEBUG ===")
 
-	// Send request
+	// Check if polling is configured
+	if pollingConfig, ok := configData["polling"].(map[string]interface{}); ok {
+		return hp.executeWithPolling(ctx, req, pollingConfig, p, state)
+	}
+
+	// Send single request (non-polling)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -323,6 +330,307 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 
 	log.Printf("[DEBUG] Final saved values: %v", saved)
 	return nil
+}
+
+// executeWithPolling executes the HTTP request with polling until conditions are met
+func (hp *HTTPPlugin) executeWithPolling(ctx context.Context, req *http.Request, pollingConfig map[string]interface{}, p map[string]interface{}, state map[string]string) (interface{}, error) {
+	logger := activity.GetLogger(ctx)
+	logger.Info("Starting HTTP request with polling configuration")
+
+	// Parse polling configuration
+	intervalStr, ok := pollingConfig["interval"].(string)
+	if !ok {
+		return nil, fmt.Errorf("polling interval is required")
+	}
+	interval, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid polling interval: %w", err)
+	}
+
+	timeoutStr, ok := pollingConfig["timeout"].(string)
+	if !ok {
+		return nil, fmt.Errorf("polling timeout is required")
+	}
+	timeout, err := time.ParseDuration(timeoutStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid polling timeout: %w", err)
+	}
+
+	maxAttempts := 0
+	if maxAttemptsFloat, ok := pollingConfig["max_attempts"].(float64); ok {
+		maxAttempts = int(maxAttemptsFloat)
+	}
+
+	backoffCoefficient := 1.0
+	if backoffFloat, ok := pollingConfig["backoff_coefficient"].(float64); ok {
+		backoffCoefficient = backoffFloat
+	}
+
+	conditions, ok := pollingConfig["conditions"].([]interface{})
+	if !ok || len(conditions) == 0 {
+		return nil, fmt.Errorf("polling conditions are required")
+	}
+
+	logger.Info("Polling configuration", "interval", interval, "timeout", timeout, "max_attempts", maxAttempts, "backoff_coefficient", backoffCoefficient)
+
+	// Set up timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	client := &http.Client{}
+	attempt := 0
+	currentInterval := interval
+
+	startTime := time.Now()
+
+	for {
+		attempt++
+		logger.Info("Polling attempt", "attempt", attempt, "elapsed", time.Since(startTime))
+
+		// Check max attempts
+		if maxAttempts > 0 && attempt > maxAttempts {
+			return nil, fmt.Errorf("polling exceeded maximum attempts (%d)", maxAttempts)
+		}
+
+		// Check timeout
+		select {
+		case <-timeoutCtx.Done():
+			return nil, fmt.Errorf("polling timed out after %v", timeout)
+		default:
+		}
+
+		// Create a new request for each attempt (body might be consumed)
+		var reqBody io.Reader
+		if req.Body != nil {
+			// We need to preserve the original body for retries
+			if req.GetBody != nil {
+				reqBody, err = req.GetBody()
+				if err != nil {
+					return nil, fmt.Errorf("failed to get request body: %w", err)
+				}
+			}
+		}
+
+		// Create new request with fresh body
+		pollReq, err := http.NewRequestWithContext(timeoutCtx, req.Method, req.URL.String(), reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create polling request: %w", err)
+		}
+
+		// Copy headers
+		for key, values := range req.Header {
+			for _, value := range values {
+				pollReq.Header.Add(key, value)
+			}
+		}
+
+		// Send request
+		resp, err := client.Do(pollReq)
+		if err != nil {
+			logger.Warn("Polling request failed", "error", err, "attempt", attempt)
+			// Wait before retrying
+			time.Sleep(currentInterval)
+			currentInterval = time.Duration(float64(currentInterval) * backoffCoefficient)
+			continue
+		}
+
+		// Read response body
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logger.Warn("Failed to read response body", "error", err, "attempt", attempt)
+			time.Sleep(currentInterval)
+			currentInterval = time.Duration(float64(currentInterval) * backoffCoefficient)
+			continue
+		}
+
+		// Create response object
+		response := &HTTPResponse{
+			StatusCode: resp.StatusCode,
+			Headers:    make(map[string]string),
+			Body:       string(respBody),
+		}
+
+		// Copy headers
+		for key, values := range resp.Header {
+			if len(values) > 0 {
+				response.Headers[key] = values[0]
+			}
+		}
+
+		// Process saves for this attempt
+		saved := make(map[string]string)
+		if err := hp.processSaves(p, resp, respBody, saved); err != nil {
+			logger.Warn("Failed to process saves", "error", err, "attempt", attempt)
+		}
+
+		logger.Info("Polling response", "status_code", resp.StatusCode, "body_length", len(respBody), "attempt", attempt)
+
+		// Check polling conditions
+		conditionsMet, err := hp.checkPollingConditions(conditions, resp, respBody, state)
+		if err != nil {
+			logger.Warn("Error checking polling conditions", "error", err, "attempt", attempt)
+			time.Sleep(currentInterval)
+			currentInterval = time.Duration(float64(currentInterval) * backoffCoefficient)
+			continue
+		}
+
+		if conditionsMet {
+			logger.Info("Polling conditions met", "attempt", attempt, "elapsed", time.Since(startTime))
+			
+			// Process final assertions
+			if err := hp.processAssertions(p, resp, respBody); err != nil {
+				return nil, fmt.Errorf("final assertions failed: %w", err)
+			}
+
+			return &ActivityResponse{
+				Response: response,
+				Saved:    saved,
+			}, nil
+		}
+
+		logger.Info("Polling conditions not met, waiting before retry", "interval", currentInterval)
+		time.Sleep(currentInterval)
+		currentInterval = time.Duration(float64(currentInterval) * backoffCoefficient)
+	}
+}
+
+// checkPollingConditions checks if all polling conditions are met
+func (hp *HTTPPlugin) checkPollingConditions(conditions []interface{}, resp *http.Response, respBody []byte, state map[string]string) (bool, error) {
+	for _, condition := range conditions {
+		conditionMap, ok := condition.(map[string]interface{})
+		if !ok {
+			return false, fmt.Errorf("invalid condition format: got type %T", condition)
+		}
+
+		conditionType, ok := conditionMap["type"].(string)
+		if !ok {
+			return false, fmt.Errorf("condition type is required")
+		}
+
+		// Replace variables in expected value if it's a string
+		if expectedStr, ok := conditionMap["expected"].(string); ok {
+			expectedStr, err := replaceVariables(expectedStr, state)
+			if err != nil {
+				return false, fmt.Errorf("failed to replace variables in expected value: %w", err)
+			}
+			conditionMap["expected"] = expectedStr
+		}
+
+		switch conditionType {
+		case "status_code":
+			expected, ok := conditionMap["expected"].(float64)
+			if !ok {
+				return false, fmt.Errorf("status code condition expected value must be a number: got type %T", conditionMap["expected"])
+			}
+			if int(expected) != resp.StatusCode {
+				return false, nil
+			}
+
+		case "header":
+			headerName, ok := conditionMap["name"].(string)
+			if !ok {
+				return false, fmt.Errorf("header name is required for header condition")
+			}
+
+			expected, ok := conditionMap["expected"].(string)
+			if !ok {
+				return false, fmt.Errorf("header value must be a string")
+			}
+
+			actual := resp.Header.Get(headerName)
+			if actual != expected {
+				return false, nil
+			}
+
+		case "json_path":
+			// Handle JSON path conditions
+			var jsonData interface{}
+			if err := json.Unmarshal(respBody, &jsonData); err != nil {
+				return false, fmt.Errorf("failed to parse response body as JSON: %w", err)
+			}
+
+			path, ok := conditionMap["path"].(string)
+			if !ok {
+				return false, fmt.Errorf("path is required for JSONPath condition")
+			}
+
+			// Replace variables in path field
+			path, err := replaceVariables(path, state)
+			if err != nil {
+				return false, fmt.Errorf("failed to replace variables in path field: %w", err)
+			}
+
+			query, err := gojq.Parse(path)
+			if err != nil {
+				return false, fmt.Errorf("failed to parse jq expression %q: %w", path, err)
+			}
+
+			iter := query.Run(jsonData)
+			var result interface{}
+			var found bool
+
+			for {
+				v, ok := iter.Next()
+				if !ok {
+					break
+				}
+				if err, ok := v.(error); ok {
+					return false, fmt.Errorf("error evaluating jq expression %q: %w", path, err)
+				}
+				if !found {
+					result = v
+					found = true
+				}
+			}
+
+			// If we're just checking existence
+			if exists, ok := conditionMap["exists"].(bool); ok && exists {
+				if !found {
+					return false, nil
+				}
+				// Skip value comparison if we're only checking existence
+				continue
+			}
+
+			if !found {
+				return false, nil
+			}
+
+			// Only compare values if we have an expected value
+			if expected, hasExpected := conditionMap["expected"]; hasExpected {
+				equal := false
+				switch v := result.(type) {
+				case int:
+					if exp, ok := expected.(float64); ok {
+						equal = float64(v) == exp
+					} else if exp, ok := expected.(int); ok {
+						equal = v == exp
+					}
+				case float64:
+					if exp, ok := expected.(float64); ok {
+						equal = v == exp
+					} else if exp, ok := expected.(int); ok {
+						equal = v == float64(exp)
+					}
+				case string:
+					if exp, ok := expected.(string); ok {
+						equal = v == exp
+					}
+				default:
+					equal = result == expected
+				}
+
+				if !equal {
+					return false, nil
+				}
+			}
+		default:
+			return false, fmt.Errorf("unknown condition type: %s", conditionType)
+		}
+	}
+
+	return true, nil
 }
 
 func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Response, respBody []byte) error {

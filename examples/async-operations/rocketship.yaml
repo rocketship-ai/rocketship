@@ -1,0 +1,248 @@
+name: "Async Operations Example"
+description: "Demonstrates async HTTP operations with polling until completion"
+tests:
+  - name: "Two-Stage Async Job Processing"
+    steps:
+      - name: "Submit async job"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://httpbin.org/anything"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "two-stage-async"
+          body: |
+            {
+              "operation": "process-data",
+              "data": {"items": [1, 2, 3, 4, 5]},
+              "estimated_duration": 30
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".json.operation"
+            expected: "process-data"
+        save:
+          - json_path: ".json.operation"
+            as: "job_id"
+
+      - name: "Poll job until completion"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/anything/{{ job_id }}"
+          headers:
+            X-Test-Session: "two-stage-async"
+          polling:
+            interval: "2s"
+            timeout: "30s"
+            backoff_coefficient: 1.1
+            conditions:
+              - type: "status_code"
+                expected: 200
+              - type: "json_path"
+                path: ".url"
+                exists: true
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "https://httpbin.org/anything/{{ job_id }}"
+        save:
+          - json_path: ".url"
+            as: "job_status_url"
+
+  - name: "Image Processing Workflow"
+    steps:
+      - name: "Start image processing"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://httpbin.org/anything/image-processing"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "image-processing"
+          body: |
+            {
+              "image_url": "https://example.com/image.jpg",
+              "operations": ["resize", "watermark", "compress"],
+              "output_format": "jpg"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".json.image_url"
+            as: "original_image"
+          - json_path: ".url"
+            as: "processing_job_id"
+
+      - name: "Wait for processing completion"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ processing_job_id }}/status"
+          headers:
+            X-Test-Session: "image-processing"
+          polling:
+            interval: "3s"
+            timeout: "2m"
+            max_attempts: 20
+            backoff_coefficient: 1.2
+            conditions:
+              - type: "status_code"
+                expected: 200
+              - type: "json_path"
+                path: ".url"
+                exists: true
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "{{ processing_job_id }}/status"
+        save:
+          - json_path: ".url"
+            as: "processed_status_url"
+
+      - name: "Verify processing results"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ processed_status_url }}"
+          headers:
+            X-Test-Session: "image-processing"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "{{ processed_status_url }}"
+
+tests:
+  - name: "Async Job Processing"
+    steps:
+      - name: "Start async job"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://httpbin.org/delay/5"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "async-demo"
+          body: |
+            {
+              "operation": "process-data",
+              "data": {
+                "items": [1, 2, 3, 4, 5]
+              }
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".origin"
+            as: "request_origin"
+
+  - name: "Async Job with Polling"
+    steps:
+      - name: "Start async job and poll for completion"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://httpbin.org/delay/2"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "async-poll-demo"
+          body: |
+            {
+              "job_id": "job-12345",
+              "operation": "long-running-task"
+            }
+          polling:
+            interval: "1s"          # Poll every 1 second
+            timeout: "30s"          # Give up after 30 seconds
+            max_attempts: 10        # Maximum 10 polling attempts
+            backoff_coefficient: 1.2 # Increase interval by 20% each attempt
+            conditions:
+              - type: "status_code"
+                expected: 200
+              - type: "json_path"
+                path: ".origin"
+                exists: true
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".origin"
+            exists: true
+        save:
+          - json_path: ".origin"
+            as: "job_origin"
+
+  - name: "Complex Async Workflow"
+    steps:
+      - name: "Submit batch processing job"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://httpbin.org/anything"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "async-workflow"
+          body: |
+            {
+              "batch_id": "batch-789",
+              "items": ["item1", "item2", "item3"],
+              "status": "processing"
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".json.batch_id"
+            as: "batch_id"
+
+      - name: "Poll until batch processing completes"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://httpbin.org/anything/{{ batch_id }}"
+          headers:
+            X-Test-Session: "async-workflow"
+          polling:
+            interval: "2s"
+            timeout: "1m"
+            max_attempts: 15
+            backoff_coefficient: 1.1
+            conditions:
+              - type: "status_code"
+                expected: 200
+              - type: "json_path"
+                path: ".url"
+                exists: true
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "https://httpbin.org/anything/{{ batch_id }}"
+        save:
+          - json_path: ".url"
+            as: "final_url"
+
+      - name: "Verify final results"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ final_url }}"
+          headers:
+            X-Test-Session: "async-workflow"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "{{ final_url }}"
