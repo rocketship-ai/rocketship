@@ -1,0 +1,27 @@
+name: "HTTP Form Encoded Example"
+description: "Demonstrate application/x-www-form-urlencoded requests via http plugin"
+vars:
+  name: "world"
+tests:
+  - name: "Form POST via httpbin"
+    steps:
+      - name: "Send form"
+        plugin: http
+        config:
+          method: POST
+          url: "https://httpbin.org/post"
+          form:
+            foo: "bar"
+            templated: "hello {{ .vars.name }}"
+        assertions:
+          - type: status_code
+            expected: 200
+          - type: json_path
+            path: ".headers[\"Content-Type\"]"
+            expected: "application/x-www-form-urlencoded"
+          - type: json_path
+            path: ".form.foo"
+            expected: "bar"
+          - type: json_path
+            path: ".form.templated"
+            expected: "hello world"

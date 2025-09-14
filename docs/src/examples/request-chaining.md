@@ -193,3 +193,38 @@ When your APIs return or expect handlebars syntax (`{{ }}`), use backslash escap
 The backslash (`\`) escapes the handlebars, making `\\{{ user_id }}` output literal `{{ user_id }}` instead of trying to process it as a variable.
 
 See the Handlebars Escaping section in (variables.md) for complete details and advanced usage.
+
+## Form-Encoded Requests (application/x-www-form-urlencoded)
+
+Some APIs expect form-encoded bodies instead of JSON. The http plugin supports this with a `form` map in the step config. When `form` is provided, Rocketship encodes it as `application/x-www-form-urlencoded` and sets the Content-Type automatically (unless you set it explicitly).
+
+Example:
+
+```yaml
+- name: "Submit form"
+  plugin: http
+  config:
+    method: POST
+    url: "https://httpbin.org/post"
+    form:
+      foo: "bar"
+      templated: "hello {{ .vars.name }}"  # Works with variables
+  assertions:
+    - type: status_code
+      expected: 200
+    - type: json_path
+      path: ".form.foo"
+      expected: "bar"
+    - type: json_path
+      path: ".headers[\"Content-Type\"]"
+      expected: "application/x-www-form-urlencoded"
+```
+
+Notes:
+- If both `form` and `body` are provided, `form` takes precedence.
+- Repeated keys can be provided with arrays:
+
+```yaml
+form:
+  tags: ["alpha", "beta"]  # Encodes as tags=alpha&tags=beta
+```

@@ -315,6 +315,16 @@ jobs:
             exit 1
           fi
 
+          echo "Running HTTP form-encoded example..."
+          OUTPUT=$(rocketship run -af examples/http-form-encoded/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ HTTP form-encoded tests passed"
+          else
+            echo "❌ HTTP form-encoded tests had failures"
+            exit 1
+          fi
+
           echo "Running SQL testing example..."
           OUTPUT=$(rocketship run -af examples/sql-testing/rocketship.yaml --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
           echo "$OUTPUT"

@@ -42,6 +42,17 @@
 ## Plugin Configurations
 
 
+### Plugin: `http`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `method` | ✅ | HTTP method to use | `string` | - |
+| `url` | ✅ | Request URL | `string` | - |
+| `headers` |  | HTTP headers to include | `object` | - |
+| `body` |  | Raw request body (string). If 'form' is also provided, 'form' takes precedence. | `string` | - |
+| `form` |  | Form fields to be url-encoded as application/x-www-form-urlencoded | `object` | - |
+
+
 ### Plugin: `script`
 
 | Field | Required | Description | Type / Allowed Values | Notes |
