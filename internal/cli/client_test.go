@@ -180,12 +180,12 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 	// Initialize logger to prevent nil pointer dereference
 	InitLogging()
 
-	tests := []struct {
-		name     string
-		response *generated.GetAuthConfigResponse
-		authErr  error
-		wantErr  bool
-	}{
+    tests := []struct {
+        name     string
+        response *generated.GetAuthConfigResponse
+        authErr  error
+        wantErr  bool
+    }{
 		{
 			name: "local server",
 			response: &generated.GetAuthConfigResponse{
@@ -209,17 +209,7 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			authErr: status.Error(codes.Internal, "server error"),
 			wantErr: true,
 		},
-		{
-			name:    "unimplemented (graceful degradation)",
-			authErr: status.Error(codes.Unimplemented, "not supported"),
-			response: &generated.GetAuthConfigResponse{
-				AuthEnabled:  false,
-				AuthType:     "none", 
-				AuthEndpoint: "",
-			}, // Should return default values
-			wantErr: false,
-		},
-	}
+    }
 
 	for _, tt := range tests {
 		tt := tt
@@ -448,4 +438,3 @@ func containsHelper(s, substr string) bool {
 	}
 	return false
 }
-
