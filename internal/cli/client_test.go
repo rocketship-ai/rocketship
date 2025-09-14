@@ -195,15 +195,15 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		{
-			name: "cloud server",
-			response: &generated.GetAuthConfigResponse{
-				AuthEnabled:  true,
-				AuthType:     "cloud",
-				AuthEndpoint: "https://cloud.rocketship.sh/auth",
-			},
-			wantErr: false,
-		},
+        {
+            name: "cloud server",
+            response: &generated.GetAuthConfigResponse{
+                AuthEnabled:  true,
+                AuthType:     "cloud",
+                AuthEndpoint: "https://app.rocketship.sh/auth",
+            },
+            wantErr: false,
+        },
 		{
 			name:    "server error",
 			authErr: status.Error(codes.Internal, "server error"),
