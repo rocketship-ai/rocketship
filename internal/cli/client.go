@@ -3,80 +3,51 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
+    "crypto/tls"
 )
 
 type EngineClient struct {
-	client generated.EngineClient
-	conn   *grpc.ClientConn
+    client generated.EngineClient
+    conn   *grpc.ClientConn
 }
 
-// ResolveEngineAddress determines the engine address to use based on:
-// 1. Explicit address (if provided)
-// 2. Active profile's engine address
-// 3. Default localhost:7700
-func ResolveEngineAddress(explicitAddress string) (string, error) {
-	// If an explicit address is provided, use it
-	if explicitAddress != "" {
-		Logger.Debug("Using explicitly provided engine address", "address", explicitAddress)
-		return explicitAddress, nil
-	}
 
-	// Try to load config and use active profile
-	config, err := LoadConfig()
-	if err != nil {
-		// Config load failed, use default
-		Logger.Debug("Failed to load config, using default address", "error", err, "address", "localhost:7700")
-		return "localhost:7700", nil
-	}
-
-	// Check if there's an active profile
-	if config.DefaultProfile != "" {
-		profile, exists := config.GetProfile(config.DefaultProfile)
-		if exists && profile.EngineAddress != "" {
-			Logger.Debug("Using engine address from active profile", "profile", profile.Name, "address", profile.EngineAddress)
-			return profile.EngineAddress, nil
-		} else {
-			Logger.Debug("Active profile has no engine address, using default", "profile", config.DefaultProfile, "address", "localhost:7700")
-		}
-	} else {
-		Logger.Debug("No active profile, using default address", "address", "localhost:7700")
-	}
-
-	return "localhost:7700", nil
-}
 
 func NewEngineClient(address string) (*EngineClient, error) {
-	// Resolve the actual address to use
-	resolvedAddress, err := ResolveEngineAddress(address)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve engine address: %w", err)
-	}
+    // Decide target and transport credentials (TLS vs insecure)
+    target, creds, err := resolveDialOptions(address)
+    if err != nil {
+        return nil, err
+    }
 
-	Logger.Debug("connecting to engine", "address", resolvedAddress)
+    Logger.Debug("connecting to engine", "address", target)
 
-	conn, err := grpc.NewClient(resolvedAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		if err == context.DeadlineExceeded {
-			return nil, fmt.Errorf("connection timed out - is the engine running at %s?", resolvedAddress)
-		}
-		return nil, fmt.Errorf("failed to connect to engine: %w", err)
-	}
+    conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(creds))
+    if err != nil {
+        if err == context.DeadlineExceeded {
+            return nil, fmt.Errorf("connection timed out - is the engine running at %s?", target)
+        }
+        return nil, fmt.Errorf("failed to connect to engine: %w", err)
+    }
 
-	client := generated.NewEngineClient(conn)
-	return &EngineClient{
-		client: client,
-		conn:   conn,
-	}, nil
+    client := generated.NewEngineClient(conn)
+    return &EngineClient{
+        client: client,
+        conn:   conn,
+    }, nil
 }
 
 func (c *EngineClient) Close() error {
-	return c.conn.Close()
+    return c.conn.Close()
 }
 
 // HealthCheck performs a health check against the engine
@@ -191,32 +162,180 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 
 // ServerInfo represents server auth capabilities
 type ServerInfo struct {
-	AuthEnabled bool
-	AuthType   string // "none", "cloud", "oidc", "token"
+	AuthEnabled   bool
+	AuthType      string // "none", "cloud", "oidc", "token"
+	AuthEndpoint  string // OAuth/OIDC endpoint for authentication flows
 }
 
 // GetServerInfo gets server capabilities and configuration
 func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
-	infoCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	
-	resp, err := c.client.GetAuthConfig(infoCtx, &generated.GetAuthConfigRequest{})
-	if err != nil {
-		// Gracefully handle engines that don't support GetAuthConfig (pre-profile system)
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == 12 { // UNIMPLEMENTED
-				Logger.Debug("Engine doesn't support GetAuthConfig, assuming local-only")
-				return &ServerInfo{
-					AuthEnabled: false,
-					AuthType:   "none",
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("failed to get server info: %w", err)
-	}
+    infoCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+    defer cancel()
+    
+    resp, err := c.client.GetAuthConfig(infoCtx, &generated.GetAuthConfigRequest{})
+    if err != nil {
+        return nil, fmt.Errorf("failed to get server info: %w", err)
+    }
 	
 	return &ServerInfo{
-		AuthEnabled: resp.AuthEnabled,
-		AuthType:   resp.AuthType,
+		AuthEnabled:  resp.AuthEnabled,
+		AuthType:     resp.AuthType,
+		AuthEndpoint: resp.AuthEndpoint,
 	}, nil
+}
+
+// --- Dial resolution helpers ---
+
+// resolveDialOptions determines the gRPC target and the appropriate transport credentials.
+// Priority:
+// 1) If an explicit address is provided, honor its scheme when present (https/grpcs = TLS; http/grpc = insecure).
+//    For URL schemes without ports, defaults are 443 for https/grpcs and 7700 for http/grpc.
+// 2) If no explicit address, use the active profile's engine address and TLS settings.
+// 3) Fallback to localhost:7700 insecure.
+func resolveDialOptions(explicitAddress string) (string, credentials.TransportCredentials, error) {
+    // If explicit address provided, use it
+    if explicitAddress != "" {
+        target, useTLS, serverName, err := parseExplicitAddress(explicitAddress)
+        if err != nil {
+            return "", nil, fmt.Errorf("invalid engine address: %w", err)
+        }
+        if useTLS {
+            tlsCfg := &tls.Config{}
+            if serverName != "" {
+                tlsCfg.ServerName = serverName
+            }
+            Logger.Debug("TLS enabled for explicit engine address", "server_name", tlsCfg.ServerName)
+            return target, credentials.NewTLS(tlsCfg), nil
+        }
+        Logger.Debug("TLS disabled for explicit engine address")
+        return target, insecure.NewCredentials(), nil
+    }
+
+    // No explicit address: use profile if available
+    config, err := LoadConfig()
+    if err != nil {
+        Logger.Debug("Failed to load config, using default address", "error", err, "address", "localhost:7700")
+        return "localhost:7700", insecure.NewCredentials(), nil
+    }
+
+    profile := config.GetCurrentProfile()
+    if profile.EngineAddress == "" {
+        return "localhost:7700", insecure.NewCredentials(), nil
+    }
+    Logger.Debug("Using engine address from active profile", "profile", profile.Name, "address", profile.EngineAddress)
+    // Parse profile.EngineAddress which may be a URL or bare host[:port]
+    if profile.TLS.Enabled {
+        // TLS path
+        var host, port string
+        if hasScheme(profile.EngineAddress) {
+            u, perr := url.Parse(profile.EngineAddress)
+            if perr != nil {
+                return "", nil, fmt.Errorf("invalid profile engine address: %w", perr)
+            }
+            host = u.Hostname()
+            port = u.Port()
+            if port == "" {
+                port = "443"
+            }
+        } else {
+            h, p, errSplit := net.SplitHostPort(profile.EngineAddress)
+            if errSplit != nil {
+                // Assume missing port, default 443
+                host = profile.EngineAddress
+                port = "443"
+            } else {
+                host = h
+                port = p
+            }
+        }
+        sni := profile.TLS.Domain
+        if sni == "" {
+            sni = host
+        }
+        target := net.JoinHostPort(host, port)
+        tlsCfg := &tls.Config{ServerName: sni}
+        Logger.Debug("TLS enabled from profile", "address", target, "server_name", sni)
+        return target, credentials.NewTLS(tlsCfg), nil
+    }
+    // Insecure path
+    if hasScheme(profile.EngineAddress) {
+        u, perr := url.Parse(profile.EngineAddress)
+        if perr != nil {
+            return "", nil, fmt.Errorf("invalid profile engine address: %w", perr)
+        }
+        host := u.Hostname()
+        port := u.Port()
+        if port == "" {
+            port = "7700"
+        }
+        target := net.JoinHostPort(host, port)
+        Logger.Debug("Using insecure transport from profile", "address", target)
+        return target, insecure.NewCredentials(), nil
+    }
+    // Bare host[:port]
+    host, port, errSplit := net.SplitHostPort(profile.EngineAddress)
+    if errSplit != nil {
+        host = profile.EngineAddress
+        port = "7700"
+    }
+    target := net.JoinHostPort(host, port)
+    Logger.Debug("Using insecure transport from profile", "address", target)
+    return target, insecure.NewCredentials(), nil
+}
+
+// parseExplicitAddress parses an explicit address which may be a URL with a scheme
+// (http, https, grpc, grpcs) or a bare host:port. Returns the dial target, whether TLS is used,
+// and the server name (for SNI) when TLS is used.
+func parseExplicitAddress(addr string) (target string, useTLS bool, serverName string, err error) {
+    if hasScheme(addr) {
+        u, perr := url.Parse(addr)
+        if perr != nil {
+            return "", false, "", perr
+        }
+        host := u.Hostname()
+        port := u.Port()
+        switch u.Scheme {
+        case "https", "grpcs":
+            if port == "" {
+                port = "443"
+            }
+            return net.JoinHostPort(host, port), true, host, nil
+        case "http", "grpc":
+            if port == "" {
+                port = "7700"
+            }
+            return net.JoinHostPort(host, port), false, "", nil
+        default:
+            return "", false, "", fmt.Errorf("unsupported scheme: %s", u.Scheme)
+        }
+    }
+    // No scheme: treat as host[:port]
+    host, port, splitErr := net.SplitHostPort(addr)
+    if splitErr != nil {
+        // If missing port, default to 7700
+        if addr != "" && !containsColon(addr) {
+            return net.JoinHostPort(addr, "7700"), false, "", nil
+        }
+        return "", false, "", splitErr
+    }
+    if host == "" {
+        return "", false, "", fmt.Errorf("invalid address: missing host")
+    }
+    if port == "" {
+        port = "7700"
+    }
+    return net.JoinHostPort(host, port), false, "", nil
+}
+
+func hasScheme(s string) bool {
+    return len(s) >= 7 && (s[:7] == "http://" || s[:8] == "https://" || s[:7] == "grpc://" || s[:8] == "grpcs://")
+}
+
+func containsColon(s string) bool {
+    for i := 0; i < len(s); i++ {
+        if s[i] == ':' {
+            return true
+        }
+    }
+    return false
 }

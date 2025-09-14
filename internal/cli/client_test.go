@@ -15,10 +15,12 @@ import (
 // Mock gRPC server for testing
 type mockEngineServer struct {
 	generated.UnimplementedEngineServer
-	healthStatus string
-	runResponse  *generated.CreateRunResponse
-	healthErr    error
-	runErr       error
+	healthStatus   string
+	runResponse    *generated.CreateRunResponse
+	authResponse   *generated.GetAuthConfigResponse
+	healthErr      error
+	runErr         error
+	authErr        error
 }
 
 func (m *mockEngineServer) Health(ctx context.Context, req *generated.HealthRequest) (*generated.HealthResponse, error) {
@@ -38,6 +40,13 @@ func (m *mockEngineServer) CreateRun(ctx context.Context, req *generated.CreateR
 func (m *mockEngineServer) StreamLogs(req *generated.LogStreamRequest, stream generated.Engine_StreamLogsServer) error {
 	// Simple mock implementation
 	return nil
+}
+
+func (m *mockEngineServer) GetAuthConfig(ctx context.Context, req *generated.GetAuthConfigRequest) (*generated.GetAuthConfigResponse, error) {
+	if m.authErr != nil {
+		return nil, m.authErr
+	}
+	return m.authResponse, nil
 }
 
 func setupMockServer(tb testing.TB, mock *mockEngineServer) (string, func()) {
@@ -160,6 +169,94 @@ func TestEngineClient_HealthCheck(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+			}
+		})
+	}
+}
+
+func TestEngineClient_GetServerInfo(t *testing.T) {
+	t.Parallel()
+	
+	// Initialize logger to prevent nil pointer dereference
+	InitLogging()
+
+    tests := []struct {
+        name     string
+        response *generated.GetAuthConfigResponse
+        authErr  error
+        wantErr  bool
+    }{
+		{
+			name: "local server",
+			response: &generated.GetAuthConfigResponse{
+				AuthEnabled:  false,
+				AuthType:     "none",
+				AuthEndpoint: "",
+			},
+			wantErr: false,
+		},
+        {
+            name: "cloud server",
+            response: &generated.GetAuthConfigResponse{
+                AuthEnabled:  true,
+                AuthType:     "cloud",
+                AuthEndpoint: "https://app.rocketship.sh/auth",
+            },
+            wantErr: false,
+        },
+		{
+			name:    "server error",
+			authErr: status.Error(codes.Internal, "server error"),
+			wantErr: true,
+		},
+    }
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mock := &mockEngineServer{
+				authResponse: tt.response,
+				authErr:      tt.authErr,
+			}
+
+			addr, cleanup := setupMockServer(t, mock)
+			defer cleanup()
+
+			client, err := NewEngineClient(addr)
+			if err != nil {
+				t.Fatalf("Failed to create client: %v", err)
+			}
+			defer func() {
+				if err := client.Close(); err != nil {
+					t.Errorf("Failed to close client: %v", err)
+				}
+			}()
+
+			ctx := context.Background()
+			serverInfo, err := client.GetServerInfo(ctx)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if serverInfo.AuthEnabled != tt.response.AuthEnabled {
+				t.Errorf("AuthEnabled = %v, want %v", serverInfo.AuthEnabled, tt.response.AuthEnabled)
+			}
+			if serverInfo.AuthType != tt.response.AuthType {
+				t.Errorf("AuthType = %s, want %s", serverInfo.AuthType, tt.response.AuthType)
+			}
+			if serverInfo.AuthEndpoint != tt.response.AuthEndpoint {
+				t.Errorf("AuthEndpoint = %s, want %s", serverInfo.AuthEndpoint, tt.response.AuthEndpoint)
 			}
 		})
 	}
@@ -341,4 +438,3 @@ func containsHelper(s, substr string) bool {
 	}
 	return false
 }
-

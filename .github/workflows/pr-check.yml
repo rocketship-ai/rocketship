@@ -110,7 +110,7 @@ jobs:
           echo "Generating plugin reference documentation..."
           cd docs && python3 src/yaml-reference/generate-plugin-reference.py
           cd ..
-          
+
           echo "Checking for differences..."
           if git diff --exit-code docs/src/yaml-reference/plugin-reference.md; then
             echo "✅ Plugin reference docs are up-to-date!"
@@ -362,14 +362,14 @@ jobs:
           echo "Testing profile system..."
           # Test profile list shows default built-in profile
           OUTPUT=$(rocketship profile list)
-          if echo "$OUTPUT" | grep -q "default.*cloud.rocketship.sh"; then
+          if echo "$OUTPUT" | grep -q "default.*app.rocketship.sh"; then
             echo "✅ Default profile configured correctly"
           else
             echo "❌ Default profile missing or misconfigured"
             exit 1
           fi
 
-          # Test profile routing (should attempt connection to cloud.rocketship.sh and fail gracefully)
+          # Test profile routing (should attempt connection to app.rocketship.sh and fail gracefully)
           OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -f examples/simple-delay/rocketship.yaml 2>&1) || true
           if echo "$OUTPUT" | grep -q "Using engine address from active profile"; then
             echo "✅ Profile routing middleware working"
@@ -398,14 +398,14 @@ jobs:
           ! rocketship validate nonexistent.yaml
           ! rocketship run -f nonexistent.yaml
           ! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
-          
+
           echo "Testing run persistence error scenarios..."
           # Test list without server running
           ! rocketship list -e localhost:7700
-          
+
           # Test get without server running  
           ! rocketship get abc123 -e localhost:7700
-          
+
           # Test get with invalid run ID (when server is running)
           rocketship start server --background
           sleep 3
@@ -421,9 +421,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'mcp-server/package-lock.json'
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "mcp-server/package-lock.json"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -458,7 +458,7 @@ jobs:
           cd mcp-server
           # Install the local package globally for testing
           npm install -g ./rocketshipai-mcp-server-*.tgz
-          
+
           # Verify the binary is available
           which rocketship-mcp || echo "Binary not found in PATH"
           ls -la $(npm root -g)/@rocketshipai/mcp-server/ || echo "Package not found"

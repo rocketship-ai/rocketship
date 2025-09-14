@@ -43,16 +43,18 @@ type TeamContext struct {
 	TeamName string `json:"team_name"`
 }
 
-// GetDefaultProfile returns the built-in default profile for cloud.rocketship.sh
+// GetDefaultProfile returns the built-in default profile for app.rocketship.sh
 func GetDefaultProfile() Profile {
-	return Profile{
-		Name:          "default",
-		EngineAddress: "https://cloud.rocketship.sh",
-		TLS: TLSConfig{
-			Enabled: true,
-		},
-		Environment: make(map[string]string),
-	}
+    return Profile{
+        Name:          "default",
+        // Store host:port and rely on TLS config for transport semantics
+        EngineAddress: "app.rocketship.sh:443",
+        TLS: TLSConfig{
+            Enabled: true,
+            Domain:  "app.rocketship.sh",
+        },
+        Environment: make(map[string]string),
+    }
 }
 
 // DefaultConfig returns a new config with sensible defaults
