@@ -1,0 +1,87 @@
+name: "Simple S3 Test Suite"
+description: "A simple test suite that demonstrates basic S3 operations"
+vars:
+  s3_bucket: "test-bucket"
+  aws_access_key: "test"
+  aws_secret_key: "test"
+  aws_region: "us-east-1"
+  local_stack_endpoint: "http://localhost:4566"  # Used only for local testing with LocalStack
+tests:
+  - name: "Upload File to S3"
+    steps:
+      - name: "Log start of S3 upload test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting S3 upload test - uploading file"
+
+      - name: "Upload a new file"
+        plugin: "s3"
+        config:
+          operation: "PUT"
+          file_path: "/home/rahul/so i will work on adding.txt"
+          aws_access_key: "{{ .vars.aws_access_key }}"
+          aws_secret_key: "{{ .vars.aws_secret_key }}"
+          bucket: "{{ .vars.s3_bucket }}"
+          key_prefix: "uploads"
+          aws_region: "{{ .vars.aws_region }}"
+          endpoint: "{{ .vars.local_stack_endpoint }}"  # Use LocalStack endpoint for local testing
+        assertions:
+          - type: "json_path"
+            path: ".status"
+            expected: 200
+          - type: "json_path"
+            path: ".url"
+            expected: "https://{{ .vars.s3_bucket }}.s3.{{ .vars.aws_region }}.amazonaws.com/uploads/so_i_will_work_on_adding.txt"
+        save:
+          - json_path: ".s3_file_name"
+            as: "file_name"
+
+      - name: "Log end of S3 upload test"
+        plugin: "log"
+        config:
+          message: "🔧 Finished S3 upload test - uploaded file"
+
+      - name: "Log start of S3 download test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting S3 download test - downloading file"
+
+      - name: "Download File from S3"
+        plugin: "s3"
+        config:
+          operation: "GET"
+          s3_file_name: "{{ file_name }}"
+          aws_access_key: "{{ .vars.aws_access_key }}"
+          aws_secret_key: "{{ .vars.aws_secret_key }}"
+          bucket: "{{ .vars.s3_bucket }}"
+          aws_region: "{{ .vars.aws_region }}"
+          key_prefix: "uploads"
+          file_path: "/home/rahul/{{file_name}}" # Path to save the downloaded file if provided
+          endpoint: "{{ .vars.local_stack_endpoint }}"  # Use LocalStack endpoint for local testing
+
+      - name: "Log end of S3 download test"
+        plugin: "log"
+        config:
+          message: "🔧 Finished S3 download test - downloaded file"
+
+      - name: "Log start of S3 delete test"
+        plugin: "log"
+        config:
+          message: "🔧 Starting S3 delete test - deleting file"
+
+      - name: "Delete File from S3"
+        plugin: "s3"
+        config:
+          operation: "DELETE"
+          s3_file_name: "so i will work on adding.txt"
+          aws_access_key: "{{ .vars.aws_access_key }}"
+          aws_secret_key: "{{ .vars.aws_secret_key }}"
+          bucket: "{{ .vars.s3_bucket }}"
+          key_prefix: "uploads"
+          aws_region: "{{ .vars.aws_region }}"
+          endpoint: "{{ .vars.local_stack_endpoint }}"  # Use LocalStack endpoint for local testing
+
+      - name: "Log end of S3 delete test"
+        plugin: "log"
+        config:
+          message: "🔧 Finished S3 delete test - deleted file"

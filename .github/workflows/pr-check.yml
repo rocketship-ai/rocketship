@@ -178,6 +178,28 @@ jobs:
           --health-timeout=5s
           --health-retries=3
 
+      # add localstack service for testing AWS plugins
+      localstack:
+        container_name: localstack
+        image: localstack/localstack:3.0.2
+        ports:
+          - "4566:4566"                     # Edge port (unified entrypoint)
+          - "4510-4559:4510-4559"           # Service ports
+        environment:
+          - DEBUG=1                         
+          - SERVICES=s3  #later add more services as needed, comma-separated
+          - AWS_ACCESS_KEY_ID=test
+          - AWS_SECRET_ACCESS_KEY=test
+          - DEFAULT_REGION=us-east-1
+        volumes:
+          - "./.github/scripts/init-localstack-s3.sh:/etc/localstack/init/ready.d/init-localstack-s3.sh"
+        healthcheck:
+          test: ["CMD", "curl", "-s", "http://localhost:4566/_localstack/health"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+
+
     steps:
       - uses: actions/checkout@v4
 
@@ -312,6 +334,16 @@ jobs:
             echo "✅ simple-delay tests passed"
           else
             echo "❌ simple-delay tests had failures"
+            exit 1
+          fi
+
+          echo "Running s3 example..."
+          OUTPUT=$(rocketship run -af examples/s3-testing/rocketship.yaml)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
+            echo "✅ S3 plugin tests passed"
+          else
+            echo "❌ S3 plugin tests had failures"
             exit 1
           fi
 
