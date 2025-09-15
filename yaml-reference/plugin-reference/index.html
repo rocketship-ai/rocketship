@@ -1232,6 +1232,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#plugin-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: http
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#plugin-script" class="md-nav__link">
     <span class="md-ellipsis">
       Plugin: script
@@ -1930,6 +1939,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#plugin-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: http
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#plugin-script" class="md-nav__link">
     <span class="md-ellipsis">
       Plugin: script
@@ -2139,6 +2157,55 @@
 </ul>
 <hr />
 <h2 id="plugin-configurations">Plugin Configurations</h2>
+<h3 id="plugin-http">Plugin: <code>http</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>method</code></td>
+<td>✅</td>
+<td>HTTP method to use</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>url</code></td>
+<td>✅</td>
+<td>Request URL</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td></td>
+<td>HTTP headers to include</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td></td>
+<td>Raw request body (string). If 'form' is also provided, 'form' takes precedence.</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>form</code></td>
+<td></td>
+<td>Form fields to be url-encoded as application/x-www-form-urlencoded</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
 <h3 id="plugin-script">Plugin: <code>script</code></h3>
 <table>
 <thead>
