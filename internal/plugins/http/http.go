@@ -111,16 +111,15 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		return nil, fmt.Errorf("invalid config format: got type %T", p["config"])
 	}
 
-    // Replace variables in URL
-    urlStr, ok := configData["url"].(string)
-    if !ok {
-        return nil, fmt.Errorf("url is required")
-    }
-    urlStr, err := replaceVariables(urlStr, state)
-    if err != nil {
-        return nil, fmt.Errorf("failed to replace variables in URL: %w", err)
-    }
-
+	// Replace variables in URL
+	urlStr, ok := configData["url"].(string)
+	if !ok {
+		return nil, fmt.Errorf("url is required")
+	}
+	urlStr, err := replaceVariables(urlStr, state)
+	if err != nil {
+		return nil, fmt.Errorf("failed to replace variables in URL: %w", err)
+	}
 
 	// Build request body
 	var body io.Reader
@@ -169,8 +168,8 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		return nil, fmt.Errorf("method is required")
 	}
 
-    // Create request
-    req, err := http.NewRequestWithContext(ctx, method, urlStr, body)
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, method, urlStr, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -263,11 +262,6 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		Saved:    saved,
 	}, nil
 }
-
-// buildRequest is a helper to construct an HTTP request from config and state.
-// It's used by tests to validate request construction without requiring Temporal context.
-// Note: Request-building logic is also mirrored in tests via a helper to avoid
-// pulling Temporal activity context into unit tests.
 
 func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response, respBody []byte, saved map[string]string) error {
 	saves, ok := p["save"].([]interface{})
