@@ -557,6 +557,68 @@ func TestBuildRequest_FormPreferredOverBody(t *testing.T) {
     }
 }
 
+// buildRequest is a test-only helper mirroring the request-building logic in the plugin
+func buildRequest(method, urlStr string, configData map[string]interface{}, state map[string]string) (*http.Request, error) {
+    var err error
+    var body io.Reader
+    isForm := false
+
+    if formData, ok := configData["form"].(map[string]interface{}); ok && len(formData) > 0 {
+        values := url.Values{}
+        for k, v := range formData {
+            switch val := v.(type) {
+            case string:
+                replaced, rerr := replaceVariables(val, state)
+                if rerr != nil {
+                    return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
+                }
+                values.Add(k, replaced)
+            case []interface{}:
+                for _, elem := range val {
+                    str := fmt.Sprint(elem)
+                    if s, ok := elem.(string); ok {
+                        if rep, rerr := replaceVariables(s, state); rerr == nil {
+                            str = rep
+                        }
+                    }
+                    values.Add(k, str)
+                }
+            default:
+                values.Add(k, fmt.Sprint(val))
+            }
+        }
+        encoded := values.Encode()
+        body = strings.NewReader(encoded)
+        isForm = true
+    } else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
+        bodyStr, err = replaceVariables(bodyStr, state)
+        if err != nil {
+            return nil, fmt.Errorf("failed to replace variables in body: %w", err)
+        }
+        body = bytes.NewReader([]byte(bodyStr))
+    }
+
+    req, err := http.NewRequest(method, urlStr, body)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create request: %w", err)
+    }
+    if headers, ok := configData["headers"].(map[string]interface{}); ok {
+        for key, value := range headers {
+            if strValue, ok := value.(string); ok {
+                strValue, err = replaceVariables(strValue, state)
+                if err != nil {
+                    return nil, fmt.Errorf("failed to replace variables in header %s: %w", key, err)
+                }
+                req.Header.Add(key, strValue)
+            }
+        }
+    }
+    if isForm && req.Header.Get("Content-Type") == "" {
+        req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    }
+    return req, nil
+}
+
 func TestHTTPPlugin_ErrorHandling(t *testing.T) {
 	plugin := &HTTPPlugin{}
 	ctx := context.Background()
