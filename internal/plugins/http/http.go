@@ -8,7 +8,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
@@ -110,18 +112,50 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	}
 
 	// Replace variables in URL
-	url, ok := configData["url"].(string)
+	urlStr, ok := configData["url"].(string)
 	if !ok {
 		return nil, fmt.Errorf("url is required")
 	}
-	url, err := replaceVariables(url, state)
+	urlStr, err := replaceVariables(urlStr, state)
 	if err != nil {
 		return nil, fmt.Errorf("failed to replace variables in URL: %w", err)
 	}
 
-	// Replace variables in body
+	// Build request body
 	var body io.Reader
-	if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
+	isForm := false
+	// Prefer form encoding when provided
+	if formData, ok := configData["form"].(map[string]interface{}); ok && len(formData) > 0 {
+		values := url.Values{}
+		for k, v := range formData {
+			switch val := v.(type) {
+			case string:
+				// Apply runtime variable replacement for string values
+				replaced, rerr := replaceVariables(val, state)
+				if rerr != nil {
+					return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
+				}
+				values.Add(k, replaced)
+			case []interface{}:
+				for _, elem := range val {
+					str := fmt.Sprint(elem)
+					// Try replacement on strings only
+					if s, ok := elem.(string); ok {
+						if rep, rerr := replaceVariables(s, state); rerr == nil {
+							str = rep
+						}
+					}
+					values.Add(k, str)
+				}
+			default:
+				values.Add(k, fmt.Sprint(val))
+			}
+		}
+		encoded := values.Encode()
+		body = strings.NewReader(encoded)
+		isForm = true
+	} else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
+		// Raw body path
 		bodyStr, err = replaceVariables(bodyStr, state)
 		if err != nil {
 			return nil, fmt.Errorf("failed to replace variables in body: %w", err)
@@ -135,7 +169,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	}
 
 	// Create request
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	req, err := http.NewRequestWithContext(ctx, method, urlStr, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -151,6 +185,11 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 				req.Header.Add(key, strValue)
 			}
 		}
+	}
+
+	// Default Content-Type for form submissions if not explicitly set
+	if isForm && req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
 	// Debug: Print the final HTTP request details

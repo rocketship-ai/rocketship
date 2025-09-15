@@ -203,6 +203,45 @@
               "allOf": [
                 {
                   "if": {
+                    "properties": { "plugin": { "const": "http" } }
+                  },
+                  "then": {
+                    "properties": {
+                      "config": {
+                        "type": "object",
+                        "required": ["method", "url"],
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "description": "HTTP method to use"
+                          },
+                          "url": {
+                            "type": "string",
+                            "description": "Request URL"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "description": "HTTP headers to include",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "body": {
+                            "type": "string",
+                            "description": "Raw request body (string). If 'form' is also provided, 'form' takes precedence."
+                          },
+                          "form": {
+                            "type": "object",
+                            "description": "Form fields to be url-encoded as application/x-www-form-urlencoded",
+                            "additionalProperties": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
                     "properties": { "plugin": { "const": "script" } }
                   },
                   "then": {

@@ -1,14 +1,17 @@
 package http
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"sync"
-	"testing"
+    "bytes"
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "net/http/httptest"
+    "net/url"
+    "strings"
+    "sync"
+    "testing"
 )
 
 func TestHTTPPlugin_GetType(t *testing.T) {
@@ -470,6 +473,150 @@ func TestHTTPPlugin_VariableSubstitution(t *testing.T) {
 
 	// Skip this test as it requires Temporal activity context
 	t.Skip("Activity method requires Temporal context - skipping direct call test")
+}
+
+func TestBuildRequest_FormURLEncoded(t *testing.T) {
+    state := map[string]string{"name": "world"}
+    config := map[string]interface{}{
+        "form": map[string]interface{}{
+            "foo":       "bar",
+            "templated": "hello {{ name }}",
+        },
+    }
+    req, err := buildRequest("POST", "http://example.com", config, state)
+    if err != nil {
+        t.Fatalf("buildRequest error: %v", err)
+    }
+    if ct := req.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded" {
+        t.Fatalf("expected Content-Type form, got %q", ct)
+    }
+    // Read and parse body
+    bodyBytes, _ := io.ReadAll(req.Body)
+    req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+    v, err := url.ParseQuery(string(bodyBytes))
+    if err != nil {
+        t.Fatalf("parse body: %v", err)
+    }
+    if v.Get("foo") != "bar" {
+        t.Errorf("expected foo=bar, got %q", v.Get("foo"))
+    }
+    if v.Get("templated") != "hello world" {
+        t.Errorf("expected templated=hello world, got %q", v.Get("templated"))
+    }
+}
+
+func TestBuildRequest_FormExplicitHeaderPreserved(t *testing.T) {
+    config := map[string]interface{}{
+        "headers": map[string]interface{}{
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+        },
+        "form": map[string]interface{}{
+            "a": "1",
+        },
+    }
+    req, err := buildRequest("POST", "http://example.com", config, nil)
+    if err != nil {
+        t.Fatalf("buildRequest error: %v", err)
+    }
+    if ct := req.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded; charset=utf-8" {
+        t.Fatalf("expected explicit Content-Type preserved, got %q", ct)
+    }
+}
+
+func TestBuildRequest_FormArrayValues(t *testing.T) {
+    config := map[string]interface{}{
+        "form": map[string]interface{}{
+            "multi": []interface{}{"1", "2"},
+        },
+    }
+    req, err := buildRequest("POST", "http://example.com", config, nil)
+    if err != nil {
+        t.Fatalf("buildRequest error: %v", err)
+    }
+    bodyBytes, _ := io.ReadAll(req.Body)
+    req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+    v, _ := url.ParseQuery(string(bodyBytes))
+    vals, ok := v["multi"]
+    if !ok || len(vals) != 2 || vals[0] != "1" || vals[1] != "2" {
+        t.Fatalf("expected multi=[1,2], got %v", vals)
+    }
+}
+
+func TestBuildRequest_FormPreferredOverBody(t *testing.T) {
+    config := map[string]interface{}{
+        "body": "{\"x\":1}",
+        "form": map[string]interface{}{"y": "2"},
+    }
+    req, err := buildRequest("POST", "http://example.com", config, nil)
+    if err != nil {
+        t.Fatalf("buildRequest error: %v", err)
+    }
+    bodyBytes, _ := io.ReadAll(req.Body)
+    if !strings.Contains(string(bodyBytes), "y=2") {
+        t.Fatalf("expected form body, got %q", string(bodyBytes))
+    }
+}
+
+// buildRequest is a test-only helper mirroring the request-building logic in the plugin
+func buildRequest(method, urlStr string, configData map[string]interface{}, state map[string]string) (*http.Request, error) {
+    var err error
+    var body io.Reader
+    isForm := false
+
+    if formData, ok := configData["form"].(map[string]interface{}); ok && len(formData) > 0 {
+        values := url.Values{}
+        for k, v := range formData {
+            switch val := v.(type) {
+            case string:
+                replaced, rerr := replaceVariables(val, state)
+                if rerr != nil {
+                    return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
+                }
+                values.Add(k, replaced)
+            case []interface{}:
+                for _, elem := range val {
+                    str := fmt.Sprint(elem)
+                    if s, ok := elem.(string); ok {
+                        if rep, rerr := replaceVariables(s, state); rerr == nil {
+                            str = rep
+                        }
+                    }
+                    values.Add(k, str)
+                }
+            default:
+                values.Add(k, fmt.Sprint(val))
+            }
+        }
+        encoded := values.Encode()
+        body = strings.NewReader(encoded)
+        isForm = true
+    } else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
+        bodyStr, err = replaceVariables(bodyStr, state)
+        if err != nil {
+            return nil, fmt.Errorf("failed to replace variables in body: %w", err)
+        }
+        body = bytes.NewReader([]byte(bodyStr))
+    }
+
+    req, err := http.NewRequest(method, urlStr, body)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create request: %w", err)
+    }
+    if headers, ok := configData["headers"].(map[string]interface{}); ok {
+        for key, value := range headers {
+            if strValue, ok := value.(string); ok {
+                strValue, err = replaceVariables(strValue, state)
+                if err != nil {
+                    return nil, fmt.Errorf("failed to replace variables in header %s: %w", key, err)
+                }
+                req.Header.Add(key, strValue)
+            }
+        }
+    }
+    if isForm && req.Header.Get("Content-Type") == "" {
+        req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    }
+    return req, nil
 }
 
 func TestHTTPPlugin_ErrorHandling(t *testing.T) {
