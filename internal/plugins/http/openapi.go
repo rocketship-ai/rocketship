@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -23,6 +24,8 @@ type openAPIValidationConfig struct {
 	OperationID      string
 	ValidateRequest  bool
 	ValidateResponse bool
+	Version          string
+	CacheTTL         time.Duration
 }
 
 type openAPIValidator struct {
@@ -33,8 +36,11 @@ type openAPIValidator struct {
 }
 
 type openAPISpecEntry struct {
-	doc    *openapi3.T
-	router routers.Router
+	doc         *openapi3.T
+	router      routers.Router
+	loadedAt    time.Time
+	localPath   string
+	fileModTime time.Time
 }
 
 var openAPISpecCache = struct {
@@ -44,13 +50,30 @@ var openAPISpecCache = struct {
 	specs: make(map[string]*openAPISpecEntry),
 }
 
-func newOpenAPIValidator(ctx context.Context, configData map[string]interface{}, state map[string]string) (*openAPIValidator, error) {
-	cfg, err := parseOpenAPIValidationConfig(configData, state)
+const defaultOpenAPICacheTTL = 30 * time.Minute
+
+type openAPICacheOptions struct {
+	Version string
+	TTL     time.Duration
+}
+
+func cacheKeyForOpenAPI(location, version string) string {
+	if version == "" {
+		return location
+	}
+	return fmt.Sprintf("%s::%s", location, version)
+}
+
+func newOpenAPIValidator(ctx context.Context, configData map[string]interface{}, suiteData interface{}, state map[string]string) (*openAPIValidator, error) {
+	cfg, err := parseOpenAPIValidationConfig(configData, suiteData, state)
 	if err != nil || cfg == nil {
 		return nil, err
 	}
 
-	entry, err := loadOpenAPISpec(ctx, cfg.SpecLocation)
+	entry, err := loadOpenAPISpec(ctx, cfg.SpecLocation, openAPICacheOptions{
+		Version: cfg.Version,
+		TTL:     cfg.CacheTTL,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -58,92 +81,197 @@ func newOpenAPIValidator(ctx context.Context, configData map[string]interface{},
 	return &openAPIValidator{config: cfg, entry: entry}, nil
 }
 
-func parseOpenAPIValidationConfig(configData map[string]interface{}, state map[string]string) (*openAPIValidationConfig, error) {
-	raw, ok := configData["openapi"]
-	if !ok {
+func parseOpenAPIValidationConfig(configData map[string]interface{}, suiteData interface{}, state map[string]string) (*openAPIValidationConfig, error) {
+	var (
+		suiteMap map[string]interface{}
+		ok       bool
+	)
+
+	if suiteData != nil {
+		suiteMap, ok = suiteData.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("suite openapi config must be an object")
+		}
+	}
+
+	var stepOverride map[string]interface{}
+	if raw, exists := configData["openapi"]; exists {
+		var ok bool
+		stepOverride, ok = raw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("openapi config must be an object")
+		}
+	}
+
+	if suiteMap == nil && stepOverride == nil {
 		return nil, nil
 	}
 
-	openapiMap, ok := raw.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("openapi config must be an object")
-	}
-
-	rawSpec, ok := openapiMap["spec"]
-	if !ok {
-		return nil, fmt.Errorf("openapi.spec is required when OpenAPI validation is enabled")
-	}
-
-	specStr, ok := rawSpec.(string)
-	if !ok {
-		return nil, fmt.Errorf("openapi.spec must be a string")
-	}
-	specStr = strings.TrimSpace(specStr)
-	if specStr == "" {
-		return nil, fmt.Errorf("openapi.spec must be a non-empty string")
-	}
-
-	if processed, err := replaceVariables(specStr, state); err == nil {
-		specStr = processed
-	} else {
-		return nil, fmt.Errorf("failed to process openapi.spec template: %w", err)
-	}
-
 	cfg := &openAPIValidationConfig{
-		SpecLocation:     specStr,
 		ValidateRequest:  true,
 		ValidateResponse: true,
+		CacheTTL:         defaultOpenAPICacheTTL,
 	}
 
-	if rawOperationID, ok := openapiMap["operation_id"]; ok {
-		operationID, ok := rawOperationID.(string)
-		if !ok {
-			return nil, fmt.Errorf("openapi.operation_id must be a string")
+	if suiteMap != nil {
+		if spec, exists, err := getStringField(suiteMap, "spec"); err != nil {
+			return nil, err
+		} else if exists {
+			if spec == "" {
+				return nil, fmt.Errorf("openapi.spec must be a non-empty string")
+			}
+			processed, err := replaceVariables(spec, state)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process openapi.spec template: %w", err)
+			}
+			cfg.SpecLocation = processed
+		} else {
+			return nil, fmt.Errorf("openapi.spec is required in suite-level configuration")
 		}
-		cfg.OperationID = strings.TrimSpace(operationID)
+
+		if val, exists, err := getBoolField(suiteMap, "validate_request"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.ValidateRequest = val
+		}
+
+		if val, exists, err := getBoolField(suiteMap, "validate_response"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.ValidateResponse = val
+		}
+
+		if version, exists, err := getStringField(suiteMap, "version"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.Version = version
+		}
+
+		if ttlStr, exists, err := getStringField(suiteMap, "cache_ttl"); err != nil {
+			return nil, err
+		} else if exists && ttlStr != "" {
+			dur, err := time.ParseDuration(ttlStr)
+			if err != nil {
+				return nil, fmt.Errorf("openapi.cache_ttl must be a valid duration: %w", err)
+			}
+			if dur > 0 {
+				cfg.CacheTTL = dur
+			}
+		}
 	}
 
-	if rawValidateRequest, ok := openapiMap["validate_request"]; ok {
-		validateRequest, ok := rawValidateRequest.(bool)
-		if !ok {
-			return nil, fmt.Errorf("openapi.validate_request must be a boolean")
+	if stepOverride != nil {
+		if spec, exists, err := getStringField(stepOverride, "spec"); err != nil {
+			return nil, err
+		} else if exists {
+			if spec == "" {
+				return nil, fmt.Errorf("openapi.spec override must be a non-empty string")
+			}
+			processed, err := replaceVariables(spec, state)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process openapi.spec template: %w", err)
+			}
+			cfg.SpecLocation = processed
 		}
-		cfg.ValidateRequest = validateRequest
+
+		if opID, exists, err := getStringField(stepOverride, "operation_id"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.OperationID = opID
+		}
+
+		if val, exists, err := getBoolField(stepOverride, "validate_request"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.ValidateRequest = val
+		}
+
+		if val, exists, err := getBoolField(stepOverride, "validate_response"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.ValidateResponse = val
+		}
+
+		if version, exists, err := getStringField(stepOverride, "version"); err != nil {
+			return nil, err
+		} else if exists {
+			cfg.Version = version
+		}
 	}
 
-	if rawValidateResponse, ok := openapiMap["validate_response"]; ok {
-		validateResponse, ok := rawValidateResponse.(bool)
-		if !ok {
-			return nil, fmt.Errorf("openapi.validate_response must be a boolean")
-		}
-		cfg.ValidateResponse = validateResponse
+	if !cfg.ValidateRequest && !cfg.ValidateResponse {
+		return nil, nil
+	}
+
+	if strings.TrimSpace(cfg.SpecLocation) == "" {
+		return nil, fmt.Errorf("openapi.spec must be provided via suite-level defaults or step override")
 	}
 
 	return cfg, nil
 }
 
-func loadOpenAPISpec(ctx context.Context, location string) (*openAPISpecEntry, error) {
-	openAPISpecCache.mu.RLock()
-	if entry, ok := openAPISpecCache.specs[location]; ok {
-		openAPISpecCache.mu.RUnlock()
-		return entry, nil
+func getStringField(data map[string]interface{}, key string) (string, bool, error) {
+	raw, exists := data[key]
+	if !exists {
+		return "", false, nil
 	}
-	openAPISpecCache.mu.RUnlock()
+	value, ok := raw.(string)
+	if !ok {
+		return "", true, fmt.Errorf("openapi.%s must be a string", key)
+	}
+	return strings.TrimSpace(value), true, nil
+}
+
+func getBoolField(data map[string]interface{}, key string) (bool, bool, error) {
+	raw, exists := data[key]
+	if !exists {
+		return false, false, nil
+	}
+	value, ok := raw.(bool)
+	if !ok {
+		return false, true, fmt.Errorf("openapi.%s must be a boolean", key)
+	}
+	return value, true, nil
+}
+
+func loadOpenAPISpec(ctx context.Context, location string, opts openAPICacheOptions) (*openAPISpecEntry, error) {
+	ttl := opts.TTL
+	if ttl <= 0 {
+		ttl = defaultOpenAPICacheTTL
+	}
+
+	cacheKey := cacheKeyForOpenAPI(location, opts.Version)
+
+	openAPISpecCache.mu.RLock()
+	if entry, ok := openAPISpecCache.specs[cacheKey]; ok {
+		openAPISpecCache.mu.RUnlock()
+		if !entry.needsReload(ttl) {
+			return entry, nil
+		}
+	} else {
+		openAPISpecCache.mu.RUnlock()
+	}
 
 	openAPISpecCache.mu.Lock()
 	defer openAPISpecCache.mu.Unlock()
 
-	if entry, ok := openAPISpecCache.specs[location]; ok {
-		return entry, nil
+	if entry, ok := openAPISpecCache.specs[cacheKey]; ok {
+		if entry.needsReload(ttl) {
+			delete(openAPISpecCache.specs, cacheKey)
+		} else {
+			return entry, nil
+		}
 	}
 
 	loader := &openapi3.Loader{Context: ctx}
 	loader.IsExternalRefsAllowed = true
 
 	var (
-		doc       *openapi3.T
-		err       error
-		parsedURL *url.URL
+		doc          *openapi3.T
+		err          error
+		parsedURL    *url.URL
+		resolvedPath string
+		modTime      time.Time
 	)
 
 	if u, parseErr := url.Parse(location); parseErr == nil && u.Scheme != "" {
@@ -153,6 +281,9 @@ func loadOpenAPISpec(ctx context.Context, location string) (*openAPISpecEntry, e
 			switch strings.ToLower(u.Scheme) {
 			case "http", "https":
 				return nil, fmt.Errorf("failed to load OpenAPI spec from %q: %w", location, err)
+			case "file":
+				// fall back to local file handling below
+				doc = nil
 			default:
 				doc = nil
 			}
@@ -164,7 +295,7 @@ func loadOpenAPISpec(ctx context.Context, location string) (*openAPISpecEntry, e
 		if parsedURL != nil {
 			if parsedURL.Scheme == "file" && parsedURL.Path != "" {
 				path = parsedURL.Path
-			} else if parsedURL.Path != "" {
+			} else if parsedURL.Path != "" && parsedURL.Scheme == "" {
 				path = parsedURL.Path
 			}
 		}
@@ -173,6 +304,12 @@ func loadOpenAPISpec(ctx context.Context, location string) (*openAPISpecEntry, e
 				path = filepath.Join(wd, path)
 			}
 		}
+		info, statErr := os.Stat(path)
+		if statErr != nil {
+			return nil, fmt.Errorf("failed to stat OpenAPI spec %q: %w", location, statErr)
+		}
+		modTime = info.ModTime()
+		resolvedPath = path
 		doc, err = loader.LoadFromFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load OpenAPI spec from %q: %w", location, err)
@@ -184,9 +321,32 @@ func loadOpenAPISpec(ctx context.Context, location string) (*openAPISpecEntry, e
 		return nil, fmt.Errorf("failed to create OpenAPI router for %q: %w", location, err)
 	}
 
-	entry := &openAPISpecEntry{doc: doc, router: router}
-	openAPISpecCache.specs[location] = entry
+	entry := &openAPISpecEntry{
+		doc:         doc,
+		router:      router,
+		loadedAt:    time.Now(),
+		localPath:   resolvedPath,
+		fileModTime: modTime,
+	}
+	openAPISpecCache.specs[cacheKey] = entry
 	return entry, nil
+}
+
+func (entry *openAPISpecEntry) needsReload(ttl time.Duration) bool {
+	if entry == nil {
+		return true
+	}
+	if ttl > 0 && time.Since(entry.loadedAt) > ttl {
+		return true
+	}
+	if entry.localPath != "" {
+		if info, err := os.Stat(entry.localPath); err == nil {
+			if info.ModTime().After(entry.fileModTime) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (v *openAPIValidator) shouldValidateRequest() bool {

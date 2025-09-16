@@ -6,6 +6,7 @@
 | `name` | ✅ | Name of the test suite |
 | `description` |  | Description of the test suite |
 | `vars` |  | Configuration variables that can be referenced in test steps using {{ vars.key }} syntax |
+| `openapi` |  | Suite-level OpenAPI contract validation defaults applied to HTTP steps |
 | `tests` | ✅ | Array of test cases |
 
 
@@ -51,16 +52,12 @@
 | `headers` |  | HTTP headers to include | `object` | - |
 | `body` |  | Raw request body (string). If 'form' is also provided, 'form' takes precedence. | `string` | - |
 | `form` |  | Form fields to be url-encoded as application/x-www-form-urlencoded | `object` | - |
-| `openapi` |  | OpenAPI contract validation settings | `object` | See **OpenAPI validation** below |
-
-##### HTTP OpenAPI validation
-
-| Field | Required | Description | Notes |
-| ----- | -------- | ----------- | ----- |
-| `spec` | ✅ | Path or URL to an OpenAPI v3 document | Supports local file paths (relative to the worker's current directory) and HTTP(S) URLs. |
-| `operation_id` |  | Require the request to match a specific `operationId` | Helps disambiguate when multiple operations share similar paths. |
-| `validate_request` |  | Enable request validation (default `true`) | Set to `false` to skip request validation while keeping response validation. |
-| `validate_response` |  | Enable response validation (default `true`) | Response validation also fails when the status code is not described in the spec. |
+| `openapi` |  | Override OpenAPI validation behavior for this HTTP step | `object` | - |
+| `openapi.spec` |  | Path or URL to an OpenAPI v3 document | `string` | - |
+| `openapi.operation_id` |  | Require the request to match a specific operationId | `string` | - |
+| `openapi.version` |  | Optional spec version identifier used to invalidate cached contracts | `string` | - |
+| `openapi.validate_request` |  | Enable request validation for this step | `boolean` | - |
+| `openapi.validate_response` |  | Enable response validation for this step | `boolean` | - |
 
 
 ### Plugin: `script`

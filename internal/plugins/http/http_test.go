@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestHTTPPlugin_GetType(t *testing.T) {
@@ -678,7 +679,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -717,7 +718,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -758,7 +759,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -778,6 +779,189 @@ paths:
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("uses suite defaults when no step override provided", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{
+			"spec": specPath,
+		}
+		configData := map[string]interface{}{}
+
+		validator, err := newOpenAPIValidator(ctx, configData, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		reqBody := []byte(`{"name":"Jane"}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, reqBody)
+
+		if err := validator.prepareRequestValidation(ctx, req, reqBody); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+
+		if !validator.shouldValidateRequest() || !validator.shouldValidateResponse() {
+			t.Fatalf("expected suite defaults to enable both validations")
+		}
+	})
+
+	t.Run("step override disables request validation only", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{
+			"spec": specPath,
+		}
+		configData := map[string]interface{}{
+			"openapi": map[string]interface{}{
+				"validate_request": false,
+			},
+		}
+
+		validator, err := newOpenAPIValidator(ctx, configData, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		if validator.shouldValidateRequest() {
+			t.Fatalf("expected request validation to be disabled")
+		}
+		if !validator.shouldValidateResponse() {
+			t.Fatalf("expected response validation to remain enabled")
+		}
+
+		reqBody := []byte(`{"name":"Jane"}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, reqBody)
+
+		if err := validator.prepareRequestValidation(ctx, req, reqBody); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+
+		resp := &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+		}
+		respBody := []byte(`{"id":"123","name":"Jane"}`)
+
+		if err := validator.validateResponse(ctx, resp, respBody); err != nil {
+			t.Fatalf("validateResponse error: %v", err)
+		}
+	})
+
+	t.Run("returns nil when both validations disabled", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{
+			"spec": specPath,
+		}
+		configData := map[string]interface{}{
+			"openapi": map[string]interface{}{
+				"validate_request":  false,
+				"validate_response": false,
+			},
+		}
+
+		validator, err := newOpenAPIValidator(ctx, configData, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+		if validator != nil {
+			t.Fatalf("expected validator to be nil when both validations are disabled")
+		}
+	})
+}
+
+func TestOpenAPISpecCaching(t *testing.T) {
+	t.Parallel()
+
+	specContents := `openapi: 3.0.3
+info:
+  title: Cache Test API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      responses:
+        '200':
+          description: ok
+`
+
+	tempDir := t.TempDir()
+	specPath := filepath.Join(tempDir, "openapi.yaml")
+	if err := os.WriteFile(specPath, []byte(specContents), 0o600); err != nil {
+		t.Fatalf("failed to write spec: %v", err)
+	}
+
+	ctx := context.Background()
+
+	resetCache := func() {
+		openAPISpecCache.mu.Lock()
+		openAPISpecCache.specs = make(map[string]*openAPISpecEntry)
+		openAPISpecCache.mu.Unlock()
+	}
+
+	resetCache()
+
+	suite := map[string]interface{}{
+		"spec":      specPath,
+		"cache_ttl": "1h",
+		"version":   "v1",
+	}
+
+	validatorOne, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating validator: %v", err)
+	}
+	if validatorOne == nil {
+		t.Fatalf("expected validator instance")
+	}
+
+	validatorTwo, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating second validator: %v", err)
+	}
+	if validatorTwo.entry != validatorOne.entry {
+		t.Fatalf("expected cache to reuse spec entry")
+	}
+
+	suiteVersionTwo := map[string]interface{}{
+		"spec":    specPath,
+		"version": "v2",
+	}
+
+	validatorThree, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteVersionTwo, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating validator with new version: %v", err)
+	}
+	if validatorThree.entry == nil || validatorThree.entry == validatorOne.entry {
+		t.Fatalf("expected new cache entry when version changes")
+	}
+
+	suiteShortTTL := map[string]interface{}{
+		"spec":      specPath,
+		"cache_ttl": "5ms",
+	}
+
+	resetCache()
+	validatorShortTTL, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteShortTTL, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating validator with short TTL: %v", err)
+	}
+	entryBefore := validatorShortTTL.entry
+	time.Sleep(10 * time.Millisecond)
+	validatorAfterTTL, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteShortTTL, nil)
+	if err != nil {
+		t.Fatalf("unexpected error creating validator after TTL: %v", err)
+	}
+	if validatorAfterTTL.entry == entryBefore {
+		t.Fatalf("expected cache entry to refresh after TTL expires")
+	}
 }
 
 func TestHTTPPlugin_ErrorHandling(t *testing.T) {

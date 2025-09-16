@@ -39,6 +39,7 @@ type SaveConfig struct {
 type OpenAPIValidationConfig struct {
 	Spec             string `json:"spec" yaml:"spec"`
 	OperationID      string `json:"operation_id" yaml:"operation_id,omitempty"`
+	Version          string `json:"version" yaml:"version,omitempty"`
 	ValidateRequest  *bool  `json:"validate_request" yaml:"validate_request,omitempty"`
 	ValidateResponse *bool  `json:"validate_response" yaml:"validate_response,omitempty"`
 }

@@ -111,6 +111,15 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		return nil, fmt.Errorf("invalid config format: got type %T", p["config"])
 	}
 
+	var suiteOpenAPI map[string]interface{}
+	if rawSuite, exists := p["suite_openapi"]; exists && rawSuite != nil {
+		var ok bool
+		suiteOpenAPI, ok = rawSuite.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("suite_openapi config must be an object when provided")
+		}
+	}
+
 	// Replace variables in URL
 	urlStr, ok := configData["url"].(string)
 	if !ok {
@@ -219,7 +228,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	logger.Info("=== END HTTP REQUEST DEBUG ===")
 
 	var openapiValidator *openAPIValidator
-	if validator, err := newOpenAPIValidator(ctx, configData, state); err != nil {
+	if validator, err := newOpenAPIValidator(ctx, configData, suiteOpenAPI, state); err != nil {
 		return nil, err
 	} else {
 		openapiValidator = validator

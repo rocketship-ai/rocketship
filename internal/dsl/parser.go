@@ -16,7 +16,17 @@ type RocketshipConfig struct {
 	Name        string                 `json:"name" yaml:"name"`
 	Description string                 `json:"description" yaml:"description"`
 	Vars        map[string]interface{} `json:"vars" yaml:"vars,omitempty"`
+	OpenAPI     *OpenAPISuiteConfig    `json:"openapi" yaml:"openapi,omitempty"`
 	Tests       []Test                 `json:"tests" yaml:"tests"`
+}
+
+// OpenAPISuiteConfig represents OpenAPI settings applied to all HTTP steps unless overridden per step
+type OpenAPISuiteConfig struct {
+	Spec             string `json:"spec" yaml:"spec"`
+	Version          string `json:"version" yaml:"version,omitempty"`
+	ValidateRequest  *bool  `json:"validate_request" yaml:"validate_request,omitempty"`
+	ValidateResponse *bool  `json:"validate_response" yaml:"validate_response,omitempty"`
+	CacheTTL         string `json:"cache_ttl" yaml:"cache_ttl,omitempty"`
 }
 
 type Test struct {

@@ -79,16 +79,16 @@ func TestHandleDelayStep(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			
+
 			// Use temporal test suite for workflow context
 			testSuite := &testsuite.WorkflowTestSuite{}
 			env := testSuite.NewTestWorkflowEnvironment()
-			
+
 			// Run the handleDelayStep function in a test workflow
 			env.ExecuteWorkflow(func(ctx workflow.Context) error {
 				return handleDelayStep(ctx, tt.step, "test-name", "test-run-id")
 			})
-			
+
 			if tt.wantErr {
 				if env.IsWorkflowCompleted() {
 					err := env.GetWorkflowError()
@@ -114,7 +114,6 @@ func TestHandleDelayStep(t *testing.T) {
 		})
 	}
 }
-
 
 func TestTestWorkflow(t *testing.T) {
 	tests := []struct {
@@ -252,7 +251,7 @@ func TestTestWorkflow(t *testing.T) {
 						Response: &http.HTTPResponse{StatusCode: 201},
 						Saved:    map[string]string{"user_id": "456"},
 					}, nil)
-				
+
 				// Second HTTP call uses the saved user_id
 				env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 					config := params["config"].(map[string]interface{})
@@ -270,16 +269,16 @@ func TestTestWorkflow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			
+
 			testSuite := &testsuite.WorkflowTestSuite{}
 			env := testSuite.NewTestWorkflowEnvironment()
-			
+
 			if tt.setupEnv != nil {
 				tt.setupEnv(env)
 			}
-			
-			env.ExecuteWorkflow(TestWorkflow, tt.test, make(map[string]interface{}), "test-run-id")
-			
+
+			env.ExecuteWorkflow(TestWorkflow, tt.test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil))
+
 			if tt.wantErr {
 				if env.IsWorkflowCompleted() {
 					err := env.GetWorkflowError()
@@ -310,25 +309,25 @@ func TestWorkflowStatePropagation(t *testing.T) {
 	// Test that state is properly propagated between HTTP steps
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
-	
+
 	// Register activities with proper names
 	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
 	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
-	
+
 	// Mock LogForwarderActivity to return success
 	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
 		map[string]interface{}{"forwarded": true}, nil)
-	
+
 	// Track the calls to verify state propagation
 	var callOrder []map[string]interface{}
 	var mu sync.Mutex
-	
+
 	env.OnActivity("http", mock.Anything, mock.Anything).Return(
 		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			mu.Lock()
 			callOrder = append(callOrder, params)
 			mu.Unlock()
-			
+
 			// Return different saved values based on call order
 			if len(callOrder) == 1 {
 				return &http.ActivityResponse{
@@ -342,7 +341,7 @@ func TestWorkflowStatePropagation(t *testing.T) {
 				}, nil
 			}
 		})
-	
+
 	test := dsl.Test{
 		Name: "state-propagation-test",
 		Steps: []dsl.Step{
@@ -377,27 +376,27 @@ func TestWorkflowStatePropagation(t *testing.T) {
 			},
 		},
 	}
-	
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id")
-	
+
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil))
+
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("Expected workflow to complete successfully")
 	}
 	if err := env.GetWorkflowError(); err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Verify we made the expected number of calls
 	if len(callOrder) != 2 {
 		t.Fatalf("Expected 2 activity calls, got %d", len(callOrder))
 	}
-	
+
 	// Verify first call has empty state
 	firstCallState := callOrder[0]["state"].(map[string]interface{})
 	if len(firstCallState) != 0 {
 		t.Errorf("Expected first call to have empty state, got %v", firstCallState)
 	}
-	
+
 	// Verify second call has state from first call
 	secondCallState := callOrder[1]["state"].(map[string]interface{})
 	if secondCallState["token"] != "abc123" {
@@ -413,32 +412,32 @@ func TestWorkflowConcurrency(t *testing.T) {
 	numWorkflows := 10
 	var wg sync.WaitGroup
 	errors := make(chan error, numWorkflows)
-	
+
 	for i := 0; i < numWorkflows; i++ {
 		wg.Add(1)
 		go func(workflowID int) {
 			defer wg.Done()
-			
+
 			testSuite := &testsuite.WorkflowTestSuite{}
 			env := testSuite.NewTestWorkflowEnvironment()
-			
+
 			// Register activities
 			env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
 			env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
-			
+
 			// Mock LogForwarderActivity to return success
 			env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
 				map[string]interface{}{"forwarded": true}, nil)
-			
+
 			// Each workflow should have its own isolated state
 			expectedValue := fmt.Sprintf("value-%d", workflowID)
-			
+
 			env.OnActivity("http", mock.Anything, mock.Anything).Return(
 				&http.ActivityResponse{
 					Response: &http.HTTPResponse{StatusCode: 200},
 					Saved:    map[string]string{"workflow_id": expectedValue},
 				}, nil)
-			
+
 			test := dsl.Test{
 				Name: fmt.Sprintf("concurrent-test-%d", workflowID),
 				Steps: []dsl.Step{
@@ -465,9 +464,9 @@ func TestWorkflowConcurrency(t *testing.T) {
 					},
 				},
 			}
-			
-			env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id")
-			
+
+			env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil))
+
 			if !env.IsWorkflowCompleted() {
 				errors <- fmt.Errorf("workflow %d did not complete", workflowID)
 				return
@@ -478,10 +477,10 @@ func TestWorkflowConcurrency(t *testing.T) {
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
 	close(errors)
-	
+
 	for err := range errors {
 		t.Error(err)
 	}
@@ -491,15 +490,15 @@ func TestWorkflowWithComplexState(t *testing.T) {
 	// Test workflow with complex state transitions and variable substitution
 	testSuite := &testsuite.WorkflowTestSuite{}
 	env := testSuite.NewTestWorkflowEnvironment()
-	
+
 	// Register activities
 	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
 	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
-	
+
 	// Mock LogForwarderActivity to return success
 	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
 		map[string]interface{}{"forwarded": true}, nil)
-	
+
 	// Mock responses for different steps
 	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 		config := params["config"].(map[string]interface{})
@@ -509,7 +508,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 			Response: &http.HTTPResponse{StatusCode: 200},
 			Saved:    map[string]string{"auth_token": "token123", "user_id": "user456"},
 		}, nil)
-	
+
 	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 		config := params["config"].(map[string]interface{})
 		return contains(config["url"].(string), "/users/")
@@ -518,7 +517,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 			Response: &http.HTTPResponse{StatusCode: 200},
 			Saved:    map[string]string{"profile_id": "profile789"},
 		}, nil)
-	
+
 	env.OnActivity("http", mock.Anything, mock.MatchedBy(func(params map[string]interface{}) bool {
 		config := params["config"].(map[string]interface{})
 		return contains(config["url"].(string), "/profiles/")
@@ -527,7 +526,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 			Response: &http.HTTPResponse{StatusCode: 200},
 			Saved:    map[string]string{},
 		}, nil)
-	
+
 	test := dsl.Test{
 		Name: "complex-state-test",
 		Steps: []dsl.Step{
@@ -572,9 +571,9 @@ func TestWorkflowWithComplexState(t *testing.T) {
 			},
 		},
 	}
-	
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id")
-	
+
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil))
+
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("Expected workflow to complete successfully")
 	}
@@ -585,7 +584,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 
 // Helper function for string containment
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > len(substr) && findSubstring(s, substr)))
 }
 
