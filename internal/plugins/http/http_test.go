@@ -1,17 +1,19 @@
 package http
 
 import (
-    "bytes"
-    "context"
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "net/http/httptest"
-    "net/url"
-    "strings"
-    "sync"
-    "testing"
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
 )
 
 func TestHTTPPlugin_GetType(t *testing.T) {
@@ -48,10 +50,10 @@ func TestReplaceVariables(t *testing.T) {
 			expected: "hello world!",
 		},
 		{
-			name:     "missing variable",
-			input:    "hello {{ missing }}",
-			state:    map[string]string{"name": "world"},
-			wantErr:  true,
+			name:    "missing variable",
+			input:   "hello {{ missing }}",
+			state:   map[string]string{"name": "world"},
+			wantErr: true,
 		},
 		{
 			name:     "nil state",
@@ -217,10 +219,10 @@ func TestHTTPPlugin_Activity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			
+
 			// Skip tests that call Activity directly (requires Temporal context)
 			t.Skip("Activity method requires Temporal context - skipping direct call test")
-			
+
 			resp, err := plugin.Activity(ctx, tt.params)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Activity() error = %v, wantErr %v", err, tt.wantErr)
@@ -235,7 +237,7 @@ func TestHTTPPlugin_Activity(t *testing.T) {
 
 func TestHTTPPlugin_ProcessAssertions(t *testing.T) {
 	plugin := &HTTPPlugin{}
-	
+
 	tests := []struct {
 		name       string
 		params     map[string]interface{}
@@ -320,7 +322,7 @@ func TestHTTPPlugin_ProcessAssertions(t *testing.T) {
 
 func TestHTTPPlugin_ProcessSaves(t *testing.T) {
 	plugin := &HTTPPlugin{}
-	
+
 	tests := []struct {
 		name     string
 		params   map[string]interface{}
@@ -413,27 +415,27 @@ func TestHTTPPlugin_ProcessSaves(t *testing.T) {
 
 func TestHTTPPlugin_ConcurrentRequests(t *testing.T) {
 	t.Parallel()
-	
+
 	// Test concurrent creation of HTTPPlugin instances to ensure thread safety
 	numGoroutines := 50
 	var wg sync.WaitGroup
 	errors := make(chan error, numGoroutines)
-	
+
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			// Create plugin instance concurrently
 			plugin := &HTTPPlugin{}
-			
+
 			// Test GetType method concurrently
 			pluginType := plugin.GetType()
 			if pluginType != "http" {
 				errors <- fmt.Errorf("goroutine %d: expected type 'http', got %s", id, pluginType)
 				return
 			}
-			
+
 			// Test concurrent parsing
 			testParams := map[string]interface{}{
 				"config": map[string]interface{}{
@@ -441,17 +443,17 @@ func TestHTTPPlugin_ConcurrentRequests(t *testing.T) {
 					"url":    "https://example.com",
 				},
 			}
-			
+
 			if _, ok := testParams["config"].(map[string]interface{}); !ok {
 				errors <- fmt.Errorf("goroutine %d: failed to parse config", id)
 				return
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
 	close(errors)
-	
+
 	for err := range errors {
 		t.Error(err)
 	}
@@ -461,9 +463,9 @@ func TestHTTPPlugin_VariableSubstitution(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Echo back the request body and headers for verification
 		body, _ := json.Marshal(map[string]interface{}{
-			"received_body":    r.Header.Get("X-Test-Body"),
-			"received_header":  r.Header.Get("X-Test-Header"),
-			"received_url":     r.URL.String(),
+			"received_body":   r.Header.Get("X-Test-Body"),
+			"received_header": r.Header.Get("X-Test-Header"),
+			"received_url":    r.URL.String(),
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
@@ -476,147 +478,306 @@ func TestHTTPPlugin_VariableSubstitution(t *testing.T) {
 }
 
 func TestBuildRequest_FormURLEncoded(t *testing.T) {
-    state := map[string]string{"name": "world"}
-    config := map[string]interface{}{
-        "form": map[string]interface{}{
-            "foo":       "bar",
-            "templated": "hello {{ name }}",
-        },
-    }
-    req, err := buildRequest("POST", "http://example.com", config, state)
-    if err != nil {
-        t.Fatalf("buildRequest error: %v", err)
-    }
-    if ct := req.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded" {
-        t.Fatalf("expected Content-Type form, got %q", ct)
-    }
-    // Read and parse body
-    bodyBytes, _ := io.ReadAll(req.Body)
-    req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-    v, err := url.ParseQuery(string(bodyBytes))
-    if err != nil {
-        t.Fatalf("parse body: %v", err)
-    }
-    if v.Get("foo") != "bar" {
-        t.Errorf("expected foo=bar, got %q", v.Get("foo"))
-    }
-    if v.Get("templated") != "hello world" {
-        t.Errorf("expected templated=hello world, got %q", v.Get("templated"))
-    }
+	state := map[string]string{"name": "world"}
+	config := map[string]interface{}{
+		"form": map[string]interface{}{
+			"foo":       "bar",
+			"templated": "hello {{ name }}",
+		},
+	}
+	req, err := buildRequest("POST", "http://example.com", config, state)
+	if err != nil {
+		t.Fatalf("buildRequest error: %v", err)
+	}
+	if ct := req.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded" {
+		t.Fatalf("expected Content-Type form, got %q", ct)
+	}
+	// Read and parse body
+	bodyBytes, _ := io.ReadAll(req.Body)
+	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	v, err := url.ParseQuery(string(bodyBytes))
+	if err != nil {
+		t.Fatalf("parse body: %v", err)
+	}
+	if v.Get("foo") != "bar" {
+		t.Errorf("expected foo=bar, got %q", v.Get("foo"))
+	}
+	if v.Get("templated") != "hello world" {
+		t.Errorf("expected templated=hello world, got %q", v.Get("templated"))
+	}
 }
 
 func TestBuildRequest_FormExplicitHeaderPreserved(t *testing.T) {
-    config := map[string]interface{}{
-        "headers": map[string]interface{}{
-            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        },
-        "form": map[string]interface{}{
-            "a": "1",
-        },
-    }
-    req, err := buildRequest("POST", "http://example.com", config, nil)
-    if err != nil {
-        t.Fatalf("buildRequest error: %v", err)
-    }
-    if ct := req.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded; charset=utf-8" {
-        t.Fatalf("expected explicit Content-Type preserved, got %q", ct)
-    }
+	config := map[string]interface{}{
+		"headers": map[string]interface{}{
+			"Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+		},
+		"form": map[string]interface{}{
+			"a": "1",
+		},
+	}
+	req, err := buildRequest("POST", "http://example.com", config, nil)
+	if err != nil {
+		t.Fatalf("buildRequest error: %v", err)
+	}
+	if ct := req.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded; charset=utf-8" {
+		t.Fatalf("expected explicit Content-Type preserved, got %q", ct)
+	}
 }
 
 func TestBuildRequest_FormArrayValues(t *testing.T) {
-    config := map[string]interface{}{
-        "form": map[string]interface{}{
-            "multi": []interface{}{"1", "2"},
-        },
-    }
-    req, err := buildRequest("POST", "http://example.com", config, nil)
-    if err != nil {
-        t.Fatalf("buildRequest error: %v", err)
-    }
-    bodyBytes, _ := io.ReadAll(req.Body)
-    req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-    v, _ := url.ParseQuery(string(bodyBytes))
-    vals, ok := v["multi"]
-    if !ok || len(vals) != 2 || vals[0] != "1" || vals[1] != "2" {
-        t.Fatalf("expected multi=[1,2], got %v", vals)
-    }
+	config := map[string]interface{}{
+		"form": map[string]interface{}{
+			"multi": []interface{}{"1", "2"},
+		},
+	}
+	req, err := buildRequest("POST", "http://example.com", config, nil)
+	if err != nil {
+		t.Fatalf("buildRequest error: %v", err)
+	}
+	bodyBytes, _ := io.ReadAll(req.Body)
+	req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+	v, _ := url.ParseQuery(string(bodyBytes))
+	vals, ok := v["multi"]
+	if !ok || len(vals) != 2 || vals[0] != "1" || vals[1] != "2" {
+		t.Fatalf("expected multi=[1,2], got %v", vals)
+	}
 }
 
 func TestBuildRequest_FormPreferredOverBody(t *testing.T) {
-    config := map[string]interface{}{
-        "body": "{\"x\":1}",
-        "form": map[string]interface{}{"y": "2"},
-    }
-    req, err := buildRequest("POST", "http://example.com", config, nil)
-    if err != nil {
-        t.Fatalf("buildRequest error: %v", err)
-    }
-    bodyBytes, _ := io.ReadAll(req.Body)
-    if !strings.Contains(string(bodyBytes), "y=2") {
-        t.Fatalf("expected form body, got %q", string(bodyBytes))
-    }
+	config := map[string]interface{}{
+		"body": "{\"x\":1}",
+		"form": map[string]interface{}{"y": "2"},
+	}
+	req, err := buildRequest("POST", "http://example.com", config, nil)
+	if err != nil {
+		t.Fatalf("buildRequest error: %v", err)
+	}
+	bodyBytes, _ := io.ReadAll(req.Body)
+	if !strings.Contains(string(bodyBytes), "y=2") {
+		t.Fatalf("expected form body, got %q", string(bodyBytes))
+	}
 }
 
 // buildRequest is a test-only helper mirroring the request-building logic in the plugin
 func buildRequest(method, urlStr string, configData map[string]interface{}, state map[string]string) (*http.Request, error) {
-    var err error
-    var body io.Reader
-    isForm := false
+	var err error
+	var body io.Reader
+	isForm := false
 
-    if formData, ok := configData["form"].(map[string]interface{}); ok && len(formData) > 0 {
-        values := url.Values{}
-        for k, v := range formData {
-            switch val := v.(type) {
-            case string:
-                replaced, rerr := replaceVariables(val, state)
-                if rerr != nil {
-                    return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
-                }
-                values.Add(k, replaced)
-            case []interface{}:
-                for _, elem := range val {
-                    str := fmt.Sprint(elem)
-                    if s, ok := elem.(string); ok {
-                        if rep, rerr := replaceVariables(s, state); rerr == nil {
-                            str = rep
-                        }
-                    }
-                    values.Add(k, str)
-                }
-            default:
-                values.Add(k, fmt.Sprint(val))
-            }
-        }
-        encoded := values.Encode()
-        body = strings.NewReader(encoded)
-        isForm = true
-    } else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
-        bodyStr, err = replaceVariables(bodyStr, state)
-        if err != nil {
-            return nil, fmt.Errorf("failed to replace variables in body: %w", err)
-        }
-        body = bytes.NewReader([]byte(bodyStr))
-    }
+	if formData, ok := configData["form"].(map[string]interface{}); ok && len(formData) > 0 {
+		values := url.Values{}
+		for k, v := range formData {
+			switch val := v.(type) {
+			case string:
+				replaced, rerr := replaceVariables(val, state)
+				if rerr != nil {
+					return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
+				}
+				values.Add(k, replaced)
+			case []interface{}:
+				for _, elem := range val {
+					str := fmt.Sprint(elem)
+					if s, ok := elem.(string); ok {
+						if rep, rerr := replaceVariables(s, state); rerr == nil {
+							str = rep
+						}
+					}
+					values.Add(k, str)
+				}
+			default:
+				values.Add(k, fmt.Sprint(val))
+			}
+		}
+		encoded := values.Encode()
+		body = strings.NewReader(encoded)
+		isForm = true
+	} else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
+		bodyStr, err = replaceVariables(bodyStr, state)
+		if err != nil {
+			return nil, fmt.Errorf("failed to replace variables in body: %w", err)
+		}
+		body = bytes.NewReader([]byte(bodyStr))
+	}
 
-    req, err := http.NewRequest(method, urlStr, body)
-    if err != nil {
-        return nil, fmt.Errorf("failed to create request: %w", err)
-    }
-    if headers, ok := configData["headers"].(map[string]interface{}); ok {
-        for key, value := range headers {
-            if strValue, ok := value.(string); ok {
-                strValue, err = replaceVariables(strValue, state)
-                if err != nil {
-                    return nil, fmt.Errorf("failed to replace variables in header %s: %w", key, err)
-                }
-                req.Header.Add(key, strValue)
-            }
-        }
-    }
-    if isForm && req.Header.Get("Content-Type") == "" {
-        req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-    }
-    return req, nil
+	req, err := http.NewRequest(method, urlStr, body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	if headers, ok := configData["headers"].(map[string]interface{}); ok {
+		for key, value := range headers {
+			if strValue, ok := value.(string); ok {
+				strValue, err = replaceVariables(strValue, state)
+				if err != nil {
+					return nil, fmt.Errorf("failed to replace variables in header %s: %w", key, err)
+				}
+				req.Header.Add(key, strValue)
+			}
+		}
+	}
+	if isForm && req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	return req, nil
+}
+
+func TestHTTPPlugin_OpenAPIValidation(t *testing.T) {
+	t.Parallel()
+
+	specContents := `openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /users:
+    post:
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+              additionalProperties: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                additionalProperties: false
+`
+
+	tempDir := t.TempDir()
+	specPath := filepath.Join(tempDir, "openapi.yaml")
+	if err := os.WriteFile(specPath, []byte(specContents), 0o600); err != nil {
+		t.Fatalf("failed to write spec: %v", err)
+	}
+
+	t.Run("valid request and response", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		configData := map[string]interface{}{
+			"openapi": map[string]interface{}{
+				"spec": specPath,
+			},
+		}
+
+		validator, err := newOpenAPIValidator(ctx, configData, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		reqBody := []byte(`{"name":"Jane"}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, reqBody)
+
+		if err := validator.prepareRequestValidation(ctx, req, reqBody); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+
+		if err := validator.validateRequest(ctx); err != nil {
+			t.Fatalf("validateRequest error: %v", err)
+		}
+
+		resp := &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+		}
+		respBody := []byte(`{"id":"123","name":"Jane"}`)
+
+		if err := validator.validateResponse(ctx, resp, respBody); err != nil {
+			t.Fatalf("validateResponse error: %v", err)
+		}
+	})
+
+	t.Run("response with additional fields fails", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		configData := map[string]interface{}{
+			"openapi": map[string]interface{}{
+				"spec": specPath,
+			},
+		}
+
+		validator, err := newOpenAPIValidator(ctx, configData, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		reqBody := []byte(`{"name":"Jane"}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, reqBody)
+
+		if err := validator.prepareRequestValidation(ctx, req, reqBody); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+
+		if err := validator.validateRequest(ctx); err != nil {
+			t.Fatalf("validateRequest error: %v", err)
+		}
+
+		resp := &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+		}
+		respBody := []byte(`{"id":"123","name":"Jane","extra":"nope"}`)
+
+		if err := validator.validateResponse(ctx, resp, respBody); err == nil {
+			t.Fatalf("expected response validation error")
+		} else if !strings.Contains(err.Error(), "openapi response validation failed") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("request validation prevents invalid payload", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		configData := map[string]interface{}{
+			"openapi": map[string]interface{}{
+				"spec": specPath,
+			},
+		}
+
+		validator, err := newOpenAPIValidator(ctx, configData, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		reqBody := []byte(`{"email":"jane@example.com"}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/users", bytes.NewReader(reqBody))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, reqBody)
+
+		if err := validator.prepareRequestValidation(ctx, req, reqBody); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+
+		if err := validator.validateRequest(ctx); err == nil {
+			t.Fatalf("expected request validation failure")
+		} else if !strings.Contains(err.Error(), "openapi request validation failed") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestHTTPPlugin_ErrorHandling(t *testing.T) {
@@ -669,10 +830,10 @@ func TestHTTPPlugin_ErrorHandling(t *testing.T) {
 	for _, tt := range errorTests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			
+
 			// Skip tests that call Activity directly (requires Temporal context)
 			t.Skip("Activity method requires Temporal context - skipping direct call test")
-			
+
 			_, err := plugin.Activity(ctx, tt.params)
 			if err == nil {
 				t.Error("Expected error, got nil")
