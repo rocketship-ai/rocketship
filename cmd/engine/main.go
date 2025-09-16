@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"net"
+	"net/http"
 	"os"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -34,7 +37,25 @@ func main() {
 
 	logger.Debug("creating engine orchestrator")
 	engine := orchestrator.NewEngine(c)
+	startHealthServer()
 	startGRPCServer(engine)
+}
+
+type healthPayload struct {
+	Status string `json:"status"`
+}
+
+func newHealthMux() http.Handler {
+	mux := http.NewServeMux()
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(healthPayload{Status: "ok"})
+	})
+
+	mux.HandleFunc("/", handler)
+	mux.HandleFunc("/healthz", handler)
+	return mux
 }
 
 func startGRPCServer(engine generated.EngineServer) {
@@ -55,4 +76,20 @@ func startGRPCServer(engine generated.EngineServer) {
 		logger.Error("failed to serve grpc", "error", err)
 		os.Exit(1)
 	}
+}
+
+func startHealthServer() {
+	logger := cli.Logger
+	mux := newHealthMux()
+	server := &http.Server{
+		Addr:    ":7701",
+		Handler: mux,
+	}
+
+	logger.Info("http health server listening", "port", ":7701")
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("health server error", "error", err)
+		}
+	}()
 }
