@@ -1,7 +1,7 @@
 name: "HTTP OpenAPI Form Example"
 description: "Demonstrates OpenAPI validation for form-encoded requests"
 openapi:
-  spec: "./examples/http-openapi-form/spec.yaml"
+  spec: "./examples/http-openapi-form/spec.openapi"
   cache_ttl: "5m"
 
 tests:
