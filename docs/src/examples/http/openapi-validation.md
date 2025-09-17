@@ -16,6 +16,7 @@ openapi:
 - YAML and JSON OpenAPI documents are both supported; kin-openapi auto-detects the format.
 - `cache_ttl` controls how long a contract stays cached (default 30 minutes). Raise or lower it depending on how often specs change.
 - Bump the optional `version` string (`version: "2024-03-15"`) whenever you publish a new contract to force an immediate refresh.
+- Form-encoded payloads (`application/x-www-form-urlencoded`) and other common content types are validated automatically—just use the HTTP plugin’s `form` config block.
 
 ## Step-Level Overrides
 

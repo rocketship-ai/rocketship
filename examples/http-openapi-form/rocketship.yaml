@@ -1,0 +1,22 @@
+name: "HTTP OpenAPI Form Example"
+description: "Demonstrates OpenAPI validation for form-encoded requests"
+openapi:
+  spec: "./examples/http-openapi-form/spec.yaml"
+  cache_ttl: "5m"
+
+tests:
+  - name: "Submit form data"
+    steps:
+      - name: "Send form payload"
+        plugin: http
+        config:
+          method: POST
+          url: "https://postman-echo.com/post"
+          form:
+            foo: "hello-world"
+            bar: 123
+          openapi:
+            validate_response: false
+        assertions:
+          - type: status_code
+            expected: 200

@@ -308,6 +308,7 @@ jobs:
           ./.github/scripts/test-log-plugin-validation.sh
           ./.github/scripts/test-env-file.sh
           ./.github/scripts/test-retry-functionality.sh
+          ./.github/scripts/test-http-openapi-form.sh
 
           echo "Testing individual example file..."
           echo "Testing browser plugin integration..."
