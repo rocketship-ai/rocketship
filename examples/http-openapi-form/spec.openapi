@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: Postman Echo Multi-Format API
+  version: 1.2.1
+servers:
+  - url: https://postman-echo.com
+paths:
+  /post:
+    post:
+      operationId: submitData
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: integer
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: integer
+      responses:
+        "200":
+          description: Successful echo response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - json
+                properties:
+                  json:
+                    type: object
+                  data:
+                    oneOf:
+                      - type: string
+                      - type: object
+        "400":
+          description: Invalid input

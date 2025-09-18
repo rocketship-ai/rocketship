@@ -120,7 +120,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			"suite_name", run.Name,
 			"source", runContext.Source)
 
-		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars, runID)
+		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars, runID, run.OpenAPI)
 		if err != nil {
 			log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
 			return nil, fmt.Errorf("failed to start workflow: %w", err)
@@ -540,9 +540,9 @@ func (e *Engine) Health(ctx context.Context, req *generated.HealthRequest) (*gen
 // GetAuthConfig implements server discovery endpoint
 func (e *Engine) GetAuthConfig(ctx context.Context, req *generated.GetAuthConfigRequest) (*generated.GetAuthConfigResponse, error) {
 	return &generated.GetAuthConfigResponse{
-		AuthEnabled:   false,               // Phase 1: No auth yet
-		AuthType:      "none",              // Will be "cloud", "oidc", "token" in later phases
-		AuthEndpoint:  "",                  // No auth endpoint for local server
+		AuthEnabled:  false,  // Phase 1: No auth yet
+		AuthType:     "none", // Will be "cloud", "oidc", "token" in later phases
+		AuthEndpoint: "",     // No auth endpoint for local server
 	}, nil
 }
 

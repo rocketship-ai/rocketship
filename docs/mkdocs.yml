@@ -60,7 +60,9 @@ nav:
   - Examples:
       - Overview: examples.md
       - HTTP Testing:
-          - Request Chaining & Delays: examples/request-chaining.md
+          - Request Chaining: examples/http/request-chaining.md
+          - Managing Delays: examples/http/delays.md
+          - Contract Validation: examples/http/openapi-validation.md
       - SQL Testing:
           - SQL Queries: examples/sql-testing.md
       - Supabase Testing:

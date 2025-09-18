@@ -11,10 +11,11 @@ type HTTPPlugin struct {
 
 // HTTPConfig contains the HTTP request configuration
 type HTTPConfig struct {
-	Method  string            `json:"method" yaml:"method"`
-	URL     string            `json:"url" yaml:"url"`
-	Body    string            `json:"body" yaml:"body,omitempty"`
-	Headers map[string]string `json:"headers" yaml:"headers,omitempty"`
+	Method  string                   `json:"method" yaml:"method"`
+	URL     string                   `json:"url" yaml:"url"`
+	Body    string                   `json:"body" yaml:"body,omitempty"`
+	Headers map[string]string        `json:"headers" yaml:"headers,omitempty"`
+	OpenAPI *OpenAPIValidationConfig `json:"openapi" yaml:"openapi,omitempty"`
 }
 
 // HTTPAssertion represents a test assertion
@@ -32,6 +33,15 @@ type SaveConfig struct {
 	Header   string `json:"header" yaml:"header,omitempty"`       // Header name to extract
 	As       string `json:"as" yaml:"as"`                         // Variable name to save as
 	Required *bool  `json:"required" yaml:"required,omitempty"`   // Whether the value is required (defaults to true)
+}
+
+// OpenAPIValidationConfig configures OpenAPI request/response validation for the HTTP plugin
+type OpenAPIValidationConfig struct {
+	Spec             string `json:"spec" yaml:"spec"`
+	OperationID      string `json:"operation_id" yaml:"operation_id,omitempty"`
+	Version          string `json:"version" yaml:"version,omitempty"`
+	ValidateRequest  *bool  `json:"validate_request" yaml:"validate_request,omitempty"`
+	ValidateResponse *bool  `json:"validate_response" yaml:"validate_response,omitempty"`
 }
 
 // Common assertion types

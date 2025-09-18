@@ -18,6 +18,33 @@
       "description": "Configuration variables that can be referenced in test steps using {{ vars.key }} syntax",
       "additionalProperties": true
     },
+    "openapi": {
+      "type": "object",
+      "description": "Suite-level OpenAPI contract validation defaults applied to HTTP steps",
+      "properties": {
+        "spec": {
+          "type": "string",
+          "description": "Path or URL to an OpenAPI v3 document"
+        },
+        "version": {
+          "type": "string",
+          "description": "Optional spec version identifier used to invalidate cached contracts"
+        },
+        "validate_request": {
+          "type": "boolean",
+          "description": "Enable request validation (default true)"
+        },
+        "validate_response": {
+          "type": "boolean",
+          "description": "Enable response validation (default true)"
+        },
+        "cache_ttl": {
+          "type": "string",
+          "description": "Duration (e.g. 30m, 1h) before a cached spec is automatically reloaded"
+        }
+      },
+      "required": ["spec"]
+    },
     "tests": {
       "type": "array",
       "description": "Array of test cases",
@@ -234,6 +261,33 @@
                             "type": "object",
                             "description": "Form fields to be url-encoded as application/x-www-form-urlencoded",
                             "additionalProperties": true
+                          },
+                          "openapi": {
+                            "type": "object",
+                            "description": "Override OpenAPI validation behavior for this HTTP step",
+                            "properties": {
+                              "spec": {
+                                "type": "string",
+                                "description": "Path or URL to an OpenAPI v3 document"
+                              },
+                              "operation_id": {
+                                "type": "string",
+                                "description": "Require the request to match a specific operationId"
+                              },
+                              "version": {
+                                "type": "string",
+                                "description": "Optional spec version identifier used to invalidate cached contracts"
+                              },
+                              "validate_request": {
+                                "type": "boolean",
+                                "description": "Enable request validation for this step"
+                              },
+                              "validate_response": {
+                                "type": "boolean",
+                                "description": "Enable response validation for this step"
+                              }
+                            },
+                            "additionalProperties": false
                           }
                         }
                       }

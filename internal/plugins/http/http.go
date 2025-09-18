@@ -111,6 +111,15 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		return nil, fmt.Errorf("invalid config format: got type %T", p["config"])
 	}
 
+	var suiteOpenAPI map[string]interface{}
+	if rawSuite, exists := p["suite_openapi"]; exists && rawSuite != nil {
+		var ok bool
+		suiteOpenAPI, ok = rawSuite.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("suite_openapi config must be an object when provided")
+		}
+	}
+
 	// Replace variables in URL
 	urlStr, ok := configData["url"].(string)
 	if !ok {
@@ -204,19 +213,37 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		}
 	}
 
-	// Print body if present
+	var reqBodyBytes []byte
 	if req.Body != nil {
-		// Read body for logging (we need to recreate it since it's consumed)
-		if bodyBytes, err := io.ReadAll(req.Body); err == nil {
-			bodyStr := string(bodyBytes)
-			logger.Info("Body:", "content", bodyStr)
-			// Recreate the body reader for the actual request
-			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		bodyBytes, readErr := io.ReadAll(req.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read request body: %w", readErr)
 		}
+		reqBodyBytes = bodyBytes
+		logger.Info("Body:", "content", string(reqBodyBytes))
 	} else {
 		logger.Info("Body: <empty>")
 	}
+	setRequestBody(req, reqBodyBytes)
 	logger.Info("=== END HTTP REQUEST DEBUG ===")
+
+	var openapiValidator *openAPIValidator
+	if validator, err := newOpenAPIValidator(ctx, configData, suiteOpenAPI, state); err != nil {
+		return nil, err
+	} else {
+		openapiValidator = validator
+	}
+
+	if openapiValidator != nil {
+		if err := openapiValidator.prepareRequestValidation(ctx, req, reqBodyBytes); err != nil {
+			return nil, err
+		}
+		if openapiValidator.shouldValidateRequest() {
+			if err := openapiValidator.validateRequest(ctx); err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	// Send request
 	client := &http.Client{}
@@ -243,6 +270,12 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	for key, values := range resp.Header {
 		if len(values) > 0 {
 			response.Headers[key] = values[0]
+		}
+	}
+
+	if openapiValidator != nil && openapiValidator.shouldValidateResponse() {
+		if err := openapiValidator.validateResponse(ctx, resp, respBody); err != nil {
+			return nil, err
 		}
 	}
 

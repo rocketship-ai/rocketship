@@ -10,9 +10,9 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}, runID string) error {
+func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}, runID string, suiteOpenAPI *dsl.OpenAPISuiteConfig) error {
 	logger := workflow.GetLogger(ctx)
-	
+
 	// Set base timeout for non-plugin activities (LogForwarderActivity, etc.)
 	// Plugin activities will override this with step-specific options in executePlugin
 	baseAO := workflow.ActivityOptions{
@@ -43,7 +43,7 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface
 			}
 		} else {
 			// Execute plugin through registry
-			if err := executePlugin(ctx, step, state, vars, runID, test.Name); err != nil {
+			if err := executePlugin(ctx, step, state, vars, runID, test.Name, suiteOpenAPI); err != nil {
 				// Send error log to engine
 				sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Step failed: %v", err), "red", true)
 				return fmt.Errorf("step %d: %w", i, err)
@@ -78,7 +78,7 @@ func handleDelayStep(ctx workflow.Context, step dsl.Step, testName, runID string
 }
 
 // executePlugin executes any registered plugin through the plugin registry
-func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string) error {
+func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string, suiteOpenAPI *dsl.OpenAPISuiteConfig) error {
 	logger := workflow.GetLogger(ctx)
 
 	// Check if plugin is registered
@@ -108,6 +108,26 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	// Pass vars for script plugin usage (other plugins ignore them since CLI processes config vars)
 	if vars != nil {
 		pluginParams["vars"] = vars
+	}
+
+	if step.Plugin == "http" && suiteOpenAPI != nil {
+		suiteMap := map[string]interface{}{}
+		if suiteOpenAPI.Spec != "" {
+			suiteMap["spec"] = suiteOpenAPI.Spec
+		}
+		if suiteOpenAPI.Version != "" {
+			suiteMap["version"] = suiteOpenAPI.Version
+		}
+		if suiteOpenAPI.ValidateRequest != nil {
+			suiteMap["validate_request"] = *suiteOpenAPI.ValidateRequest
+		}
+		if suiteOpenAPI.ValidateResponse != nil {
+			suiteMap["validate_response"] = *suiteOpenAPI.ValidateResponse
+		}
+		if suiteOpenAPI.CacheTTL != "" {
+			suiteMap["cache_ttl"] = suiteOpenAPI.CacheTTL
+		}
+		pluginParams["suite_openapi"] = suiteMap
 	}
 
 	// Create step-specific activity options with retry policy

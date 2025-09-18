@@ -1,0 +1,41 @@
+name: "HTTP OpenAPI Multi-Format Example"
+description: "Demonstrates OpenAPI validation for form-encoded and JSON requests"
+openapi:
+  spec: "./examples/http-openapi-form/spec.openapi"
+  cache_ttl: "5m"
+
+tests:
+  - name: "Submit payloads"
+    steps:
+      - name: "Send form payload"
+        plugin: http
+        config:
+          method: POST
+          url: "https://postman-echo.com/post"
+          form:
+            foo: "hello-world"
+            bar: 123
+          openapi:
+            validate_response: false
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "Send JSON payload"
+        plugin: http
+        config:
+          method: POST
+          url: "https://postman-echo.com/post"
+          headers:
+            Content-Type: application/json
+          body: |
+            {
+              "foo": "json-hello",
+              "bar": 321
+            }
+        assertions:
+          - type: status_code
+            expected: 200
+          - type: json_path
+            path: ".json.foo"
+            expected: "json-hello"

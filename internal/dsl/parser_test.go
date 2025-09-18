@@ -86,6 +86,26 @@ tests:
           duration: "5s"
 `,
 		},
+		{
+			name: "suite openapi configuration",
+			yaml: `
+name: "OpenAPI Suite"
+openapi:
+  spec: "./specs/test.yaml"
+  validate_request: false
+  cache_ttl: "45m"
+tests:
+  - name: "Test 1"
+    steps:
+      - name: "Call"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://example.com"
+          openapi:
+            validate_response: false
+`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -95,6 +115,14 @@ tests:
 			assert.NotEmpty(t, config.Name)
 			// Version field no longer exists in spec
 			assert.NotEmpty(t, config.Tests)
+			if tt.name == "suite openapi configuration" {
+				require.NotNil(t, config.OpenAPI)
+				assert.Equal(t, "./specs/test.yaml", config.OpenAPI.Spec)
+				if assert.NotNil(t, config.OpenAPI.ValidateRequest) {
+					assert.False(t, *config.OpenAPI.ValidateRequest)
+				}
+				assert.Equal(t, "45m", config.OpenAPI.CacheTTL)
+			}
 		})
 	}
 }
@@ -156,6 +184,22 @@ tests:
         assertions:
           - type: "json_path"
             expected: "value"
+`,
+			expectedErr: "schema validation failed",
+		},
+		{
+			name: "suite openapi missing spec fails",
+			yaml: `
+name: "Invalid OpenAPI"
+openapi:
+  validate_request: false
+tests:
+  - name: "Test 1"
+    steps:
+      - name: "Step 1"
+        plugin: "delay"
+        config:
+          duration: "1s"
 `,
 			expectedErr: "schema validation failed",
 		},
