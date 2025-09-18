@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Postman Echo Form API
-  version: 1.0.0
+  version: 1.1.0
 servers:
   - url: https://postman-echo.com
 paths:
@@ -24,5 +24,37 @@ paths:
       responses:
         "200":
           description: Successful echo response
+        "400":
+          description: Invalid input
+  /post/json:
+    post:
+      operationId: submitJson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: integer
+      responses:
+        "200":
+          description: JSON echo response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - json
+                properties:
+                  json:
+                    type: object
+                  data:
+                    type: string
         "400":
           description: Invalid input

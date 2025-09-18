@@ -1,0 +1,19 @@
+name: "HTTP OpenAPI Multi-Format Example (Invalid)"
+description: "Triggers OpenAPI validation failure for missing form field"
+openapi:
+  spec: "./examples/http-openapi-form/spec.openapi"
+  cache_ttl: "5m"
+
+tests:
+  - name: "Submit invalid form data"
+    steps:
+      - name: "Missing required form field"
+        plugin: http
+        config:
+          method: POST
+          url: "https://postman-echo.com/post"
+          form:
+            bar: 123
+        assertions:
+          - type: status_code
+            expected: 200
