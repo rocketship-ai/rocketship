@@ -1,13 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Postman Echo Form API
-  version: 1.1.0
+  title: Postman Echo Multi-Format API
+  version: 1.2.0
 servers:
   - url: https://postman-echo.com
 paths:
   /post:
     post:
-      operationId: submitForm
+      operationId: submitData
       requestBody:
         required: true
         content:
@@ -21,17 +21,6 @@ paths:
                   type: string
                 bar:
                   type: integer
-      responses:
-        "200":
-          description: Successful echo response
-        "400":
-          description: Invalid input
-  /post/json:
-    post:
-      operationId: submitJson
-      requestBody:
-        required: true
-        content:
           application/json:
             schema:
               type: object
@@ -44,7 +33,7 @@ paths:
                   type: integer
       responses:
         "200":
-          description: JSON echo response
+          description: Successful echo response
           content:
             application/json:
               schema:

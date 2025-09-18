@@ -25,7 +25,7 @@ tests:
         plugin: http
         config:
           method: POST
-          url: "https://postman-echo.com/post/json"
+          url: "https://postman-echo.com/post"
           headers:
             Content-Type: application/json
           body: |

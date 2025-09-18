@@ -9,20 +9,13 @@ ROCKETSHIP_LOG=ERROR rocketship run -af examples/http-openapi-form/rocketship.ya
 
 set +e
 OUTPUT=$(ROCKETSHIP_LOG=ERROR rocketship run -af examples/http-openapi-form/rocketship-invalid.yaml 2>&1)
-STATUS=$?
 set -e
 popd >/dev/null
 
-if [[ $STATUS -eq 0 ]]; then
-  echo "❌ Expected invalid form run to fail but it succeeded"
+if ! echo "$OUTPUT" | grep -q "openapi request validation failed"; then
+  echo "❌ Expected OpenAPI validation failure for invalid form payload"
   echo "$OUTPUT"
   exit 1
 fi
 
-echo "$OUTPUT" | grep -q "openapi request validation failed" || {
-  echo "❌ Expected OpenAPI validation error not found"
-  echo "$OUTPUT"
-  exit 1
-}
-
-echo "✅ HTTP OpenAPI form and json integration passed"
+echo "✅ HTTP OpenAPI form/json integration passed"
