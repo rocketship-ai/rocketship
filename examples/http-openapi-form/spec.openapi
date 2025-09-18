@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Postman Echo Multi-Format API
-  version: 1.2.0
+  version: 1.2.1
 servers:
   - url: https://postman-echo.com
 paths:
@@ -44,6 +44,8 @@ paths:
                   json:
                     type: object
                   data:
-                    type: string
+                    oneOf:
+                      - type: string
+                      - type: object
         "400":
           description: Invalid input
