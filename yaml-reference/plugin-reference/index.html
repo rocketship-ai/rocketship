@@ -482,6 +482,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -521,11 +525,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/request-chaining/" class="md-nav__link">
+      <a href="../../examples/http/request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Request Chaining & Delays
+    Request Chaining
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/http/delays/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Managing Delays
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/http/openapi-validation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contract Validation
   </span>
   
 
@@ -2094,6 +2140,11 @@
 <td>Configuration variables that can be referenced in test steps using {{ vars.key }} syntax</td>
 </tr>
 <tr>
+<td><code>openapi</code></td>
+<td></td>
+<td>Suite-level OpenAPI contract validation defaults applied to HTTP steps</td>
+</tr>
+<tr>
 <td><code>tests</code></td>
 <td>✅</td>
 <td>Array of test cases</td>
@@ -2202,6 +2253,48 @@
 <td></td>
 <td>Form fields to be url-encoded as application/x-www-form-urlencoded</td>
 <td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>openapi</code></td>
+<td></td>
+<td>Override OpenAPI validation behavior for this HTTP step</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>openapi.spec</code></td>
+<td></td>
+<td>Path or URL to an OpenAPI v3 document</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>openapi.operation_id</code></td>
+<td></td>
+<td>Require the request to match a specific operationId</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>openapi.version</code></td>
+<td></td>
+<td>Optional spec version identifier used to invalidate cached contracts</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>openapi.validate_request</code></td>
+<td></td>
+<td>Enable request validation for this step</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>openapi.validate_response</code></td>
+<td></td>
+<td>Enable response validation for this step</td>
+<td><code>boolean</code></td>
 <td>-</td>
 </tr>
 </tbody>

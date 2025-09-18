@@ -8,28 +8,28 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/examples/log-plugin/">
+        <link rel="canonical" href="https://docs.rocketship.sh/examples/http/openapi-validation/">
       
       
-        <link rel="prev" href="../browser-testing/">
+        <link rel="prev" href="../delays/">
       
       
-        <link rel="next" href="../retry-policies/">
+        <link rel="next" href="../../sql-testing/">
       
       
-      <link rel="icon" href="../../assets/transparent.png">
+      <link rel="icon" href="../../../assets/transparent.png">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.12">
     
     
       
-        <title>Log Plugin - Rocketship CLI</title>
+        <title>Contract Validation - Rocketship CLI</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.7e359304.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.7e359304.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +48,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#log-plugin" class="md-skip">
+        <a href="#contract-validation-for-http-steps" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +92,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../../assets/transparent-reverse.png" alt="logo">
+  <img src="../../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Log Plugin
+              Contract Validation
             
           </span>
         </div>
@@ -226,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../../assets/transparent-reverse.png" alt="logo">
+  <img src="../../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     Rocketship CLI
@@ -255,7 +255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -325,7 +325,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
+      <a href="../../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -346,7 +346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../../quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -367,7 +367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../test-run-management/" class="md-nav__link">
+      <a href="../../../test-run-management/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -457,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -475,8 +475,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -491,13 +493,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
         
           
           <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
@@ -511,7 +511,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             HTTP Testing
@@ -525,7 +525,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../http/request-chaining/" class="md-nav__link">
+      <a href="../request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -546,7 +546,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../http/delays/" class="md-nav__link">
+      <a href="../delays/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -564,10 +564,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../http/openapi-validation/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Contract Validation
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -576,6 +596,71 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#suite-level-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      Suite-Level Defaults
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-level-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      Step-Level Overrides
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-combined-with-request-chaining" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Combined with Request Chaining
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-behaviour" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cache Behaviour
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Next Steps
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -639,7 +724,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sql-testing/" class="md-nav__link">
+      <a href="../../sql-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -711,7 +796,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../supabase-testing/" class="md-nav__link">
+      <a href="../../supabase-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -783,7 +868,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../variables/" class="md-nav__link">
+      <a href="../../variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -857,7 +942,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-scripting/" class="md-nav__link">
+      <a href="../../custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -878,7 +963,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-scripting/" class="md-nav__link">
+      <a href="../../shell-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -952,7 +1037,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-testing/" class="md-nav__link">
+      <a href="../../agent-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -973,7 +1058,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../browser-testing/" class="md-nav__link">
+      <a href="../../browser-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -999,8 +1084,6 @@
                 
   
   
-    
-  
   
   
     
@@ -1013,11 +1096,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_8" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
         
           
           <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
@@ -1031,7 +1116,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_8">
             <span class="md-nav__icon md-icon"></span>
             Logging
@@ -1042,30 +1127,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Log Plugin
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../log-plugin/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1074,71 +1139,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      Configuration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#variable-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Variable Support
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Output
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Use Cases
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1202,7 +1202,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../retry-policies/" class="md-nav__link">
+      <a href="../../retry-policies/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1284,7 +1284,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../yaml-reference/plugin-reference/" class="md-nav__link">
+      <a href="../../../yaml-reference/plugin-reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1312,7 +1312,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../mcp-server/" class="md-nav__link">
+      <a href="../../../mcp-server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1380,7 +1380,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy-on-your-cloud/" class="md-nav__link">
+      <a href="../../../deploy-on-your-cloud/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1401,7 +1401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy-on-kubernetes/" class="md-nav__link">
+      <a href="../../../deploy-on-kubernetes/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1489,7 +1489,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship/" class="md-nav__link">
+      <a href="../../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1510,7 +1510,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_run/" class="md-nav__link">
+      <a href="../../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1531,7 +1531,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_list/" class="md-nav__link">
+      <a href="../../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1552,7 +1552,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_get/" class="md-nav__link">
+      <a href="../../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1618,7 +1618,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_start/" class="md-nav__link">
+      <a href="../../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1639,7 +1639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
+      <a href="../../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1713,7 +1713,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_stop/" class="md-nav__link">
+      <a href="../../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1734,7 +1734,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
+      <a href="../../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1763,7 +1763,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_validate/" class="md-nav__link">
+      <a href="../../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1784,7 +1784,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_version/" class="md-nav__link">
+      <a href="../../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1812,7 +1812,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1852,45 +1852,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
+  <a href="#suite-level-defaults" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration
+      Suite-Level Defaults
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
+  <a href="#step-level-overrides" class="md-nav__link">
     <span class="md-ellipsis">
-      Basic Usage
+      Step-Level Overrides
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#variable-support" class="md-nav__link">
+  <a href="#example-combined-with-request-chaining" class="md-nav__link">
     <span class="md-ellipsis">
-      Variable Support
+      Example Combined with Request Chaining
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-output" class="md-nav__link">
+  <a href="#cache-behaviour" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Output
+      Cache Behaviour
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
+  <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
-      Use Cases
+      Next Steps
     </span>
   </a>
   
@@ -1914,78 +1914,62 @@
   
 
 
-<h1 id="log-plugin">Log Plugin</h1>
-<p>The log plugin allows you to add custom logging messages to your test suites for debugging, monitoring, and progress tracking. Log messages appear in the CLI output during test execution.</p>
-<h2 id="configuration">Configuration</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Your</span><span class="nv"> </span><span class="s">log</span><span class="nv"> </span><span class="s">message</span><span class="nv"> </span><span class="s">here&quot;</span>
+<h1 id="contract-validation-for-http-steps">Contract Validation for HTTP Steps</h1>
+<p>Rocketship can validate every HTTP request and response against an OpenAPI v3 contract. The validator now lives at the suite level, so you configure it once and inherit the settings everywhere.</p>
+<h2 id="suite-level-defaults">Suite-Level Defaults</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">openapi</span><span class="p">:</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">spec</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./contracts/checkout.yaml&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">cache_ttl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;30m&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">validate_response</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
-<h2 id="basic-usage">Basic Usage</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Basic Logging Example</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">tests</span><span class="p">:</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test with logging</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Starting</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">execution&quot;</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://httpbin.org/get&quot;</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;HTTP</span><span class="nv"> </span><span class="s">request</span><span class="nv"> </span><span class="s">completed&quot;</span>
-</code></pre></div>
-<h2 id="variable-support">Variable Support</h2>
-<p>The log plugin supports all variable types including configuration variables, environment variables, and runtime variables:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Logging with Variables</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-session-123&quot;</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">tests</span><span class="p">:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Variable logging example</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Starting</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">session:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.vars.session</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://httpbin.org/get&quot;</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="nt">save</span><span class="p">:</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;response_data&quot;</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.response.json</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;User</span><span class="nv"> </span><span class="s">agent:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.runtime.response_data.headers.User-Agent</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Test</span><span class="nv"> </span><span class="s">running</span><span class="nv"> </span><span class="s">on:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.HOSTNAME</span><span class="nv"> </span><span class="s">}}&quot;</span>
-</code></pre></div>
-<h2 id="example-output">Example Output</h2>
-<p>When running tests:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-log/rocketship.yaml
-</code></pre></div>
-<p>You'll see log messages in the output:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>🚀 Starting user-service tests in staging environment
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Running on user&#39;s machine at /home/user
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Created test data with ID: test_1234567890, Status: active
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>⚠️  Warning: This is a simulated warning during testing
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>✅ Test completed successfully for user-service
-</code></pre></div></p>
-<h2 id="use-cases">Use Cases</h2>
 <ul>
-<li><strong>Progress Tracking</strong>: Log milestones in long-running tests</li>
-<li><strong>Debug Information</strong>: Output variable values and intermediate results</li>
-<li><strong>Test Documentation</strong>: Add context about what each step is doing</li>
-<li><strong>Monitoring</strong>: Track important events during test execution</li>
+<li><code>spec</code> accepts relative or absolute filesystem paths <strong>and</strong> HTTP(S) URLs.</li>
+<li>YAML and JSON OpenAPI documents are both supported; kin-openapi auto-detects the format.</li>
+<li><code>cache_ttl</code> controls how long a contract stays cached (default 30 minutes). Raise or lower it depending on how often specs change.</li>
+<li>Bump the optional <code>version</code> string (<code>version: "2024-03-15"</code>) whenever you publish a new contract to force an immediate refresh.</li>
+<li>Form-encoded payloads (<code>application/x-www-form-urlencoded</code>) and other common content types are validated automatically—just use the HTTP plugin’s <code>form</code> config block.</li>
 </ul>
-<p>Log messages always appear in the CLI output regardless of the logging level, making them perfect for providing real-time feedback during test execution.</p>
+<h2 id="step-level-overrides">Step-Level Overrides</h2>
+<p>Sometimes you need to skip a check for a particular scenario (for example, sending intentionally malformed data). Add an <code>openapi</code> block on the step to toggle behaviour:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Submit</span><span class="nv"> </span><span class="s">malformed</span><span class="nv"> </span><span class="s">payload&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://api.example.com/orders</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;{&quot;sku&quot;:</span><span class="nv"> </span><span class="s">&quot;broken&quot;}&#39;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">openapi</span><span class="p">:</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<p>You can also point a specific step at a different <code>spec</code>, require an <code>operation_id</code>, or disable response validation.</p>
+<h2 id="example-combined-with-request-chaining">Example Combined with Request Chaining</h2>
+<p>The request-chaining suite uses a single contract:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">openapi</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">spec</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./contracts/tryme.yaml&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">cache_ttl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;30m&quot;</span>
+</code></pre></div>
+<p>Every HTTP step inherits that contract. One step turns off <code>validate_request</code> to test how the server handles malformed input:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">second</span><span class="nv"> </span><span class="s">car&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://tryme.rocketship.sh/cars&quot;</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;{&quot;make&quot;:&quot;Honda&quot;,&quot;model&quot;:&quot;Civic&quot;}&#39;</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">openapi</span><span class="p">:</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</code></pre></div>
+<p>With the contract in place, Rocketship fails the run if the server returns extra fields, the wrong status code, or a payload that violates the schema. All failures include the underlying kin-openapi error details.</p>
+<h2 id="cache-behaviour">Cache Behaviour</h2>
+<ul>
+<li>Entries expire automatically after the configured <code>cache_ttl</code>.</li>
+<li>Local specs refresh as soon as their modification time changes.</li>
+<li>Remote specs refresh when the TTL expires or when you bump the <code>version</code> field.</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+<li>Build the full <a href="../request-chaining/">HTTP Request Chaining</a> flow.</li>
+<li>Combine delays and contract validation for resilient suites by pairing this guide with <a href="../delays/">Managing Delays</a>.</li>
+</ul>
 
 
 
@@ -2032,10 +2016,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
       
     
   </body>
