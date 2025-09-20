@@ -934,26 +934,50 @@ paths:
 		}
 	})
 
-	t.Run("missing required form field fails validation", func(t *testing.T) {
+	jsonSpec := `openapi: 3.1.0
+info:
+  title: JSON API
+  version: 1.0.0
+paths:
+  /post:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: integer
+`
+
+	jsonSpecPath := filepath.Join(tempDir, "json-openapi.yaml")
+	if err := os.WriteFile(jsonSpecPath, []byte(jsonSpec), 0o600); err != nil {
+		t.Fatalf("failed to write json spec: %v", err)
+	}
+
+	t.Run("missing required json field fails validation", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
-		suite := map[string]interface{}{"spec": formSpecPath}
+		suite := map[string]interface{}{"spec": jsonSpecPath}
 
 		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
 
-		form := url.Values{}
-		form.Set("bar", "42")
-		encoded := form.Encode()
+		body := []byte(`{"bar":321}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/post", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, body)
 
-		req := httptest.NewRequest(http.MethodPost, "http://example.com/post", strings.NewReader(encoded))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		setRequestBody(req, []byte(encoded))
-
-		if err := validator.prepareRequestValidation(ctx, req, []byte(encoded)); err != nil {
+		if err := validator.prepareRequestValidation(ctx, req, body); err != nil {
 			t.Fatalf("prepareRequestValidation error: %v", err)
 		}
 		if err := validator.validateRequest(ctx); err == nil {

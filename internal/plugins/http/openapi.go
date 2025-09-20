@@ -9,14 +9,15 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/getkin/kin-openapi/openapi3filter"
-	"github.com/getkin/kin-openapi/routers"
-	"github.com/getkin/kin-openapi/routers/legacy"
+	"github.com/pb33f/libopenapi"
+	validator "github.com/pb33f/libopenapi-validator"
+	validatorErrors "github.com/pb33f/libopenapi-validator/errors"
+	"gopkg.in/yaml.v3"
 )
 
 type openAPIValidationConfig struct {
@@ -29,18 +30,27 @@ type openAPIValidationConfig struct {
 }
 
 type openAPIValidator struct {
-	config       *openAPIValidationConfig
-	entry        *openAPISpecEntry
-	requestInput *openapi3filter.RequestValidationInput
-	requestBody  []byte
+	config          *openAPIValidationConfig
+	entry           *openAPISpecEntry
+	requestClone    *http.Request
+	requestBodyCopy []byte
+	matchedOp       *operationMatcher
 }
 
 type openAPISpecEntry struct {
-	doc         *openapi3.T
-	router      routers.Router
+	validator   validator.Validator
+	operations  []*operationMatcher
+	version     string
 	loadedAt    time.Time
 	localPath   string
 	fileModTime time.Time
+}
+
+type operationMatcher struct {
+	method      string
+	template    string
+	regex       *regexp.Regexp
+	operationID string
 }
 
 var openAPISpecCache = struct {
@@ -96,7 +106,6 @@ func parseOpenAPIValidationConfig(configData map[string]interface{}, suiteData i
 
 	var stepOverride map[string]interface{}
 	if raw, exists := configData["openapi"]; exists {
-		var ok bool
 		stepOverride, ok = raw.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("openapi config must be an object")
@@ -263,73 +272,164 @@ func loadOpenAPISpec(ctx context.Context, location string, opts openAPICacheOpti
 		}
 	}
 
-	loader := &openapi3.Loader{Context: ctx}
-	loader.IsExternalRefsAllowed = true
-
-	var (
-		doc          *openapi3.T
-		err          error
-		parsedURL    *url.URL
-		resolvedPath string
-		modTime      time.Time
-	)
-
-	if u, parseErr := url.Parse(location); parseErr == nil && u.Scheme != "" {
-		parsedURL = u
-		doc, err = loader.LoadFromURI(u)
-		if err != nil {
-			switch strings.ToLower(u.Scheme) {
-			case "http", "https":
-				return nil, fmt.Errorf("failed to load OpenAPI spec from %q: %w", location, err)
-			case "file":
-				// fall back to local file handling below
-				doc = nil
-			default:
-				doc = nil
-			}
-		}
-	}
-
-	if doc == nil {
-		path := location
-		if parsedURL != nil {
-			if parsedURL.Scheme == "file" && parsedURL.Path != "" {
-				path = parsedURL.Path
-			} else if parsedURL.Path != "" && parsedURL.Scheme == "" {
-				path = parsedURL.Path
-			}
-		}
-		if !filepath.IsAbs(path) {
-			if wd, err := os.Getwd(); err == nil {
-				path = filepath.Join(wd, path)
-			}
-		}
-		info, statErr := os.Stat(path)
-		if statErr != nil {
-			return nil, fmt.Errorf("failed to stat OpenAPI spec %q: %w", location, statErr)
-		}
-		modTime = info.ModTime()
-		resolvedPath = path
-		doc, err = loader.LoadFromFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load OpenAPI spec from %q: %w", location, err)
-		}
-	}
-
-	router, err := legacy.NewRouter(doc)
+	specBytes, resolvedPath, modTime, err := fetchSpecBytes(location)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenAPI router for %q: %w", location, err)
+		return nil, err
+	}
+
+	docRoot, err := parseOpenAPIRoot(specBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse OpenAPI spec %q: %w", location, err)
+	}
+
+	document, docErrs := libopenapi.NewDocument(specBytes)
+	if docErrs != nil {
+		return nil, fmt.Errorf("failed to load OpenAPI document for %q: %v", location, docErrs)
+	}
+
+	val, valErrs := validator.NewValidator(document)
+	if len(valErrs) > 0 {
+		return nil, fmt.Errorf("failed to initialise OpenAPI validator for %q: %s", location, formatGenericErrors(valErrs))
+	}
+
+	operations, err := buildOperationMatchers(docRoot.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build OpenAPI operations for %q: %w", location, err)
 	}
 
 	entry := &openAPISpecEntry{
-		doc:         doc,
-		router:      router,
+		validator:   val,
+		operations:  operations,
+		version:     docRoot.OpenAPI,
 		loadedAt:    time.Now(),
 		localPath:   resolvedPath,
 		fileModTime: modTime,
 	}
 	openAPISpecCache.specs[cacheKey] = entry
 	return entry, nil
+}
+
+func fetchSpecBytes(location string) ([]byte, string, time.Time, error) {
+	if parsed, err := url.Parse(location); err == nil && parsed.Scheme != "" && parsed.Scheme != "file" {
+		resp, err := http.Get(location)
+		if err != nil {
+			return nil, "", time.Time{}, fmt.Errorf("failed to download OpenAPI spec from %q: %w", location, err)
+		}
+		defer func() {
+			if cerr := resp.Body.Close(); cerr != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to close OpenAPI spec response body: %v\n", cerr)
+			}
+		}()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, "", time.Time{}, fmt.Errorf("failed to download OpenAPI spec from %q: HTTP %d", location, resp.StatusCode)
+		}
+
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, "", time.Time{}, fmt.Errorf("failed to read OpenAPI spec from %q: %w", location, err)
+		}
+		return data, "", time.Now(), nil
+	}
+
+	path := location
+	if parsed, err := url.Parse(location); err == nil && parsed.Scheme == "file" {
+		path = parsed.Path
+	}
+
+	if !filepath.IsAbs(path) {
+		if wd, err := os.Getwd(); err == nil {
+			path = filepath.Join(wd, path)
+		}
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", time.Time{}, fmt.Errorf("failed to read OpenAPI spec %q: %w", location, err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, "", time.Time{}, fmt.Errorf("failed to stat OpenAPI spec %q: %w", location, err)
+	}
+
+	return data, path, info.ModTime(), nil
+}
+
+type openAPIRoot struct {
+	OpenAPI string                            `yaml:"openapi" json:"openapi"`
+	Paths   map[string]map[string]interface{} `yaml:"paths" json:"paths"`
+}
+
+func parseOpenAPIRoot(data []byte) (*openAPIRoot, error) {
+	var root openAPIRoot
+	if err := yaml.Unmarshal(data, &root); err != nil {
+		return nil, err
+	}
+	if root.Paths == nil {
+		root.Paths = make(map[string]map[string]interface{})
+	}
+	return &root, nil
+}
+
+func buildOperationMatchers(paths map[string]map[string]interface{}) ([]*operationMatcher, error) {
+	httpMethods := map[string]struct{}{
+		"GET": {}, "PUT": {}, "POST": {}, "DELETE": {}, "OPTIONS": {}, "HEAD": {}, "PATCH": {}, "TRACE": {},
+	}
+
+	operations := make([]*operationMatcher, 0)
+	for template, methodMap := range paths {
+		if methodMap == nil {
+			continue
+		}
+		pattern := convertPathTemplateToRegex(template)
+		if pattern == "" {
+			continue
+		}
+		regex, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("invalid path template %q: %w", template, err)
+		}
+
+		for method, raw := range methodMap {
+			if _, ok := httpMethods[strings.ToUpper(method)]; !ok {
+				continue
+			}
+			operationID := extractOperationID(raw)
+			operations = append(operations, &operationMatcher{
+				method:      strings.ToUpper(method),
+				template:    template,
+				regex:       regex,
+				operationID: operationID,
+			})
+		}
+	}
+
+	return operations, nil
+}
+
+func convertPathTemplateToRegex(template string) string {
+	if template == "" {
+		return ""
+	}
+	escaped := regexp.QuoteMeta(template)
+	re := regexp.MustCompile(`\\\{[^/]+\\\}`)
+	replaced := re.ReplaceAllString(escaped, "[^/]+")
+	return "^" + replaced + "$"
+}
+
+func extractOperationID(raw interface{}) string {
+	if raw == nil {
+		return ""
+	}
+	if m, ok := raw.(map[string]interface{}); ok {
+		if val, exists := m["operationId"]; exists {
+			if str, ok := val.(string); ok {
+				return strings.TrimSpace(str)
+			}
+		}
+	}
+	return ""
 }
 
 func (entry *openAPISpecEntry) needsReload(ttl time.Duration) bool {
@@ -349,6 +449,19 @@ func (entry *openAPISpecEntry) needsReload(ttl time.Duration) bool {
 	return false
 }
 
+func (entry *openAPISpecEntry) matchOperation(method, path string) *operationMatcher {
+	method = strings.ToUpper(method)
+	for _, op := range entry.operations {
+		if op.method != method {
+			continue
+		}
+		if op.regex.MatchString(path) {
+			return op
+		}
+	}
+	return nil
+}
+
 func (v *openAPIValidator) shouldValidateRequest() bool {
 	return v != nil && v.config.ValidateRequest
 }
@@ -362,84 +475,70 @@ func (v *openAPIValidator) prepareRequestValidation(ctx context.Context, req *ht
 	clone.Header = req.Header.Clone()
 	setRequestBody(clone, body)
 
-	route, pathParams, err := v.entry.router.FindRoute(clone)
-	if err != nil {
-		return fmt.Errorf("failed to find OpenAPI operation for %s %s in %q: %w", req.Method, req.URL.Path, v.config.SpecLocation, err)
+	matched := v.entry.matchOperation(clone.Method, clone.URL.Path)
+	if matched == nil {
+		return fmt.Errorf("failed to find OpenAPI operation for %s %s in %q", req.Method, req.URL.Path, v.config.SpecLocation)
 	}
 
 	if v.config.OperationID != "" {
-		actualOperationID := ""
-		if route.Operation != nil {
-			actualOperationID = route.Operation.OperationID
+		actual := matched.operationID
+		if actual != v.config.OperationID {
+			return fmt.Errorf("OpenAPI operation_id mismatch: expected %q but matched %q", v.config.OperationID, actual)
 		}
-		if actualOperationID != v.config.OperationID {
-			return fmt.Errorf("OpenAPI operation_id mismatch: expected %q but matched %q", v.config.OperationID, actualOperationID)
-		}
-	}
-
-	v.requestInput = &openapi3filter.RequestValidationInput{
-		Request:    clone,
-		PathParams: pathParams,
-		Route:      route,
-		Options: &openapi3filter.Options{
-			MultiError:         true,
-			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
-		},
 	}
 
 	if len(body) > 0 {
-		v.requestBody = append([]byte(nil), body...)
+		v.requestBodyCopy = append([]byte(nil), body...)
 	} else {
-		v.requestBody = nil
+		v.requestBodyCopy = nil
 	}
+
+	v.requestClone = clone
+	v.matchedOp = matched
 
 	return nil
 }
 
 func (v *openAPIValidator) validateRequest(ctx context.Context) error {
-	if v.requestInput == nil {
+	if v.requestClone == nil {
 		return fmt.Errorf("internal error: request validation input is not prepared")
 	}
-
-	if err := openapi3filter.ValidateRequest(ctx, v.requestInput); err != nil {
-		return fmt.Errorf("openapi request validation failed: %w", err)
+	setRequestBody(v.requestClone, v.requestBodyCopy)
+	ok, errs := v.entry.validator.ValidateHttpRequest(v.requestClone)
+	if ok {
+		return nil
 	}
-	if len(v.requestBody) == 0 {
-		setRequestBody(v.requestInput.Request, nil)
-	} else {
-		setRequestBody(v.requestInput.Request, v.requestBody)
-	}
-	return nil
+	return formatValidationErrors("openapi request validation failed", errs)
 }
 
 func (v *openAPIValidator) validateResponse(ctx context.Context, resp *http.Response, body []byte) error {
-	if v.requestInput == nil {
+	if v.requestClone == nil {
 		return fmt.Errorf("internal error: request validation input is required for response validation")
 	}
 
-	if len(v.requestBody) == 0 {
-		setRequestBody(v.requestInput.Request, nil)
-	} else {
-		setRequestBody(v.requestInput.Request, v.requestBody)
+	setRequestBody(v.requestClone, v.requestBodyCopy)
+	respClone := cloneHTTPResponse(resp, body)
+	respClone.Request = v.requestClone
+	ok, errs := v.entry.validator.ValidateHttpRequestResponse(v.requestClone, respClone)
+	if ok {
+		return nil
 	}
+	return formatValidationErrors("openapi response validation failed", errs)
+}
 
-	responseInput := &openapi3filter.ResponseValidationInput{
-		RequestValidationInput: v.requestInput,
-		Status:                 resp.StatusCode,
-		Header:                 resp.Header.Clone(),
-		Body:                   io.NopCloser(bytes.NewReader(body)),
-		Options: &openapi3filter.Options{
-			MultiError:            true,
-			IncludeResponseStatus: true,
-			AuthenticationFunc:    openapi3filter.NoopAuthenticationFunc,
-		},
+func cloneHTTPResponse(resp *http.Response, body []byte) *http.Response {
+	clone := &http.Response{
+		Status:        resp.Status,
+		StatusCode:    resp.StatusCode,
+		Proto:         resp.Proto,
+		ProtoMajor:    resp.ProtoMajor,
+		ProtoMinor:    resp.ProtoMinor,
+		Header:        resp.Header.Clone(),
+		Trailer:       resp.Trailer.Clone(),
+		ContentLength: int64(len(body)),
+		Body:          io.NopCloser(bytes.NewReader(body)),
 	}
-
-	if err := openapi3filter.ValidateResponse(ctx, responseInput); err != nil {
-		return fmt.Errorf("openapi response validation failed: %w", err)
-	}
-
-	return nil
+	return clone
 }
 
 func setRequestBody(req *http.Request, body []byte) {
@@ -455,4 +554,55 @@ func setRequestBody(req *http.Request, body []byte) {
 	req.GetBody = func() (io.ReadCloser, error) {
 		return io.NopCloser(bytes.NewReader(body)), nil
 	}
+}
+
+func formatValidationErrors(prefix string, errs []*validatorErrors.ValidationError) error {
+	if len(errs) == 0 {
+		return fmt.Errorf("%s: unknown validation error", prefix)
+	}
+	parts := make([]string, 0, len(errs))
+	for _, e := range errs {
+		msg := strings.TrimSpace(e.Message)
+		if msg == "" {
+			msg = strings.TrimSpace(e.Reason)
+		}
+		if msg == "" {
+			msg = fmt.Sprintf("%s validation failed", e.ValidationType)
+		}
+
+		if len(e.SchemaValidationErrors) > 0 {
+			schemaParts := make([]string, 0, len(e.SchemaValidationErrors))
+			for _, se := range e.SchemaValidationErrors {
+				detail := strings.TrimSpace(se.Reason)
+				if loc := strings.TrimSpace(se.Location); loc != "" {
+					detail = fmt.Sprintf("%s: %s", loc, detail)
+				}
+				schemaParts = append(schemaParts, detail)
+			}
+			msg = fmt.Sprintf("%s (%s)", msg, strings.Join(schemaParts, "; "))
+		}
+
+		if fix := strings.TrimSpace(e.HowToFix); fix != "" {
+			msg = fmt.Sprintf("%s. Fix: %s", msg, fix)
+		}
+		parts = append(parts, msg)
+	}
+	return fmt.Errorf("%s: %s", prefix, strings.Join(parts, "; "))
+}
+
+func formatGenericErrors(errs []error) string {
+	if len(errs) == 0 {
+		return "unknown error"
+	}
+	msgs := make([]string, 0, len(errs))
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		msgs = append(msgs, strings.TrimSpace(err.Error()))
+	}
+	if len(msgs) == 0 {
+		return "unknown error"
+	}
+	return strings.Join(msgs, "; ")
 }
