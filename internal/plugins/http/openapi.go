@@ -55,11 +55,16 @@ type openAPISpecEntry struct {
 }
 
 type operationMatcher struct {
-	method         string
-	template       string
-	regex          *regexp.Regexp
-	operationID    string
-	requestSchemas map[string]*base.Schema
+	method           string
+	template         string
+	regex            *regexp.Regexp
+	operationID      string
+	requestSchemas   map[string]*base.Schema
+	basePathMatchers []basePathMatcher
+}
+
+type basePathMatcher struct {
+	segments []string
 }
 
 var openAPISpecCache = struct {
@@ -441,12 +446,18 @@ func buildOperationMatchers(paths map[string]map[string]interface{}, docModel *l
 			if operationID == "" {
 				operationID = extractOperationIDFromRaw(methodMap[method])
 			}
+			basePaths := collectBasePaths(highOp, pathItem, &docModel.Model)
+			baseMatchers := make([]basePathMatcher, 0, len(basePaths))
+			for _, bp := range basePaths {
+				baseMatchers = append(baseMatchers, newBasePathMatcher(bp))
+			}
 			operations = append(operations, &operationMatcher{
-				method:         strings.ToUpper(method),
-				template:       template,
-				regex:          regex,
-				operationID:    operationID,
-				requestSchemas: requestSchemas,
+				method:           strings.ToUpper(method),
+				template:         template,
+				regex:            regex,
+				operationID:      operationID,
+				requestSchemas:   requestSchemas,
+				basePathMatchers: baseMatchers,
 			})
 		}
 	}
@@ -522,6 +533,120 @@ func extractRequestSchemas(op *v3high.Operation) map[string]*base.Schema {
 	return schemas
 }
 
+func collectBasePaths(op *v3high.Operation, pathItem *v3high.PathItem, doc *v3high.Document) []string {
+	seen := make(map[string]struct{})
+	basePaths := make([]string, 0)
+
+	addServers := func(servers []*v3high.Server) {
+		for _, srv := range servers {
+			if srv == nil {
+				continue
+			}
+			base := normalizeBasePath(extractServerBasePath(srv.URL))
+			if _, ok := seen[base]; ok {
+				continue
+			}
+			seen[base] = struct{}{}
+			basePaths = append(basePaths, base)
+		}
+	}
+
+	if op != nil && len(op.Servers) > 0 {
+		addServers(op.Servers)
+	}
+	if len(basePaths) == 0 && pathItem != nil && len(pathItem.Servers) > 0 {
+		addServers(pathItem.Servers)
+	}
+	if len(basePaths) == 0 && doc != nil && len(doc.Servers) > 0 {
+		addServers(doc.Servers)
+	}
+
+	if len(basePaths) == 0 {
+		basePaths = append(basePaths, "")
+	}
+	return basePaths
+}
+
+func extractServerBasePath(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(raw, "/") {
+		return raw
+	}
+	if strings.Contains(raw, "://") {
+		if u, err := url.Parse(raw); err == nil {
+			return u.Path
+		}
+	}
+	if idx := strings.Index(raw, "/"); idx != -1 {
+		return raw[idx:]
+	}
+	return ""
+}
+
+func normalizeBasePath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" || path == "/" {
+		return ""
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	for len(path) > 1 && strings.HasSuffix(path, "/") {
+		path = strings.TrimSuffix(path, "/")
+	}
+	return path
+}
+
+func newBasePathMatcher(path string) basePathMatcher {
+	return basePathMatcher{segments: splitTemplateSegments(path)}
+}
+
+func (m basePathMatcher) trim(path string) (string, bool) {
+	reqSegments := splitActualPath(path)
+	if len(reqSegments) < len(m.segments) {
+		return "", false
+	}
+	for i, seg := range m.segments {
+		if isTemplateSegment(seg) {
+			if reqSegments[i] == "" {
+				return "", false
+			}
+			continue
+		}
+		if seg != reqSegments[i] {
+			return "", false
+		}
+	}
+	remainder := reqSegments[len(m.segments):]
+	if len(remainder) == 0 {
+		return "/", true
+	}
+	return "/" + strings.Join(remainder, "/"), true
+}
+
+func splitTemplateSegments(path string) []string {
+	trimmed := strings.Trim(path, "/")
+	if trimmed == "" {
+		return []string{}
+	}
+	return strings.Split(trimmed, "/")
+}
+
+func splitActualPath(path string) []string {
+	trimmed := strings.Trim(path, "/")
+	if trimmed == "" {
+		return []string{}
+	}
+	return strings.Split(trimmed, "/")
+}
+
+func isTemplateSegment(seg string) bool {
+	return strings.HasPrefix(seg, "{") && strings.HasSuffix(seg, "}")
+}
+
 func (entry *openAPISpecEntry) needsReload(ttl time.Duration) bool {
 	if entry == nil {
 		return true
@@ -545,8 +670,23 @@ func (entry *openAPISpecEntry) matchOperation(method, path string) *operationMat
 		if op.method != method {
 			continue
 		}
-		if op.regex.MatchString(path) {
-			return op
+		if len(op.basePathMatchers) == 0 {
+			if op.regex.MatchString(path) {
+				return op
+			}
+			continue
+		}
+		for _, matcher := range op.basePathMatchers {
+			trimmed, ok := matcher.trim(path)
+			if !ok {
+				continue
+			}
+			if trimmed == "" {
+				trimmed = "/"
+			}
+			if op.regex.MatchString(trimmed) {
+				return op
+			}
 		}
 	}
 	return nil
@@ -623,7 +763,7 @@ func (v *openAPIValidator) performAdditionalRequestValidation() error {
 		return nil
 	}
 
-	payload, err := parseFormPayload(v.requestBodyCopy)
+	payload, err := parseURLEncodedPayload(v.requestBodyCopy)
 	if err != nil {
 		return fmt.Errorf("openapi request validation failed: %w", err)
 	}
@@ -650,7 +790,7 @@ func isFormMediaType(mediaType string) bool {
 	return mediaType == "application/x-www-form-urlencoded"
 }
 
-func parseFormPayload(body []byte) (map[string]any, error) {
+func parseURLEncodedPayload(body []byte) (map[string]any, error) {
 	values, err := url.ParseQuery(string(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse form payload: %w", err)
