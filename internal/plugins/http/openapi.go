@@ -5,18 +5,24 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
+	"github.com/pb33f/libopenapi-validator/config"
 	validatorErrors "github.com/pb33f/libopenapi-validator/errors"
+	"github.com/pb33f/libopenapi-validator/schema_validation"
+	"github.com/pb33f/libopenapi/datamodel/high/base"
+	v3high "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,19 +44,22 @@ type openAPIValidator struct {
 }
 
 type openAPISpecEntry struct {
-	validator   validator.Validator
-	operations  []*operationMatcher
-	version     string
-	loadedAt    time.Time
-	localPath   string
-	fileModTime time.Time
+	validator       validator.Validator
+	schemaValidator schema_validation.SchemaValidator
+	operations      []*operationMatcher
+	version         string
+	versionNumber   float32
+	loadedAt        time.Time
+	localPath       string
+	fileModTime     time.Time
 }
 
 type operationMatcher struct {
-	method      string
-	template    string
-	regex       *regexp.Regexp
-	operationID string
+	method         string
+	template       string
+	regex          *regexp.Regexp
+	operationID    string
+	requestSchemas map[string]*base.Schema
 }
 
 var openAPISpecCache = struct {
@@ -282,9 +291,16 @@ func loadOpenAPISpec(ctx context.Context, location string, opts openAPICacheOpti
 		return nil, fmt.Errorf("failed to parse OpenAPI spec %q: %w", location, err)
 	}
 
-	document, docErrs := libopenapi.NewDocument(specBytes)
-	if docErrs != nil {
-		return nil, fmt.Errorf("failed to load OpenAPI document for %q: %v", location, docErrs)
+	versionNumber := parseOpenAPIVersion(docRoot.OpenAPI)
+
+	document, docErr := libopenapi.NewDocument(specBytes)
+	if docErr != nil {
+		return nil, fmt.Errorf("failed to load OpenAPI document for %q: %v", location, docErr)
+	}
+
+	docModel, buildErrs := document.BuildV3Model()
+	if len(buildErrs) > 0 {
+		return nil, fmt.Errorf("failed to build OpenAPI model for %q: %s", location, formatGenericErrors(buildErrs))
 	}
 
 	val, valErrs := validator.NewValidator(document)
@@ -292,18 +308,25 @@ func loadOpenAPISpec(ctx context.Context, location string, opts openAPICacheOpti
 		return nil, fmt.Errorf("failed to initialise OpenAPI validator for %q: %s", location, formatGenericErrors(valErrs))
 	}
 
-	operations, err := buildOperationMatchers(docRoot.Paths)
+	schemaValidator := schema_validation.NewSchemaValidator(
+		config.WithOpenAPIMode(),
+		config.WithScalarCoercion(),
+	)
+
+	operations, err := buildOperationMatchers(docRoot.Paths, docModel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build OpenAPI operations for %q: %w", location, err)
 	}
 
 	entry := &openAPISpecEntry{
-		validator:   val,
-		operations:  operations,
-		version:     docRoot.OpenAPI,
-		loadedAt:    time.Now(),
-		localPath:   resolvedPath,
-		fileModTime: modTime,
+		validator:       val,
+		schemaValidator: schemaValidator,
+		operations:      operations,
+		version:         docRoot.OpenAPI,
+		versionNumber:   versionNumber,
+		loadedAt:        time.Now(),
+		localPath:       resolvedPath,
+		fileModTime:     modTime,
 	}
 	openAPISpecCache.specs[cacheKey] = entry
 	return entry, nil
@@ -372,16 +395,32 @@ func parseOpenAPIRoot(data []byte) (*openAPIRoot, error) {
 	return &root, nil
 }
 
-func buildOperationMatchers(paths map[string]map[string]interface{}) ([]*operationMatcher, error) {
-	httpMethods := map[string]struct{}{
-		"GET": {}, "PUT": {}, "POST": {}, "DELETE": {}, "OPTIONS": {}, "HEAD": {}, "PATCH": {}, "TRACE": {},
+func parseOpenAPIVersion(version string) float32 {
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return 3.1
 	}
+	parts := strings.Split(version, ".")
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 3.1
+	}
+	minor := 0
+	if len(parts) > 1 {
+		if m, err := strconv.Atoi(parts[1]); err == nil {
+			minor = m
+		}
+	}
+	value, err := strconv.ParseFloat(fmt.Sprintf("%d.%d", major, minor), 32)
+	if err != nil {
+		return 3.1
+	}
+	return float32(value)
+}
 
+func buildOperationMatchers(paths map[string]map[string]interface{}, docModel *libopenapi.DocumentModel[v3high.Document]) ([]*operationMatcher, error) {
 	operations := make([]*operationMatcher, 0)
 	for template, methodMap := range paths {
-		if methodMap == nil {
-			continue
-		}
 		pattern := convertPathTemplateToRegex(template)
 		if pattern == "" {
 			continue
@@ -391,21 +430,53 @@ func buildOperationMatchers(paths map[string]map[string]interface{}) ([]*operati
 			return nil, fmt.Errorf("invalid path template %q: %w", template, err)
 		}
 
-		for method, raw := range methodMap {
-			if _, ok := httpMethods[strings.ToUpper(method)]; !ok {
-				continue
+		pathItem := docModel.Model.Paths.PathItems.GetOrZero(template)
+		for method := range methodMap {
+			highOp := extractHighOperation(pathItem, method)
+			requestSchemas := extractRequestSchemas(highOp)
+			operationID := ""
+			if highOp != nil {
+				operationID = strings.TrimSpace(highOp.OperationId)
 			}
-			operationID := extractOperationID(raw)
+			if operationID == "" {
+				operationID = extractOperationIDFromRaw(methodMap[method])
+			}
 			operations = append(operations, &operationMatcher{
-				method:      strings.ToUpper(method),
-				template:    template,
-				regex:       regex,
-				operationID: operationID,
+				method:         strings.ToUpper(method),
+				template:       template,
+				regex:          regex,
+				operationID:    operationID,
+				requestSchemas: requestSchemas,
 			})
 		}
 	}
-
 	return operations, nil
+}
+
+func extractHighOperation(pathItem *v3high.PathItem, method string) *v3high.Operation {
+	if pathItem == nil {
+		return nil
+	}
+	switch strings.ToUpper(method) {
+	case http.MethodGet:
+		return pathItem.Get
+	case http.MethodPut:
+		return pathItem.Put
+	case http.MethodPost:
+		return pathItem.Post
+	case http.MethodDelete:
+		return pathItem.Delete
+	case http.MethodOptions:
+		return pathItem.Options
+	case http.MethodHead:
+		return pathItem.Head
+	case http.MethodPatch:
+		return pathItem.Patch
+	case http.MethodTrace:
+		return pathItem.Trace
+	default:
+		return nil
+	}
 }
 
 func convertPathTemplateToRegex(template string) string {
@@ -418,7 +489,7 @@ func convertPathTemplateToRegex(template string) string {
 	return "^" + replaced + "$"
 }
 
-func extractOperationID(raw interface{}) string {
+func extractOperationIDFromRaw(raw interface{}) string {
 	if raw == nil {
 		return ""
 	}
@@ -430,6 +501,25 @@ func extractOperationID(raw interface{}) string {
 		}
 	}
 	return ""
+}
+
+func extractRequestSchemas(op *v3high.Operation) map[string]*base.Schema {
+	schemas := make(map[string]*base.Schema)
+	if op == nil || op.RequestBody == nil || op.RequestBody.Content == nil {
+		return schemas
+	}
+	for mediaPair := op.RequestBody.Content.First(); mediaPair != nil; mediaPair = mediaPair.Next() {
+		mediaType := strings.ToLower(strings.TrimSpace(mediaPair.Key()))
+		media := mediaPair.Value()
+		if media == nil || media.Schema == nil {
+			continue
+		}
+		schema := media.Schema.Schema()
+		if schema != nil {
+			schemas[mediaType] = schema
+		}
+	}
+	return schemas
 }
 
 func (entry *openAPISpecEntry) needsReload(ttl time.Duration) bool {
@@ -505,10 +595,79 @@ func (v *openAPIValidator) validateRequest(ctx context.Context) error {
 	}
 	setRequestBody(v.requestClone, v.requestBodyCopy)
 	ok, errs := v.entry.validator.ValidateHttpRequest(v.requestClone)
-	if ok {
+	if !ok {
+		return formatValidationErrors("openapi request validation failed", errs)
+	}
+	if err := v.performAdditionalRequestValidation(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *openAPIValidator) performAdditionalRequestValidation() error {
+	if v.entry.schemaValidator == nil || v.matchedOp == nil || len(v.matchedOp.requestSchemas) == 0 {
+		return nil
+	}
+
+	mediaType := normalizeMediaType(v.requestClone.Header.Get("Content-Type"))
+	if mediaType == "" {
+		return nil
+	}
+
+	schema, ok := v.matchedOp.requestSchemas[mediaType]
+	if !ok {
+		return nil
+	}
+
+	if !isFormMediaType(mediaType) {
+		return nil
+	}
+
+	payload, err := parseFormPayload(v.requestBodyCopy)
+	if err != nil {
+		return fmt.Errorf("openapi request validation failed: %w", err)
+	}
+
+	valid, errs := v.entry.schemaValidator.ValidateSchemaObjectWithVersion(schema, payload, v.entry.versionNumber)
+	if valid {
 		return nil
 	}
 	return formatValidationErrors("openapi request validation failed", errs)
+}
+
+func normalizeMediaType(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	media, _, err := mime.ParseMediaType(value)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(media)
+}
+
+func isFormMediaType(mediaType string) bool {
+	return mediaType == "application/x-www-form-urlencoded"
+}
+
+func parseFormPayload(body []byte) (map[string]any, error) {
+	values, err := url.ParseQuery(string(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse form payload: %w", err)
+	}
+	result := make(map[string]any)
+	for key, vals := range values {
+		if len(vals) == 1 {
+			result[key] = vals[0]
+			continue
+		}
+		arr := make([]any, len(vals))
+		for i, val := range vals {
+			arr[i] = val
+		}
+		result[key] = arr
+	}
+	return result, nil
 }
 
 func (v *openAPIValidator) validateResponse(ctx context.Context, resp *http.Response, body []byte) error {
