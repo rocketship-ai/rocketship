@@ -13,7 +13,7 @@ openapi:
 ```
 
 - `spec` accepts relative or absolute filesystem paths **and** HTTP(S) URLs.
-- YAML and JSON OpenAPI documents are both supported; kin-openapi auto-detects the format.
+- YAML and JSON OpenAPI documents are both supported; `github.com/pb33f/libopenapi-validator` auto-detects the format.
 - `cache_ttl` controls how long a contract stays cached (default 30 minutes). Raise or lower it depending on how often specs change.
 - Bump the optional `version` string (`version: "2024-03-15"`) whenever you publish a new contract to force an immediate refresh.
 - Form-encoded payloads (`application/x-www-form-urlencoded`) and other common content types are validated automatically—just use the HTTP plugin’s `form` config block.
@@ -58,13 +58,20 @@ Every HTTP step inherits that contract. One step turns off `validate_request` to
       validate_request: false
 ```
 
-With the contract in place, Rocketship fails the run if the server returns extra fields, the wrong status code, or a payload that violates the schema. All failures include the underlying kin-openapi error details.
+With the contract in place, Rocketship fails the run if the server returns extra fields, the wrong status code, or a payload that violates the schema. All failures include the underlying `libopenapi-validator` error details.
 
 ## Cache Behaviour
 
 - Entries expire automatically after the configured `cache_ttl`.
 - Local specs refresh as soon as their modification time changes.
 - Remote specs refresh when the TTL expires or when you bump the `version` field.
+
+## Known Issues
+
+- Literal paths can still lose precedence to templated paths in `libopenapi-validator` (see `/Messages/Operations` vs `/Messages/{message_id}`) until the upstream matcher is fixed.
+- The validator currently skips `multipart/form-data` and other complex encodings because the upstream library lacks decoders for those media types.
+- Server `host`/`scheme` variables, callbacks, webhooks, and links defined in the OpenAPI document are not yet validated.
+- Validation errors come directly from `github.com/pb33f/libopenapi-validator`; behaviour may change as the library evolves.
 
 ## Next Steps
 

@@ -1172,6 +1172,8 @@ paths:
 			t.Fatalf("expected both literal and parameterized operations to be present")
 		}
 
+		// TODO(#openapi-precedence): remove this once github.com/pb33f/libopenapi-validator fixes path precedence
+		// ordering—the test should pass without forcing the parameterized operation to run first.
 		// Force the parameterized operation to be evaluated before the literal one to simulate the reported bug.
 		validator.entry.operations = []*operationMatcher{paramOp, literalOp}
 
