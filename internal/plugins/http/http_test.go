@@ -960,6 +960,160 @@ paths:
 			t.Fatalf("expected validation to fail when required field missing")
 		}
 	})
+
+	jsonSpec := `openapi: 3.1.0
+info:
+  title: JSON API
+  version: 1.0.0
+paths:
+  /post:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - foo
+              properties:
+                foo:
+                  type: string
+                bar:
+                  type: integer
+`
+
+	jsonSpecPath := filepath.Join(tempDir, "json-openapi.yaml")
+	if err := os.WriteFile(jsonSpecPath, []byte(jsonSpec), 0o600); err != nil {
+		t.Fatalf("failed to write json spec: %v", err)
+	}
+
+	t.Run("missing required json field fails validation", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{"spec": jsonSpecPath}
+
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		body := []byte(`{"bar":321}`)
+		req := httptest.NewRequest(http.MethodPost, "http://example.com/post", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		setRequestBody(req, body)
+
+		if err := validator.prepareRequestValidation(ctx, req, body); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+		if err := validator.validateRequest(ctx); err == nil {
+			t.Fatalf("expected validation to fail when required field missing")
+		}
+	})
+
+	responseSpec := `openapi: 3.1.0
+info:
+  title: Response API
+  version: 1.0.0
+paths:
+  /widgets:
+    get:
+      responses:
+        '200':
+          description: OK
+          headers:
+            X-Test:
+              required: true
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - foo
+                additionalProperties: false
+                properties:
+                  foo:
+                    type: string
+`
+
+	responseSpecPath := filepath.Join(tempDir, "response-openapi.yaml")
+	if err := os.WriteFile(responseSpecPath, []byte(responseSpec), 0o600); err != nil {
+		t.Fatalf("failed to write response spec: %v", err)
+	}
+
+	t.Run("response missing header fails validation", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{"spec": responseSpecPath}
+
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/widgets", nil)
+		setRequestBody(req, nil)
+		if err := validator.prepareRequestValidation(ctx, req, nil); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+		if err := validator.validateRequest(ctx); err != nil {
+			t.Fatalf("unexpected request validation failure: %v", err)
+		}
+
+		resp := &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+		}
+		body := []byte(`{"foo":"bar"}`)
+		if err := validator.validateResponse(ctx, resp, body); err == nil {
+			t.Fatalf("expected response validation to fail due to missing header")
+		}
+	})
+
+	baseSpec := `openapi: 3.1.0
+servers:
+  - url: https://api.example.com/v1
+info:
+  title: Base Path API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      responses:
+        '200':
+          description: OK
+`
+
+	baseSpecPath := filepath.Join(tempDir, "base-openapi.yaml")
+	if err := os.WriteFile(baseSpecPath, []byte(baseSpec), 0o600); err != nil {
+		t.Fatalf("failed to write base path spec: %v", err)
+	}
+
+	t.Run("server base path matches request", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{"spec": baseSpecPath}
+
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "http://api.example.com/v1/users", nil)
+		setRequestBody(req, nil)
+
+		if err := validator.prepareRequestValidation(ctx, req, nil); err != nil {
+			t.Fatalf("prepareRequestValidation error: %v", err)
+		}
+		if err := validator.validateRequest(ctx); err != nil {
+			t.Fatalf("expected request validation to pass with server base path, got %v", err)
+		}
+	})
 }
 
 func TestOpenAPISpecCaching(t *testing.T) {
