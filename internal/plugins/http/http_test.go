@@ -1093,6 +1093,36 @@ paths:
 		t.Fatalf("failed to write base path spec: %v", err)
 	}
 
+	pathPrecedenceSpec := `openapi: 3.1.0
+info:
+  title: Path Precedence Bug
+  version: 1.0.0
+paths:
+  /Messages/{message_id}:
+    parameters:
+      - name: message_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^comms_message_[0-7][a-hjkmnpqrstv-z0-9]{25,34}'
+    get:
+      responses:
+        '200':
+          description: OK
+  /Messages/Operations:
+    get:
+      summary: List Operations
+      responses:
+        '200':
+          description: OK
+`
+
+	pathPrecedenceSpecPath := filepath.Join(tempDir, "path-precedence-openapi.yaml")
+	if err := os.WriteFile(pathPrecedenceSpecPath, []byte(pathPrecedenceSpec), 0o600); err != nil {
+		t.Fatalf("failed to write path precedence spec: %v", err)
+	}
+
 	t.Run("server base path matches request", func(t *testing.T) {
 		t.Parallel()
 
@@ -1112,6 +1142,51 @@ paths:
 		}
 		if err := validator.validateRequest(ctx); err != nil {
 			t.Fatalf("expected request validation to pass with server base path, got %v", err)
+		}
+	})
+
+	t.Run("literal path takes precedence over parameterized path", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
+		suite := map[string]interface{}{"spec": pathPrecedenceSpecPath}
+
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		if err != nil {
+			t.Fatalf("unexpected error creating validator: %v", err)
+		}
+
+		var (
+			paramOp   *operationMatcher
+			literalOp *operationMatcher
+		)
+		for _, op := range validator.entry.operations {
+			switch op.template {
+			case "/Messages/{message_id}":
+				paramOp = op
+			case "/Messages/Operations":
+				literalOp = op
+			}
+		}
+		if paramOp == nil || literalOp == nil {
+			t.Fatalf("expected both literal and parameterized operations to be present")
+		}
+
+		// TODO(#openapi-precedence): remove this once github.com/pb33f/libopenapi-validator fixes path precedence
+		// ordering—the test should pass without forcing the parameterized operation to run first.
+		// Force the parameterized operation to be evaluated before the literal one to simulate the reported bug.
+		validator.entry.operations = []*operationMatcher{paramOp, literalOp}
+
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/Messages/Operations?start_date=2020-01-01T00:00:00Z&end_date=2025-12-31T23:59:59Z&page_size=10", nil)
+		setRequestBody(req, nil)
+
+		if err := validator.prepareRequestValidation(ctx, req, nil); err != nil {
+			t.Fatalf("unexpected error preparing validation: %v", err)
+		}
+		if err := validator.validateRequest(ctx); err == nil {
+			t.Fatalf("expected request validation to fail when literal path loses precedence")
+		} else if !strings.Contains(err.Error(), "message_id") {
+			t.Fatalf("expected error about message_id validation, got: %v", err)
 		}
 	})
 }
