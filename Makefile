@@ -1,4 +1,4 @@
-.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck
+.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck helm-lint helm-template-check go-lint workflow-check
 
 prepare-embed:
 	@mkdir -p internal/embedded/bin
@@ -23,11 +23,7 @@ install-workflowcheck:
 	fi
 
 # Run linting
-lint: build-binaries install-workflowcheck lint-python lint-typescript
-	@echo "Running Go linter..."
-	golangci-lint run
-	@echo "Checking workflows..."
-	workflowcheck ./...
+lint: build-binaries install-workflowcheck lint-python lint-typescript go-lint workflow-check helm-lint
 
 # Run Python linting
 lint-python:
@@ -60,6 +56,14 @@ lint-typescript:
 		echo "No mcp-server directory found, skipping TypeScript linting"; \
 	fi
 
+go-lint:
+	@echo "Running Go linter..."
+	golangci-lint run
+
+workflow-check:
+	@echo "Checking workflows..."
+	workflowcheck ./...
+
 # Build MCP server with embedded knowledge
 build-mcp:
 	@echo "Building MCP server with embedded knowledge..."
@@ -81,7 +85,23 @@ build-mcp:
 	fi
 
 # Run tests
-test: build-binaries test-go test-python test-typescript
+test: build-binaries test-go test-python test-typescript helm-template-check
+
+helm-lint:
+	@echo "Running Helm lint..."
+	@if command -v helm >/dev/null 2>&1; then \
+		./.github/scripts/helm_lint.sh; \
+	else \
+		echo "Helm not installed; skipping chart lint"; \
+	fi
+
+helm-template-check:
+	@echo "Rendering Helm templates..."
+	@if command -v helm >/dev/null 2>&1; then \
+		./.github/scripts/helm_template_check.sh; \
+	else \
+		echo "Helm not installed; skipping template checks"; \
+	fi
 
 # Run Go tests
 test-go:

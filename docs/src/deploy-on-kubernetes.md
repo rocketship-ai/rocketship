@@ -1,252 +1,136 @@
 # Deploying Rocketship on Kubernetes
 
-This guide covers deploying Rocketship on Kubernetes for production use.
+This guide shows how to bring up a complete Rocketship stack—Temporal + Rocketship Engine/Worker—on Kubernetes. The fastest path is to use the provided Minikube script, but you can also install the Helm charts manually.
 
 ## Prerequisites
 
-- Kubernetes cluster (v1.20 or later)
-- kubectl configured
-- Helm v3 installed
-- StorageClass for persistent volumes
+- Kubernetes cluster (Minikube, kind, or managed Kubernetes)
+- `kubectl` configured against the cluster
+- Helm v3
+- Docker Hub access (to pull `rocketshipai/rocketship-*` images)
 
-## Architecture
-
-The Kubernetes deployment of the Rocketship architecture can be thought of like this:
-
-![Rocketship Kubernetes Architecture](./architecture/assets/system-arc.png)
-
-## Deployment Steps
-
-### 1. Create Namespace
+## Quick Start (Minikube Script)
 
 ```bash
-kubectl create namespace rocketship
+# From the repository root
+scripts/install-minikube.sh
 ```
 
-### 2. Deploy Temporal
+The script will:
 
-We recommend using the official Temporal Helm chart:
+1. Start a Minikube profile (defaults to `rocketship`).
+2. Install Temporal using the official Temporal Helm chart with a lightweight configuration suitable for local testing.
+3. Install the Rocketship Helm chart, wiring the engine/worker to the Temporal frontend service.
+
+Environment variables allow customisation:
+
+| Variable              | Default            | Description                                   |
+| --------------------- | ------------------ | --------------------------------------------- |
+| `MINIKUBE_PROFILE`    | `rocketship`       | Minikube profile name                         |
+| `TEMPORAL_NAMESPACE`  | `temporal`         | Namespace for the Temporal release            |
+| `TEMPORAL_RELEASE`    | `temporal`         | Helm release name for Temporal                |
+| `ROCKETSHIP_NAMESPACE`| `rocketship`       | Namespace for Rocketship                      |
+| `ROCKETSHIP_RELEASE`  | `rocketship`       | Helm release name for Rocketship              |
+| `ROCKETSHIP_CHART_PATH` | `charts/rocketship` | Path to the Rocketship chart                 |
+
+Example: install everything into a single namespace called `testing`:
 
 ```bash
-# Add Temporal Helm repo
-helm repo add temporal https://temporal.github.io/helm-charts
+TEMPORAL_NAMESPACE=testing \
+ROCKETSHIP_NAMESPACE=testing \
+scripts/install-minikube.sh
+```
+
+At the end, the script prints port-forward commands for both Temporal and the Rocketship engine.
+
+## Manual Installation
+
+### 1. Install Temporal
+
+```bash
+helm repo add temporal https://go.temporal.io/helm-charts
 helm repo update
 
-# Install Temporal
 helm install temporal temporal/temporal \
-  --namespace rocketship \
+  --namespace temporal --create-namespace \
   --set server.replicaCount=1 \
   --set cassandra.config.cluster_size=1 \
-  --set prometheus.enabled=true \
-  --set grafana.enabled=true
+  --set elasticsearch.replicas=1 \
+  --set prometheus.enabled=false \
+  --set grafana.enabled=false \
+  --wait --timeout 15m
 ```
 
-### 3. Deploy Rocketship Engine
+This deploys Temporal with the baked-in dependencies (Cassandra, Elasticsearch) in minimal mode. Adjust the values for production (larger replicas, external databases, metrics, etc.).
 
-Create `engine-deployment.yaml`:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rocketship-engine
-  namespace: rocketship
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: rocketship-engine
-  template:
-    metadata:
-      labels:
-        app: rocketship-engine
-    spec:
-      containers:
-        - name: engine
-          image: rocketshipai/rocketship-engine:latest
-          ports:
-            - containerPort: 7700
-            - containerPort: 7701
-          env:
-            - name: TEMPORAL_HOST
-              value: temporal-frontend.rocketship:7233
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rocketship-engine
-  namespace: rocketship
-spec:
-  selector:
-    app: rocketship-engine
-  ports:
-    - name: grpc
-      port: 7700
-      targetPort: 7700
-    - name: http
-      port: 7701
-      targetPort: 7701
-  type: ClusterIP
-```
-
-Apply the configuration:
+### 2. Install Rocketship
 
 ```bash
-kubectl apply -f engine-deployment.yaml
+helm install rocketship charts/rocketship \
+  --namespace rocketship --create-namespace \
+  --set temporal.host="temporal-frontend.temporal:7233" \
+  --wait
 ```
 
-### 4. Deploy Rocketship Worker
+The `temporal.host` value must point at the Temporal frontend service. If you installed Temporal with a different release or namespace, update the hostname accordingly (`<release>-frontend.<namespace>:7233`).
 
-Create `worker-deployment.yaml`:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: rocketship-worker
-  namespace: rocketship
-spec:
-  replicas: 3 # Adjust based on your needs
-  selector:
-    matchLabels:
-      app: rocketship-worker
-  template:
-    metadata:
-      labels:
-        app: rocketship-worker
-    spec:
-      containers:
-        - name: worker
-          image: rocketshipai/rocketship-worker:latest
-          env:
-            - name: TEMPORAL_HOST
-              value: temporal-frontend.rocketship:7233
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
-```
-
-Apply the configuration:
+### 3. Validate
 
 ```bash
-kubectl apply -f worker-deployment.yaml
+kubectl get pods --namespace temporal
+kubectl get pods --namespace rocketship
 ```
 
-### 5. Configure Ingress (Optional)
+You should see the Temporal services along with `rocketship-engine` and `rocketship-worker` pods.
 
-If you need external access to the engine:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rocketship-engine
-  namespace: rocketship
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-spec:
-  rules:
-    - host: rocketship.your-domain.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: rocketship-engine
-                port:
-                  number: 7700
-```
-
-## Monitoring
-
-### 1. Set up Prometheus monitoring:
-
-```yaml
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: rocketship
-  namespace: rocketship
-spec:
-  selector:
-    matchLabels:
-      app: rocketship-engine
-  endpoints:
-    - port: grpc
-      interval: 15s
-```
-
-### 2. Configure logging:
-
-```yaml
-apiVersion: logging.banzaicloud.io/v1beta1
-kind: Flow
-metadata:
-  name: rocketship-logs
-  namespace: rocketship
-spec:
-  filters:
-    - parser:
-        remove_key_name_field: true
-        parse:
-          type: json
-  match:
-    - select:
-        labels:
-          app: rocketship-engine
-          app: rocketship-worker
-  localOutputRefs:
-    - loki-output
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Worker Connection Issues**:
+To exercise the stack locally:
 
 ```bash
-kubectl logs -n rocketship -l app=rocketship-worker
+# Port-forward Rocketship engine gRPC endpoint
+kubectl port-forward -n rocketship svc/rocketship-rocketship-engine 7700:7700
+
+# Port-forward Temporal frontend (optional)
+kubectl port-forward -n temporal svc/temporal-frontend 7233:7233
+
+# In another terminal, run tests (uses default gRPC port 7700)
+rocketship run -af examples/simple-http/rocketship.yaml
 ```
 
-**Engine Service Issues**:
+## Helm Chart Overview
+
+The Rocketship Helm chart (`charts/rocketship`) contains:
+
+- `rocketship-engine` Deployment + Service (named ports `grpc` and `http`).
+- `rocketship-worker` Deployment.
+- Optional Ingress configuration for exposing the engine over gRPC (use the production values file for ALB annotations).
+- Minimal default settings for CPU/memory; adjust via `values.yaml` as needed.
+
+Key values:
+
+| Value                    | Description                                                |
+| ------------------------ | ---------------------------------------------------------- |
+| `temporal.host`          | Temporal frontend host:port used by engine & worker        |
+| `engine.image.*`         | Container image/pull policy for the engine                 |
+| `worker.image.*`         | Container image/pull policy for the worker                 |
+| `engine.service.type`    | Service type (`ClusterIP` by default, `NodePort` for minikube)|
+| `ingress.*`              | Enable and configure ingress                               |
+
+Additional values files:
+
+- `values-minikube.yaml`: switches the engine service to `NodePort`.
+- `values-production.yaml`: enables an Ingress with AWS ALB gRPC annotations.
+
+## Teardown
 
 ```bash
-kubectl logs -n rocketship -l app=rocketship-engine
-```
-
-**Temporal Issues**:
-
-```bash
-kubectl logs -n rocketship -l app=temporal-frontend
-```
-
-### Health Checks
-
-```bash
-# Check pod status
-kubectl get pods -n rocketship
-
-# Check service endpoints
-kubectl get endpoints -n rocketship
-
-# Check logs
-kubectl logs -n rocketship -l app=rocketship-engine
+helm uninstall rocketship -n rocketship
+helm uninstall temporal -n temporal
+kubectl delete namespace rocketship temporal
+minikube delete -p rocketship  # optional
 ```
 
 ## Next Steps
 
-- [Command Reference](./reference/rocketship.md)
-- [Examples](./examples.md)
+- Integrate with an external Temporal installation by disabling the bundled dependencies and pointing `temporal.host` to your service.
+- Enable metrics/monitoring by wiring Prometheus/Grafana in the Temporal install and exposing the Rocketship health endpoint.
+- Configure ingress TLS and authentication as needed for your environment.

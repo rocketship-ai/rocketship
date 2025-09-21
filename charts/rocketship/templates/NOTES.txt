@@ -1,0 +1,9 @@
+Rocketship has been deployed.
+
+Engine endpoint (gRPC): service {{ include "rocketship.engine.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.engine.service.grpcPort }}
+Health endpoint: service {{ include "rocketship.engine.fullname" . }}.{{ .Release.Namespace }}:{{ .Values.engine.service.httpPort }}
+
+Temporal host configured as: {{ .Values.temporal.host }}
+
+To port-forward the engine gRPC endpoint locally:
+  kubectl port-forward svc/{{ include "rocketship.engine.fullname" . }} 7700:{{ .Values.engine.service.grpcPort }}
