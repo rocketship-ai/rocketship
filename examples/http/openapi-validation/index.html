@@ -649,6 +649,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#known-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Known Issues
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       Next Steps
@@ -1888,6 +1897,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#known-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      Known Issues
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       Next Steps
@@ -1925,7 +1943,7 @@
 </code></pre></div>
 <ul>
 <li><code>spec</code> accepts relative or absolute filesystem paths <strong>and</strong> HTTP(S) URLs.</li>
-<li>YAML and JSON OpenAPI documents are both supported; kin-openapi auto-detects the format.</li>
+<li>YAML and JSON OpenAPI documents are both supported; <code>github.com/pb33f/libopenapi-validator</code> auto-detects the format.</li>
 <li><code>cache_ttl</code> controls how long a contract stays cached (default 30 minutes). Raise or lower it depending on how often specs change.</li>
 <li>Bump the optional <code>version</code> string (<code>version: "2024-03-15"</code>) whenever you publish a new contract to force an immediate refresh.</li>
 <li>Form-encoded payloads (<code>application/x-www-form-urlencoded</code>) and other common content types are validated automatically—just use the HTTP plugin’s <code>form</code> config block.</li>
@@ -1958,12 +1976,19 @@
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">openapi</span><span class="p">:</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 </code></pre></div>
-<p>With the contract in place, Rocketship fails the run if the server returns extra fields, the wrong status code, or a payload that violates the schema. All failures include the underlying kin-openapi error details.</p>
+<p>With the contract in place, Rocketship fails the run if the server returns extra fields, the wrong status code, or a payload that violates the schema. All failures include the underlying <code>libopenapi-validator</code> error details.</p>
 <h2 id="cache-behaviour">Cache Behaviour</h2>
 <ul>
 <li>Entries expire automatically after the configured <code>cache_ttl</code>.</li>
 <li>Local specs refresh as soon as their modification time changes.</li>
 <li>Remote specs refresh when the TTL expires or when you bump the <code>version</code> field.</li>
+</ul>
+<h2 id="known-issues">Known Issues</h2>
+<ul>
+<li>Literal paths can still lose precedence to templated paths in <code>libopenapi-validator</code> (see <code>/Messages/Operations</code> vs <code>/Messages/{message_id}</code>) until the upstream matcher is fixed.</li>
+<li>The validator currently skips <code>multipart/form-data</code> and other complex encodings because the upstream library lacks decoders for those media types.</li>
+<li>Server <code>host</code>/<code>scheme</code> variables, callbacks, webhooks, and links defined in the OpenAPI document are not yet validated.</li>
+<li>Validation errors come directly from <code>github.com/pb33f/libopenapi-validator</code>; behaviour may change as the library evolves.</li>
 </ul>
 <h2 id="next-steps">Next Steps</h2>
 <ul>
