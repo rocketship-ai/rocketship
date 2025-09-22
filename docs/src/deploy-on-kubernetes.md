@@ -19,18 +19,20 @@ scripts/install-minikube.sh
 The script will:
 
 1. Start a Minikube profile (defaults to `rocketship`).
-2. Install Temporal using the official Temporal Helm chart with a lightweight configuration suitable for local testing.
-3. Install the Rocketship Helm chart, wiring the engine/worker to the Temporal frontend service.
+2. Build local `rocketship-engine` and `rocketship-worker` images inside the Minikube Docker runtime.
+3. Install Temporal using the official Temporal Helm chart with a lightweight configuration suitable for local testing.
+4. Install (or upgrade) the Rocketship Helm chart, wiring the engine/worker to the Temporal frontend service.
 
 Environment variables allow customisation:
 
 | Variable              | Default            | Description                                   |
 | --------------------- | ------------------ | --------------------------------------------- |
 | `MINIKUBE_PROFILE`    | `rocketship`       | Minikube profile name                         |
-| `TEMPORAL_NAMESPACE`  | `temporal`         | Namespace for the Temporal release            |
+| `TEMPORAL_NAMESPACE`  | `rocketship`       | Namespace for the Temporal release            |
 | `TEMPORAL_RELEASE`    | `temporal`         | Helm release name for Temporal                |
 | `ROCKETSHIP_NAMESPACE`| `rocketship`       | Namespace for Rocketship                      |
 | `ROCKETSHIP_RELEASE`  | `rocketship`       | Helm release name for Rocketship              |
+| `TEMPORAL_WORKFLOW_NAMESPACE` | `default` | Temporal logical namespace used by Rocketship (set to `default` unless you register your own) |
 | `ROCKETSHIP_CHART_PATH` | `charts/rocketship` | Path to the Rocketship chart                 |
 
 Example: install everything into a single namespace called `testing`:
@@ -52,7 +54,7 @@ helm repo add temporal https://go.temporal.io/helm-charts
 helm repo update
 
 helm install temporal temporal/temporal \
-  --namespace temporal --create-namespace \
+  --namespace rocketship --create-namespace \
   --set server.replicaCount=1 \
   --set cassandra.config.cluster_size=1 \
   --set elasticsearch.replicas=1 \
@@ -68,8 +70,11 @@ This deploys Temporal with the baked-in dependencies (Cassandra, Elasticsearch) 
 ```bash
 helm install rocketship charts/rocketship \
   --namespace rocketship --create-namespace \
-  --set temporal.host="temporal-frontend.temporal:7233" \
+  --set temporal.host="temporal-frontend.rocketship:7233" \
+  --set temporal.namespace="default" \
   --wait
+
+> **Tip:** When testing locally (e.g., with Minikube) build engine/worker images inside the cluster and override `engine.image.*` / `worker.image.*` via `--set` so the chart uses those local tags.
 ```
 
 The `temporal.host` value must point at the Temporal frontend service. If you installed Temporal with a different release or namespace, update the hostname accordingly (`<release>-frontend.<namespace>:7233`).
@@ -77,7 +82,7 @@ The `temporal.host` value must point at the Temporal frontend service. If you in
 ### 3. Validate
 
 ```bash
-kubectl get pods --namespace temporal
+kubectl get pods --namespace rocketship
 kubectl get pods --namespace rocketship
 ```
 
@@ -87,7 +92,7 @@ To exercise the stack locally:
 
 ```bash
 # Port-forward Rocketship engine gRPC endpoint
-kubectl port-forward -n rocketship svc/rocketship-rocketship-engine 7700:7700
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
 
 # Port-forward Temporal frontend (optional)
 kubectl port-forward -n temporal svc/temporal-frontend 7233:7233

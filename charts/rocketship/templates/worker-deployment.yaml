@@ -37,6 +37,8 @@ spec:
           env:
             - name: TEMPORAL_HOST
               value: {{ .Values.temporal.host | quote }}
+            - name: TEMPORAL_NAMESPACE
+              value: {{ .Values.temporal.namespace | quote }}
             {{- range .Values.worker.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}

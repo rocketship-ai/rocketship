@@ -15,9 +15,10 @@ securityContext: {}
 
 temporal:
   # Hostname:port of the Temporal frontend service. The default assumes you
-  # install Temporal into the "temporal" namespace with release name "temporal".
+  # install Temporal into the "rocketship" namespace with release name "temporal".
   # Override as needed or set via --set temporal.host=...
-  host: "temporal-frontend.temporal:7233"
+  host: "temporal-frontend.rocketship:7233"
+  namespace: "default"
 
 engine:
   replicaCount: 1
