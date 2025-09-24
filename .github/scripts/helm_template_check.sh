@@ -29,10 +29,10 @@ if ! grep -q "type: NodePort" <<<"$minikube_output"; then
   exit 1
 fi
 
-# Production values should include ALB annotations for gRPC
+# Production values should include gRPC ingress annotations (supports ALB and NGINX)
 prod_output=$(render -f "$CHART_DIR/values-production.yaml")
-if ! grep -q "alb.ingress.kubernetes.io/backend-protocol-version: GRPC" <<<"$prod_output"; then
-  echo "Expected GRPC backend annotation in production values" >&2
+if ! grep -qiE "ingress\.kubernetes\.io/backend-protocol(-version)?:[[:space:]]*\"?GRPC\"?" <<<"$prod_output"; then
+  echo "Expected gRPC backend annotation in production values" >&2
   exit 1
 fi
 

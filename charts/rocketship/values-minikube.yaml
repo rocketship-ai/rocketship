@@ -6,4 +6,3 @@ engine:
 
 worker:
   replicaCount: 1
-

@@ -26,3 +26,6 @@ cli-introspection.json
 *.log
 
 # informative .md files
+
+# certs
+globalbank.rocketship.sh/

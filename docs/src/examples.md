@@ -53,19 +53,18 @@ rocketship run -af examples/simple-log/rocketship.yaml
 
 ### Database Examples
 
-For SQL testing examples, you'll need to start the test databases first:
+You have two options for running the SQL examples:
 
-```bash
-# Start test databases with Docker Compose
-cd .docker && docker-compose up postgres-test mysql-test -d
+1. **Minikube stack** – run `scripts/install-minikube.sh`, port-forward the engine, then execute `rocketship run -af examples/sql-testing/rocketship.yaml`.
+2. **Standalone Docker containers** – start databases locally:
+   ```bash
+   docker run --rm -d --name rocketship-postgres      -e POSTGRES_PASSWORD=testpass      -e POSTGRES_DB=testdb      -p 5433:5432      postgres:13
 
-# Wait for databases to be ready, then run SQL tests
-rocketship run -f examples/sql-testing/rocketship.yaml -e localhost:7700
-```
-
-The SQL examples use local test databases with pre-populated sample data:
-
-- **PostgreSQL**: Available at `localhost:5433`
-- **MySQL**: Available at `localhost:3307`
+   docker run --rm -d --name rocketship-mysql      -e MYSQL_ROOT_PASSWORD=testpass      -e MYSQL_DATABASE=testdb      -p 3306:3306      mysql:8.0
+   ```
+   Then configure the DSNs in `examples/sql-testing/rocketship.yaml` to point to the exposed ports. Stop the containers when you're done:
+   ```bash
+   docker stop rocketship-postgres rocketship-mysql
+   ```
 
 You can find the test server's source code in the `for-contributors/test-server` directory.

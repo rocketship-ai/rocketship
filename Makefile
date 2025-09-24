@@ -166,16 +166,6 @@ dev-setup: prepare-embed
 	@$(MAKE) build-binaries
 	@echo "Development environment setup complete!"
 
-compose-up:
-	@if ! command -v docker-compose &> /dev/null; then \
-		echo "Error: docker-compose is not installed."; \
-		exit 1; \
-	fi
-	docker-compose -f .docker/docker-compose.yaml up -d
-
-compose-down:
-	docker-compose -f .docker/docker-compose.yaml down
-
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."

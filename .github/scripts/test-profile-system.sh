@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() {
+  printf "[%s] %s\n" "profile-tests" "$1"
+}
+
+CONFIG_DIR="${HOME}/.rocketship"
+CONFIG_FILE="${CONFIG_DIR}/config.json"
+
+log "Resetting CLI config for deterministic profile tests"
+rm -f "${CONFIG_FILE}"
+
+log "Ensuring default profile is present"
+DEFAULT_LIST_OUTPUT=$(rocketship profile list)
+if ! grep -q "default" <<<"${DEFAULT_LIST_OUTPUT}"; then
+  echo "❌ default profile missing after reset"
+  exit 1
+fi
+if ! grep -q "app.rocketship.sh" <<<"${DEFAULT_LIST_OUTPUT}"; then
+  echo "❌ default profile should point to app.rocketship.sh"
+  exit 1
+fi
+log "✅ default profile detected"
+
+log "Creating globalbank profile"
+rocketship profile create globalbank grpcs://globalbank.rocketship.sh >/dev/null
+rocketship profile use globalbank >/dev/null
+
+PROFILE_LIST=$(rocketship profile list)
+if ! grep -q "globalbank.*\\*" <<<"${PROFILE_LIST}"; then
+  echo "❌ globalbank profile not marked active"
+  echo "${PROFILE_LIST}"
+  exit 1
+fi
+if ! grep -q "enabled (globalbank.rocketship.sh)" <<<"${PROFILE_LIST}"; then
+  echo "❌ TLS expectation mismatch for globalbank"
+  echo "${PROFILE_LIST}"
+  exit 1
+fi
+log "✅ globalbank profile active with TLS"
+
+log "Running list against globalbank cluster"
+LIST_OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship list)
+if ! grep -q "Using engine address from active profile" <<<"${LIST_OUTPUT}"; then
+  echo "❌ did not route through active profile"
+  echo "${LIST_OUTPUT}"
+  exit 1
+fi
+if ! grep -q "No test runs found." <<<"${LIST_OUTPUT}"; then
+  echo "⚠️ expected informational output when cluster has no runs"
+fi
+log "✅ profile-based list executed"
+
+log "Testing failure path with unreachable profile"
+rocketship profile create unreachable grpc://127.0.0.1:65530 >/dev/null
+rocketship profile use unreachable >/dev/null
+set +e
+UNREACHABLE_OUTPUT=$(rocketship list 2>&1)
+STATUS=$?
+set -e
+if [ ${STATUS} -eq 0 ]; then
+  echo "❌ expected failure when connecting to unreachable profile"
+  exit 1
+fi
+if ! grep -qi "failed to connect" <<<"${UNREACHABLE_OUTPUT}"; then
+  echo "❌ unexpected error message for unreachable profile"
+  echo "${UNREACHABLE_OUTPUT}"
+  exit 1
+fi
+if ! grep -q "unreachable" <<<"${UNREACHABLE_OUTPUT}" && ! grep -q "127.0.0.1" <<<"${UNREACHABLE_OUTPUT}"; then
+  echo "⚠️ failure message missing host context"
+fi
+log "✅ unreachable profile produces explicit failure"
+
+log "Restoring globalbank profile for downstream tests"
+rocketship profile use globalbank >/dev/null
+log "✅ profile tests complete"

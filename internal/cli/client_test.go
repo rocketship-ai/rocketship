@@ -15,12 +15,12 @@ import (
 // Mock gRPC server for testing
 type mockEngineServer struct {
 	generated.UnimplementedEngineServer
-	healthStatus   string
-	runResponse    *generated.CreateRunResponse
-	authResponse   *generated.GetAuthConfigResponse
-	healthErr      error
-	runErr         error
-	authErr        error
+	healthStatus string
+	runResponse  *generated.CreateRunResponse
+	authResponse *generated.GetAuthConfigResponse
+	healthErr    error
+	runErr       error
+	authErr      error
 }
 
 func (m *mockEngineServer) Health(ctx context.Context, req *generated.HealthRequest) (*generated.HealthResponse, error) {
@@ -51,7 +51,7 @@ func (m *mockEngineServer) GetAuthConfig(ctx context.Context, req *generated.Get
 
 func setupMockServer(tb testing.TB, mock *mockEngineServer) (string, func()) {
 	tb.Helper()
-	
+
 	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		tb.Fatalf("Failed to listen: %v", err)
@@ -176,16 +176,16 @@ func TestEngineClient_HealthCheck(t *testing.T) {
 
 func TestEngineClient_GetServerInfo(t *testing.T) {
 	t.Parallel()
-	
+
 	// Initialize logger to prevent nil pointer dereference
 	InitLogging()
 
-    tests := []struct {
-        name     string
-        response *generated.GetAuthConfigResponse
-        authErr  error
-        wantErr  bool
-    }{
+	tests := []struct {
+		name     string
+		response *generated.GetAuthConfigResponse
+		authErr  error
+		wantErr  bool
+	}{
 		{
 			name: "local server",
 			response: &generated.GetAuthConfigResponse{
@@ -195,21 +195,21 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			},
 			wantErr: false,
 		},
-        {
-            name: "cloud server",
-            response: &generated.GetAuthConfigResponse{
-                AuthEnabled:  true,
-                AuthType:     "cloud",
-                AuthEndpoint: "https://app.rocketship.sh/auth",
-            },
-            wantErr: false,
-        },
+		{
+			name: "cloud server",
+			response: &generated.GetAuthConfigResponse{
+				AuthEnabled:  true,
+				AuthType:     "cloud",
+				AuthEndpoint: "https://app.rocketship.sh/auth",
+			},
+			wantErr: false,
+		},
 		{
 			name:    "server error",
 			authErr: status.Error(codes.Internal, "server error"),
 			wantErr: true,
 		},
-    }
+	}
 
 	for _, tt := range tests {
 		tt := tt
@@ -417,6 +417,64 @@ func TestEngineClient_Close(t *testing.T) {
 	}
 }
 
+func TestResolveDialOptionsUsesActiveProfile(t *testing.T) {
+	InitLogging()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg := DefaultConfig()
+	profile := Profile{
+		Name:          "globalbank",
+		EngineAddress: "globalbank.rocketship.sh:443",
+		TLS: TLSConfig{
+			Enabled: true,
+			Domain:  "globalbank.rocketship.sh",
+		},
+	}
+	cfg.AddProfile(profile)
+	cfg.DefaultProfile = "globalbank"
+
+	if err := cfg.SaveConfig(); err != nil {
+		t.Fatalf("failed to save config: %v", err)
+	}
+
+	target, creds, err := resolveDialOptions("")
+	if err != nil {
+		t.Fatalf("resolveDialOptions returned error: %v", err)
+	}
+
+	if target != "globalbank.rocketship.sh:443" {
+		t.Fatalf("target = %q, want %q", target, "globalbank.rocketship.sh:443")
+	}
+
+	pi := creds.Info()
+	if pi.SecurityProtocol != "tls" {
+		t.Fatalf("expected TLS credentials, got %q", pi.SecurityProtocol)
+	}
+}
+
+func TestResolveDialOptionsMissingProfile(t *testing.T) {
+	InitLogging()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg := DefaultConfig()
+	cfg.DefaultProfile = "ghost"
+
+	if err := cfg.SaveConfig(); err != nil {
+		t.Fatalf("failed to save config: %v", err)
+	}
+
+	_, _, err := resolveDialOptions("")
+	if err == nil {
+		t.Fatal("expected error when active profile is missing")
+	}
+
+	if !contains(err.Error(), "not found") {
+		t.Fatalf("expected missing profile error, got %v", err)
+	}
+}
+
 func TestEngineClient_InvalidAddress(t *testing.T) {
 	t.Parallel()
 
@@ -426,7 +484,7 @@ func TestEngineClient_InvalidAddress(t *testing.T) {
 
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > len(substr) && containsHelper(s, substr)))
 }
 

@@ -73,7 +73,7 @@ ADMIN_TOOLS_DEPLOY="${TEMPORAL_RELEASE}-admintools"
 echo "Ensuring Temporal namespace '$TEMPORAL_WORKFLOW_NAMESPACE' exists..."
 if kubectl --namespace "$TEMPORAL_NAMESPACE" rollout status "deployment/$ADMIN_TOOLS_DEPLOY" --timeout=120s >/dev/null 2>&1; then
   if ! kubectl exec -n "$TEMPORAL_NAMESPACE" "deploy/$ADMIN_TOOLS_DEPLOY" -- temporal operator namespace describe "$TEMPORAL_WORKFLOW_NAMESPACE" >/dev/null 2>&1; then
-    kubectl exec -n "$TEMPORAL_NAMESPACE" "deploy/$ADMIN_TOOLS_DEPLOY" -- temporal operator namespace create --namespace "$TEMPORAL_WORKFLOW_NAMESPACE" --retention 72h || true
+    kubectl exec -n "$TEMPORAL_NAMESPACE" "deploy/$ADMIN_TOOLS_DEPLOY" -- temporal operator namespace create --namespace "$TEMPORAL_WORKFLOW_NAMESPACE" --retention 7d || true
   fi
 else
   echo "WARNING: admin tools deployment not ready; skipping namespace registration"

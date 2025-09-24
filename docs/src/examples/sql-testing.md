@@ -248,22 +248,34 @@ tests:
             expected: 1
 ```
 
-## Testing with Docker
+## Local Database Setup
 
-For local testing, use the provided Docker Compose setup:
+### Option 1 – Use the Minikube stack
+
+`scripts/install-minikube.sh` brings up Temporal and Rocketship inside the cluster. After it finishes, port-forward the engine and execute the SQL example:
 
 ```bash
-# Start test databases
-cd .docker && docker-compose up postgres-test mysql-test -d
-
-# Run SQL tests
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
 rocketship run -af examples/sql-testing/rocketship.yaml
 ```
 
-The test databases include:
+### Option 2 – Standalone Docker containers
 
-- **PostgreSQL**: `localhost:5433` with sample data
-- **MySQL**: `localhost:3307` with sample data
+If you only need databases, launch them with Docker:
+
+```bash
+# PostgreSQL
+docker run --rm -d   --name rocketship-postgres   -e POSTGRES_PASSWORD=testpass   -e POSTGRES_DB=testdb   -p 5433:5432   postgres:13
+
+# MySQL
+docker run --rm -d   --name rocketship-mysql   -e MYSQL_ROOT_PASSWORD=testpass   -e MYSQL_DATABASE=testdb   -p 3306:3306   mysql:8.0
+```
+
+Point the example DSNs at `postgres://postgres:testpass@localhost:5433/testdb?sslmode=disable` and `root:testpass@tcp(127.0.0.1:3306)/testdb`. Remember to shut them down when finished:
+
+```bash
+docker stop rocketship-postgres rocketship-mysql
+```
 
 ## Best Practices
 
