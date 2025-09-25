@@ -1,0 +1,61 @@
+# Default values for Rocketship Helm chart.
+# This chart deploys the Rocketship engine and worker. A Temporal cluster must
+# already be available and reachable via the configured host.
+
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+temporal:
+  # Hostname:port of the Temporal frontend service. The default assumes you
+  # install Temporal into the "rocketship" namespace with release name "temporal".
+  # Override as needed or set via --set temporal.host=...
+  host: "temporal-frontend.rocketship:7233"
+  namespace: "default"
+
+engine:
+  replicaCount: 1
+  image:
+    repository: rocketshipai/rocketship-engine
+    tag: latest
+    pullPolicy: IfNotPresent
+  env: []
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  service:
+    type: ClusterIP
+    annotations: {}
+    grpcPort: 7700
+    httpPort: 7701
+
+worker:
+  replicaCount: 1
+  image:
+    repository: rocketshipai/rocketship-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  env: []
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: rocketship.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

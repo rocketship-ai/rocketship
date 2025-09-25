@@ -84,9 +84,17 @@ nav:
   - MCP Server: mcp-server.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
-      - Kubernetes: deploy-on-kubernetes.md
+      - Minikube (Local): deploy/minikube.md
+      - Production (DigitalOcean): deploy/digitalocean.md
   - Command Reference:
       - Overview: reference/rocketship.md
+      - profile:
+          - Overview: reference/rocketship_profile.md
+          - create: reference/rocketship_profile_create.md
+          - delete: reference/rocketship_profile_delete.md
+          - list: reference/rocketship_profile_list.md
+          - show: reference/rocketship_profile_show.md
+          - use: reference/rocketship_profile_use.md
       - run: reference/rocketship_run.md
       - list: reference/rocketship_list.md
       - get: reference/rocketship_get.md

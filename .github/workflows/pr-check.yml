@@ -263,107 +263,13 @@ jobs:
           make install
 
       - name: Warm up test server
-        run: |
-          echo "Warming up test server at tryme.rocketship.sh..."
-
-          # Make initial request to wake up the server
-          echo "Making initial request to wake up server..."
-          curl -s https://tryme.rocketship.sh/ || echo "Initial request completed (expected to fail)"
-
-          # Wait for server to be ready with retries
-          echo "Waiting for server to be ready..."
-          max_attempts=10
-          attempt=1
-
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt/$max_attempts..."
-            
-            # Test a simple endpoint that should return 200
-            if curl -s -f https://tryme.rocketship.sh/users > /dev/null 2>&1; then
-              echo "✅ Test server is ready!"
-              break
-            fi
-            
-            if [ $attempt -eq $max_attempts ]; then
-              echo "❌ Test server failed to respond after $max_attempts attempts"
-              exit 1
-            fi
-            
-            echo "Server not ready yet, waiting 3 seconds..."
-            sleep 3
-            attempt=$((attempt + 1))
-          done
+        run: ./.github/scripts/warm-up-tryme.sh
 
       - name: Test CLI commands
-        run: |
-          echo "Testing CLI help and version commands..."
-          rocketship --help
-          rocketship version
+        run: ./.github/scripts/test-cli-commands.sh
 
-          echo "Testing validate command..."
-          rocketship validate examples/
-          rocketship validate examples/simple-http/rocketship.yaml
-
-          ./.github/scripts/test-log-plugin.sh
-          ./.github/scripts/test-log-plugin-validation.sh
-          ./.github/scripts/test-env-file.sh
-          ./.github/scripts/test-retry-functionality.sh
-          ./.github/scripts/test-http-openapi-form.sh
-
-          echo "Testing individual example file..."
-          echo "Testing browser plugin integration..."
-          OUTPUT=$(rocketship run -af examples/browser-testing/rocketship.yaml)
-          echo "$OUTPUT"
-          if echo "$OUTPUT" | grep -q "✓ Passed Tests: 2"; then
-            echo "✅ Browser plugin integration tests passed"
-            # Verify that the tests are working as expected by checking the logged results
-            if echo "$OUTPUT" | grep -q "Max steps test success (should be false): false"; then
-              echo "✅ Max steps limitation is working correctly"
-            else
-              echo "⚠️  Max steps test may not be working as expected"
-            fi
-          else
-            echo "❌ Browser plugin integration tests failed"
-            exit 1
-          fi
-
-          echo "Testing browser plugin assertion failure behavior..."
-          ./.github/scripts/test-browser-assertion-failures.sh
-
-          echo "Testing all examples directory..."
-          OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
-          echo "$OUTPUT"
-          if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
-            echo "✅ All example tests passed"
-          else
-            echo "❌ Some example tests failed - this indicates a regression"
-            exit 1
-          fi
-
-          echo "Testing profile system..."
-          # Test profile list shows default built-in profile
-          OUTPUT=$(rocketship profile list)
-          if echo "$OUTPUT" | grep -q "default.*app.rocketship.sh"; then
-            echo "✅ Default profile configured correctly"
-          else
-            echo "❌ Default profile missing or misconfigured"
-            exit 1
-          fi
-
-          # Test profile routing (should attempt connection to app.rocketship.sh and fail gracefully)
-          OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -f examples/simple-delay/rocketship.yaml 2>&1) || true
-          if echo "$OUTPUT" | grep -q "Using engine address from active profile"; then
-            echo "✅ Profile routing middleware working"
-          else
-            echo "❌ Profile routing not working"
-            echo "Output: $OUTPUT"
-            exit 1
-          fi
-
-          echo "Testing start/stop commands..."
-          rocketship start server --background &
-          sleep 5
-          rocketship stop server
+      - name: Test profile system
+        run: ./.github/scripts/test-profile-system.sh
 
       - name: Test run persistence and management
         run: |
@@ -374,24 +280,7 @@ jobs:
           ./.github/scripts/test-auto-mode-cancellation.sh
 
       - name: Test CLI error handling
-        run: |
-          echo "Testing error scenarios..."
-          ! rocketship validate nonexistent.yaml
-          ! rocketship run -f nonexistent.yaml
-          ! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
-
-          echo "Testing run persistence error scenarios..."
-          # Test list without server running
-          ! rocketship list -e localhost:7700
-
-          # Test get without server running  
-          ! rocketship get abc123 -e localhost:7700
-
-          # Test get with invalid run ID (when server is running)
-          rocketship start server --background
-          sleep 3
-          ! rocketship get invalid-run-id -e localhost:7700
-          rocketship stop server
+        run: ./.github/scripts/test-cli-error-handling.sh
 
   mcp-integration:
     name: MCP Server Integration Tests
@@ -451,3 +340,19 @@ jobs:
       - name: Run comprehensive MCP integration tests
         run: |
           ./.github/scripts/test-mcp-integration.sh
+  helm:
+    name: Helm Chart Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.14.0
+
+      - name: Helm lint
+        run: ./.github/scripts/helm_lint.sh
+
+      - name: Helm template checks
+        run: ./.github/scripts/helm_template_check.sh

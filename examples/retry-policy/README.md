@@ -32,10 +32,11 @@ retry:
 ## Running the Tests
 
 ```bash
-# Using the isolated CLI wrapper
-.docker/docker-rocketship-local.sh run -f examples/retry-policy/rocketship.yaml
+# With the Minikube stack running
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+rocketship run -af examples/retry-policy/rocketship.yaml
 
-# Or with auto-start/stop (if not using Docker)
+# Local auto mode
 rocketship run -af examples/retry-policy/rocketship.yaml
 ```
 
@@ -98,7 +99,7 @@ When you run this test suite:
 To see retry behavior in action, run with debug logging:
 
 ```bash
-ROCKETSHIP_LOG=DEBUG .docker/docker-rocketship-local.sh run -f examples/retry-policy/rocketship.yaml
+ROCKETSHIP_LOG=DEBUG rocketship run -af examples/retry-policy/rocketship.yaml
 ```
 
 This will show:

@@ -190,7 +190,9 @@ tests:
         plugin: http
         config:
           method: GET
-          url: "https://httpbin.org/status/200"
+          url: "https://tryme.rocketship.sh/users"
+          headers:
+            X-Test-Session: "ci-retry-success"
         retry:
           initial_interval: "100ms"
           maximum_attempts: 5

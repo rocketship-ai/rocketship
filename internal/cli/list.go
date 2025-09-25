@@ -28,7 +28,7 @@ type ListFlags struct {
 // NewListCmd creates a new list command
 func NewListCmd() *cobra.Command {
 	flags := &ListFlags{
-		Engine:  "localhost:7700",
+		Engine:  "",
 		Limit:   20,
 		OrderBy: "started_at",
 		Format:  "table",
@@ -55,12 +55,12 @@ Examples:
   # List runs with custom limit and ordering
   rocketship list --limit 50 --order-by duration --ascending`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runList(flags)
+			return runList(cmd, flags)
 		},
 	}
 
 	// Engine connection
-	cmd.Flags().StringVarP(&flags.Engine, "engine", "e", flags.Engine, "Address of the rocketship engine")
+	cmd.Flags().StringVarP(&flags.Engine, "engine", "e", flags.Engine, "Address of the rocketship engine (defaults to active profile)")
 
 	// Filtering flags
 	cmd.Flags().StringVar(&flags.ProjectID, "project-id", "", "Filter by project ID")
@@ -78,9 +78,13 @@ Examples:
 	return cmd
 }
 
-func runList(flags *ListFlags) error {
+func runList(cmd *cobra.Command, flags *ListFlags) error {
+	engineAddr := ""
+	if cmd.Flags().Changed("engine") {
+		engineAddr = flags.Engine
+	}
 	// Connect to engine
-	client, err := NewEngineClient(flags.Engine)
+	client, err := NewEngineClient(engineAddr)
 	if err != nil {
 		return fmt.Errorf("failed to connect to engine: %w", err)
 	}
@@ -162,7 +166,7 @@ func displayRunsTable(runs []*generated.RunSummary) error {
 	for _, run := range runs {
 		// Format test counts
 		testCounts := fmt.Sprintf("%d/%d/%d", run.PassedTests, run.FailedTests, run.TotalTests)
-		
+
 		// Format duration
 		duration := "N/A"
 		if run.DurationMs > 0 {

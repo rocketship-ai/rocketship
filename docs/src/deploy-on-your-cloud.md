@@ -1,67 +1,32 @@
-# Deploying Rocketship on Your Cloud
+# Deploy Rocketship on Your Cloud
 
-Rocketship can be deployed in your cloud environment to run tests at scale, persist test history, and leverage all of Temporal's durable execution features. This guide covers the different deployment options and considerations.
+Rocketship can run anywhere Kubernetes is available. The CLI embeds the engine and worker binaries for local auto mode, but real deployments separate the components and connect them to a Temporal cluster.
 
-## Architecture Overview
+This section outlines the supported deployment paths and what each delivers so you can pick the right starting point.
 
-Rocketship consists of three main components:
+## Core Components
 
-1. **Engine**: The central service that receives test requests and coordinates test execution with Temporal
-2. **Worker**: Executes test steps and reports results back to Temporal
-3. **Temporal**: Handles workflow orchestration and state management
+Every deployment provisions:
 
-## Deployment Options
+1. **Temporal** – Durable workflow orchestration. The Helm chart from Temporal provides a ready-made stack with Cassandra, Elasticsearch, and UI components for development and staging clusters.
+2. **Rocketship Engine** – gRPC API that accepts suite executions, manages profiles, and streams results.
+3. **Rocketship Worker** – Executes plugin steps inside Temporal workflows.
 
-### Docker Compose
+Both Rocketship services require the Temporal frontend host and namespace; everything else (ingress, TLS, auth) is layered on top through Kubernetes objects.
 
-The simplest way to deploy Rocketship is using Docker Compose. This is ideal for:
+## Deployment Paths
 
-- Development environments
-- Small-scale deployments
-- Testing and evaluation
+| Scenario | Guide | Highlights |
+| --- | --- | --- |
+| Local iteration | [Run on Minikube](deploy/minikube.md) | Single script (`scripts/install-minikube.sh`) that starts Minikube, installs Temporal, builds local engine/worker images, and deploys the Rocketship chart. Great for fast feedback and integration testing inside CI. |
+| Production-ready proof of concept | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md) | Walks through preparing a managed cluster, wiring an NGINX ingress with TLS, publishing custom images to DigitalOcean Container Registry, and installing the Rocketship + Temporal Helm releases. |
 
-See the [Docker Compose Setup](#docker-compose-setup) section for details.
+> Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands.
 
-### Kubernetes
+## After Deployment
 
-For production deployments, we recommend using Kubernetes. This provides:
+- Use `rocketship profile create` and `rocketship profile use` to store the engine endpoint (`grpcs://…`) and default to TLS where appropriate.
+- Run suites with `rocketship run --engine`. When profiles are active, the CLI resolves the engine address automatically.
+- Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).
 
-- High availability
-- Automatic scaling
-- Better resource management
-- Production-grade monitoring
-
-See the [Kubernetes Deployment](deploy-on-kubernetes.md) guide for details.
-
-## Docker Compose Setup
-
-Clone the Rocketship repository, navigate to the `.docker` directory, and run the following command:
-
-```bash
-docker compose up -d
-```
-
-Verify the deployment:
-
-```bash
-# Check service status
-docker-compose ps
-
-# Check engine logs
-docker-compose logs engine
-
-# Check worker logs
-docker-compose logs worker
-```
-
-Run a test:
-
-```bash
-rocketship run -f your-test.yaml -e localhost:7700
-```
-
-## Next Steps
-
-- [Deploy on Kubernetes](./deploy-on-kubernetes.md) for production-grade deployment
-- [Command Reference](./reference/rocketship.md) for CLI usage
-- [Examples](./examples.md) for test suite examples
+Continue with one of the guides above to stand up Rocketship in your environment.

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: rocketship
+description: Rocketship engine and worker Helm chart
+home: https://github.com/rocketship-ai/rocketship
+icon: https://raw.githubusercontent.com/rocketship-ai/rocketship/main/docs/src/assets/transparent.png
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - rocketship
+  - testing
+  - temporal
+sources:
+  - https://github.com/rocketship-ai/rocketship

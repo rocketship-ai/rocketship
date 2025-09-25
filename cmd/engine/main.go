@@ -24,10 +24,15 @@ func main() {
 		logger.Error("TEMPORAL_HOST environment variable is not set")
 		os.Exit(1)
 	}
+	temporalNamespace := os.Getenv("TEMPORAL_NAMESPACE")
+	if temporalNamespace == "" {
+		temporalNamespace = "default"
+	}
 
 	logger.Debug("connecting to temporal", "host", temporalHost)
 	c, err := client.Dial(client.Options{
-		HostPort: temporalHost,
+		HostPort:  temporalHost,
+		Namespace: temporalNamespace,
 	})
 	if err != nil {
 		logger.Error("failed to create temporal client", "error", err)

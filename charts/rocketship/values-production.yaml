@@ -1,0 +1,17 @@
+# for NGINX
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  hosts:
+    - host: globalbank.rocketship.sh
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: globalbank-rocketship-tls
+      hosts:
+        - globalbank.rocketship.sh

@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rocketship is an open-source testing framework for browser and API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.
 
-There are 3 "server" components that make up the Rocketship system: Temporal, Engine, and Worker. The CLI is meant to communicate with the system via the engine. There are three ways to run Rocketship:
+There are 3 "server" components that make up the Rocketship system: Temporal, Engine, and Worker. The CLI is meant to communicate with the engine. There are three ways to run Rocketship:
 
-1. **Docker Multi-Stack Environment** (RECOMMENDED FOR AGENTS): Isolated Docker environments with auto-port allocation
-2. The self-hosted solution calls for spinning up all of these server components separately using their Dockerfiles and having the CLI connect remotely.
-3. The local solution is much faster and has the CLI just run all of the server components locally on separate processes.
+1. **Minikube stack** (RECOMMENDED FOR AGENTS): `scripts/install-minikube.sh` provisions Temporal + Rocketship inside an isolated cluster per branch.
+2. **Self-hosted cluster**: Deploy the Helm charts to your own Kubernetes environment and connect the CLI remotely.
+3. **Local processes**: Use `rocketship start server` / `rocketship run -af` for quick experiments without Kubernetes.
 
 **Key Components:**
 
@@ -169,133 +169,68 @@ This ensures all plugins handle variables identically and support all documented
 
 The browser plugin uses AI-driven web automation via the `browser-use` Python library. The Python script (`browser_automation.py`) is embedded into the binary using `go:embed` to ensure it's available at runtime.
 
-## 🐳 Docker Multi-Stack Environment (RECOMMENDED)
+## 🚀 Minikube Environment (RECOMMENDED)
 
-**As a coding agent, you should ALWAYS use the isolated Docker environment instead of local binaries.** This ensures:
+Agents should use the maintained Minikube workflow instead of the deprecated `.docker/rocketship` scripts. The helper script provisions Temporal, the Rocketship engine/worker, and sane defaults for local development.
 
-- ✅ **Complete isolation** from other agents
-- ✅ **Unique ports** prevent conflicts  
-- ✅ **Source code isolation** with tagged Docker images
-- ✅ **Zero configuration** with auto-detection
-- ✅ **Clean environments** for every git worktree
-
-### Quick Start for Coding Agents
+### Quick Start
 
 ```bash
-# Initialize your isolated environment (run once per worktree)
-./.docker/rocketship init
-
-# Start your stack
-./.docker/rocketship start
-
-# Run tests through your isolated environment
-./.docker/rocketship run -f examples/simple-http/rocketship.yaml
-
-# Check status of your stack
-./.docker/rocketship status
-
-# Stop when done
-./.docker/rocketship stop
+# From the repository root
+scripts/install-minikube.sh
 ```
 
-### How Auto-Detection Works
+The script will:
 
-The system automatically:
-1. **Detects your git branch** (e.g., `feature-api`)
-2. **Creates unique stack name** (e.g., `rocketship-feature-api`) 
-3. **Calculates unique ports** using hash-based allocation
-4. **Builds tagged Docker images** (e.g., `rocketship-engine:feature-api`)
-5. **Isolates everything** - networks, volumes, containers
+1. Start (or reuse) a Minikube profile named `rocketship`.
+2. Build local engine/worker images inside the cluster’s Docker runtime.
+3. Install the Temporal Helm chart with a single-replica, batteries-included stack.
+4. Register the Temporal namespace used by Rocketship.
+5. Deploy the Rocketship Helm chart and print port-forward helpers.
 
-### Stack Isolation Example
+### Customisation
 
-If multiple agents are working simultaneously:
+Environment variables let you change resource names without editing the script:
 
-**Agent 1** (branch: `feature-api`):
-- Stack: `rocketship-feature-api`
-- Temporal UI: `http://localhost:11880`
-- Engine API: `localhost:11500`
-- Docker Images: `rocketship-engine:feature-api`, `rocketship-worker:feature-api`
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
+| `ROCKETSHIP_NAMESPACE` | `rocketship` | Namespace for Rocketship resources |
+| `TEMPORAL_NAMESPACE` | `rocketship` | Namespace for the Temporal Helm release |
+| `TEMPORAL_WORKFLOW_NAMESPACE` | `rocketship` | Temporal logical namespace registered via CLI |
+| `ROCKETSHIP_RELEASE` | `rocketship` | Helm release name for Rocketship |
+| `TEMPORAL_RELEASE` | `temporal` | Helm release name for Temporal |
 
-**Agent 2** (branch: `feature-ui`):
-- Stack: `rocketship-feature-ui`  
-- Temporal UI: `http://localhost:12780`
-- Engine API: `localhost:12400`
-- Docker Images: `rocketship-engine:feature-ui`, `rocketship-worker:feature-ui`
-
-**Zero conflicts!** Each agent gets completely isolated infrastructure.
-
-### Available Docker Commands
+Example (single shared namespace):
 
 ```bash
-# Environment Management
-./.docker/rocketship init        # Initialize stack for current git branch
-./.docker/rocketship start       # Start the stack
-./.docker/rocketship stop        # Stop the stack
-./.docker/rocketship restart     # Restart the stack
-./.docker/rocketship status      # Show status
-./.docker/rocketship info        # Show detailed stack information
-./.docker/rocketship logs        # Show logs for all services
-./.docker/rocketship logs engine # Show logs for specific service
-./.docker/rocketship clean       # Stop and remove all containers/volumes
-
-# Test Commands (require running stack)
-./.docker/rocketship validate <file>     # Validate test file
-./.docker/rocketship run [options]       # Run tests
-./.docker/rocketship list               # List test runs
-./.docker/rocketship get <run-id>       # Get test run details
+ROCKETSHIP_NAMESPACE=testing TEMPORAL_NAMESPACE=testing TEMPORAL_WORKFLOW_NAMESPACE=testing scripts/install-minikube.sh
 ```
 
-### Complete Development Workflow
+### Verifying the Stack
 
 ```bash
-# 1. Initialize your isolated environment
-./.docker/rocketship init
-
-# 2. Start the stack
-./.docker/rocketship start
-
-# 3. Make code changes to engine/worker/CLI
-# ... edit files ...
-
-# 4. Test your changes (rebuilds images automatically if needed)
-./.docker/rocketship run -f examples/simple-http/rocketship.yaml
-
-# 5. Run additional tests
-./.docker/rocketship run -f examples/complex-http/rocketship.yaml
-
-# 6. Check test history
-./.docker/rocketship list
-
-# 7. Stop stack when done
-./.docker/rocketship stop
+kubectl get pods -n rocketship
+kubectl get svc -n rocketship
 ```
 
-### Integration with Test Session Isolation
+Port-forward the engine when you want to run the CLI directly:
 
-When running HTTP tests, always use unique session headers to prevent interference with other agents:
-
-```yaml
-steps:
-  - name: "Test with agent isolation"
-    plugin: http
-    config:
-      url: "https://tryme.rocketship.sh/users"
-      headers:
-        X-Test-Session: "{{ .vars.agent_session_id }}"  # Use your unique session
+```bash
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+rocketship profile create minikube grpc://localhost:7700
+rocketship profile use minikube
 ```
 
-### Troubleshooting Docker Environment
+### Cleanup
 
-**Stack not initialized**: Run `./.docker/rocketship init` first
+```bash
+helm uninstall rocketship temporal -n rocketship
+kubectl delete namespace rocketship
+minikube delete -p rocketship
+```
 
-**Port conflicts**: The auto-allocation system prevents this, but if it happens:
-- Check what's using the port: `lsof -i :PORT_NUMBER`
-- Clean and restart: `./.docker/rocketship clean && ./.docker/rocketship start`
-
-**Images not updating**: The system rebuilds automatically when source changes, but you can force rebuild:
-- Stop stack: `./.docker/rocketship stop`
-- Start again: `./.docker/rocketship start`
+Minikube keeps everything self-contained, so you can safely destroy and recreate the environment per branch.
 
 ## Running Tests (Legacy Local Mode)
 
@@ -337,56 +272,43 @@ rocketship stop server
 
 ## Running Tests with SQL Plugin
 
-**Using Docker Environment (RECOMMENDED):**
-
-The SQL test databases (PostgreSQL and MySQL) are automatically included in your isolated Docker stack:
+**Using the Minikube stack (recommended):** the Temporal and Rocketship pods run inside the cluster created by `scripts/install-minikube.sh`. After the script completes, port-forward the engine and run the suite:
 
 ```bash
-# Start your stack (includes SQL databases)
-./.docker/rocketship start
-
-# Run SQL tests through your isolated environment
-./.docker/rocketship run -f examples/sql-testing/rocketship.yaml
-
-# Stop when done
-./.docker/rocketship stop
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+rocketship run -af examples/sql-testing/rocketship.yaml
 ```
 
-**Legacy Local Mode (for reference only):**
+**Ad-hoc local databases (optional):** if you only need throwaway databases for quick experiments, you can spin them up with Docker:
 
 ```bash
-docker-compose -f .docker/docker-compose.yaml up postgres-test mysql-test -d
-rocketship run -af examples/sql-testing/rocketship.yaml
-docker-compose -f .docker/docker-compose.yaml down
+# PostgreSQL
+docker run --rm -d   --name rocketship-postgres   -e POSTGRES_PASSWORD=testpass   -e POSTGRES_DB=testdb   -p 5433:5432   postgres:13
+
+# MySQL
+docker run --rm -d   --name rocketship-mysql   -e MYSQL_ROOT_PASSWORD=testpass   -e MYSQL_DATABASE=testdb   -p 3306:3306   mysql:8.0
+```
+
+Update your test variables/DSNs to match the exposed ports (`postgres://postgres:testpass@localhost:5433/testdb`, `root:testpass@tcp(127.0.0.1:3306)/testdb`). Stop the containers when you are finished:
+
+```bash
+docker stop rocketship-postgres rocketship-mysql
 ```
 
 ## Running Tests with Browser Plugin
 
-**Using Docker Environment (RECOMMENDED):**
-
-Browser dependencies are included in the Docker worker container:
+The Minikube workflow builds fresh engine/worker images that already contain the Python runtime and Playwright dependencies. After running `scripts/install-minikube.sh`, port-forward the engine and execute the suite:
 
 ```bash
-# Start your stack
-./.docker/rocketship start
-
-# Run browser tests through your isolated environment
-./.docker/rocketship run -f examples/browser-testing/rocketship.yaml
-
-# Stop when done
-./.docker/rocketship stop
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+rocketship run -af examples/browser-testing/rocketship.yaml
 ```
 
-**Legacy Local Mode (for reference only):**
+**Manual local mode:** when you are not using the cluster, install the browser dependencies once per machine:
 
 ```bash
-# Install browser-use and its dependencies
 pip install browser-use playwright langchain-openai langchain-anthropic
-
-# Install Playwright browsers
 playwright install chromium
-
-# Run browser tests
 rocketship run -af examples/browser-automation/rocketship.yaml
 ```
 

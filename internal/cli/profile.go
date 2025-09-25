@@ -298,13 +298,21 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 		urlStr = "http://" + urlStr
 	}
 	
-	parsedURL, err := url.Parse(urlStr)
+    parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return Profile{}, fmt.Errorf("invalid URL: %w", err)
 	}
 	
-	// Determine TLS settings from scheme
-	tlsEnabled := parsedURL.Scheme == "https"
+    // Determine TLS settings from scheme
+    var tlsEnabled bool
+    switch strings.ToLower(parsedURL.Scheme) {
+    case "https", "grpcs":
+        tlsEnabled = true
+    case "http", "grpc":
+        tlsEnabled = false
+    default:
+        tlsEnabled = false
+    }
 	
 	// Build engine address
 	host := parsedURL.Hostname()
@@ -316,13 +324,13 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 	}
 	
 	// Default ports
-	if port == "" {
-		if tlsEnabled {
-			port = "443"
-		} else {
-			port = "7700"
-		}
-	}
+    if port == "" {
+        if tlsEnabled {
+            port = "443"
+        } else {
+            port = "7700"
+        }
+    }
 	
 	engineAddress := fmt.Sprintf("%s:%s", host, port)
 	
@@ -349,5 +357,4 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 	
 	return profile, nil
 }
-
 

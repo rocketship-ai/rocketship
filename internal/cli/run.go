@@ -544,7 +544,7 @@ func NewRunCmd() *cobra.Command {
 
 	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
 	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
-	cmd.Flags().StringP("engine", "e", "localhost:7700", "Address of the rocketship engine")
+	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (defaults to active profile)")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")
 	cmd.Flags().StringP("var-file", "", "", "Load variables from YAML file")

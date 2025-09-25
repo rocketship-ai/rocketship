@@ -22,7 +22,7 @@ type GetFlags struct {
 // NewGetCmd creates a new get command
 func NewGetCmd() *cobra.Command {
 	flags := &GetFlags{
-		Engine: "localhost:7700",
+		Engine: "",
 		Format: "table",
 	}
 
@@ -43,12 +43,12 @@ Examples:
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			runID := args[0]
-			return runGet(runID, flags)
+			return runGet(cmd, runID, flags)
 		},
 	}
 
 	// Engine connection
-	cmd.Flags().StringVarP(&flags.Engine, "engine", "e", flags.Engine, "Address of the rocketship engine")
+	cmd.Flags().StringVarP(&flags.Engine, "engine", "e", flags.Engine, "Address of the rocketship engine (defaults to active profile)")
 
 	// Display options
 	cmd.Flags().StringVar(&flags.Format, "format", flags.Format, "Output format (table, json, yaml)")
@@ -57,9 +57,13 @@ Examples:
 	return cmd
 }
 
-func runGet(runID string, flags *GetFlags) error {
+func runGet(cmd *cobra.Command, runID string, flags *GetFlags) error {
+	engineAddr := ""
+	if cmd.Flags().Changed("engine") {
+		engineAddr = flags.Engine
+	}
 	// Connect to engine
-	client, err := NewEngineClient(flags.Engine)
+	client, err := NewEngineClient(engineAddr)
 	if err != nil {
 		return fmt.Errorf("failed to connect to engine: %w", err)
 	}
