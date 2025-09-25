@@ -36,3 +36,13 @@ if ! grep -qiE "ingress\.kubernetes\.io/backend-protocol(-version)?:[[:space:]]*
   exit 1
 fi
 
+# OIDC web preset should render oauth2-proxy deployment and env markers
+oidc_output=$(render -f "$CHART_DIR/values-oidc-web.yaml")
+if ! grep -q "oauth2-proxy" <<<"$oidc_output"; then
+  echo "Expected oauth2-proxy resources in values-oidc-web.yaml render" >&2
+  exit 1
+fi
+if ! grep -q "OAUTH2_PROXY_PROVIDER" <<<"$oidc_output"; then
+  echo "Expected OIDC environment variables in oauth2-proxy deployment" >&2
+  exit 1
+fi

@@ -59,3 +59,38 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+
+web:
+  enabled: false
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    tls: []
+  oauth2Proxy:
+    enabled: false
+    replicaCount: 1
+    image:
+      repository: quay.io/oauth2-proxy/oauth2-proxy
+      tag: v7.6.0
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 4180
+    upstreamOverride: ""
+    extraArgs:
+      - --cookie-secure=true
+      - --cookie-samesite=lax
+      - --set-authorization-header=true
+      - --pass-authorization-header=true
+      - --pass-access-token=true
+      - --set-xauthrequest=true
+    env: []
+    envFrom: []
+    podAnnotations: {}
+    podLabels: {}
+    resources: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}

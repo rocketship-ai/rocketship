@@ -1,0 +1,19 @@
+{{- if and .Values.web.enabled .Values.web.oauth2Proxy.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rocketship.webProxy.fullname" . }}
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web-oauth2-proxy
+spec:
+  type: {{ .Values.web.oauth2Proxy.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "rocketship.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: web-oauth2-proxy
+  ports:
+    - name: http
+      port: {{ .Values.web.oauth2Proxy.service.port }}
+      targetPort: http
+{{- end }}

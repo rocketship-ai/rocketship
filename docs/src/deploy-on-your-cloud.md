@@ -20,6 +20,7 @@ Both Rocketship services require the Temporal frontend host and namespace; every
 | --- | --- | --- |
 | Local iteration | [Run on Minikube](deploy/minikube.md) | Single script (`scripts/install-minikube.sh`) that starts Minikube, installs Temporal, builds local engine/worker images, and deploys the Rocketship chart. Great for fast feedback and integration testing inside CI. |
 | Production-ready proof of concept | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md) | Walks through preparing a managed cluster, wiring an NGINX ingress with TLS, publishing custom images to DigitalOcean Container Registry, and installing the Rocketship + Temporal Helm releases. |
+| Web UI with OIDC front-door | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md#enable-oidc-for-the-web-ui) | Layer oauth2-proxy + NGINX annotations using `values-oidc-web.yaml`, so authenticated users reach the web endpoints via Auth0/Okta while gRPC remains unaffected. |
 
 > Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands.
 
@@ -29,4 +30,4 @@ Both Rocketship services require the Temporal frontend host and namespace; every
 - Run suites with `rocketship run --engine`. When profiles are active, the CLI resolves the engine address automatically.
 - Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).
 
-Continue with one of the guides above to stand up Rocketship in your environment.
+Once the core stack is running, you can optionally apply the OIDC preset to front any HTTP/UI endpoints with your IdP before traffic reaches Rocketship.

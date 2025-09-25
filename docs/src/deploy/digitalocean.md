@@ -144,7 +144,36 @@ kubectl get pods -n rocketship
 
 `rocketship-engine` and `rocketship-worker` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
 
-## 7. Point DNS at the Load Balancer
+## 7. Enable OIDC for the Web UI (optional)
+
+If you want browser users to authenticate via Auth0/Okta before reaching Rocketship’s HTTP endpoints, layer oauth2-proxy in front of the engine’s HTTP port:
+
+1. **Create the credentials secret** (keys consumed by the preset):
+   ```bash
+   kubectl create secret generic oauth2-proxy-credentials \
+     --namespace rocketship \
+     --from-literal=clientID=YOUR_AUTH0_CLIENT_ID \
+     --from-literal=clientSecret=YOUR_AUTH0_CLIENT_SECRET \
+     --from-literal=cookieSecret=$(openssl rand -base64 32)
+   ```
+
+2. **Review `charts/rocketship/values-oidc-web.yaml`:**
+   - Set `OAUTH2_PROXY_OIDC_ISSUER_URL` to your Auth0 domain (e.g. `https://rocketship-demo.us.auth0.com/`).
+   - Update `OAUTH2_PROXY_REDIRECT_URL` to match the web hostname (`https://app.globalbank.rocketship.sh/oauth2/callback`).
+   - Adjust hosts/TLS to match your ingress.
+
+3. **Apply the preset alongside the existing gRPC values:**
+   ```bash
+   helm upgrade --install rocketship charts/rocketship \
+     --namespace rocketship \
+     -f charts/rocketship/values-production.yaml \
+     -f charts/rocketship/values-oidc-web.yaml \
+     --wait
+   ```
+
+4. **Verify the flow:** hitting `https://app.globalbank.rocketship.sh` should redirect to Auth0. After login you should see the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and will use token/device auth once implemented.
+
+## 8. Point DNS at the Load Balancer
 
 Retrieve the ingress address and configure an A record for your domain:
 
@@ -160,7 +189,7 @@ For example, the ingress might resolve to `104.248.110.90`. Create an A record s
 
 Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.
 
-## 8. Smoke Test the Endpoint
+## 9. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 
@@ -187,7 +216,7 @@ rocketship list    # Should connect through TLS without --engine
 
 If you see a `connection refused` message against `127.0.0.1:7700`, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.
 
-## 9. Updating the Deployment
+## 10. Updating the Deployment
 
 1. Rebuild and push the images with the same tag (or bump the `TAG`).
 2. Run `helm upgrade rocketship charts/rocketship ...` with the updated values.
@@ -197,7 +226,7 @@ If you see a `connection refused` message against `127.0.0.1:7700`, ensure you a
    kubectl rollout status deploy/rocketship-worker -n rocketship
    ```
 
-## 10. Troubleshooting Tips
+## 11. Troubleshooting Tips
 
 - `CrashLoopBackOff` with `exec /bin/engine: exec format error` indicates the image was built for the wrong architecture. Rebuild with `--platform linux/amd64`.
 - If the worker logs show `Namespace <name> is not found`, rerun the Temporal namespace creation step and verify `temporal.namespace` in the Helm values matches.

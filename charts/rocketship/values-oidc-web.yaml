@@ -1,0 +1,71 @@
+# Example values for enabling oauth2-proxy in front of the Rocketship web endpoints
+# This configuration assumes:
+# - An Auth0 (or compatible OIDC) application configured for the Rocketship web UI
+# - A Kubernetes secret named `oauth2-proxy-credentials` with keys:
+#     clientID          -> OAuth client ID (plain text)
+#     clientSecret      -> OAuth client secret
+#     cookieSecret      -> 32-byte random string, base64 encoded (use `openssl rand -base64 32`)
+# - The Rocketship engine service will serve HTTP traffic (health/UI) on port 7701
+
+web:
+  enabled: true
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    hosts:
+      - host: app.globalbank.rocketship.sh
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: globalbank-rocketship-tls
+        hosts:
+          - app.globalbank.rocketship.sh
+  oauth2Proxy:
+    enabled: true
+    replicaCount: 1
+    # Set to empty to let the chart route requests to the engine HTTP port (7701)
+    upstreamOverride: ""
+    extraArgs:
+      - --cookie-name=_rocketship_auth
+      - --cookie-secure=true
+      - --cookie-samesite=lax
+      - --scope=openid profile email
+      - --email-domain=*
+      - --skip-provider-button=true
+    env:
+      - name: OAUTH2_PROXY_PROVIDER
+        value: oidc
+      - name: OAUTH2_PROXY_CLIENT_ID
+        valueFrom:
+          secretKeyRef:
+            name: oauth2-proxy-credentials
+            key: clientID
+      - name: OAUTH2_PROXY_CLIENT_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: oauth2-proxy-credentials
+            key: clientSecret
+      - name: OAUTH2_PROXY_COOKIE_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: oauth2-proxy-credentials
+            key: cookieSecret
+      - name: OAUTH2_PROXY_REDIRECT_URL
+        value: https://app.globalbank.rocketship.sh/oauth2/callback
+      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+        value: https://YOUR_AUTH0_DOMAIN/    # e.g. https://rocketship-demo.us.auth0.com/
+      - name: OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL
+        value: "false"
+      - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
+        value: "true"
+      - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER
+        value: "true"
+      - name: OAUTH2_PROXY_SET_XAUTHREQUEST
+        value: "true"
+      - name: OAUTH2_PROXY_FORCE_HTTPS
+        value: "true"
