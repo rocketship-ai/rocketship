@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/reference/rocketship_stop_server/">
+        <link rel="canonical" href="https://docs.rocketship.sh/deploy/digitalocean/">
       
       
-        <link rel="prev" href="../rocketship_stop/">
+        <link rel="prev" href="../minikube/">
       
       
-        <link rel="next" href="../rocketship_validate/">
+        <link rel="next" href="../../reference/rocketship/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>stop server - Rocketship CLI</title>
+        <title>Production (DigitalOcean) - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#rocketship-stop-server" class="md-skip">
+        <a href="#deploy-rocketship-on-digitalocean-kubernetes" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              stop server
+              Production (DigitalOcean)
             
           </span>
         </div>
@@ -1244,8 +1244,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1263,13 +1265,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -1283,7 +1283,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Deploy On Your Cloud
@@ -1318,7 +1318,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy/minikube/" class="md-nav__link">
+      <a href="../minikube/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1336,10 +1336,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../deploy/digitalocean/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Production (DigitalOcean)
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1348,6 +1368,125 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-set-up-namespaces-and-ingress-controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Set Up Namespaces and Ingress Controller
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-install-temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Install Temporal
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-create-the-tls-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Create the TLS Secret
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-authenticate-the-registry-inside-the-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Authenticate the Registry Inside the Cluster
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-build-and-push-rocketship-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Build and Push Rocketship Images
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-deploy-the-rocketship-helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Deploy the Rocketship Helm Chart
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-point-dns-at-the-load-balancer" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Point DNS at the Load Balancer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-smoke-test-the-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Smoke Test the Endpoint
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-updating-the-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Updating the Deployment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-troubleshooting-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Troubleshooting Tips
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1364,10 +1503,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1397,11 +1534,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1415,7 +1554,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Command Reference
@@ -1429,7 +1568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship/" class="md-nav__link">
+      <a href="../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1503,7 +1642,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1524,7 +1663,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_create/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_create/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1545,7 +1684,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_delete/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_delete/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1566,7 +1705,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1587,7 +1726,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_show/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_show/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1608,7 +1747,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_use/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_use/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1637,7 +1776,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_run/" class="md-nav__link">
+      <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1658,7 +1797,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1679,7 +1818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_get/" class="md-nav__link">
+      <a href="../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1745,7 +1884,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start/" class="md-nav__link">
+      <a href="../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1766,7 +1905,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1792,10 +1931,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1808,11 +1945,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_7" >
         
           
           <label class="md-nav__link" for="__nav_7_7" id="__nav_7_7_label" tabindex="0">
@@ -1826,7 +1965,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7_7">
             <span class="md-nav__icon md-icon"></span>
             stop
@@ -1840,7 +1979,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1858,28 +1997,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    stop server
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1888,90 +2009,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#rocketship-stop-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      rocketship stop server
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship stop server">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options inherited from parent commands
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-25-sep-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 25-Sep-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1992,7 +2029,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_validate/" class="md-nav__link">
+      <a href="../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2013,7 +2050,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_version/" class="md-nav__link">
+      <a href="../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2071,6 +2108,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -2079,68 +2118,101 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rocketship-stop-server" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
-      rocketship stop server
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship stop server">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
+      Prerequisites
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#1-set-up-namespaces-and-ingress-controller" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      1. Set Up Namespaces and Ingress Controller
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#2-install-temporal" class="md-nav__link">
     <span class="md-ellipsis">
-      Options inherited from parent commands
+      2. Install Temporal
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#3-create-the-tls-secret" class="md-nav__link">
     <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-25-sep-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 25-Sep-2025
+      3. Create the TLS Secret
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#4-authenticate-the-registry-inside-the-cluster" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Authenticate the Registry Inside the Cluster
+    </span>
+  </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#5-build-and-push-rocketship-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Build and Push Rocketship Images
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-deploy-the-rocketship-helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      6. Deploy the Rocketship Helm Chart
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-point-dns-at-the-load-balancer" class="md-nav__link">
+    <span class="md-ellipsis">
+      7. Point DNS at the Load Balancer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-smoke-test-the-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      8. Smoke Test the Endpoint
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-updating-the-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      9. Updating the Deployment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-troubleshooting-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Troubleshooting Tips
+    </span>
+  </a>
   
 </li>
       
@@ -2162,25 +2234,171 @@
   
 
 
-  <h1>stop server</h1>
-
-<h2 id="rocketship-stop-server">rocketship stop server</h2>
-<p>Stop the rocketship server</p>
-<h3 id="synopsis">Synopsis</h3>
-<p>Stop the rocketship server and all its components.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rocketship stop server [flags]
-</code></pre></div>
-<h3 id="options">Options</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  -h, --help   help for server
-</code></pre></div>
-<h3 id="options-inherited-from-parent-commands">Options inherited from parent commands</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>      --debug   Enable debug logging
-</code></pre></div>
-<h3 id="see-also">SEE ALSO</h3>
+<h1 id="deploy-rocketship-on-digitalocean-kubernetes">Deploy Rocketship on DigitalOcean Kubernetes</h1>
+<p>This walkthrough recreates the production proof-of-concept we validated on DigitalOcean Kubernetes (DOKS). It covers standing up Temporal, publishing Rocketship images to DigitalOcean Container Registry (DOCR), terminating TLS through an NGINX ingress, and wiring the CLI via profiles.</p>
+<p>The steps assume you have a domain (e.g. <code>globalbank.rocketship.sh</code>) with a valid certificate bundle from ZeroSSL or a similar CA.</p>
+<h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li><a href="../rocketship_stop/">rocketship stop</a>  - Stop rocketship the rocketship server</li>
+<li>DigitalOcean account with:</li>
+<li>A Kubernetes cluster (2 × CPU-optimised nodes were used during validation)</li>
+<li>DigitalOcean Container Registry (<code>registry.digitalocean.com/&lt;registry&gt;</code>) enabled</li>
+<li><a href="https://docs.digitalocean.com/reference/doctl/how-to/install/"><code>doctl</code></a> authenticated (<code>doctl auth init</code>)</li>
+<li><code>kubectl</code> configured for the cluster (<code>doctl kubernetes cluster kubeconfig save &lt;cluster-name&gt;</code>)</li>
+<li>Docker CLI with <a href="https://docs.docker.com/build/install-buildx/">Buildx</a></li>
+<li>Helm 3</li>
+<li>TLS assets</li>
+<li><code>certificate.crt</code> and <code>private.key</code> (ZeroSSL issues these; concatenate the intermediate bundle with the server cert if required)</li>
 </ul>
-<h6 id="auto-generated-by-spf13cobra-on-25-sep-2025">Auto generated by spf13/cobra on 25-Sep-2025</h6>
+<p>All commands below run from the repository root.</p>
+<h2 id="1-set-up-namespaces-and-ingress-controller">1. Set Up Namespaces and Ingress Controller</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>namespace<span class="w"> </span>rocketship
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>kubectl<span class="w"> </span>config<span class="w"> </span>set-context<span class="w"> </span>--current<span class="w"> </span>--namespace<span class="o">=</span>rocketship
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Install ingress-nginx (DigitalOcean automatically provisions a Load Balancer)</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>ingress-nginx<span class="w"> </span>https://kubernetes.github.io/ingress-nginx
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>helm<span class="w"> </span>install<span class="w"> </span>ingress-nginx<span class="w"> </span>ingress-nginx/ingress-nginx<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span>--namespace<span class="w"> </span>ingress-nginx<span class="w"> </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span>--set<span class="w"> </span>controller.service.annotations.<span class="s2">&quot;service\.beta\.kubernetes\.io/do-loadbalancer-enable-proxy-protocol&quot;</span><span class="o">=</span><span class="s2">&quot;true&quot;</span>
+</code></pre></div>
+<blockquote>
+<p>The annotation enables PROXY protocol support on DigitalOcean’s load balancer, which keeps source IPs available in the ingress logs. Omit or adjust if you do not need it.</p>
+</blockquote>
+<h2 id="2-install-temporal">2. Install Temporal</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>temporal<span class="w"> </span>https://go.temporal.io/helm-charts
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>helm<span class="w"> </span>install<span class="w"> </span>temporal<span class="w"> </span>temporal/temporal<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--set<span class="w"> </span>server.replicaCount<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--set<span class="w"> </span>cassandra.config.cluster_size<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--set<span class="w"> </span>elasticsearch.replicas<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--set<span class="w"> </span>prometheus.enabled<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>--set<span class="w"> </span>grafana.enabled<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div>
+<p>Register the Temporal logical namespace the Rocketship worker will use:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>deploy/temporal-admintools<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>temporal<span class="w"> </span>operator<span class="w"> </span>namespace<span class="w"> </span>create<span class="w"> </span>--namespace<span class="w"> </span>default
+</code></pre></div>
+<p>(Keep <code>default</code> unless you intend to manage multiple namespaces; update Helm values accordingly later.)</p>
+<h2 id="3-create-the-tls-secret">3. Create the TLS Secret</h2>
+<p>DigitalOcean expects the key and certificate in PEM format. Convert the ZeroSSL bundle into the standard filenames if necessary:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Combine the server cert and intermediate bundle when provided separately</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>cat<span class="w"> </span>certificate.crt<span class="w"> </span>ca_bundle.crt<span class="w"> </span>&gt;<span class="w"> </span>fullchain.pem
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>tls<span class="w"> </span>globalbank-rocketship-tls<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--cert<span class="o">=</span>fullchain.pem<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--key<span class="o">=</span>private.key<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship
+</code></pre></div>
+<h2 id="4-authenticate-the-registry-inside-the-cluster">4. Authenticate the Registry Inside the Cluster</h2>
+<p>Create the image pull secret with <code>doctl</code> and apply it to the <code>rocketship</code> namespace:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>doctl<span class="w"> </span>registry<span class="w"> </span>kubernetes-manifest<span class="w"> </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span>&gt;<span class="w"> </span><span class="k">do</span>-registry-secret.yaml
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span><span class="k">do</span>-registry-secret.yaml
+</code></pre></div>
+<p>The secret name is typically <code>registry-&lt;registry-name&gt;</code> and is referenced automatically by the chart when <code>imagePullSecrets</code> is set.</p>
+<h2 id="5-build-and-push-rocketship-images">5. Build and Push Rocketship Images</h2>
+<p>DigitalOcean’s nodes run on <code>linux/amd64</code>, so build multi-architecture images to avoid “exec format error” crashes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">REGISTRY</span><span class="o">=</span>registry.digitalocean.com/rocketship
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">TAG</span><span class="o">=</span>v0.1-test
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Engine</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>docker<span class="w"> </span>buildx<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--platform<span class="w"> </span>linux/amd64,linux/arm64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>-f<span class="w"> </span>.docker/Dockerfile.engine<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>-t<span class="w"> </span><span class="nv">$REGISTRY</span>/rocketship-engine:<span class="nv">$TAG</span><span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--push
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># Worker</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>docker<span class="w"> </span>buildx<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span>--platform<span class="w"> </span>linux/amd64,linux/arm64<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span>-f<span class="w"> </span>.docker/Dockerfile.worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span>-t<span class="w"> </span><span class="nv">$REGISTRY</span>/rocketship-worker:<span class="nv">$TAG</span><span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">  </span>--push
+</code></pre></div>
+<blockquote>
+<p>Re-run these commands whenever you change code; keep the tag stable (for example <code>v0.1-test</code>) so the Helm release pulls the updated digest.</p>
+</blockquote>
+<h2 id="6-deploy-the-rocketship-helm-chart">6. Deploy the Rocketship Helm Chart</h2>
+<p>Create a values override file (<code>deploy/do-values.yaml</code>) or inline the settings:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--set<span class="w"> </span>temporal.host<span class="o">=</span>temporal-frontend.rocketship:7233<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>default<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--set<span class="w"> </span>imagePullSecrets<span class="o">[</span><span class="m">0</span><span class="o">]</span>.name<span class="o">=</span>registry-rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--set<span class="w"> </span>ingress.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--set<span class="w"> </span>ingress.className<span class="o">=</span>nginx<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/backend-protocol&quot;</span><span class="o">=</span>GRPC<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/ssl-redirect&quot;</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/proxy-body-size&quot;</span><span class="o">=</span><span class="s2">&quot;0&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">[</span><span class="m">0</span><span class="o">]</span>.secretName<span class="o">=</span>globalbank-rocketship-tls<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">[</span><span class="m">0</span><span class="o">]</span>.hosts<span class="o">[</span><span class="m">0</span><span class="o">]=</span>globalbank.rocketship.sh<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.host<span class="o">=</span>globalbank.rocketship.sh<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.paths<span class="o">[</span><span class="m">0</span><span class="o">]</span>.path<span class="o">=</span>/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.paths<span class="o">[</span><span class="m">0</span><span class="o">]</span>.pathType<span class="o">=</span>Prefix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span>--wait
+</code></pre></div>
+<p>Confirm the pods are healthy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>rocketship
+</code></pre></div>
+<p><code>rocketship-engine</code> and <code>rocketship-worker</code> should report <code>READY 1/1</code>. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.</p>
+<h2 id="7-point-dns-at-the-load-balancer">7. Point DNS at the Load Balancer</h2>
+<p>Retrieve the ingress address and configure an A record for your domain:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>-n<span class="w"> </span>rocketship
+</code></pre></div>
+<p>For example, the ingress might resolve to <code>104.248.110.90</code>. Create an A record such as:</p>
+<table>
+<thead>
+<tr>
+<th>Host</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>globalbank</code></td>
+<td><code>104.248.110.90</code></td>
+</tr>
+</tbody>
+</table>
+<p>Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.</p>
+<h2 id="8-smoke-test-the-endpoint">8. Smoke Test the Endpoint</h2>
+<p>The Rocketship health endpoint answers gRPC, so an HTTPS request returns <code>415</code> with <code>application/grpc</code>, which confirms end-to-end TLS:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
+</code></pre></div>
+<p>Output snippet:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>&lt; HTTP/2 415
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>&lt; content-type: application/grpc
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>&lt; grpc-status: 3
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
+</code></pre></div>
+<p>Create and use a profile from the CLI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
+</code></pre></div>
+<p>If you see a <code>connection refused</code> message against <code>127.0.0.1:7700</code>, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.</p>
+<h2 id="9-updating-the-deployment">9. Updating the Deployment</h2>
+<ol>
+<li>Rebuild and push the images with the same tag (or bump the <code>TAG</code>).</li>
+<li>Run <code>helm upgrade rocketship charts/rocketship ...</code> with the updated values.</li>
+<li>Watch rollout status:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
+</code></pre></div></li>
+</ol>
+<h2 id="10-troubleshooting-tips">10. Troubleshooting Tips</h2>
+<ul>
+<li><code>CrashLoopBackOff</code> with <code>exec /bin/engine: exec format error</code> indicates the image was built for the wrong architecture. Rebuild with <code>--platform linux/amd64</code>.</li>
+<li>If the worker logs show <code>Namespace &lt;name&gt; is not found</code>, rerun the Temporal namespace creation step and verify <code>temporal.namespace</code> in the Helm values matches.</li>
+<li><code>curl</code> connecting to <code>127.0.0.1</code> usually means DNS hasn’t propagated or the CLI profile points at the wrong port (<code>7700</code> vs <code>443</code>). Profiles created with <code>grpcs://</code> automatically default to port 443.</li>
+</ul>
+<p>With these steps you have a durable Rocketship installation bridging a managed Temporal stack, ingress TLS, and CLI profiles—ready for teams to run suites from their laptops or CI pipelines.</p>
 
 
 

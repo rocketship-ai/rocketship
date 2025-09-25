@@ -14,7 +14,7 @@
         <link rel="prev" href="../mcp-server/">
       
       
-        <link rel="next" href="../deploy-on-kubernetes/">
+        <link rel="next" href="../deploy/minikube/">
       
       
       <link rel="icon" href="../assets/transparent.png">
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#deploying-rocketship-on-your-cloud" class="md-skip">
+        <a href="#deploy-rocketship-on-your-cloud" class="md-skip">
           Skip to content
         </a>
       
@@ -1255,6 +1255,8 @@
       
         
       
+        
+      
     
     
       
@@ -1341,60 +1343,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#architecture-overview" class="md-nav__link">
+  <a href="#core-components" class="md-nav__link">
     <span class="md-ellipsis">
-      Architecture Overview
+      Core Components
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#deployment-options" class="md-nav__link">
+  <a href="#deployment-paths" class="md-nav__link">
     <span class="md-ellipsis">
-      Deployment Options
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Deployment Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#docker-compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker Compose
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#kubernetes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Kubernetes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker-compose-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker Compose Setup
+      Deployment Paths
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#after-deployment" class="md-nav__link">
     <span class="md-ellipsis">
-      Next Steps
+      After Deployment
     </span>
   </a>
   
@@ -1416,11 +1385,32 @@
   
   
     <li class="md-nav__item">
-      <a href="../deploy-on-kubernetes/" class="md-nav__link">
+      <a href="../deploy/minikube/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Kubernetes
+    Minikube (Local)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deploy/digitalocean/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Production (DigitalOcean)
   </span>
   
 
@@ -1445,6 +1435,8 @@
   
     
     
+      
+        
       
         
       
@@ -1513,6 +1505,193 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    profile
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            profile
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_profile/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_profile_create/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    create
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_profile_delete/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    delete
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_profile_list/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    list
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_profile_show/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    show
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_profile_use/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    use
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1605,10 +1784,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_6" >
         
           
-          <label class="md-nav__link" for="__nav_7_5" id="__nav_7_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_7_6" id="__nav_7_6_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1619,8 +1798,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7_5">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_6">
             <span class="md-nav__icon md-icon"></span>
             start
           </label>
@@ -1700,10 +1879,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_7" >
         
           
-          <label class="md-nav__link" for="__nav_7_6" id="__nav_7_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_7_7" id="__nav_7_7_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1714,8 +1893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_7">
             <span class="md-nav__icon md-icon"></span>
             stop
           </label>
@@ -1867,60 +2046,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#architecture-overview" class="md-nav__link">
+  <a href="#core-components" class="md-nav__link">
     <span class="md-ellipsis">
-      Architecture Overview
+      Core Components
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#deployment-options" class="md-nav__link">
+  <a href="#deployment-paths" class="md-nav__link">
     <span class="md-ellipsis">
-      Deployment Options
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Deployment Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#docker-compose" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker Compose
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#kubernetes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Kubernetes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker-compose-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker Compose Setup
+      Deployment Paths
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#after-deployment" class="md-nav__link">
     <span class="md-ellipsis">
-      Next Steps
+      After Deployment
     </span>
   </a>
   
@@ -1944,56 +2090,49 @@
   
 
 
-<h1 id="deploying-rocketship-on-your-cloud">Deploying Rocketship on Your Cloud</h1>
-<p>Rocketship can be deployed in your cloud environment to run tests at scale, persist test history, and leverage all of Temporal's durable execution features. This guide covers the different deployment options and considerations.</p>
-<h2 id="architecture-overview">Architecture Overview</h2>
-<p>Rocketship consists of three main components:</p>
+<h1 id="deploy-rocketship-on-your-cloud">Deploy Rocketship on Your Cloud</h1>
+<p>Rocketship can run anywhere Kubernetes is available. The CLI embeds the engine and worker binaries for local auto mode, but real deployments separate the components and connect them to a Temporal cluster.</p>
+<p>This section outlines the supported deployment paths and what each delivers so you can pick the right starting point.</p>
+<h2 id="core-components">Core Components</h2>
+<p>Every deployment provisions:</p>
 <ol>
-<li><strong>Engine</strong>: The central service that receives test requests and coordinates test execution with Temporal</li>
-<li><strong>Worker</strong>: Executes test steps and reports results back to Temporal</li>
-<li><strong>Temporal</strong>: Handles workflow orchestration and state management</li>
+<li><strong>Temporal</strong> – Durable workflow orchestration. The Helm chart from Temporal provides a ready-made stack with Cassandra, Elasticsearch, and UI components for development and staging clusters.</li>
+<li><strong>Rocketship Engine</strong> – gRPC API that accepts suite executions, manages profiles, and streams results.</li>
+<li><strong>Rocketship Worker</strong> – Executes plugin steps inside Temporal workflows.</li>
 </ol>
-<h2 id="deployment-options">Deployment Options</h2>
-<h3 id="docker-compose">Docker Compose</h3>
-<p>The simplest way to deploy Rocketship is using Docker Compose. This is ideal for:</p>
+<p>Both Rocketship services require the Temporal frontend host and namespace; everything else (ingress, TLS, auth) is layered on top through Kubernetes objects.</p>
+<h2 id="deployment-paths">Deployment Paths</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Guide</th>
+<th>Highlights</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local iteration</td>
+<td><a href="../deploy/minikube/">Run on Minikube</a></td>
+<td>Single script (<code>scripts/install-minikube.sh</code>) that starts Minikube, installs Temporal, builds local engine/worker images, and deploys the Rocketship chart. Great for fast feedback and integration testing inside CI.</td>
+</tr>
+<tr>
+<td>Production-ready proof of concept</td>
+<td><a href="../deploy/digitalocean/">Deploy on DigitalOcean Kubernetes</a></td>
+<td>Walks through preparing a managed cluster, wiring an NGINX ingress with TLS, publishing custom images to DigitalOcean Container Registry, and installing the Rocketship + Temporal Helm releases.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands.</p>
+</blockquote>
+<h2 id="after-deployment">After Deployment</h2>
 <ul>
-<li>Development environments</li>
-<li>Small-scale deployments</li>
-<li>Testing and evaluation</li>
+<li>Use <code>rocketship profile create</code> and <code>rocketship profile use</code> to store the engine endpoint (<code>grpcs://…</code>) and default to TLS where appropriate.</li>
+<li>Run suites with <code>rocketship run --engine</code>. When profiles are active, the CLI resolves the engine address automatically.</li>
+<li>Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).</li>
 </ul>
-<p>See the <a href="#docker-compose-setup">Docker Compose Setup</a> section for details.</p>
-<h3 id="kubernetes">Kubernetes</h3>
-<p>For production deployments, we recommend using Kubernetes. This provides:</p>
-<ul>
-<li>High availability</li>
-<li>Automatic scaling</li>
-<li>Better resource management</li>
-<li>Production-grade monitoring</li>
-</ul>
-<p>See the <a href="../deploy-on-kubernetes/">Kubernetes Deployment</a> guide for details.</p>
-<h2 id="docker-compose-setup">Docker Compose Setup</h2>
-<p>Clone the Rocketship repository, navigate to the <code>.docker</code> directory, and run the following command:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-</code></pre></div>
-<p>Verify the deployment:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Check service status</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker-compose<span class="w"> </span>ps
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Check engine logs</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>docker-compose<span class="w"> </span>logs<span class="w"> </span>engine
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Check worker logs</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>docker-compose<span class="w"> </span>logs<span class="w"> </span>worker
-</code></pre></div>
-<p>Run a test:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>your-test.yaml<span class="w"> </span>-e<span class="w"> </span>localhost:7700
-</code></pre></div>
-<h2 id="next-steps">Next Steps</h2>
-<ul>
-<li><a href="../deploy-on-kubernetes/">Deploy on Kubernetes</a> for production-grade deployment</li>
-<li><a href="../reference/rocketship/">Command Reference</a> for CLI usage</li>
-<li><a href="../examples/">Examples</a> for test suite examples</li>
-</ul>
+<p>Continue with one of the guides above to stand up Rocketship in your environment.</p>
 
 
 

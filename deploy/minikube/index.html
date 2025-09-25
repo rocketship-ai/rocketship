@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/reference/rocketship_stop_server/">
+        <link rel="canonical" href="https://docs.rocketship.sh/deploy/minikube/">
       
       
-        <link rel="prev" href="../rocketship_stop/">
+        <link rel="prev" href="../../deploy-on-your-cloud/">
       
       
-        <link rel="next" href="../rocketship_validate/">
+        <link rel="next" href="../digitalocean/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>stop server - Rocketship CLI</title>
+        <title>Minikube (Local) - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#rocketship-stop-server" class="md-skip">
+        <a href="#run-rocketship-on-minikube" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              stop server
+              Minikube (Local)
             
           </span>
         </div>
@@ -1244,8 +1244,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1263,13 +1265,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -1283,7 +1283,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Deploy On Your Cloud
@@ -1315,10 +1315,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../deploy/minikube/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Minikube (Local)
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1327,6 +1347,80 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prerequisites
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-launch-the-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Launch the Stack
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-customise-the-install-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Customise the Install (Optional)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-verify-the-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Verify the Deployment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-manual-helm-flow-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Manual Helm Flow (Optional)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Cleanup
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1339,7 +1433,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy/digitalocean/" class="md-nav__link">
+      <a href="../digitalocean/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1364,10 +1458,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1397,11 +1489,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1415,7 +1509,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Command Reference
@@ -1429,7 +1523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship/" class="md-nav__link">
+      <a href="../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1503,7 +1597,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1524,7 +1618,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_create/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_create/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1545,7 +1639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_delete/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_delete/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1566,7 +1660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1587,7 +1681,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_show/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_show/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1608,7 +1702,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_use/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_use/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1637,7 +1731,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_run/" class="md-nav__link">
+      <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1658,7 +1752,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1679,7 +1773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_get/" class="md-nav__link">
+      <a href="../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1745,7 +1839,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start/" class="md-nav__link">
+      <a href="../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1766,7 +1860,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1792,10 +1886,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -1808,11 +1900,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_7" >
         
           
           <label class="md-nav__link" for="__nav_7_7" id="__nav_7_7_label" tabindex="0">
@@ -1826,7 +1920,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7_7">
             <span class="md-nav__icon md-icon"></span>
             stop
@@ -1840,7 +1934,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1858,28 +1952,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    stop server
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1888,90 +1964,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#rocketship-stop-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      rocketship stop server
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship stop server">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options inherited from parent commands
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-25-sep-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 25-Sep-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1992,7 +1984,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_validate/" class="md-nav__link">
+      <a href="../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2013,7 +2005,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_version/" class="md-nav__link">
+      <a href="../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2071,6 +2063,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -2079,68 +2073,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rocketship-stop-server" class="md-nav__link">
+  <a href="#prerequisites" class="md-nav__link">
     <span class="md-ellipsis">
-      rocketship stop server
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship stop server">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
+      Prerequisites
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#1-launch-the-stack" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      1. Launch the Stack
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#2-customise-the-install-optional" class="md-nav__link">
     <span class="md-ellipsis">
-      Options inherited from parent commands
+      2. Customise the Install (Optional)
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#3-verify-the-deployment" class="md-nav__link">
     <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-25-sep-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 25-Sep-2025
+      3. Verify the Deployment
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#4-manual-helm-flow-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      4. Manual Helm Flow (Optional)
+    </span>
+  </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#5-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      5. Cleanup
+    </span>
+  </a>
   
 </li>
       
@@ -2162,25 +2144,143 @@
   
 
 
-  <h1>stop server</h1>
-
-<h2 id="rocketship-stop-server">rocketship stop server</h2>
-<p>Stop the rocketship server</p>
-<h3 id="synopsis">Synopsis</h3>
-<p>Stop the rocketship server and all its components.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rocketship stop server [flags]
-</code></pre></div>
-<h3 id="options">Options</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  -h, --help   help for server
-</code></pre></div>
-<h3 id="options-inherited-from-parent-commands">Options inherited from parent commands</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>      --debug   Enable debug logging
-</code></pre></div>
-<h3 id="see-also">SEE ALSO</h3>
+<h1 id="run-rocketship-on-minikube">Run Rocketship on Minikube</h1>
+<p>Use this guide when you want a fully isolated Rocketship stack on your laptop for development, demos, or CI automation. The repository ships with <code>scripts/install-minikube.sh</code>, which provisions Temporal plus the Rocketship engine and worker in a single namespace.</p>
+<h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li><a href="../rocketship_stop/">rocketship stop</a>  - Stop rocketship the rocketship server</li>
+<li>macOS or Linux host with at least 4 vCPUs and 8 GB RAM free</li>
+<li><a href="https://minikube.sigs.k8s.io/docs/start/">Minikube</a> <code>v1.36+</code></li>
+<li><a href="https://kubernetes.io/docs/tasks/tools/">Kubectl</a> pointed to your Minikube context</li>
+<li><a href="https://helm.sh/docs/intro/install/">Helm 3</a></li>
+<li>Docker (Minikube uses the local Docker daemon to build images)</li>
 </ul>
-<h6 id="auto-generated-by-spf13cobra-on-25-sep-2025">Auto generated by spf13/cobra on 25-Sep-2025</h6>
+<h2 id="1-launch-the-stack">1. Launch the Stack</h2>
+<p>From the repository root:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>scripts/install-minikube.sh
+</code></pre></div>
+<p>The script performs the following steps:</p>
+<ol>
+<li>Starts/ensures a Minikube profile (defaults to <code>rocketship</code>).</li>
+<li>Switches the Docker context to Minikube and builds the engine and worker images as <code>rocketship-engine-local:dev</code> and <code>rocketship-worker-local:dev</code>.</li>
+<li>Installs Temporal via the official Helm chart in the <code>rocketship</code> namespace using a minimal configuration (single replica services, Cassandra + Elasticsearch, no Prometheus/Grafana).</li>
+<li>Registers the Temporal logical namespace <code>rocketship</code> using the Temporal CLI.</li>
+<li>Installs the Rocketship Helm chart, pointing at the Temporal frontend service, and exposes ClusterIP services with named <code>grpc</code>/<code>http</code> ports.</li>
+<li>Prints summary information and port-forward helper commands.</li>
+</ol>
+<p>Typical output ends with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Engine endpoint (gRPC): service rocketship-engine.rocketship:7700
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Health endpoint: service rocketship-engine.rocketship:7701
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Temporal host configured as: temporal-frontend.rocketship:7233
+</code></pre></div>
+<h2 id="2-customise-the-install-optional">2. Customise the Install (Optional)</h2>
+<p>Environment variables let you adjust namespaces, release names, and Temporal workflow namespace without editing the script:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MINIKUBE_PROFILE</code></td>
+<td><code>rocketship</code></td>
+<td>Minikube profile name</td>
+</tr>
+<tr>
+<td><code>ROCKETSHIP_NAMESPACE</code></td>
+<td><code>rocketship</code></td>
+<td>Kubernetes namespace for Rocketship services</td>
+</tr>
+<tr>
+<td><code>TEMPORAL_NAMESPACE</code></td>
+<td><code>rocketship</code></td>
+<td>Namespace for Temporal Helm release</td>
+</tr>
+<tr>
+<td><code>TEMPORAL_WORKFLOW_NAMESPACE</code></td>
+<td><code>rocketship</code></td>
+<td>Temporal logical namespace registered via CLI</td>
+</tr>
+<tr>
+<td><code>TEMPORAL_RELEASE</code></td>
+<td><code>temporal</code></td>
+<td>Helm release name for Temporal</td>
+</tr>
+<tr>
+<td><code>ROCKETSHIP_RELEASE</code></td>
+<td><code>rocketship</code></td>
+<td>Helm release name for Rocketship</td>
+</tr>
+<tr>
+<td><code>ROCKETSHIP_CHART_PATH</code></td>
+<td><code>charts/rocketship</code></td>
+<td>Path to the chart (override when packaging)</td>
+</tr>
+</tbody>
+</table>
+<p>Example: run everything inside a namespace called <code>testing</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nv">ROCKETSHIP_NAMESPACE</span><span class="o">=</span>testing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">TEMPORAL_NAMESPACE</span><span class="o">=</span>testing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nv">TEMPORAL_WORKFLOW_NAMESPACE</span><span class="o">=</span>testing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>scripts/install-minikube.sh
+</code></pre></div>
+<h2 id="3-verify-the-deployment">3. Verify the Deployment</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>rocketship
+</code></pre></div>
+<p>You should see Temporal pods (frontend, history, matching, worker, cassandra, elasticsearch) and two Rocketship deployments (<code>rocketship-engine</code>, <code>rocketship-worker</code>).</p>
+<p>To exercise the stack locally:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>svc/rocketship-engine<span class="w"> </span><span class="m">7700</span>:7700
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>minikube<span class="w"> </span>grpc://localhost:7700
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>minikube
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-http/rocketship.yaml
+</code></pre></div>
+<h2 id="4-manual-helm-flow-optional">4. Manual Helm Flow (Optional)</h2>
+<p>If you prefer to perform the steps yourself:</p>
+<ol>
+<li>Install Temporal:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>temporal<span class="w"> </span>https://go.temporal.io/helm-charts
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>helm<span class="w"> </span>install<span class="w"> </span>temporal<span class="w"> </span>temporal/temporal<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--set<span class="w"> </span>server.replicaCount<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--set<span class="w"> </span>cassandra.config.cluster_size<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--set<span class="w"> </span>elasticsearch.replicas<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--set<span class="w"> </span>prometheus.enabled<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--set<span class="w"> </span>grafana.enabled<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>--wait<span class="w"> </span>--timeout<span class="w"> </span>15m
+</code></pre></div></li>
+<li>Register the Temporal namespace (default <code>rocketship</code>):
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>deploy/temporal-admintools<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>temporal<span class="w"> </span>operator<span class="w"> </span>namespace<span class="w"> </span>create<span class="w"> </span>--namespace<span class="w"> </span>rocketship
+</code></pre></div></li>
+<li>Build local images and load them into Minikube:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>minikube<span class="w"> </span>docker-env<span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>.docker/Dockerfile.engine<span class="w"> </span>-t<span class="w"> </span>rocketship-engine-local:dev<span class="w"> </span>.
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>.docker/Dockerfile.worker<span class="w"> </span>-t<span class="w"> </span>rocketship-worker-local:dev<span class="w"> </span>.
+</code></pre></div></li>
+<li>Install Rocketship using overrides:
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--set<span class="w"> </span>temporal.host<span class="o">=</span>temporal-frontend.rocketship:7233<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span>rocketship-engine-local<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span>dev<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span>rocketship-worker-local<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span>dev<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span>--values<span class="w"> </span>charts/rocketship/values-minikube.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">  </span>--wait
+</code></pre></div></li>
+</ol>
+<h2 id="5-cleanup">5. Cleanup</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>rocketship<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>temporal<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>rocketship
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>minikube<span class="w"> </span>delete<span class="w"> </span>-p<span class="w"> </span>rocketship
+</code></pre></div>
+<p>You now have a repeatable local environment for building new features, running integration tests, or debugging plugin behaviour before deploying to a managed cluster.</p>
 
 
 
