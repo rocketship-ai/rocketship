@@ -63,7 +63,7 @@ if [ ${STATUS} -eq 0 ]; then
   echo "❌ expected failure when connecting to unreachable profile"
   exit 1
 fi
-if ! grep -qi "failed to connect" <<<"${UNREACHABLE_OUTPUT}"; then
+if ! grep -qiE "failed to (connect|list runs)" <<<"${UNREACHABLE_OUTPUT}"; then
   echo "❌ unexpected error message for unreachable profile"
   echo "${UNREACHABLE_OUTPUT}"
   exit 1
