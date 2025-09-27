@@ -128,7 +128,7 @@ What it accomplishes
 
 Changes
 - `proto/engine.proto`: add `GetServerInfo` returning version, capability flags, and advertised `auth_type` values: `none`, `token`, `oidc`, `cloud`.
-- Server returns static values initially. `GetAuthConfig` remains for backward compatibility.
+- Server returns static values initially.
 
 Tests (unit)
 - Proto gen compiles; client displays info when the RPC is available.

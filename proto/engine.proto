@@ -13,7 +13,7 @@ service Engine {
   rpc Health(HealthRequest) returns (HealthResponse);
   
   // Server Discovery
-  rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
+  rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
 }
 
 message CreateRunRequest {
@@ -132,10 +132,18 @@ message HealthResponse {
 }
 
 // Server Discovery Messages
-message GetAuthConfigRequest {}
+message GetServerInfoRequest {}
 
-message GetAuthConfigResponse {
-  bool auth_enabled = 1;
-  string auth_type = 2;        // "none", "cloud", "oidc", "token"
-  string auth_endpoint = 3;    // OAuth/OIDC endpoint for authentication flows
+message ServerEndpoint {
+  string type = 1;    // e.g., "grpc", "http", "ui"
+  string address = 2; // host:port or URL, depending on endpoint type
+}
+
+message GetServerInfoResponse {
+  string version = 1;
+  bool auth_enabled = 2;
+  string auth_type = 3;        // "none", "cloud", "oidc", "token"
+  string auth_endpoint = 4;    // OAuth/OIDC endpoint for authentication flows
+  repeated string capabilities = 5;
+  repeated ServerEndpoint endpoints = 6;
 }

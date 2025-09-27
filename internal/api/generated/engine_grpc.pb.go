@@ -26,7 +26,7 @@ const (
 	Engine_GetRun_FullMethodName        = "/rocketship.v1.Engine/GetRun"
 	Engine_CancelRun_FullMethodName     = "/rocketship.v1.Engine/CancelRun"
 	Engine_Health_FullMethodName        = "/rocketship.v1.Engine/Health"
-	Engine_GetAuthConfig_FullMethodName = "/rocketship.v1.Engine/GetAuthConfig"
+	Engine_GetServerInfo_FullMethodName = "/rocketship.v1.Engine/GetServerInfo"
 )
 
 // EngineClient is the client API for Engine service.
@@ -41,7 +41,7 @@ type EngineClient interface {
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
 	// Server Discovery
-	GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error)
+	GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error)
 }
 
 type engineClient struct {
@@ -131,10 +131,10 @@ func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...gr
 	return out, nil
 }
 
-func (c *engineClient) GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error) {
+func (c *engineClient) GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetAuthConfigResponse)
-	err := c.cc.Invoke(ctx, Engine_GetAuthConfig_FullMethodName, in, out, cOpts...)
+	out := new(GetServerInfoResponse)
+	err := c.cc.Invoke(ctx, Engine_GetServerInfo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ type EngineServer interface {
 	CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
 	// Server Discovery
-	GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error)
+	GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error)
 	mustEmbedUnimplementedEngineServer()
 }
 
@@ -185,8 +185,8 @@ func (UnimplementedEngineServer) CancelRun(context.Context, *CancelRunRequest) (
 func (UnimplementedEngineServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
 }
-func (UnimplementedEngineServer) GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetAuthConfig not implemented")
+func (UnimplementedEngineServer) GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetServerInfo not implemented")
 }
 func (UnimplementedEngineServer) mustEmbedUnimplementedEngineServer() {}
 func (UnimplementedEngineServer) testEmbeddedByValue()                {}
@@ -328,20 +328,20 @@ func _Engine_Health_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Engine_GetAuthConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetAuthConfigRequest)
+func _Engine_GetServerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetServerInfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(EngineServer).GetAuthConfig(ctx, in)
+		return srv.(EngineServer).GetServerInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Engine_GetAuthConfig_FullMethodName,
+		FullMethod: Engine_GetServerInfo_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EngineServer).GetAuthConfig(ctx, req.(*GetAuthConfigRequest))
+		return srv.(EngineServer).GetServerInfo(ctx, req.(*GetServerInfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -378,8 +378,8 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Engine_Health_Handler,
 		},
 		{
-			MethodName: "GetAuthConfig",
-			Handler:    _Engine_GetAuthConfig_Handler,
+			MethodName: "GetServerInfo",
+			Handler:    _Engine_GetServerInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

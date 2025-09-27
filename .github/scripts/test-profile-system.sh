@@ -52,6 +52,50 @@ if ! grep -q "No test runs found." <<<"${LIST_OUTPUT}"; then
 fi
 log "✅ profile-based list executed"
 
+log "Starting local engine for discovery checks"
+rocketship start server --background >/tmp/rocketship-profile-test.log 2>&1
+
+log "Creating local profile for discovery"
+rocketship profile create local grpc://localhost:7700 >/dev/null
+rocketship profile use local >/dev/null
+
+# Give the background engine time to accept connections
+DISCOVERY_OUTPUT=""
+for attempt in {1..10}; do
+  if DISCOVERY_OUTPUT=$(rocketship profile show local 2>&1); then
+    break
+  fi
+  sleep 2
+done
+
+if [ -z "${DISCOVERY_OUTPUT}" ]; then
+  echo "❌ failed to query discovery info from local engine"
+  rocketship stop server >/dev/null 2>&1 || true
+  exit 1
+fi
+if ! grep -q "Server Discovery:" <<<"${DISCOVERY_OUTPUT}"; then
+  echo "❌ discovery section missing from profile show"
+  echo "${DISCOVERY_OUTPUT}"
+  rocketship stop server >/dev/null 2>&1 || true
+  exit 1
+fi
+if ! grep -q "Capabilities: .*discovery.v2" <<<"${DISCOVERY_OUTPUT}"; then
+  echo "❌ discovery capabilities not reported"
+  echo "${DISCOVERY_OUTPUT}"
+  rocketship stop server >/dev/null 2>&1 || true
+  exit 1
+fi
+if ! grep -q "Version:" <<<"${DISCOVERY_OUTPUT}"; then
+  echo "⚠️ discovery response missing version"
+fi
+log "✅ discovery v2 surfaced via profile show"
+
+log "Stopping local engine"
+rocketship stop server >/dev/null 2>&1 || true
+
+rocketship profile use globalbank >/dev/null 2>&1 || true
+rocketship profile delete local >/dev/null 2>&1 || true
+
 log "Testing failure path with unreachable profile"
 rocketship profile create unreachable grpc://127.0.0.1:65530 >/dev/null
 rocketship profile use unreachable >/dev/null
