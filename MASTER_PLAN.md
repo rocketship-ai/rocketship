@@ -238,10 +238,10 @@ Optional E2E (follow‑up)
 
 ## Ingress With OIDC at ALB (For Web) vs gRPC For CLI
 
-Ingress pattern: ALB can enforce OIDC at the edge using annotations (issuer, authorize/token/userinfo endpoints, client secret), maintaining a browser session via `AWSELBAuthSessionCookie`. This works well for web UIs and HTTP routes. However, OIDC at ALB is not compatible with raw gRPC clients (the redirect/302‑based flow breaks gRPC). Therefore:
+Ingress pattern: ALB can enforce OIDC at the edge using annotations (issuer, authorize/token/userinfo endpoints, client secret), maintaining a browser session via `AWSELBAuthSessionCookie`. This works well for web UIs and HTTP routes. However, OIDC at ALB is not compatible with raw gRPC clients (the redirect/302-based flow breaks gRPC). Therefore:
 
 - Use OIDC at ALB for web/HTTP endpoints (future Rocketship web UI, simple status pages).
-- Keep the Engine gRPC ingress separate and protect gRPC via application‑level auth (token or JWT validated by the engine). This is CLI‑friendly and avoids ALB redirect complexity.
+- Keep the Engine gRPC ingress separate and protect gRPC via application-level auth (token or JWT validated by the engine). This is CLI-friendly and avoids ALB redirect complexity.
 
 The chart will ship two presets:
 - `values-grpc.yaml` — gRPC ingress with `alb.ingress.kubernetes.io/backend-protocol-version: GRPC`, service port named `grpc`.
@@ -249,3 +249,18 @@ The chart will ship two presets:
 
 RBAC Note
 - RBAC is out of scope for this epic. Plan to add role/permission enforcement once orgs/users are fully modeled and JWTs are in place (v2).
+
+---
+
+## Post-Epic Naming Alignment (Managed Cloud & Self-Hosted)
+
+When the v1 workstream (PRs 1–8) completes and we begin prepping the managed cloud rollout:
+
+- **Web UI hostnames**
+  - Self-hosted reference environments: migrate the web ingress to become the primary apex host (`globalbank.rocketship.sh`).
+  - Managed cloud environment: serve the UI from `app.rocketship.sh`.
+- **CLI / gRPC hostnames**
+  - Self-hosted reference environments: move the gRPC ingress to `cli.globalbank.rocketship.sh` (profiles and docs must be updated accordingly).
+  - Managed cloud environment: expose the gRPC endpoint at `cli.rocketship.sh`.
+
+This hostname swap is intentionally deferred until after PR 8 so the current validation work stays stable. Capture it as a dedicated follow-up task that updates Helm values, DNS guidance, documentation, and profile examples in one pass.

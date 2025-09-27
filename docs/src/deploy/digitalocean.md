@@ -61,16 +61,17 @@ kubectl exec -n rocketship deploy/temporal-admintools -- \
 
 ## 3. Create the TLS Secret
 
-DigitalOcean expects the key and certificate in PEM format. Convert the ZeroSSL bundle into the standard filenames if necessary:
+Issue a SAN certificate that covers both `globalbank.rocketship.sh` and `app.globalbank.rocketship.sh` (Let's Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
 
 ```bash
-# Combine the server cert and intermediate bundle when provided separately
-cat certificate.crt ca_bundle.crt > fullchain.pem
+# optional: remove the old secret if it exists
+kubectl delete secret globalbank-rocketship-tls -n rocketship 2>/dev/null || true
 
+# create the secret with the new cert/key
 kubectl create secret tls globalbank-rocketship-tls \
-  --cert=fullchain.pem \
-  --key=private.key \
-  --namespace rocketship
+  --namespace rocketship \
+  --cert=/etc/letsencrypt/live/globalbank.rocketship.sh/fullchain.pem \
+  --key=/etc/letsencrypt/live/globalbank.rocketship.sh/privkey.pem
 ```
 
 ## 4. Authenticate the Registry Inside the Cluster
@@ -154,7 +155,7 @@ If you want browser users to authenticate via Auth0/Okta before reaching Rockets
      --namespace rocketship \
      --from-literal=clientID=YOUR_AUTH0_CLIENT_ID \
      --from-literal=clientSecret=YOUR_AUTH0_CLIENT_SECRET \
-     --from-literal=cookieSecret=$(openssl rand -base64 32)
+     --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
    ```
 
 2. **Review `charts/rocketship/values-oidc-web.yaml`:**
@@ -171,7 +172,7 @@ If you want browser users to authenticate via Auth0/Okta before reaching Rockets
      --wait
    ```
 
-4. **Verify the flow:** hitting `https://app.globalbank.rocketship.sh` should redirect to Auth0. After login you should see the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and will use token/device auth once implemented.
+4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and will use token/device auth once implemented.
 
 ## 8. Point DNS at the Load Balancer
 

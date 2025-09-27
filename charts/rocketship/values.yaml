@@ -80,6 +80,8 @@ web:
       port: 4180
     upstreamOverride: ""
     extraArgs:
+      - --http-address=0.0.0.0:{{ .Values.web.oauth2Proxy.service.port }}
+      - --https-address=:0
       - --cookie-secure=true
       - --cookie-samesite=lax
       - --set-authorization-header=true

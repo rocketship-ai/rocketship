@@ -4,7 +4,7 @@
 # - A Kubernetes secret named `oauth2-proxy-credentials` with keys:
 #     clientID          -> OAuth client ID (plain text)
 #     clientSecret      -> OAuth client secret
-#     cookieSecret      -> 32-byte random string, base64 encoded (use `openssl rand -base64 32`)
+#     cookieSecret      -> 32-byte random string, base64 encoded (e.g. `python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`)
 # - The Rocketship engine service will serve HTTP traffic (health/UI) on port 7701
 
 web:
@@ -58,7 +58,7 @@ web:
       - name: OAUTH2_PROXY_REDIRECT_URL
         value: https://app.globalbank.rocketship.sh/oauth2/callback
       - name: OAUTH2_PROXY_OIDC_ISSUER_URL
-        value: https://YOUR_AUTH0_DOMAIN/    # e.g. https://rocketship-demo.us.auth0.com/
+        value: https://dev-0ankenxegmh7xfjm.us.auth0.com/ # e.g. https://rocketship-demo.us.auth0.com/
       - name: OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL
         value: "false"
       - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
@@ -68,4 +68,6 @@ web:
       - name: OAUTH2_PROXY_SET_XAUTHREQUEST
         value: "true"
       - name: OAUTH2_PROXY_FORCE_HTTPS
-        value: "true"
+        value: "false"
+      - name: OAUTH2_PROXY_HTTPS_ADDRESS
+        value: ":0"
