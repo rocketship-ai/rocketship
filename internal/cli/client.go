@@ -177,19 +177,7 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	resp, err := c.client.GetServerInfo(infoCtx, &generated.GetServerInfoRequest{})
 	if err != nil {
 		if s, ok := status.FromError(err); ok && s.Code() == codes.Unimplemented {
-			Logger.Debug("server does not support GetServerInfo, falling back to legacy discovery")
-			legacy, legacyErr := c.client.GetAuthConfig(infoCtx, &generated.GetAuthConfigRequest{})
-			if legacyErr != nil {
-				return nil, fmt.Errorf("failed to get server info: %w", legacyErr)
-			}
-			return &ServerInfo{
-				Version:      "",
-				AuthEnabled:  legacy.AuthEnabled,
-				AuthType:     legacy.AuthType,
-				AuthEndpoint: legacy.AuthEndpoint,
-				Capabilities: nil,
-				Endpoints:    map[string]string{},
-			}, nil
+			return nil, fmt.Errorf("failed to get server info: server does not support discovery.v2")
 		}
 		return nil, fmt.Errorf("failed to get server info: %w", err)
 	}

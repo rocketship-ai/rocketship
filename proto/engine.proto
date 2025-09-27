@@ -14,7 +14,6 @@ service Engine {
   
   // Server Discovery
   rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
-  rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
 }
 
 message CreateRunRequest {
@@ -147,12 +146,4 @@ message GetServerInfoResponse {
   string auth_endpoint = 4;    // OAuth/OIDC endpoint for authentication flows
   repeated string capabilities = 5;
   repeated ServerEndpoint endpoints = 6;
-}
-
-message GetAuthConfigRequest {}
-
-message GetAuthConfigResponse {
-  bool auth_enabled = 1;
-  string auth_type = 2;        // "none", "cloud", "oidc", "token"
-  string auth_endpoint = 3;    // OAuth/OIDC endpoint for authentication flows
 }

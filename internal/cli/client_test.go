@@ -18,11 +18,9 @@ type mockEngineServer struct {
 	generated.UnimplementedEngineServer
 	healthStatus       string
 	runResponse        *generated.CreateRunResponse
-	authResponse       *generated.GetAuthConfigResponse
 	serverInfoResponse *generated.GetServerInfoResponse
 	healthErr          error
 	runErr             error
-	authErr            error
 	serverInfoErr      error
 }
 
@@ -43,13 +41,6 @@ func (m *mockEngineServer) CreateRun(ctx context.Context, req *generated.CreateR
 func (m *mockEngineServer) StreamLogs(req *generated.LogStreamRequest, stream generated.Engine_StreamLogsServer) error {
 	// Simple mock implementation
 	return nil
-}
-
-func (m *mockEngineServer) GetAuthConfig(ctx context.Context, req *generated.GetAuthConfigRequest) (*generated.GetAuthConfigResponse, error) {
-	if m.authErr != nil {
-		return nil, m.authErr
-	}
-	return m.authResponse, nil
 }
 
 func (m *mockEngineServer) GetServerInfo(ctx context.Context, req *generated.GetServerInfoRequest) (*generated.GetServerInfoResponse, error) {
@@ -197,8 +188,6 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 		name               string
 		serverInfoResponse *generated.GetServerInfoResponse
 		serverInfoErr      error
-		authResponse       *generated.GetAuthConfigResponse
-		authErr            error
 		expect             *ServerInfo
 		wantErr            bool
 	}{
@@ -224,31 +213,13 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			},
 		},
 		{
-			name:          "fallback to legacy auth config",
-			serverInfoErr: status.Error(codes.Unimplemented, "nope"),
-			authResponse: &generated.GetAuthConfigResponse{
-				AuthEnabled:  true,
-				AuthType:     "cloud",
-				AuthEndpoint: "https://app.rocketship.sh/auth",
-			},
-			expect: &ServerInfo{
-				Version:      "",
-				AuthEnabled:  true,
-				AuthType:     "cloud",
-				AuthEndpoint: "https://app.rocketship.sh/auth",
-				Capabilities: nil,
-				Endpoints:    map[string]string{},
-			},
-		},
-		{
 			name:          "server info error propagates",
 			serverInfoErr: status.Error(codes.Internal, "boom"),
 			wantErr:       true,
 		},
 		{
-			name:          "legacy fallback error",
+			name:          "unimplemented discovery triggers error",
 			serverInfoErr: status.Error(codes.Unimplemented, "no discovery"),
-			authErr:       status.Error(codes.PermissionDenied, "denied"),
 			wantErr:       true,
 		},
 	}
@@ -259,8 +230,6 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			t.Parallel()
 
 			mock := &mockEngineServer{
-				authResponse:       tt.authResponse,
-				authErr:            tt.authErr,
 				serverInfoResponse: tt.serverInfoResponse,
 				serverInfoErr:      tt.serverInfoErr,
 			}

@@ -220,19 +220,6 @@ func (e *Engine) GetServerInfo(ctx context.Context, _ *generated.GetServerInfoRe
 	}, nil
 }
 
-func (e *Engine) GetAuthConfig(ctx context.Context, _ *generated.GetAuthConfigRequest) (*generated.GetAuthConfigResponse, error) {
-	info, err := e.GetServerInfo(ctx, &generated.GetServerInfoRequest{})
-	if err != nil {
-		return nil, err
-	}
-
-	return &generated.GetAuthConfigResponse{
-		AuthEnabled:  info.AuthEnabled,
-		AuthType:     info.AuthType,
-		AuthEndpoint: info.AuthEndpoint,
-	}, nil
-}
-
 func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
 	slog.Debug("ListRuns called",
 		"project_id", req.ProjectId,

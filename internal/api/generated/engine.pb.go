@@ -1386,102 +1386,6 @@ func (x *GetServerInfoResponse) GetEndpoints() []*ServerEndpoint {
 	return nil
 }
 
-type GetAuthConfigRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetAuthConfigRequest) Reset() {
-	*x = GetAuthConfigRequest{}
-	mi := &file_engine_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetAuthConfigRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetAuthConfigRequest) ProtoMessage() {}
-
-func (x *GetAuthConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetAuthConfigRequest.ProtoReflect.Descriptor instead.
-func (*GetAuthConfigRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{21}
-}
-
-type GetAuthConfigResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AuthEnabled   bool                   `protobuf:"varint,1,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
-	AuthType      string                 `protobuf:"bytes,2,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`             // "none", "cloud", "oidc", "token"
-	AuthEndpoint  string                 `protobuf:"bytes,3,opt,name=auth_endpoint,json=authEndpoint,proto3" json:"auth_endpoint,omitempty"` // OAuth/OIDC endpoint for authentication flows
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetAuthConfigResponse) Reset() {
-	*x = GetAuthConfigResponse{}
-	mi := &file_engine_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetAuthConfigResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetAuthConfigResponse) ProtoMessage() {}
-
-func (x *GetAuthConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetAuthConfigResponse.ProtoReflect.Descriptor instead.
-func (*GetAuthConfigResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *GetAuthConfigResponse) GetAuthEnabled() bool {
-	if x != nil {
-		return x.AuthEnabled
-	}
-	return false
-}
-
-func (x *GetAuthConfigResponse) GetAuthType() string {
-	if x != nil {
-		return x.AuthType
-	}
-	return ""
-}
-
-func (x *GetAuthConfigResponse) GetAuthEndpoint() string {
-	if x != nil {
-		return x.AuthEndpoint
-	}
-	return ""
-}
-
 var File_engine_proto protoreflect.FileDescriptor
 
 const file_engine_proto_rawDesc = "" +
@@ -1607,12 +1511,7 @@ const file_engine_proto_rawDesc = "" +
 	"\tauth_type\x18\x03 \x01(\tR\bauthType\x12#\n" +
 	"\rauth_endpoint\x18\x04 \x01(\tR\fauthEndpoint\x12\"\n" +
 	"\fcapabilities\x18\x05 \x03(\tR\fcapabilities\x12;\n" +
-	"\tendpoints\x18\x06 \x03(\v2\x1d.rocketship.v1.ServerEndpointR\tendpoints\"\x16\n" +
-	"\x14GetAuthConfigRequest\"|\n" +
-	"\x15GetAuthConfigResponse\x12!\n" +
-	"\fauth_enabled\x18\x01 \x01(\bR\vauthEnabled\x12\x1b\n" +
-	"\tauth_type\x18\x02 \x01(\tR\bauthType\x12#\n" +
-	"\rauth_endpoint\x18\x03 \x01(\tR\fauthEndpoint2\xcb\x05\n" +
+	"\tendpoints\x18\x06 \x03(\v2\x1d.rocketship.v1.ServerEndpointR\tendpoints2\xef\x04\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +
@@ -1622,8 +1521,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06GetRun\x12\x1c.rocketship.v1.GetRunRequest\x1a\x1d.rocketship.v1.GetRunResponse\x12N\n" +
 	"\tCancelRun\x12\x1f.rocketship.v1.CancelRunRequest\x1a .rocketship.v1.CancelRunResponse\x12E\n" +
 	"\x06Health\x12\x1c.rocketship.v1.HealthRequest\x1a\x1d.rocketship.v1.HealthResponse\x12Z\n" +
-	"\rGetServerInfo\x12#.rocketship.v1.GetServerInfoRequest\x1a$.rocketship.v1.GetServerInfoResponse\x12Z\n" +
-	"\rGetAuthConfig\x12#.rocketship.v1.GetAuthConfigRequest\x1a$.rocketship.v1.GetAuthConfigResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
+	"\rGetServerInfo\x12#.rocketship.v1.GetServerInfoRequest\x1a$.rocketship.v1.GetServerInfoResponseB9Z7github.com/rocketship/rocketship/internal/api/generatedb\x06proto3"
 
 var (
 	file_engine_proto_rawDescOnce sync.Once
@@ -1637,7 +1535,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 	return file_engine_proto_rawDescData
 }
 
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_engine_proto_goTypes = []any{
 	(*CreateRunRequest)(nil),      // 0: rocketship.v1.CreateRunRequest
 	(*RunContext)(nil),            // 1: rocketship.v1.RunContext
@@ -1660,13 +1558,11 @@ var file_engine_proto_goTypes = []any{
 	(*GetServerInfoRequest)(nil),  // 18: rocketship.v1.GetServerInfoRequest
 	(*ServerEndpoint)(nil),        // 19: rocketship.v1.ServerEndpoint
 	(*GetServerInfoResponse)(nil), // 20: rocketship.v1.GetServerInfoResponse
-	(*GetAuthConfigRequest)(nil),  // 21: rocketship.v1.GetAuthConfigRequest
-	(*GetAuthConfigResponse)(nil), // 22: rocketship.v1.GetAuthConfigResponse
-	nil,                           // 23: rocketship.v1.RunContext.MetadataEntry
+	nil,                           // 21: rocketship.v1.RunContext.MetadataEntry
 }
 var file_engine_proto_depIdxs = []int32{
 	1,  // 0: rocketship.v1.CreateRunRequest.context:type_name -> rocketship.v1.RunContext
-	23, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
+	21, // 1: rocketship.v1.RunContext.metadata:type_name -> rocketship.v1.RunContext.MetadataEntry
 	7,  // 2: rocketship.v1.ListRunsResponse.runs:type_name -> rocketship.v1.RunSummary
 	1,  // 3: rocketship.v1.RunSummary.context:type_name -> rocketship.v1.RunContext
 	10, // 4: rocketship.v1.GetRunResponse.run:type_name -> rocketship.v1.RunDetails
@@ -1681,18 +1577,16 @@ var file_engine_proto_depIdxs = []int32{
 	14, // 13: rocketship.v1.Engine.CancelRun:input_type -> rocketship.v1.CancelRunRequest
 	16, // 14: rocketship.v1.Engine.Health:input_type -> rocketship.v1.HealthRequest
 	18, // 15: rocketship.v1.Engine.GetServerInfo:input_type -> rocketship.v1.GetServerInfoRequest
-	21, // 16: rocketship.v1.Engine.GetAuthConfig:input_type -> rocketship.v1.GetAuthConfigRequest
-	2,  // 17: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
-	4,  // 18: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
-	13, // 19: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
-	6,  // 20: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
-	9,  // 21: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
-	15, // 22: rocketship.v1.Engine.CancelRun:output_type -> rocketship.v1.CancelRunResponse
-	17, // 23: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
-	20, // 24: rocketship.v1.Engine.GetServerInfo:output_type -> rocketship.v1.GetServerInfoResponse
-	22, // 25: rocketship.v1.Engine.GetAuthConfig:output_type -> rocketship.v1.GetAuthConfigResponse
-	17, // [17:26] is the sub-list for method output_type
-	8,  // [8:17] is the sub-list for method input_type
+	2,  // 16: rocketship.v1.Engine.CreateRun:output_type -> rocketship.v1.CreateRunResponse
+	4,  // 17: rocketship.v1.Engine.StreamLogs:output_type -> rocketship.v1.LogLine
+	13, // 18: rocketship.v1.Engine.AddLog:output_type -> rocketship.v1.AddLogResponse
+	6,  // 19: rocketship.v1.Engine.ListRuns:output_type -> rocketship.v1.ListRunsResponse
+	9,  // 20: rocketship.v1.Engine.GetRun:output_type -> rocketship.v1.GetRunResponse
+	15, // 21: rocketship.v1.Engine.CancelRun:output_type -> rocketship.v1.CancelRunResponse
+	17, // 22: rocketship.v1.Engine.Health:output_type -> rocketship.v1.HealthResponse
+	20, // 23: rocketship.v1.Engine.GetServerInfo:output_type -> rocketship.v1.GetServerInfoResponse
+	16, // [16:24] is the sub-list for method output_type
+	8,  // [8:16] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
 	8,  // [8:8] is the sub-list for extension extendee
 	0,  // [0:8] is the sub-list for field type_name
@@ -1709,7 +1603,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
