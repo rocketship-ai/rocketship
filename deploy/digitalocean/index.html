@@ -1457,18 +1457,27 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-point-dns-at-the-load-balancer" class="md-nav__link">
+  <a href="#8-enable-token-authentication-for-grpc-recommended" class="md-nav__link">
     <span class="md-ellipsis">
-      8. Point DNS at the Load Balancer
+      8. Enable Token Authentication for gRPC (recommended)
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-smoke-test-the-endpoint" class="md-nav__link">
+  <a href="#9-point-dns-at-the-load-balancer" class="md-nav__link">
     <span class="md-ellipsis">
-      9. Smoke Test the Endpoint
+      9. Point DNS at the Load Balancer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-smoke-test-the-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Smoke Test the Endpoint
     </span>
   </a>
   
@@ -2199,18 +2208,27 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-point-dns-at-the-load-balancer" class="md-nav__link">
+  <a href="#8-enable-token-authentication-for-grpc-recommended" class="md-nav__link">
     <span class="md-ellipsis">
-      8. Point DNS at the Load Balancer
+      8. Enable Token Authentication for gRPC (recommended)
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-smoke-test-the-endpoint" class="md-nav__link">
+  <a href="#9-point-dns-at-the-load-balancer" class="md-nav__link">
     <span class="md-ellipsis">
-      9. Smoke Test the Endpoint
+      9. Point DNS at the Load Balancer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-smoke-test-the-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      10. Smoke Test the Endpoint
     </span>
   </a>
   
@@ -2398,12 +2416,51 @@
 </code></pre></div></p>
 </li>
 <li>
-<p><strong>Verify the flow:</strong> visit <code>https://app.globalbank.rocketship.sh/</code> in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (<code>/healthz</code>). gRPC traffic remains on <code>globalbank.rocketship.sh:7700</code> and will use token/device auth once implemented.</p>
+<p><strong>Verify the flow:</strong> visit <code>https://app.globalbank.rocketship.sh/</code> in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (<code>/healthz</code>). gRPC traffic remains on <code>globalbank.rocketship.sh:7700</code> and is expected to be protected with bearer tokens (see the next section).</p>
 </li>
 </ol>
-<h2 id="8-point-dns-at-the-load-balancer">8. Point DNS at the Load Balancer</h2>
+<h2 id="8-enable-token-authentication-for-grpc-recommended">8. Enable Token Authentication for gRPC (recommended)</h2>
+<p>Issue a long-lived token for the engine so only authenticated CLI or CI jobs can invoke workflows.</p>
+<ol>
+<li>
+<p><strong>Generate a token and store it in a Kubernetes secret</strong> (replace the example value):
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>rocketship-engine-token<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">token</span><span class="o">=</span><span class="s2">&quot;rst_self_</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Patch your Helm values (or create <code>values-token.yaml</code>) to inject the token:</strong></p>
+</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">engine</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ROCKETSHIP_ENGINE_TOKEN</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">      </span><span class="nt">valueFrom</span><span class="p">:</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">        </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rocketship-engine-token</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
+</code></pre></div>
+<p>Apply it alongside the production values:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>-f<span class="w"> </span>values-token.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span>--wait
+</code></pre></div>
+<ol>
+<li><strong>Configure the CLI</strong> by setting <code>ROCKETSHIP_TOKEN</code> before invoking commands or within your CI secret store:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ROCKETSHIP_TOKEN</span><span class="o">=</span><span class="s2">&quot;rst_self_yourtoken&quot;</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>rocketship<span class="w"> </span>list
+</code></pre></div>
+<p>When the environment variable is absent, the CLI now returns a clear error instructing you to supply the token.</p>
+<blockquote>
+<p>The token lives entirely in Kubernetes secrets and short-lived environment variables; no code changes are required in the chart. Rotate it by updating the secret and re-running the Helm upgrade.</p>
+</blockquote>
+<h2 id="9-point-dns-at-the-load-balancer">9. Point DNS at the Load Balancer</h2>
 <p>Retrieve the ingress address and configure an A record for your domain:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>-n<span class="w"> </span>rocketship
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div>
 <p>For example, the ingress might resolve to <code>104.248.110.90</code>. Create an A record such as:</p>
 <table>
@@ -2421,20 +2478,20 @@
 </tbody>
 </table>
 <p>Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.</p>
-<h2 id="9-smoke-test-the-endpoint">9. Smoke Test the Endpoint</h2>
+<h2 id="10-smoke-test-the-endpoint">10. Smoke Test the Endpoint</h2>
 <p>The Rocketship health endpoint answers gRPC, so an HTTPS request returns <code>415</code> with <code>application/grpc</code>, which confirms end-to-end TLS:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
 </code></pre></div>
 <p>Output snippet:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>&lt; HTTP/2 415
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>&lt; content-type: application/grpc
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>&lt; grpc-status: 3
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>&lt; HTTP/2 415
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>&lt; content-type: application/grpc
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>&lt; grpc-status: 3
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
 </code></pre></div>
 <p>Create and use a profile from the CLI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
 </code></pre></div>
 <p>If you see a <code>connection refused</code> message against <code>127.0.0.1:7700</code>, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.</p>
 <h2 id="10-updating-the-deployment">10. Updating the Deployment</h2>
@@ -2442,8 +2499,8 @@
 <li>Rebuild and push the images with the same tag (or bump the <code>TAG</code>).</li>
 <li>Run <code>helm upgrade rocketship charts/rocketship ...</code> with the updated values.</li>
 <li>Watch rollout status:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div></li>
 </ol>
 <h2 id="11-troubleshooting-tips">11. Troubleshooting Tips</h2>

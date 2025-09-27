@@ -2134,6 +2134,7 @@
 <h2 id="after-deployment">After Deployment</h2>
 <ul>
 <li>Use <code>rocketship profile create</code> and <code>rocketship profile use</code> to store the engine endpoint (<code>grpcs://…</code>) and default to TLS where appropriate.</li>
+<li>Inject a secret token into the engine (<code>ROCKETSHIP_ENGINE_TOKEN</code>) and export the same value as <code>ROCKETSHIP_TOKEN</code> in the CLI/CI environment so gRPC calls are authenticated.</li>
 <li>Run suites with <code>rocketship run --engine</code>. When profiles are active, the CLI resolves the engine address automatically.</li>
 <li>Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).</li>
 </ul>
