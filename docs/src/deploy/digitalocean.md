@@ -174,9 +174,53 @@ If you want browser users to authenticate via Auth0/Okta before reaching Rockets
      --wait
    ```
 
-4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and will use token/device auth once implemented.
+4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and is expected to be protected with bearer tokens (see the next section).
 
-## 8. Point DNS at the Load Balancer
+## 8. Enable Token Authentication for gRPC (recommended)
+
+Issue a long-lived token for the engine so only authenticated CLI or CI jobs can invoke workflows.
+
+1. **Generate a token and store it in a Kubernetes secret** (replace the example value):
+   ```bash
+   kubectl create secret generic rocketship-engine-token \
+     --namespace rocketship \
+     --from-literal=token="rst_self_$(openssl rand -hex 32)"
+   ```
+
+2. **Patch your Helm values (or create `values-token.yaml`) to inject the token:**
+
+   ```yaml
+   engine:
+     env:
+       - name: ROCKETSHIP_ENGINE_TOKEN
+         valueFrom:
+           secretKeyRef:
+             name: rocketship-engine-token
+             key: token
+   ```
+
+   Apply it alongside the production values:
+
+   ```bash
+   helm upgrade --install rocketship charts/rocketship \
+     --namespace rocketship \
+     -f charts/rocketship/values-production.yaml \
+     -f values-token.yaml \
+     --wait
+   ```
+
+3. **Configure the CLI** by setting `ROCKETSHIP_TOKEN` before invoking commands or within your CI secret store:
+
+   ```bash
+   export ROCKETSHIP_TOKEN="rst_self_yourtoken"
+   rocketship list
+   ```
+
+   When the environment variable is absent, the CLI now returns a clear error instructing you to supply the token.
+
+> The token lives entirely in Kubernetes secrets and short-lived environment variables; no code changes are required in the chart. Rotate it by updating the secret and re-running the Helm upgrade.
+
+## 9. Point DNS at the Load Balancer
 
 Retrieve the ingress address and configure an A record for your domain:
 
@@ -192,7 +236,7 @@ For example, the ingress might resolve to `104.248.110.90`. Create an A record s
 
 Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.
 
-## 9. Smoke Test the Endpoint
+## 10. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 

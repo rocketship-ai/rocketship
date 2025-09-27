@@ -96,6 +96,54 @@ rocketship stop server >/dev/null 2>&1 || true
 rocketship profile use globalbank >/dev/null 2>&1 || true
 rocketship profile delete local >/dev/null 2>&1 || true
 
+log "Starting token-protected engine"
+ROCKETSHIP_ENGINE_TOKEN=local-secret rocketship start server --background >/tmp/rocketship-profile-test-token.log 2>&1
+
+log "Creating profile targeting token-protected engine"
+rocketship profile create local-token grpc://localhost:7700 >/dev/null
+rocketship profile use local-token >/dev/null
+
+log "Validating token enforcement"
+set +e
+TOKENLESS_OUTPUT=$(rocketship list 2>&1)
+STATUS=$?
+set -e
+if [ ${STATUS} -eq 0 ]; then
+  echo "❌ expected list to fail without ROCKETSHIP_TOKEN"
+  rocketship stop server >/dev/null 2>&1 || true
+  exit 1
+fi
+if ! grep -q "requires a token" <<<"${TOKENLESS_OUTPUT}"; then
+  echo "❌ missing token guidance in failure output"
+  echo "${TOKENLESS_OUTPUT}"
+  rocketship stop server >/dev/null 2>&1 || true
+  exit 1
+fi
+log "✅ missing token produces helpful error"
+
+log "Listing with ROCKETSHIP_TOKEN provided"
+set +e
+TOKEN_OUTPUT=$(ROCKETSHIP_TOKEN=local-secret rocketship list 2>&1)
+STATUS=$?
+set -e
+if [ ${STATUS} -ne 0 ]; then
+  echo "❌ list failed even with ROCKETSHIP_TOKEN set"
+  echo "${TOKEN_OUTPUT}"
+  rocketship stop server >/dev/null 2>&1 || true
+  exit 1
+fi
+if ! grep -q "No test runs found." <<<"${TOKEN_OUTPUT}"; then
+  echo "⚠️ token-auth list returned unexpected output"
+  echo "${TOKEN_OUTPUT}"
+fi
+log "✅ command succeeds when token supplied"
+
+log "Stopping token-protected engine"
+rocketship stop server >/dev/null 2>&1 || true
+
+rocketship profile use globalbank >/dev/null 2>&1 || true
+rocketship profile delete local-token >/dev/null 2>&1 || true
+
 log "Testing failure path with unreachable profile"
 rocketship profile create unreachable grpc://127.0.0.1:65530 >/dev/null
 rocketship profile use unreachable >/dev/null

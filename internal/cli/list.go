@@ -120,6 +120,9 @@ func runList(cmd *cobra.Command, flags *ListFlags) error {
 	// Call ListRuns
 	resp, err := client.client.ListRuns(ctx, req)
 	if err != nil {
+		if wrapped := translateAuthError("failed to list runs", err); wrapped != nil {
+			return wrapped
+		}
 		return fmt.Errorf("failed to list runs: %w", err)
 	}
 
