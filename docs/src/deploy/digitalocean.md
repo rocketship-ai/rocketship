@@ -220,7 +220,7 @@ Issue a long-lived token for the engine so only authenticated CLI or CI jobs can
 
 > The token lives entirely in Kubernetes secrets and short-lived environment variables; no code changes are required in the chart. Rotate it by updating the secret and re-running the Helm upgrade.
 
-## 9. Point DNS at the Load Balancer
+## 10. Point DNS at the Load Balancer
 
 Retrieve the ingress address and configure an A record for your domain:
 
@@ -236,7 +236,35 @@ For example, the ingress might resolve to `104.248.110.90`. Create an A record s
 
 Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.
 
-## 10. Smoke Test the Endpoint
+## 9. Enable OIDC Authentication for CLI (optional)
+
+If your organisation relies on OIDC and you want individual Rocketship users to authenticate with their own identities, configure the engine with the issuer metadata. The Helm chart exposes `engine.env`, so append entries like:
+
+```yaml
+engine:
+  env:
+    - name: ROCKETSHIP_AUTH_MODE
+      value: oidc
+    - name: ROCKETSHIP_OIDC_ISSUER
+      value: "https://auth.globalbank.rocketship.sh/"
+    - name: ROCKETSHIP_OIDC_CLIENT_ID
+      value: rocketship-cli
+    - name: ROCKETSHIP_OIDC_AUDIENCE
+      value: rocketship-api
+```
+
+When the issuer publishes a discovery document, the engine automatically resolves the JWKS, token, and device-authorization endpoints. If your authority does not expose device flow metadata, provide overrides via `ROCKETSHIP_OIDC_DEVICE_ENDPOINT`, `ROCKETSHIP_OIDC_TOKEN_ENDPOINT`, and `ROCKETSHIP_OIDC_JWKS_URL`.
+
+After deploying, ask users to sign in once with the CLI:
+
+```bash
+rocketship login -p globalbank
+rocketship status            # confirm expiry and identity
+```
+
+The CLI stores access tokens securely and will refresh them as needed when contacting the engine.
+
+## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 

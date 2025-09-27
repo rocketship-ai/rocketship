@@ -146,4 +146,10 @@ message GetServerInfoResponse {
   string auth_endpoint = 4;    // OAuth/OIDC endpoint for authentication flows
   repeated string capabilities = 5;
   repeated ServerEndpoint endpoints = 6;
+  string device_authorization_endpoint = 7;
+  string token_endpoint = 8;
+  string issuer = 9;
+  string audience = 10;
+  repeated string scopes = 11;
+  string client_id = 12;
 }

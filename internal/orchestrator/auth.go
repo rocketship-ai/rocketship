@@ -2,7 +2,6 @@ package orchestrator
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -22,9 +21,6 @@ var authExemptMethods = map[string]struct{}{
 	"/rocketship.v1.Engine/Health":        {},
 	"/rocketship.v1.Engine/GetServerInfo": {},
 }
-
-// NewAuthUnaryInterceptor returns a unary interceptor that enforces token authentication
-// on all RPCs except those listed in authExemptMethods.
 
 func (e *Engine) NewAuthUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -76,66 +72,124 @@ func (e *Engine) authorize(ctx context.Context, fullMethod string) error {
 		return status.Error(codes.Unauthenticated, "empty bearer token")
 	}
 
-	if !e.authConfig.Validate(token) {
-		return status.Error(codes.PermissionDenied, "invalid token")
-	}
-
-	return nil
+	return e.authConfig.Validate(ctx, token)
 }
 
-// authConfig encapsulates token authentication state.
+type authMode int
+
+const (
+	authModeNone authMode = iota
+	authModeToken
+	authModeOIDC
+)
+
+// authConfig encapsulates authentication state for the engine.
 type authConfig struct {
-	enabled bool
-	token   string
+	mode authMode
+
+	// token mode
+	token string
+
+	// oidc mode
+	oidc *oidcProvider
 }
 
-func (a authConfig) Disabled() bool { return !a.enabled }
-
-// Validate returns true if the provided token matches the configured secret.
-func (a authConfig) Validate(token string) bool {
-	return a.enabled && token == a.token
+func (a authConfig) Disabled() bool {
+	return a.mode == authModeNone
 }
 
-// configureServerInfo mutates the GetServerInfo response to reflect auth configuration.
+func (a authConfig) Type() string {
+	switch a.mode {
+	case authModeToken:
+		return "token"
+	case authModeOIDC:
+		return "oidc"
+	default:
+		return "none"
+	}
+}
+
+func (a authConfig) Validate(ctx context.Context, bearer string) error {
+	switch a.mode {
+	case authModeToken:
+		if bearer == a.token {
+			return nil
+		}
+		return status.Error(codes.PermissionDenied, "invalid token")
+	case authModeOIDC:
+		if a.oidc == nil {
+			return status.Error(codes.Internal, "oidc verifier misconfigured")
+		}
+		return a.oidc.Validate(ctx, bearer)
+	default:
+		return nil
+	}
+}
+
 func (a authConfig) configureServerInfo(resp *generated.GetServerInfoResponse) {
 	if resp == nil {
 		return
 	}
-	resp.AuthEnabled = a.enabled
-	if !a.enabled {
+	if a.mode == authModeNone {
 		if resp.AuthType == "" {
 			resp.AuthType = "none"
 		}
+		resp.AuthEnabled = false
 		return
 	}
-	resp.AuthType = "token"
-	if !containsString(resp.Capabilities, "auth.token") {
-		resp.Capabilities = append(resp.Capabilities, "auth.token")
+
+	resp.AuthEnabled = true
+	resp.AuthType = a.Type()
+
+	switch a.mode {
+	case authModeToken:
+		if !containsString(resp.Capabilities, "auth.token") {
+			resp.Capabilities = append(resp.Capabilities, "auth.token")
+		}
+	case authModeOIDC:
+		if !containsString(resp.Capabilities, "auth.oidc") {
+			resp.Capabilities = append(resp.Capabilities, "auth.oidc")
+		}
+		if a.oidc != nil {
+			resp.DeviceAuthorizationEndpoint = a.oidc.DeviceEndpoint
+			resp.TokenEndpoint = a.oidc.TokenEndpoint
+			resp.Issuer = a.oidc.Issuer
+			resp.Audience = a.oidc.Audience
+			resp.ClientId = a.oidc.ClientID
+			resp.Scopes = append([]string(nil), a.oidc.Scopes...)
+			if resp.AuthEndpoint == "" {
+				resp.AuthEndpoint = a.oidc.DeviceEndpoint
+			}
+		}
 	}
 }
 
-// ConfigureToken enables token authentication for the engine.
 func (e *Engine) ConfigureToken(token string) {
 	trimmed := strings.TrimSpace(token)
+	if trimmed == "" {
+		e.authConfig = authConfig{mode: authModeNone}
+		return
+	}
 	e.authConfig = authConfig{
-		enabled: trimmed != "",
-		token:   trimmed,
+		mode:  authModeToken,
+		token: trimmed,
 	}
 }
 
-// MustConfigureToken reads configuration and panics if the supplied token is invalid.
-// Exported for tests and bootstrap wiring.
-func (e *Engine) MustConfigureToken(token string) {
-	trimmed := strings.TrimSpace(token)
-	if token != "" && trimmed == "" {
-		panic(fmt.Sprintf("invalid token (blank): %q", token))
+func (e *Engine) ConfigureOIDC(ctx context.Context, settings OIDCSettings) error {
+	provider, err := newOIDCProvider(ctx, settings)
+	if err != nil {
+		return err
 	}
-	e.ConfigureToken(trimmed)
+	e.authConfig = authConfig{
+		mode: authModeOIDC,
+		oidc: provider,
+	}
+	return nil
 }
 
-// TokenAuthEnabled reports whether token authentication is currently enabled.
-func (e *Engine) TokenAuthEnabled() bool {
-	return !e.authConfig.Disabled()
+func (e *Engine) AuthMode() string {
+	return e.authConfig.Type()
 }
 
 func containsString(values []string, needle string) bool {

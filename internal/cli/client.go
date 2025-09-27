@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/cli/auth"
+	"github.com/rocketship-ai/rocketship/internal/cli/oidc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -24,14 +27,18 @@ type EngineClient struct {
 	conn   *grpc.ClientConn
 }
 
+type tokenSource string
+
 const (
-	tokenEnvVar        = "ROCKETSHIP_TOKEN"
-	authorizationValue = "authorization"
+	tokenEnvVar                    = "ROCKETSHIP_TOKEN"
+	authorizationValue             = "authorization"
+	sourceEnv          tokenSource = "env"
+	sourceStore        tokenSource = "profile"
 )
 
 func NewEngineClient(address string) (*EngineClient, error) {
 	// Decide target and transport credentials (TLS vs insecure)
-	target, creds, err := resolveDialOptions(address)
+	target, creds, profileName, usedProfile, err := resolveDialOptions(address)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +46,10 @@ func NewEngineClient(address string) (*EngineClient, error) {
 	Logger.Debug("connecting to engine", "address", target)
 
 	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
-	if token := resolveAuthToken(); token != "" {
-		Logger.Debug("attaching bearer token from environment")
+	if token, src, err := resolveAuthToken(usedProfile, profileName); err != nil {
+		return nil, err
+	} else if token != "" {
+		Logger.Debug("attaching bearer token", "source", string(src))
 		dialOpts = append(dialOpts,
 			grpc.WithChainUnaryInterceptor(newTokenUnaryInterceptor(token)),
 			grpc.WithChainStreamInterceptor(newTokenStreamInterceptor(token)),
@@ -195,12 +204,18 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 
 // ServerInfo represents server auth capabilities
 type ServerInfo struct {
-	Version      string
-	AuthEnabled  bool
-	AuthType     string // "none", "cloud", "oidc", "token"
-	AuthEndpoint string // OAuth/OIDC endpoint for authentication flows
-	Capabilities []string
-	Endpoints    map[string]string
+	Version        string
+	AuthEnabled    bool
+	AuthType       string // "none", "cloud", "oidc", "token"
+	AuthEndpoint   string // OAuth/OIDC endpoint for authentication flows
+	Capabilities   []string
+	Endpoints      map[string]string
+	DeviceEndpoint string
+	TokenEndpoint  string
+	Issuer         string
+	Audience       string
+	Scopes         []string
+	ClientID       string
 }
 
 // GetServerInfo gets server capabilities and configuration
@@ -217,12 +232,18 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	}
 
 	info := &ServerInfo{
-		Version:      resp.GetVersion(),
-		AuthEnabled:  resp.GetAuthEnabled(),
-		AuthType:     resp.GetAuthType(),
-		AuthEndpoint: resp.GetAuthEndpoint(),
-		Capabilities: append([]string(nil), resp.GetCapabilities()...),
-		Endpoints:    make(map[string]string),
+		Version:        resp.GetVersion(),
+		AuthEnabled:    resp.GetAuthEnabled(),
+		AuthType:       resp.GetAuthType(),
+		AuthEndpoint:   resp.GetAuthEndpoint(),
+		Capabilities:   append([]string(nil), resp.GetCapabilities()...),
+		Endpoints:      make(map[string]string),
+		DeviceEndpoint: resp.GetDeviceAuthorizationEndpoint(),
+		TokenEndpoint:  resp.GetTokenEndpoint(),
+		Issuer:         resp.GetIssuer(),
+		Audience:       resp.GetAudience(),
+		Scopes:         append([]string(nil), resp.GetScopes()...),
+		ClientID:       resp.GetClientId(),
 	}
 
 	for _, ep := range resp.GetEndpoints() {
@@ -240,9 +261,32 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	return info, nil
 }
 
-func resolveAuthToken() string {
+func resolveAuthToken(usedProfile bool, profileName string) (string, tokenSource, error) {
 	token := strings.TrimSpace(os.Getenv(tokenEnvVar))
-	return token
+	if token != "" {
+		return token, sourceEnv, nil
+	}
+	if !usedProfile || profileName == "" {
+		return "", "", nil
+	}
+
+	manager, err := auth.NewManager()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to initialise token manager: %w", err)
+	}
+
+	token, err = manager.AccessToken(profileName, refreshStoredToken)
+	if err != nil {
+		if errors.Is(err, auth.ErrTokenNotFound) {
+			return "", "", nil
+		}
+		return "", "", fmt.Errorf("failed to obtain access token: %w", err)
+	}
+	return token, sourceStore, nil
+}
+
+func refreshStoredToken(current auth.TokenData) (auth.TokenData, error) {
+	return oidc.RefreshAccessToken(context.Background(), current)
 }
 
 func newTokenUnaryInterceptor(token string) grpc.UnaryClientInterceptor {
@@ -286,12 +330,12 @@ func translateAuthError(prefix string, err error) error {
 //    For URL schemes without ports, defaults are 443 for https/grpcs and 7700 for http/grpc.
 // 2) If no explicit address, use the active profile's engine address and TLS settings.
 // 3) Surface an error when profile configuration is unavailable so the caller can prompt the user.
-func resolveDialOptions(explicitAddress string) (string, credentials.TransportCredentials, error) {
+func resolveDialOptions(explicitAddress string) (string, credentials.TransportCredentials, string, bool, error) {
 	// If explicit address provided, use it
 	if explicitAddress != "" {
 		target, useTLS, serverName, err := parseExplicitAddress(explicitAddress)
 		if err != nil {
-			return "", nil, fmt.Errorf("invalid engine address: %w", err)
+			return "", nil, "", false, fmt.Errorf("invalid engine address: %w", err)
 		}
 		if useTLS {
 			tlsCfg := &tls.Config{}
@@ -299,16 +343,16 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
 				tlsCfg.ServerName = serverName
 			}
 			Logger.Debug("TLS enabled for explicit engine address", "server_name", tlsCfg.ServerName)
-			return target, credentials.NewTLS(tlsCfg), nil
+			return target, credentials.NewTLS(tlsCfg), "", false, nil
 		}
 		Logger.Debug("TLS disabled for explicit engine address")
-		return target, insecure.NewCredentials(), nil
+		return target, insecure.NewCredentials(), "", false, nil
 	}
 
 	// No explicit address: use profile if available
 	config, err := LoadConfig()
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to load profile config: %w", err)
+		return "", nil, "", false, fmt.Errorf("failed to load profile config: %w", err)
 	}
 
 	profileName := config.DefaultProfile
@@ -318,11 +362,11 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
 
 	profile, exists := config.GetProfile(profileName)
 	if !exists {
-		return "", nil, fmt.Errorf("active profile %q not found", profileName)
+		return "", nil, profileName, true, fmt.Errorf("active profile %q not found", profileName)
 	}
 
 	if profile.EngineAddress == "" {
-		return "", nil, fmt.Errorf("active profile %q has no engine address configured", profile.Name)
+		return "", nil, profileName, true, fmt.Errorf("active profile %q has no engine address configured", profile.Name)
 	}
 
 	Logger.Debug("Using engine address from active profile", "profile", profile.Name, "address", profile.EngineAddress)
@@ -333,7 +377,7 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
 		if hasScheme(profile.EngineAddress) {
 			u, perr := url.Parse(profile.EngineAddress)
 			if perr != nil {
-				return "", nil, fmt.Errorf("invalid profile engine address: %w", perr)
+				return "", nil, profileName, true, fmt.Errorf("invalid profile engine address: %w", perr)
 			}
 			host = u.Hostname()
 			port = u.Port()
@@ -358,13 +402,13 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
 		target := net.JoinHostPort(host, port)
 		tlsCfg := &tls.Config{ServerName: sni}
 		Logger.Debug("TLS enabled from profile", "address", target, "server_name", sni)
-		return target, credentials.NewTLS(tlsCfg), nil
+		return target, credentials.NewTLS(tlsCfg), profileName, true, nil
 	}
 	// Insecure path
 	if hasScheme(profile.EngineAddress) {
 		u, perr := url.Parse(profile.EngineAddress)
 		if perr != nil {
-			return "", nil, fmt.Errorf("invalid profile engine address: %w", perr)
+			return "", nil, profileName, true, fmt.Errorf("invalid profile engine address: %w", perr)
 		}
 		host := u.Hostname()
 		port := u.Port()
@@ -373,7 +417,7 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
 		}
 		target := net.JoinHostPort(host, port)
 		Logger.Debug("Using insecure transport from profile", "address", target)
-		return target, insecure.NewCredentials(), nil
+		return target, insecure.NewCredentials(), profileName, true, nil
 	}
 	// Bare host[:port]
 	host, port, errSplit := net.SplitHostPort(profile.EngineAddress)
@@ -383,7 +427,7 @@ func resolveDialOptions(explicitAddress string) (string, credentials.TransportCr
 	}
 	target := net.JoinHostPort(host, port)
 	Logger.Debug("Using insecure transport from profile", "address", target)
-	return target, insecure.NewCredentials(), nil
+	return target, insecure.NewCredentials(), profileName, true, nil
 }
 
 // parseExplicitAddress parses an explicit address which may be a URL with a scheme
