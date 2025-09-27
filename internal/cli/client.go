@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -13,6 +15,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -20,6 +23,11 @@ type EngineClient struct {
 	client generated.EngineClient
 	conn   *grpc.ClientConn
 }
+
+const (
+	tokenEnvVar        = "ROCKETSHIP_TOKEN"
+	authorizationValue = "authorization"
+)
 
 func NewEngineClient(address string) (*EngineClient, error) {
 	// Decide target and transport credentials (TLS vs insecure)
@@ -30,7 +38,16 @@ func NewEngineClient(address string) (*EngineClient, error) {
 
 	Logger.Debug("connecting to engine", "address", target)
 
-	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(creds))
+	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	if token := resolveAuthToken(); token != "" {
+		Logger.Debug("attaching bearer token from environment")
+		dialOpts = append(dialOpts,
+			grpc.WithChainUnaryInterceptor(newTokenUnaryInterceptor(token)),
+			grpc.WithChainStreamInterceptor(newTokenStreamInterceptor(token)),
+		)
+	}
+
+	conn, err := grpc.NewClient(target, dialOpts...)
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			return nil, fmt.Errorf("connection timed out - is the engine running at %s?", target)
@@ -74,8 +91,8 @@ func (c *EngineClient) RunTest(ctx context.Context, yamlData []byte) (string, er
 		if err == context.DeadlineExceeded {
 			return "", fmt.Errorf("timed out waiting for engine to respond")
 		}
-		if s, ok := status.FromError(err); ok {
-			return "", fmt.Errorf("failed to create run: %s", s.Message())
+		if wrapped := translateAuthError("failed to create run", err); wrapped != nil {
+			return "", wrapped
 		}
 		return "", fmt.Errorf("failed to create run: %w", err)
 	}
@@ -95,8 +112,8 @@ func (c *EngineClient) RunTestWithContext(ctx context.Context, yamlData []byte, 
 		if err == context.DeadlineExceeded {
 			return "", fmt.Errorf("timed out waiting for engine to respond")
 		}
-		if s, ok := status.FromError(err); ok {
-			return "", fmt.Errorf("failed to create run: %s", s.Message())
+		if wrapped := translateAuthError("failed to create run", err); wrapped != nil {
+			return "", wrapped
 		}
 		return "", fmt.Errorf("failed to create run: %w", err)
 	}
@@ -105,9 +122,16 @@ func (c *EngineClient) RunTestWithContext(ctx context.Context, yamlData []byte, 
 }
 
 func (c *EngineClient) StreamLogs(ctx context.Context, runID string) (generated.Engine_StreamLogsClient, error) {
-	return c.client.StreamLogs(ctx, &generated.LogStreamRequest{
+	stream, err := c.client.StreamLogs(ctx, &generated.LogStreamRequest{
 		RunId: runID,
 	})
+	if err != nil {
+		if wrapped := translateAuthError("failed to stream logs", err); wrapped != nil {
+			return nil, wrapped
+		}
+		return nil, fmt.Errorf("failed to stream logs: %w", err)
+	}
+	return stream, nil
 }
 
 func (c *EngineClient) AddLog(ctx context.Context, runID, workflowID, message, color string, bold bool) error {
@@ -118,6 +142,11 @@ func (c *EngineClient) AddLog(ctx context.Context, runID, workflowID, message, c
 		Color:      color,
 		Bold:       bold,
 	})
+	if err != nil {
+		if wrapped := translateAuthError("failed to add log", err); wrapped != nil {
+			return wrapped
+		}
+	}
 	return err
 }
 
@@ -131,6 +160,11 @@ func (c *EngineClient) AddLogWithContext(ctx context.Context, runID, workflowID,
 		TestName:   testName,
 		StepName:   stepName,
 	})
+	if err != nil {
+		if wrapped := translateAuthError("failed to add log", err); wrapped != nil {
+			return wrapped
+		}
+	}
 	return err
 }
 
@@ -145,8 +179,8 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 		if err == context.DeadlineExceeded {
 			return fmt.Errorf("timed out waiting for engine to cancel run")
 		}
-		if s, ok := status.FromError(err); ok {
-			return fmt.Errorf("failed to cancel run: %s", s.Message())
+		if wrapped := translateAuthError("failed to cancel run", err); wrapped != nil {
+			return wrapped
 		}
 		return fmt.Errorf("failed to cancel run: %w", err)
 	}
@@ -204,6 +238,44 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	}
 
 	return info, nil
+}
+
+func resolveAuthToken() string {
+	token := strings.TrimSpace(os.Getenv(tokenEnvVar))
+	return token
+}
+
+func newTokenUnaryInterceptor(token string) grpc.UnaryClientInterceptor {
+	value := fmt.Sprintf("Bearer %s", token)
+	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		ctx = metadata.AppendToOutgoingContext(ctx, authorizationValue, value)
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
+}
+
+func newTokenStreamInterceptor(token string) grpc.StreamClientInterceptor {
+	value := fmt.Sprintf("Bearer %s", token)
+	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		ctx = metadata.AppendToOutgoingContext(ctx, authorizationValue, value)
+		return streamer(ctx, desc, cc, method, opts...)
+	}
+}
+
+func translateAuthError(prefix string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if s, ok := status.FromError(err); ok {
+		switch s.Code() {
+		case codes.Unauthenticated:
+			return fmt.Errorf("%s: engine requires a token (set %s or update your profile)", prefix, tokenEnvVar)
+		case codes.PermissionDenied:
+			return fmt.Errorf("%s: provided token was rejected (%s)", prefix, s.Message())
+		default:
+			return fmt.Errorf("%s: %s", prefix, s.Message())
+		}
+	}
+	return fmt.Errorf("%s: %w", prefix, err)
 }
 
 // --- Dial resolution helpers ---

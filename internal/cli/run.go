@@ -309,6 +309,9 @@ func displayRecentRuns(client *EngineClient) error {
 
 	resp, err := client.client.ListRuns(ctx, req)
 	if err != nil {
+		if wrapped := translateAuthError("failed to list recent runs", err); wrapped != nil {
+			return wrapped
+		}
 		return fmt.Errorf("failed to list recent runs: %w", err)
 	}
 

@@ -211,13 +211,16 @@ func (e *Engine) GetServerInfo(ctx context.Context, _ *generated.GetServerInfoRe
 		version = "dev"
 	}
 
-	return &generated.GetServerInfoResponse{
+	resp := &generated.GetServerInfoResponse{
 		Version:      version,
 		AuthEnabled:  false,
 		AuthType:     "none",
 		AuthEndpoint: "",
 		Capabilities: []string{"discovery.v2"},
-	}, nil
+	}
+
+	e.authConfig.configureServerInfo(resp)
+	return resp, nil
 }
 
 func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {

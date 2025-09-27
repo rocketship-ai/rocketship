@@ -3,9 +3,11 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/cli"
@@ -42,6 +44,16 @@ func main() {
 
 	logger.Debug("creating engine orchestrator")
 	engine := orchestrator.NewEngine(c)
+
+	token, err := loadEngineToken()
+	if err != nil {
+		logger.Error("failed to load token", "error", err)
+		os.Exit(1)
+	}
+	engine.MustConfigureToken(token)
+	if engine.TokenAuthEnabled() {
+		logger.Info("token authentication enabled")
+	}
 	startHealthServer()
 	startGRPCServer(engine)
 }
@@ -63,7 +75,7 @@ func newHealthMux() http.Handler {
 	return mux
 }
 
-func startGRPCServer(engine generated.EngineServer) {
+func startGRPCServer(engine *orchestrator.Engine) {
 	logger := cli.Logger
 
 	logger.Debug("starting grpc server", "port", ":7700")
@@ -73,7 +85,10 @@ func startGRPCServer(engine generated.EngineServer) {
 		os.Exit(1)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(engine.NewAuthUnaryInterceptor()),
+		grpc.ChainStreamInterceptor(engine.NewAuthStreamInterceptor()),
+	)
 	generated.RegisterEngineServer(grpcServer, engine)
 
 	logger.Info("grpc server listening", "port", ":7700")
@@ -81,6 +96,23 @@ func startGRPCServer(engine generated.EngineServer) {
 		logger.Error("failed to serve grpc", "error", err)
 		os.Exit(1)
 	}
+}
+
+func loadEngineToken() (string, error) {
+	if path := strings.TrimSpace(os.Getenv("ROCKETSHIP_ENGINE_TOKEN_FILE")); path != "" {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", fmt.Errorf("failed to read ROCKETSHIP_ENGINE_TOKEN_FILE: %w", err)
+		}
+		token := strings.TrimSpace(string(data))
+		if token == "" {
+			return "", fmt.Errorf("ROCKETSHIP_ENGINE_TOKEN_FILE %q is empty", path)
+		}
+		return token, nil
+	}
+
+	token := strings.TrimSpace(os.Getenv("ROCKETSHIP_ENGINE_TOKEN"))
+	return token, nil
 }
 
 func startHealthServer() {

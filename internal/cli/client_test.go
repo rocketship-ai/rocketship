@@ -2,14 +2,17 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -22,6 +25,7 @@ type mockEngineServer struct {
 	healthErr          error
 	runErr             error
 	serverInfoErr      error
+	authHeaders        []string
 }
 
 func (m *mockEngineServer) Health(ctx context.Context, req *generated.HealthRequest) (*generated.HealthResponse, error) {
@@ -32,6 +36,11 @@ func (m *mockEngineServer) Health(ctx context.Context, req *generated.HealthRequ
 }
 
 func (m *mockEngineServer) CreateRun(ctx context.Context, req *generated.CreateRunRequest) (*generated.CreateRunResponse, error) {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		m.authHeaders = append([]string(nil), md.Get("authorization")...)
+	} else {
+		m.authHeaders = nil
+	}
 	if m.runErr != nil {
 		return nil, m.runErr
 	}
@@ -363,6 +372,61 @@ func TestEngineClient_RunTest(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestEngineClient_AttachesBearerToken(t *testing.T) {
+	// Do not run in parallel to keep environment scoped to this test lifecycle
+	InitLogging()
+
+	mock := &mockEngineServer{
+		runResponse: &generated.CreateRunResponse{RunId: "abc"},
+	}
+	addr, cleanup := setupMockServer(t, mock)
+	defer cleanup()
+
+	// Give server time to start
+	time.Sleep(100 * time.Millisecond)
+
+	t.Setenv(tokenEnvVar, "secret123")
+
+	client, err := NewEngineClient(addr)
+	if err != nil {
+		t.Fatalf("NewEngineClient failed: %v", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	if _, err := client.RunTest(context.Background(), []byte("name: test")); err != nil {
+		t.Fatalf("RunTest failed: %v", err)
+	}
+
+	if len(mock.authHeaders) == 0 {
+		t.Fatal("expected authorization header to be captured")
+	}
+	if got, want := mock.authHeaders[0], "Bearer secret123"; got != want {
+		t.Fatalf("authorization header mismatch: got %q, want %q", got, want)
+	}
+}
+
+func TestTranslateAuthError(t *testing.T) {
+	unauth := status.Error(codes.Unauthenticated, "missing metadata")
+	if err := translateAuthError("failed op", unauth); err == nil || !strings.Contains(err.Error(), "requires a token") {
+		t.Fatalf("expected token guidance, got %v", err)
+	}
+
+	denied := status.Error(codes.PermissionDenied, "invalid token")
+	if err := translateAuthError("failed op", denied); err == nil || !strings.Contains(err.Error(), "rejected") || !strings.Contains(err.Error(), "invalid token") {
+		t.Fatalf("expected rejection message with detail, got %v", err)
+	}
+
+	other := status.Error(codes.InvalidArgument, "bad input")
+	if err := translateAuthError("failed op", other); err == nil || !strings.Contains(err.Error(), "bad input") {
+		t.Fatalf("expected passthrough message, got %v", err)
+	}
+
+	generic := errors.New("boom")
+	if err := translateAuthError("failed op", generic); err == nil || !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("expected wrapped generic error, got %v", err)
 	}
 }
 

@@ -10,9 +10,10 @@ import (
 
 type Engine struct {
 	generated.UnimplementedEngineServer
-	temporal client.Client
-	runs     map[string]*RunInfo
-	mu       sync.RWMutex
+	temporal   client.Client
+	runs       map[string]*RunInfo
+	mu         sync.RWMutex
+	authConfig authConfig
 }
 type RunInfo struct {
 	ID        string

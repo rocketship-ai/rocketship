@@ -27,6 +27,7 @@ Both Rocketship services require the Temporal frontend host and namespace; every
 ## After Deployment
 
 - Use `rocketship profile create` and `rocketship profile use` to store the engine endpoint (`grpcs://…`) and default to TLS where appropriate.
+- Inject a secret token into the engine (`ROCKETSHIP_ENGINE_TOKEN`) and export the same value as `ROCKETSHIP_TOKEN` in the CLI/CI environment so gRPC calls are authenticated.
 - Run suites with `rocketship run --engine`. When profiles are active, the CLI resolves the engine address automatically.
 - Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).
 

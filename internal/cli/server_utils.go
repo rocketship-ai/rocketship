@@ -144,7 +144,8 @@ func StartServer(config *ServerConfig, pm *processManager) error {
 	// Start the engine from embedded binary if not already running
 	if !pm.IsComponentRunning(Engine) {
 		Logger.Debug("starting Rocketship engine")
-		env := []string{"TEMPORAL_HOST=localhost:7233"}
+		env := os.Environ()
+		env = append(env, "TEMPORAL_HOST=localhost:7233")
 		if logLevel := os.Getenv("ROCKETSHIP_LOG"); logLevel != "" {
 			env = append(env, "ROCKETSHIP_LOG="+logLevel)
 		}

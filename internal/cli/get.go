@@ -83,6 +83,9 @@ func runGet(cmd *cobra.Command, runID string, flags *GetFlags) error {
 		RunId: runID,
 	})
 	if err != nil {
+		if wrapped := translateAuthError("failed to get run", err); wrapped != nil {
+			return wrapped
+		}
 		return fmt.Errorf("failed to get run: %w", err)
 	}
 
