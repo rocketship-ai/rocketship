@@ -40,3 +40,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "rocketship.worker.fullname" -}}
 {{- printf "%s-worker" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "rocketship.webProxy.fullname" -}}
+{{- printf "%s-web-oauth2-proxy" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
