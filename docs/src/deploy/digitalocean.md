@@ -238,22 +238,27 @@ Propagation is usually near-immediate within DigitalOcean DNS but may take longe
 
 ## 9. Enable OIDC Authentication for CLI (optional)
 
-If your organisation relies on OIDC and you want individual Rocketship users to authenticate with their own identities, configure the engine with the issuer metadata. The Helm chart exposes `engine.env`, so append entries like:
+The Helm chart now ships a turn-key configuration that enables both the UI oauth2-proxy and the engine’s gRPC JWT validation. To use it with Auth0 (or a similar IdP), provision two clients and an API:
 
-```yaml
-engine:
-  env:
-    - name: ROCKETSHIP_AUTH_MODE
-      value: oidc
-    - name: ROCKETSHIP_OIDC_ISSUER
-      value: "https://auth.globalbank.rocketship.sh/"
-    - name: ROCKETSHIP_OIDC_CLIENT_ID
-      value: rocketship-cli
-    - name: ROCKETSHIP_OIDC_AUDIENCE
-      value: rocketship-api
+1. **Create a custom API** (`Applications → APIs → Create API`). Any URL-style identifier works (e.g. `https://rocketship-engine`). Enable **Allow Offline Access** so the CLI can request refresh tokens.
+2. **Create or clone a Native application** for the CLI. Under *Advanced Settings → Grant Types* enable **Device Authorization** (Auth0 shows this only for Native apps) and **Refresh Token**. Then open the API you created in step 1, switch to **Machine to Machine Applications**, and authorise the Native client for the scopes you need (`openid profile email offline_access` etc.). Note the client ID.
+3. **Keep your existing Regular Web Application** (or oauth2-proxy client) for the UI. Its client ID/secret remain in the `oauth2-proxy-credentials` secret.
+
+With those pieces in place, edit `charts/rocketship/values-oidc-web.yaml` so `auth.oidc.*` matches your tenant (issuer, native client ID, audience/API identifier, and—if your IdP doesn’t expose discovery—explicit device/token/JWKS endpoints). Then deploy with the one-line command:
+
+```bash
+helm upgrade --install rocketship charts/rocketship \
+  --namespace rocketship \
+  -f charts/rocketship/values-production.yaml \
+  -f charts/rocketship/values-oidc-web.yaml \
+  --set engine.image.repository=$REGISTRY/rocketship-engine \
+  --set engine.image.tag=$TAG \
+  --set worker.image.repository=$REGISTRY/rocketship-worker \
+  --set worker.image.tag=$TAG \
+  --wait
 ```
 
-When the issuer publishes a discovery document, the engine automatically resolves the JWKS, token, and device-authorization endpoints. If your authority does not expose device flow metadata, provide overrides via `ROCKETSHIP_OIDC_DEVICE_ENDPOINT`, `ROCKETSHIP_OIDC_TOKEN_ENDPOINT`, and `ROCKETSHIP_OIDC_JWKS_URL`.
+After rollout, each developer runs `rocketship login` once (device flow) and the CLI will attach validated JWTs to every gRPC call. If your IdP lacks discovery metadata, override `auth.oidc.deviceEndpoint`, `auth.oidc.tokenEndpoint`, and `auth.oidc.jwksURL` in the values file or via `--set` flags.
 
 After deploying, ask users to sign in once with the CLI:
 

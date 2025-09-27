@@ -43,6 +43,42 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
+            {{- if .Values.auth.oidc.enabled }}
+            - name: ROCKETSHIP_AUTH_MODE
+              value: "oidc"
+            {{- if .Values.auth.oidc.issuer }}
+            - name: ROCKETSHIP_OIDC_ISSUER
+              value: {{ .Values.auth.oidc.issuer | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.clientID }}
+            - name: ROCKETSHIP_OIDC_CLIENT_ID
+              value: {{ .Values.auth.oidc.clientID | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.audience }}
+            - name: ROCKETSHIP_OIDC_AUDIENCE
+              value: {{ .Values.auth.oidc.audience | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.tokenEndpoint }}
+            - name: ROCKETSHIP_OIDC_TOKEN_ENDPOINT
+              value: {{ .Values.auth.oidc.tokenEndpoint | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.deviceEndpoint }}
+            - name: ROCKETSHIP_OIDC_DEVICE_ENDPOINT
+              value: {{ .Values.auth.oidc.deviceEndpoint | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.jwksURL }}
+            - name: ROCKETSHIP_OIDC_JWKS_URL
+              value: {{ .Values.auth.oidc.jwksURL | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.scopes }}
+            - name: ROCKETSHIP_OIDC_SCOPES
+              value: {{ join " " .Values.auth.oidc.scopes | quote }}
+            {{- end }}
+            {{- if .Values.auth.oidc.allowedAlgorithms }}
+            - name: ROCKETSHIP_OIDC_ALLOWED_ALGS
+              value: {{ join "," .Values.auth.oidc.allowedAlgorithms | quote }}
+            {{- end }}
+            {{- end }}
           ports:
             - name: grpc
               containerPort: {{ .Values.engine.service.grpcPort }}

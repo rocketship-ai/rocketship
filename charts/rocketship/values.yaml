@@ -20,6 +20,18 @@ temporal:
   host: "temporal-frontend.rocketship:7233"
   namespace: "default"
 
+auth:
+  oidc:
+    enabled: false
+    issuer: ""
+    clientID: ""
+    audience: ""
+    tokenEndpoint: ""
+    deviceEndpoint: ""
+    jwksURL: ""
+    scopes: []
+    allowedAlgorithms: []
+
 engine:
   replicaCount: 1
   image:

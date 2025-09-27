@@ -71,3 +71,19 @@ web:
         value: "false"
       - name: OAUTH2_PROXY_HTTPS_ADDRESS
         value: ":0"
+
+auth:
+  oidc:
+    enabled: true
+    issuer: https://dev-0ankenxegmh7xfjm.us.auth0.com/
+    clientID: rocketship-cli
+    tokenEndpoint: https://dev-0ankenxegmh7xfjm.us.auth0.com/oauth/token
+    deviceEndpoint: https://dev-0ankenxegmh7xfjm.us.auth0.com/oauth/device/code
+    jwksURL: https://dev-0ankenxegmh7xfjm.us.auth0.com/.well-known/jwks.json
+    scopes:
+      - openid
+      - profile
+      - email
+      - offline_access
+    allowedAlgorithms:
+      - RS256
