@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -59,10 +62,10 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		urlStr := args[1]
-		
+
 		team, _ := cmd.Flags().GetString("team")
 		port, _ := cmd.Flags().GetInt("port")
-		
+
 		return runProfileCreate(name, urlStr, team, port)
 	},
 }
@@ -103,7 +106,6 @@ var profileShowCmd = &cobra.Command{
 	},
 }
 
-
 func init() {
 	// Add profile subcommands
 	profileCmd.AddCommand(profileListCmd)
@@ -111,33 +113,32 @@ func init() {
 	profileCmd.AddCommand(profileDeleteCmd)
 	profileCmd.AddCommand(profileUseCmd)
 	profileCmd.AddCommand(profileShowCmd)
-	
+
 	// Add flags
 	profileCreateCmd.Flags().String("team", "", "Associate profile with a specific team")
 	profileCreateCmd.Flags().Int("port", 0, "Override the port number")
-	
-}
 
+}
 
 func runProfileList() error {
 	config, err := LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	allProfiles := config.ListAllProfiles()
-	
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	if _, err := fmt.Fprintln(w, "PROFILE\tSTATUS\tENGINE ADDRESS\tTLS\tTEAM"); err != nil {
 		return fmt.Errorf("failed to write header: %w", err)
 	}
-	
+
 	for name, profile := range allProfiles {
 		status := ""
 		if name == config.DefaultProfile {
 			status = "*"
 		}
-		
+
 		tlsStatus := "disabled"
 		if profile.TLS.Enabled {
 			tlsStatus = "enabled"
@@ -145,17 +146,17 @@ func runProfileList() error {
 				tlsStatus += fmt.Sprintf(" (%s)", profile.TLS.Domain)
 			}
 		}
-		
+
 		team := ""
 		if profile.TeamContext != nil {
 			team = profile.TeamContext.TeamName
 		}
-		
+
 		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", name, status, profile.EngineAddress, tlsStatus, team); err != nil {
 			return fmt.Errorf("failed to write profile row: %w", err)
 		}
 	}
-	
+
 	if err := w.Flush(); err != nil {
 		return fmt.Errorf("failed to flush output: %w", err)
 	}
@@ -167,25 +168,25 @@ func runProfileCreate(name, urlStr, team string, port int) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	profile, err := createProfileFromURL(name, urlStr, port)
 	if err != nil {
 		return err
 	}
-	
+
 	// Add team context if specified
 	if team != "" {
 		profile.TeamContext = &TeamContext{
 			TeamName: team,
 		}
 	}
-	
+
 	config.AddProfile(profile)
-	
+
 	if err := config.SaveConfig(); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
-	
+
 	fmt.Printf("✅ Created profile '%s'\n", name)
 	fmt.Printf("   Engine: %s\n", profile.EngineAddress)
 	if profile.TLS.Enabled {
@@ -194,7 +195,7 @@ func runProfileCreate(name, urlStr, team string, port int) error {
 	if team != "" {
 		fmt.Printf("   Team: %s\n", team)
 	}
-	
+
 	return nil
 }
 
@@ -203,15 +204,15 @@ func runProfileDelete(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	if err := config.DeleteProfile(name); err != nil {
 		return err
 	}
-	
+
 	if err := config.SaveConfig(); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
-	
+
 	fmt.Printf("✅ Deleted profile '%s'\n", name)
 	return nil
 }
@@ -221,22 +222,22 @@ func runProfileUse(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	if err := config.SetDefaultProfile(name); err != nil {
 		return err
 	}
-	
+
 	if err := config.SaveConfig(); err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
-	
+
 	profile, _ := config.GetProfile(name)
 	fmt.Printf("✅ Now using profile '%s'\n", name)
 	fmt.Printf("   Engine: %s\n", profile.EngineAddress)
 	if profile.TLS.Enabled {
 		fmt.Printf("   TLS: enabled (%s)\n", profile.TLS.Domain)
 	}
-	
+
 	return nil
 }
 
@@ -245,19 +246,19 @@ func runProfileShow(name string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	profile, exists := config.GetProfile(name)
 	if !exists {
 		return fmt.Errorf("profile '%s' not found", name)
 	}
-	
+
 	fmt.Printf("Profile: %s", profile.Name)
 	if profile.Name == config.DefaultProfile {
 		fmt.Printf(" (default)")
 	}
 	fmt.Println()
 	fmt.Printf("Engine Address: %s\n", profile.EngineAddress)
-	
+
 	if profile.TLS.Enabled {
 		fmt.Printf("TLS: enabled\n")
 		if profile.TLS.Domain != "" {
@@ -266,12 +267,12 @@ func runProfileShow(name string) error {
 	} else {
 		fmt.Printf("TLS: disabled\n")
 	}
-	
+
 	if profile.Auth.Issuer != "" {
 		fmt.Printf("Auth Issuer: %s\n", profile.Auth.Issuer)
 		fmt.Printf("Auth Client ID: %s\n", profile.Auth.ClientID)
 	}
-	
+
 	if profile.TeamContext != nil {
 		fmt.Printf("Team: %s", profile.TeamContext.TeamName)
 		if profile.TeamContext.TeamID != "" {
@@ -279,17 +280,85 @@ func runProfileShow(name string) error {
 		}
 		fmt.Println()
 	}
-	
+
 	if len(profile.Environment) > 0 {
 		fmt.Println("Environment Variables:")
 		for key, value := range profile.Environment {
 			fmt.Printf("  %s=%s\n", key, value)
 		}
 	}
-	
+
+	printServerDiscovery(profile)
+
 	return nil
 }
 
+func printServerDiscovery(profile Profile) {
+	if profile.EngineAddress == "" {
+		fmt.Println("Server Discovery: engine address not configured")
+		return
+	}
+
+	scheme := "grpc"
+	if profile.TLS.Enabled {
+		scheme = "grpcs"
+	}
+
+	client, err := NewEngineClient(fmt.Sprintf("%s://%s", scheme, profile.EngineAddress))
+	if err != nil {
+		fmt.Printf("Server Discovery: unreachable (%v)\n", err)
+		return
+	}
+	defer func() {
+		if cerr := client.Close(); cerr != nil {
+			Logger.Debug("failed to close discovery client", "error", cerr)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	info, err := client.GetServerInfo(ctx)
+	if err != nil {
+		fmt.Printf("Server Discovery: failed (%v)\n", err)
+		return
+	}
+
+	fmt.Println("Server Discovery:")
+	if info.Version != "" {
+		fmt.Printf("  Version: %s\n", info.Version)
+	}
+
+	authStatus := "disabled"
+	if info.AuthEnabled {
+		authStatus = "enabled"
+	}
+	if info.AuthType != "" {
+		authStatus = fmt.Sprintf("%s (%s)", authStatus, info.AuthType)
+	}
+	fmt.Printf("  Auth: %s\n", authStatus)
+	if info.AuthEndpoint != "" {
+		fmt.Printf("  Auth Endpoint: %s\n", info.AuthEndpoint)
+	}
+
+	if len(info.Capabilities) > 0 {
+		caps := append([]string(nil), info.Capabilities...)
+		sort.Strings(caps)
+		fmt.Printf("  Capabilities: %s\n", strings.Join(caps, ", "))
+	}
+
+	if len(info.Endpoints) > 0 {
+		keys := make([]string, 0, len(info.Endpoints))
+		for key := range info.Endpoints {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		fmt.Println("  Endpoints:")
+		for _, key := range keys {
+			fmt.Printf("    %s: %s\n", key, info.Endpoints[key])
+		}
+	}
+}
 
 func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error) {
 	// Handle raw host:port format (e.g., localhost:12100)
@@ -297,43 +366,43 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 		// Add http:// scheme for parsing
 		urlStr = "http://" + urlStr
 	}
-	
-    parsedURL, err := url.Parse(urlStr)
+
+	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return Profile{}, fmt.Errorf("invalid URL: %w", err)
 	}
-	
-    // Determine TLS settings from scheme
-    var tlsEnabled bool
-    switch strings.ToLower(parsedURL.Scheme) {
-    case "https", "grpcs":
-        tlsEnabled = true
-    case "http", "grpc":
-        tlsEnabled = false
-    default:
-        tlsEnabled = false
-    }
-	
+
+	// Determine TLS settings from scheme
+	var tlsEnabled bool
+	switch strings.ToLower(parsedURL.Scheme) {
+	case "https", "grpcs":
+		tlsEnabled = true
+	case "http", "grpc":
+		tlsEnabled = false
+	default:
+		tlsEnabled = false
+	}
+
 	// Build engine address
 	host := parsedURL.Hostname()
 	port := parsedURL.Port()
-	
+
 	// Use port override if provided
 	if portOverride > 0 {
 		port = fmt.Sprintf("%d", portOverride)
 	}
-	
+
 	// Default ports
-    if port == "" {
-        if tlsEnabled {
-            port = "443"
-        } else {
-            port = "7700"
-        }
-    }
-	
+	if port == "" {
+		if tlsEnabled {
+			port = "443"
+		} else {
+			port = "7700"
+		}
+	}
+
 	engineAddress := fmt.Sprintf("%s:%s", host, port)
-	
+
 	profile := Profile{
 		Name:          name,
 		EngineAddress: engineAddress,
@@ -343,7 +412,7 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 		},
 		Environment: make(map[string]string),
 	}
-	
+
 	// Set auth config for known cloud domains
 	if host == "app.rocketship.sh" {
 		profile.Auth = AuthProfile{
@@ -351,10 +420,9 @@ func createProfileFromURL(name, urlStr string, portOverride int) (Profile, error
 			ClientID: "rocketship-cloud-cli",
 		}
 	}
-	
+
 	// Note: Authentication configuration will be auto-detected on first use
 	// The auth config is queried from the server when needed, not during profile creation
-	
+
 	return profile, nil
 }
-

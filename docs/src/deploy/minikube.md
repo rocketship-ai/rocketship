@@ -85,6 +85,7 @@ If you prefer to perform the steps yourself:
    helm repo add temporal https://go.temporal.io/helm-charts
    helm repo update
    helm install temporal temporal/temporal \
+     --version 0.66.0 \
      --namespace rocketship --create-namespace \
      --set server.replicaCount=1 \
      --set cassandra.config.cluster_size=1 \
