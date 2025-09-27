@@ -26,6 +26,7 @@ const (
 	Engine_GetRun_FullMethodName        = "/rocketship.v1.Engine/GetRun"
 	Engine_CancelRun_FullMethodName     = "/rocketship.v1.Engine/CancelRun"
 	Engine_Health_FullMethodName        = "/rocketship.v1.Engine/Health"
+	Engine_GetServerInfo_FullMethodName = "/rocketship.v1.Engine/GetServerInfo"
 	Engine_GetAuthConfig_FullMethodName = "/rocketship.v1.Engine/GetAuthConfig"
 )
 
@@ -41,6 +42,7 @@ type EngineClient interface {
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
 	// Server Discovery
+	GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error)
 	GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error)
 }
 
@@ -131,6 +133,16 @@ func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...gr
 	return out, nil
 }
 
+func (c *engineClient) GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetServerInfoResponse)
+	err := c.cc.Invoke(ctx, Engine_GetServerInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *engineClient) GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAuthConfigResponse)
@@ -153,6 +165,7 @@ type EngineServer interface {
 	CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
 	// Server Discovery
+	GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error)
 	GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error)
 	mustEmbedUnimplementedEngineServer()
 }
@@ -184,6 +197,9 @@ func (UnimplementedEngineServer) CancelRun(context.Context, *CancelRunRequest) (
 }
 func (UnimplementedEngineServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
+}
+func (UnimplementedEngineServer) GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetServerInfo not implemented")
 }
 func (UnimplementedEngineServer) GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAuthConfig not implemented")
@@ -328,6 +344,24 @@ func _Engine_Health_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Engine_GetServerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetServerInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).GetServerInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_GetServerInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).GetServerInfo(ctx, req.(*GetServerInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Engine_GetAuthConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetAuthConfigRequest)
 	if err := dec(in); err != nil {
@@ -376,6 +410,10 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Health",
 			Handler:    _Engine_Health_Handler,
+		},
+		{
+			MethodName: "GetServerInfo",
+			Handler:    _Engine_GetServerInfo_Handler,
 		},
 		{
 			MethodName: "GetAuthConfig",

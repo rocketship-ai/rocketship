@@ -28,6 +28,7 @@ kubectl config set-context --current --namespace=rocketship
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
 helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --version 4.13.2 \
   --namespace ingress-nginx --create-namespace \
   --set controller.service.annotations."service\.beta\.kubernetes\.io/do-loadbalancer-enable-proxy-protocol"="true"
 ```
@@ -41,6 +42,7 @@ helm repo add temporal https://go.temporal.io/helm-charts
 helm repo update
 
 helm install temporal temporal/temporal \
+  --version 0.66.0 \
   --namespace rocketship \
   --set server.replicaCount=1 \
   --set cassandra.config.cluster_size=1 \

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -15,12 +16,14 @@ import (
 // Mock gRPC server for testing
 type mockEngineServer struct {
 	generated.UnimplementedEngineServer
-	healthStatus string
-	runResponse  *generated.CreateRunResponse
-	authResponse *generated.GetAuthConfigResponse
-	healthErr    error
-	runErr       error
-	authErr      error
+	healthStatus       string
+	runResponse        *generated.CreateRunResponse
+	authResponse       *generated.GetAuthConfigResponse
+	serverInfoResponse *generated.GetServerInfoResponse
+	healthErr          error
+	runErr             error
+	authErr            error
+	serverInfoErr      error
 }
 
 func (m *mockEngineServer) Health(ctx context.Context, req *generated.HealthRequest) (*generated.HealthResponse, error) {
@@ -47,6 +50,16 @@ func (m *mockEngineServer) GetAuthConfig(ctx context.Context, req *generated.Get
 		return nil, m.authErr
 	}
 	return m.authResponse, nil
+}
+
+func (m *mockEngineServer) GetServerInfo(ctx context.Context, req *generated.GetServerInfoRequest) (*generated.GetServerInfoResponse, error) {
+	if m.serverInfoErr != nil {
+		return nil, m.serverInfoErr
+	}
+	if m.serverInfoResponse != nil {
+		return m.serverInfoResponse, nil
+	}
+	return nil, status.Error(codes.Unimplemented, "GetServerInfo not implemented")
 }
 
 func setupMockServer(tb testing.TB, mock *mockEngineServer) (string, func()) {
@@ -181,33 +194,62 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 	InitLogging()
 
 	tests := []struct {
-		name     string
-		response *generated.GetAuthConfigResponse
-		authErr  error
-		wantErr  bool
+		name               string
+		serverInfoResponse *generated.GetServerInfoResponse
+		serverInfoErr      error
+		authResponse       *generated.GetAuthConfigResponse
+		authErr            error
+		expect             *ServerInfo
+		wantErr            bool
 	}{
 		{
-			name: "local server",
-			response: &generated.GetAuthConfigResponse{
-				AuthEnabled:  false,
-				AuthType:     "none",
-				AuthEndpoint: "",
+			name: "discovery v2 response",
+			serverInfoResponse: &generated.GetServerInfoResponse{
+				Version:      "v0.9.0",
+				AuthEnabled:  true,
+				AuthType:     "token",
+				AuthEndpoint: "https://auth.example.com/token",
+				Capabilities: []string{"token-auth", "discovery.v2"},
+				Endpoints: []*generated.ServerEndpoint{
+					{Type: "grpc", Address: "example.com:443"},
+				},
 			},
-			wantErr: false,
+			expect: &ServerInfo{
+				Version:      "v0.9.0",
+				AuthEnabled:  true,
+				AuthType:     "token",
+				AuthEndpoint: "https://auth.example.com/token",
+				Capabilities: []string{"token-auth", "discovery.v2"},
+				Endpoints:    map[string]string{"grpc": "example.com:443"},
+			},
 		},
 		{
-			name: "cloud server",
-			response: &generated.GetAuthConfigResponse{
+			name:          "fallback to legacy auth config",
+			serverInfoErr: status.Error(codes.Unimplemented, "nope"),
+			authResponse: &generated.GetAuthConfigResponse{
 				AuthEnabled:  true,
 				AuthType:     "cloud",
 				AuthEndpoint: "https://app.rocketship.sh/auth",
 			},
-			wantErr: false,
+			expect: &ServerInfo{
+				Version:      "",
+				AuthEnabled:  true,
+				AuthType:     "cloud",
+				AuthEndpoint: "https://app.rocketship.sh/auth",
+				Capabilities: nil,
+				Endpoints:    map[string]string{},
+			},
 		},
 		{
-			name:    "server error",
-			authErr: status.Error(codes.Internal, "server error"),
-			wantErr: true,
+			name:          "server info error propagates",
+			serverInfoErr: status.Error(codes.Internal, "boom"),
+			wantErr:       true,
+		},
+		{
+			name:          "legacy fallback error",
+			serverInfoErr: status.Error(codes.Unimplemented, "no discovery"),
+			authErr:       status.Error(codes.PermissionDenied, "denied"),
+			wantErr:       true,
 		},
 	}
 
@@ -217,8 +259,10 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 			t.Parallel()
 
 			mock := &mockEngineServer{
-				authResponse: tt.response,
-				authErr:      tt.authErr,
+				authResponse:       tt.authResponse,
+				authErr:            tt.authErr,
+				serverInfoResponse: tt.serverInfoResponse,
+				serverInfoErr:      tt.serverInfoErr,
 			}
 
 			addr, cleanup := setupMockServer(t, mock)
@@ -249,14 +293,26 @@ func TestEngineClient_GetServerInfo(t *testing.T) {
 				return
 			}
 
-			if serverInfo.AuthEnabled != tt.response.AuthEnabled {
-				t.Errorf("AuthEnabled = %v, want %v", serverInfo.AuthEnabled, tt.response.AuthEnabled)
+			if tt.expect == nil {
+				t.Fatal("expected struct must be provided when wantErr is false")
 			}
-			if serverInfo.AuthType != tt.response.AuthType {
-				t.Errorf("AuthType = %s, want %s", serverInfo.AuthType, tt.response.AuthType)
+			if serverInfo.Version != tt.expect.Version {
+				t.Errorf("Version = %q, want %q", serverInfo.Version, tt.expect.Version)
 			}
-			if serverInfo.AuthEndpoint != tt.response.AuthEndpoint {
-				t.Errorf("AuthEndpoint = %s, want %s", serverInfo.AuthEndpoint, tt.response.AuthEndpoint)
+			if serverInfo.AuthEnabled != tt.expect.AuthEnabled {
+				t.Errorf("AuthEnabled = %v, want %v", serverInfo.AuthEnabled, tt.expect.AuthEnabled)
+			}
+			if serverInfo.AuthType != tt.expect.AuthType {
+				t.Errorf("AuthType = %s, want %s", serverInfo.AuthType, tt.expect.AuthType)
+			}
+			if serverInfo.AuthEndpoint != tt.expect.AuthEndpoint {
+				t.Errorf("AuthEndpoint = %s, want %s", serverInfo.AuthEndpoint, tt.expect.AuthEndpoint)
+			}
+			if !reflect.DeepEqual(serverInfo.Capabilities, tt.expect.Capabilities) {
+				t.Errorf("Capabilities = %v, want %v", serverInfo.Capabilities, tt.expect.Capabilities)
+			}
+			if !reflect.DeepEqual(serverInfo.Endpoints, tt.expect.Endpoints) {
+				t.Errorf("Endpoints = %v, want %v", serverInfo.Endpoints, tt.expect.Endpoints)
 			}
 		})
 	}

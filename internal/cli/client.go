@@ -10,6 +10,7 @@ import (
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
@@ -160,9 +161,12 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 
 // ServerInfo represents server auth capabilities
 type ServerInfo struct {
+	Version      string
 	AuthEnabled  bool
 	AuthType     string // "none", "cloud", "oidc", "token"
 	AuthEndpoint string // OAuth/OIDC endpoint for authentication flows
+	Capabilities []string
+	Endpoints    map[string]string
 }
 
 // GetServerInfo gets server capabilities and configuration
@@ -170,16 +174,48 @@ func (c *EngineClient) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
 	infoCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	resp, err := c.client.GetAuthConfig(infoCtx, &generated.GetAuthConfigRequest{})
+	resp, err := c.client.GetServerInfo(infoCtx, &generated.GetServerInfoRequest{})
 	if err != nil {
+		if s, ok := status.FromError(err); ok && s.Code() == codes.Unimplemented {
+			Logger.Debug("server does not support GetServerInfo, falling back to legacy discovery")
+			legacy, legacyErr := c.client.GetAuthConfig(infoCtx, &generated.GetAuthConfigRequest{})
+			if legacyErr != nil {
+				return nil, fmt.Errorf("failed to get server info: %w", legacyErr)
+			}
+			return &ServerInfo{
+				Version:      "",
+				AuthEnabled:  legacy.AuthEnabled,
+				AuthType:     legacy.AuthType,
+				AuthEndpoint: legacy.AuthEndpoint,
+				Capabilities: nil,
+				Endpoints:    map[string]string{},
+			}, nil
+		}
 		return nil, fmt.Errorf("failed to get server info: %w", err)
 	}
 
-	return &ServerInfo{
-		AuthEnabled:  resp.AuthEnabled,
-		AuthType:     resp.AuthType,
-		AuthEndpoint: resp.AuthEndpoint,
-	}, nil
+	info := &ServerInfo{
+		Version:      resp.GetVersion(),
+		AuthEnabled:  resp.GetAuthEnabled(),
+		AuthType:     resp.GetAuthType(),
+		AuthEndpoint: resp.GetAuthEndpoint(),
+		Capabilities: append([]string(nil), resp.GetCapabilities()...),
+		Endpoints:    make(map[string]string),
+	}
+
+	for _, ep := range resp.GetEndpoints() {
+		if ep == nil {
+			continue
+		}
+		typeName := ep.GetType()
+		address := ep.GetAddress()
+		if typeName == "" || address == "" {
+			continue
+		}
+		info.Endpoints[typeName] = address
+	}
+
+	return info, nil
 }
 
 // --- Dial resolution helpers ---
