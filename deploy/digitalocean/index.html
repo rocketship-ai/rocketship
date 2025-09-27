@@ -1448,36 +1448,45 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-point-dns-at-the-load-balancer" class="md-nav__link">
+  <a href="#7-enable-oidc-for-the-web-ui-optional" class="md-nav__link">
     <span class="md-ellipsis">
-      7. Point DNS at the Load Balancer
+      7. Enable OIDC for the Web UI (optional)
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-smoke-test-the-endpoint" class="md-nav__link">
+  <a href="#8-point-dns-at-the-load-balancer" class="md-nav__link">
     <span class="md-ellipsis">
-      8. Smoke Test the Endpoint
+      8. Point DNS at the Load Balancer
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-updating-the-deployment" class="md-nav__link">
+  <a href="#9-smoke-test-the-endpoint" class="md-nav__link">
     <span class="md-ellipsis">
-      9. Updating the Deployment
+      9. Smoke Test the Endpoint
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#10-troubleshooting-tips" class="md-nav__link">
+  <a href="#10-updating-the-deployment" class="md-nav__link">
     <span class="md-ellipsis">
-      10. Troubleshooting Tips
+      10. Updating the Deployment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-troubleshooting-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Troubleshooting Tips
     </span>
   </a>
   
@@ -2181,36 +2190,45 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7-point-dns-at-the-load-balancer" class="md-nav__link">
+  <a href="#7-enable-oidc-for-the-web-ui-optional" class="md-nav__link">
     <span class="md-ellipsis">
-      7. Point DNS at the Load Balancer
+      7. Enable OIDC for the Web UI (optional)
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#8-smoke-test-the-endpoint" class="md-nav__link">
+  <a href="#8-point-dns-at-the-load-balancer" class="md-nav__link">
     <span class="md-ellipsis">
-      8. Smoke Test the Endpoint
+      8. Point DNS at the Load Balancer
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-updating-the-deployment" class="md-nav__link">
+  <a href="#9-smoke-test-the-endpoint" class="md-nav__link">
     <span class="md-ellipsis">
-      9. Updating the Deployment
+      9. Smoke Test the Endpoint
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#10-troubleshooting-tips" class="md-nav__link">
+  <a href="#10-updating-the-deployment" class="md-nav__link">
     <span class="md-ellipsis">
-      10. Troubleshooting Tips
+      10. Updating the Deployment
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-troubleshooting-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Troubleshooting Tips
     </span>
   </a>
   
@@ -2283,14 +2301,15 @@
 </code></pre></div>
 <p>(Keep <code>default</code> unless you intend to manage multiple namespaces; update Helm values accordingly later.)</p>
 <h2 id="3-create-the-tls-secret">3. Create the TLS Secret</h2>
-<p>DigitalOcean expects the key and certificate in PEM format. Convert the ZeroSSL bundle into the standard filenames if necessary:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Combine the server cert and intermediate bundle when provided separately</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>cat<span class="w"> </span>certificate.crt<span class="w"> </span>ca_bundle.crt<span class="w"> </span>&gt;<span class="w"> </span>fullchain.pem
+<p>Issue a SAN certificate that covers both <code>globalbank.rocketship.sh</code> and <code>app.globalbank.rocketship.sh</code> (Let's Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># optional: remove the old secret if it exists</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>secret<span class="w"> </span>globalbank-rocketship-tls<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>tls<span class="w"> </span>globalbank-rocketship-tls<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--cert<span class="o">=</span>fullchain.pem<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--key<span class="o">=</span>private.key<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># create the secret with the new cert/key</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>tls<span class="w"> </span>globalbank-rocketship-tls<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--cert<span class="o">=</span>/etc/letsencrypt/live/globalbank.rocketship.sh/fullchain.pem<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>--key<span class="o">=</span>/etc/letsencrypt/live/globalbank.rocketship.sh/privkey.pem
 </code></pre></div>
 <h2 id="4-authenticate-the-registry-inside-the-cluster">4. Authenticate the Registry Inside the Cluster</h2>
 <p>Create the image pull secret with <code>doctl</code> and apply it to the <code>rocketship</code> namespace:</p>
@@ -2347,9 +2366,42 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div>
 <p><code>rocketship-engine</code> and <code>rocketship-worker</code> should report <code>READY 1/1</code>. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.</p>
-<h2 id="7-point-dns-at-the-load-balancer">7. Point DNS at the Load Balancer</h2>
+<h2 id="7-enable-oidc-for-the-web-ui-optional">7. Enable OIDC for the Web UI (optional)</h2>
+<p>If you want browser users to authenticate via Auth0/Okta before reaching Rocketship’s HTTP endpoints, layer oauth2-proxy in front of the engine’s HTTP port:</p>
+<ol>
+<li>
+<p><strong>Create the credentials secret</strong> (keys consumed by the preset):
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>oauth2-proxy-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientID</span><span class="o">=</span>YOUR_AUTH0_CLIENT_ID<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientSecret</span><span class="o">=</span>YOUR_AUTH0_CLIENT_SECRET<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">cookieSecret</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())&quot;</span><span class="k">)</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Review <code>charts/rocketship/values-oidc-web.yaml</code>:</strong></p>
+</li>
+<li>Set <code>OAUTH2_PROXY_OIDC_ISSUER_URL</code> to your Auth0 domain (e.g. <code>https://rocketship-demo.us.auth0.com/</code>).</li>
+<li>Update <code>OAUTH2_PROXY_REDIRECT_URL</code> to match the web hostname (<code>https://app.globalbank.rocketship.sh/oauth2/callback</code>).</li>
+<li>
+<p>Adjust hosts/TLS to match your ingress.</p>
+</li>
+<li>
+<p><strong>Apply the preset alongside the existing gRPC values:</strong>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-oidc-web.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--wait
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>Verify the flow:</strong> visit <code>https://app.globalbank.rocketship.sh/</code> in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (<code>/healthz</code>). gRPC traffic remains on <code>globalbank.rocketship.sh:7700</code> and will use token/device auth once implemented.</p>
+</li>
+</ol>
+<h2 id="8-point-dns-at-the-load-balancer">8. Point DNS at the Load Balancer</h2>
 <p>Retrieve the ingress address and configure an A record for your domain:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>-n<span class="w"> </span>rocketship
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div>
 <p>For example, the ingress might resolve to <code>104.248.110.90</code>. Create an A record such as:</p>
 <table>
@@ -2367,32 +2419,32 @@
 </tbody>
 </table>
 <p>Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.</p>
-<h2 id="8-smoke-test-the-endpoint">8. Smoke Test the Endpoint</h2>
+<h2 id="9-smoke-test-the-endpoint">9. Smoke Test the Endpoint</h2>
 <p>The Rocketship health endpoint answers gRPC, so an HTTPS request returns <code>415</code> with <code>application/grpc</code>, which confirms end-to-end TLS:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
 </code></pre></div>
 <p>Output snippet:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>&lt; HTTP/2 415
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>&lt; content-type: application/grpc
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>&lt; grpc-status: 3
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>&lt; HTTP/2 415
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>&lt; content-type: application/grpc
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>&lt; grpc-status: 3
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
 </code></pre></div>
 <p>Create and use a profile from the CLI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
 </code></pre></div>
 <p>If you see a <code>connection refused</code> message against <code>127.0.0.1:7700</code>, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.</p>
-<h2 id="9-updating-the-deployment">9. Updating the Deployment</h2>
+<h2 id="10-updating-the-deployment">10. Updating the Deployment</h2>
 <ol>
 <li>Rebuild and push the images with the same tag (or bump the <code>TAG</code>).</li>
 <li>Run <code>helm upgrade rocketship charts/rocketship ...</code> with the updated values.</li>
 <li>Watch rollout status:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div></li>
 </ol>
-<h2 id="10-troubleshooting-tips">10. Troubleshooting Tips</h2>
+<h2 id="11-troubleshooting-tips">11. Troubleshooting Tips</h2>
 <ul>
 <li><code>CrashLoopBackOff</code> with <code>exec /bin/engine: exec format error</code> indicates the image was built for the wrong architecture. Rebuild with <code>--platform linux/amd64</code>.</li>
 <li>If the worker logs show <code>Namespace &lt;name&gt; is not found</code>, rerun the Temporal namespace creation step and verify <code>temporal.namespace</code> in the Helm values matches.</li>

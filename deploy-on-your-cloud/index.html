@@ -2121,6 +2121,11 @@
 <td><a href="../deploy/digitalocean/">Deploy on DigitalOcean Kubernetes</a></td>
 <td>Walks through preparing a managed cluster, wiring an NGINX ingress with TLS, publishing custom images to DigitalOcean Container Registry, and installing the Rocketship + Temporal Helm releases.</td>
 </tr>
+<tr>
+<td>Web UI with OIDC front-door</td>
+<td><a href="../deploy/digitalocean/#7-enable-oidc-for-the-web-ui-optional">Deploy on DigitalOcean Kubernetes</a></td>
+<td>Layer oauth2-proxy + NGINX annotations using <code>values-oidc-web.yaml</code>, fronting <code>app.globalbank.rocketship.sh</code> while gRPC traffic stays on <code>globalbank.rocketship.sh</code>.</td>
+</tr>
 </tbody>
 </table>
 <blockquote>
@@ -2132,7 +2137,7 @@
 <li>Run suites with <code>rocketship run --engine</code>. When profiles are active, the CLI resolves the engine address automatically.</li>
 <li>Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).</li>
 </ul>
-<p>Continue with one of the guides above to stand up Rocketship in your environment.</p>
+<p>Once the core stack is running, you can optionally apply the OIDC preset to front any HTTP/UI endpoints with your IdP before traffic reaches Rocketship.</p>
 
 
 
