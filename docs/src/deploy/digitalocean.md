@@ -108,6 +108,13 @@ docker buildx build \
   -f .docker/Dockerfile.worker \
   -t $REGISTRY/rocketship-worker:$TAG . \
   --push
+
+# Auth broker
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -f .docker/Dockerfile.authbroker \
+  -t $REGISTRY/rocketship-auth-broker:$TAG . \
+  --push
 ```
 
 > Re-run these commands whenever you change code; keep the tag stable (for example `v0.1-test`) so the Helm release pulls the updated digest.
@@ -132,8 +139,8 @@ helm install rocketship charts/rocketship \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="true" \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-body-size"="0" \
   --set ingress.tls[0].secretName=globalbank-rocketship-tls \
-  --set ingress.tls[0].hosts[0]=globalbank.rocketship.sh \
-  --set ingress.hosts[0].host=globalbank.rocketship.sh \
+  --set ingress.tls[0].hosts[0]=cli.globalbank.rocketship.sh \
+  --set ingress.hosts[0].host=cli.globalbank.rocketship.sh \
   --set ingress.hosts[0].paths[0].path=/ \
   --set ingress.hosts[0].paths[0].pathType=Prefix \
   --wait
@@ -174,100 +181,78 @@ If you want browser users to authenticate via Auth0/Okta before reaching Rockets
      --wait
    ```
 
-4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and is expected to be protected with bearer tokens (see the next section).
+4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `cli.globalbank.rocketship.sh:443` and is expected to be protected with JWTs minted by the broker (see the next section).
 
-## 8. Enable Token Authentication for gRPC (recommended)
+## 8. Configure GitHub Device Flow for the CLI (recommended)
 
-Issue a long-lived token for the engine so only authenticated CLI or CI jobs can invoke workflows.
+Usage-based Rocketship Cloud relies on the GitHub auth broker to mint Rocketship-signed JWTs. Configure it once and every developer can authenticate with `rocketship login`.
 
-1. **Generate a token and store it in a Kubernetes secret** (replace the example value):
+1. **Create the signing key secret.** Generate a 2048-bit RSA key (or reuse an existing one) and store it as `signing-key.pem`.
    ```bash
-   kubectl create secret generic rocketship-engine-token \
+   openssl genrsa -out signing-key.pem 2048
+   kubectl create secret generic rocketship-auth-broker-signing \
      --namespace rocketship \
-     --from-literal=token="rst_self_$(openssl rand -hex 32)"
+     --from-file=signing-key.pem
    ```
 
-2. **Patch your Helm values (or create `values-token.yaml`) to inject the token:**
-
-   ```yaml
-   engine:
-     env:
-       - name: ROCKETSHIP_ENGINE_TOKEN
-         valueFrom:
-           secretKeyRef:
-             name: rocketship-engine-token
-             key: token
+2. **Provision an encryption key for the refresh-token store.**
+   ```bash
+   python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())" > broker-store.key
+   kubectl create secret generic rocketship-auth-broker-store \
+     --namespace rocketship \
+     --from-file=ROCKETSHIP_BROKER_STORE_KEY=broker-store.key
    ```
 
-   Apply it alongside the production values:
+3. **Create a GitHub OAuth App (device flow).**
+   - Homepage URL: `https://cli.rocketship.sh`
+   - Callback URL: `https://cli.rocketship.sh/oauth2/callback`
+   - Under *Device Flow*, enable **Allow device flow**.
+   - Copy the Client ID and Client Secret.
 
+4. **Store the GitHub client secret.**
+   ```bash
+   kubectl create secret generic rocketship-github-oauth \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
+   ```
+
+5. **Deploy the chart with the GitHub preset.** Provide the GitHub Client ID while secrets keep everything sensitive out of the values file.
    ```bash
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
      -f charts/rocketship/values-production.yaml \
-     -f values-token.yaml \
+     -f charts/rocketship/values-github-cloud.yaml \
+     --set engine.image.repository=$REGISTRY/rocketship-engine \
+     --set engine.image.tag=$TAG \
+     --set worker.image.repository=$REGISTRY/rocketship-worker \
+     --set worker.image.tag=$TAG \
+     --set auth.broker.github.clientID=<github-client-id> \
      --wait
    ```
 
-3. **Configure the CLI** by setting `ROCKETSHIP_TOKEN` before invoking commands or within your CI secret store:
-
+6. **Log in from the CLI.**
    ```bash
-   export ROCKETSHIP_TOKEN="rst_self_yourtoken"
-   rocketship list
+   rocketship profile create cloud grpcs://cli.rocketship.sh
+   rocketship profile use cloud
+   rocketship login
+   rocketship status
    ```
 
-   When the environment variable is absent, the CLI now returns a clear error instructing you to supply the token.
+   The CLI guides you through GitHub device flow (`https://github.com/login/device`), stores access + refresh tokens in the OS keyring, and automatically refreshes them on subsequent commands.
 
-> The token lives entirely in Kubernetes secrets and short-lived environment variables; no code changes are required in the chart. Rotate it by updating the secret and re-running the Helm upgrade.
+> The broker stores only hashed refresh tokens encrypted at rest. Rotate the signing key or store key by updating the Kubernetes secrets and rerunning `helm upgrade`.
 
-## 10. Point DNS at the Load Balancer
+## 9. Bring Your Own OIDC Provider (enterprise/self-hosted)
 
-Retrieve the ingress address and configure an A record for your domain:
+If your organisation mandates an internal IdP (Auth0, Okta, Azure AD, etc.), the chart still supports direct OIDC configuration without the GitHub broker. Provision two clients—one Native app for the CLI (device flow + refresh tokens) and one Regular Web Application for oauth2-proxy—and optionally an API/audience according to your provider’s terminology.
 
-```bash
-kubectl get ingress -n rocketship
-```
-
-For example, the ingress might resolve to `104.248.110.90`. Create an A record such as:
-
-| Host | Value |
-| --- | --- |
-| `globalbank` | `104.248.110.90` |
-
-Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.
-
-## 9. Enable OIDC Authentication for CLI (optional)
-
-The Helm chart now ships a turn-key configuration that enables both the UI oauth2-proxy and the engine’s gRPC JWT validation. To use it with Auth0 (or a similar IdP), provision two clients and an API:
-
-1. **Create a custom API** (`Applications → APIs → Create API`). Any URL-style identifier works (e.g. `https://rocketship-engine`). Enable **Allow Offline Access** so the CLI can request refresh tokens.
-2. **Create or clone a Native application** for the CLI. Under *Advanced Settings → Grant Types* enable **Device Authorization** (Auth0 shows this only for Native apps) and **Refresh Token**. Then open the API you created in step 1, switch to **Machine to Machine Applications**, and authorise the Native client for the scopes you need (`openid profile email offline_access` etc.). Note the client ID.
-3. **Keep your existing Regular Web Application** (or oauth2-proxy client) for the UI. Its client ID/secret remain in the `oauth2-proxy-credentials` secret.
-
-With those pieces in place, edit `charts/rocketship/values-oidc-web.yaml` so `auth.oidc.*` matches your tenant (issuer, native client ID, audience/API identifier, and—if your IdP doesn’t expose discovery—explicit device/token/JWKS endpoints). Then deploy with the one-line command:
+Update `charts/rocketship/values-oidc-web.yaml` with your issuer, audience, and client IDs. Then deploy with both the production and OIDC presets:
 
 ```bash
-helm upgrade --install rocketship charts/rocketship \
-  --namespace rocketship \
-  -f charts/rocketship/values-production.yaml \
-  -f charts/rocketship/values-oidc-web.yaml \
-  --set engine.image.repository=$REGISTRY/rocketship-engine \
-  --set engine.image.tag=$TAG \
-  --set worker.image.repository=$REGISTRY/rocketship-worker \
-  --set worker.image.tag=$TAG \
-  --wait
+helm upgrade --install rocketship charts/rocketship   --namespace rocketship   -f charts/rocketship/values-production.yaml   -f charts/rocketship/values-oidc-web.yaml   --set engine.image.repository=$REGISTRY/rocketship-engine   --set engine.image.tag=$TAG   --set worker.image.repository=$REGISTRY/rocketship-worker   --set worker.image.tag=$TAG   --wait
 ```
 
-After rollout, each developer runs `rocketship login` once (device flow) and the CLI will attach validated JWTs to every gRPC call. If your IdP lacks discovery metadata, override `auth.oidc.deviceEndpoint`, `auth.oidc.tokenEndpoint`, and `auth.oidc.jwksURL` in the values file or via `--set` flags.
-
-After deploying, ask users to sign in once with the CLI:
-
-```bash
-rocketship login -p globalbank
-rocketship status            # confirm expiry and identity
-```
-
-The CLI stores access tokens securely and will refresh them as needed when contacting the engine.
+After rollout, developers run `rocketship login -p <profile>` to complete device flow against your IdP. The CLI persists the refresh token and renews access tokens automatically.
 
 ### RBAC considerations
 
@@ -278,14 +263,15 @@ Regardless of where Rocketship runs (cloud usage-based, dedicated enterprise, or
 3. **Role management lives in Rocketship.** Maintain an RBAC table in Rocketship Cloud (or the broker) so you can invite users, sync GitHub teams if desired, or import roles from customer IdPs. The engine only consumes the resulting claims; it doesn’t need to know whether they originated from GitHub, Okta, or internal configuration.
 4. **Future enhancements** (optional): provide an `rbac.yaml` or Terraform provider so self-hosted clusters can seed organisations/roles declaratively, and add UI to sync GitHub org/team membership if customers opt in.
 
-This approach lets you offer the same RBAC semantics in every environment. Usage-based customers can rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.
+This approach lets you offer the same RBAC semantics in every environment. Usage-based customers rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.
 
+## 10. Point DNS at the Load Balancer
 ## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 
 ```bash
-curl -v https://globalbank.rocketship.sh/healthz
+curl -v https://cli.globalbank.rocketship.sh/healthz
 ```
 
 Output snippet:
@@ -300,7 +286,7 @@ Output snippet:
 Create and use a profile from the CLI:
 
 ```bash
-rocketship profile create globalbank grpcs://globalbank.rocketship.sh
+rocketship profile create globalbank grpcs://cli.globalbank.rocketship.sh
 rocketship profile use globalbank
 rocketship list    # Should connect through TLS without --engine
 ```

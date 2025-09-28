@@ -43,36 +43,49 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-            {{- if .Values.auth.oidc.enabled }}
+            {{- $oidcMode := .Values.auth.oidc.mode | default .Values.auth.mode }}
+            {{- $modeLower := lower $oidcMode }}
+            {{- $oidcEnabled := or .Values.auth.oidc.enabled (or (eq $modeLower "github") (eq $modeLower "oidc")) }}
+            {{- if $oidcEnabled }}
             - name: ROCKETSHIP_AUTH_MODE
               value: "oidc"
-            {{- if .Values.auth.oidc.issuer }}
+            {{- $issuer := coalesce .Values.auth.oidc.issuer .Values.auth.broker.issuer }}
+            {{- if $issuer }}
             - name: ROCKETSHIP_OIDC_ISSUER
-              value: {{ .Values.auth.oidc.issuer | quote }}
+              value: {{ $issuer | quote }}
             {{- end }}
-            {{- if .Values.auth.oidc.clientID }}
+            {{- $clientID := coalesce .Values.auth.oidc.clientID .Values.auth.broker.clientID }}
+            {{- if $clientID }}
             - name: ROCKETSHIP_OIDC_CLIENT_ID
-              value: {{ .Values.auth.oidc.clientID | quote }}
+              value: {{ $clientID | quote }}
             {{- end }}
-            {{- if .Values.auth.oidc.audience }}
+            {{- $audience := coalesce .Values.auth.oidc.audience .Values.auth.broker.audience }}
+            {{- if $audience }}
             - name: ROCKETSHIP_OIDC_AUDIENCE
-              value: {{ .Values.auth.oidc.audience | quote }}
+              value: {{ $audience | quote }}
             {{- end }}
-            {{- if .Values.auth.oidc.tokenEndpoint }}
-            - name: ROCKETSHIP_OIDC_TOKEN_ENDPOINT
-              value: {{ .Values.auth.oidc.tokenEndpoint | quote }}
-            {{- end }}
-            {{- if .Values.auth.oidc.deviceEndpoint }}
+            {{- $brokerHost := printf "http://%s:%v" (include "rocketship.authbroker.fullname" .) .Values.auth.broker.service.port }}
+            {{- $deviceEndpoint := coalesce .Values.auth.oidc.deviceEndpoint (ternary (printf "%s/device/code" $brokerHost) "" (eq $modeLower "github")) }}
+            {{- if $deviceEndpoint }}
             - name: ROCKETSHIP_OIDC_DEVICE_ENDPOINT
-              value: {{ .Values.auth.oidc.deviceEndpoint | quote }}
+              value: {{ $deviceEndpoint | quote }}
             {{- end }}
-            {{- if .Values.auth.oidc.jwksURL }}
+            {{- $tokenEndpoint := coalesce .Values.auth.oidc.tokenEndpoint (ternary (printf "%s/token" $brokerHost) "" (eq $modeLower "github")) }}
+            {{- if $tokenEndpoint }}
+            - name: ROCKETSHIP_OIDC_TOKEN_ENDPOINT
+              value: {{ $tokenEndpoint | quote }}
+            {{- end }}
+            {{- $jwksEndpoint := coalesce .Values.auth.oidc.jwksURL (ternary (printf "%s/.well-known/jwks.json" $brokerHost) "" (eq $modeLower "github")) }}
+            {{- if $jwksEndpoint }}
             - name: ROCKETSHIP_OIDC_JWKS_URL
-              value: {{ .Values.auth.oidc.jwksURL | quote }}
+              value: {{ $jwksEndpoint | quote }}
             {{- end }}
             {{- if .Values.auth.oidc.scopes }}
             - name: ROCKETSHIP_OIDC_SCOPES
               value: {{ join " " .Values.auth.oidc.scopes | quote }}
+            {{- else if .Values.auth.broker.scopes }}
+            - name: ROCKETSHIP_OIDC_SCOPES
+              value: {{ join " " .Values.auth.broker.scopes | quote }}
             {{- end }}
             {{- if .Values.auth.oidc.allowedAlgorithms }}
             - name: ROCKETSHIP_OIDC_ALLOWED_ALGS
