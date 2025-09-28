@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
@@ -177,7 +179,7 @@ func TestConfigureServerInfo(t *testing.T) {
 	}
 }
 
-func TestOIDCValidation(t *testing.T) {
+func TestOIDCValidationRSA(t *testing.T) {
 	engine := NewEngine(&noopTemporalClient{})
 
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -185,7 +187,7 @@ func TestOIDCValidation(t *testing.T) {
 		t.Fatalf("failed to generate key: %v", err)
 	}
 
-	jwksJSON := buildJWKS(key)
+	jwksJSON := buildRSAJWKS(key)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(jwksJSON))
 	}))
@@ -201,7 +203,7 @@ func TestOIDCValidation(t *testing.T) {
 		Scopes:         []string{"openid"},
 	}
 
-	token := signJWT(key, settings.Issuer, settings.Audience)
+	token := signJWTRSA(key, settings.Issuer, settings.Audience)
 
 	ctx := context.Background()
 	if err := engine.ConfigureOIDC(ctx, settings); err != nil {
@@ -213,13 +215,54 @@ func TestOIDCValidation(t *testing.T) {
 	}
 
 	// Wrong audience should fail
-	bad := signJWT(key, settings.Issuer, "wrong")
+	bad := signJWTRSA(key, settings.Issuer, "wrong")
 	if err := engine.authConfig.Validate(ctx, bad); err == nil {
 		t.Fatal("expected audience mismatch to fail")
 	}
 }
 
-func buildJWKS(key *rsa.PrivateKey) string {
+func TestOIDCValidationEC(t *testing.T) {
+	engine := NewEngine(&noopTemporalClient{})
+
+	ek, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate ec key: %v", err)
+	}
+
+	jwksJSON := buildECJWKS(ek)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(jwksJSON))
+	}))
+	defer server.Close()
+
+	settings := OIDCSettings{
+		Issuer:            "https://example.com",
+		Audience:          "api",
+		ClientID:          "rocketship-cli",
+		JWKSURL:           server.URL,
+		TokenEndpoint:     "https://example.com/token",
+		DeviceEndpoint:    "https://example.com/device",
+		Scopes:            []string{"openid"},
+		AllowedAlgorithms: []string{"ES256"},
+	}
+
+	ctx := context.Background()
+	if err := engine.ConfigureOIDC(ctx, settings); err != nil {
+		t.Fatalf("ConfigureOIDC failed: %v", err)
+	}
+
+	token := signJWTEC(ek, settings.Issuer, settings.Audience)
+	if err := engine.authConfig.Validate(ctx, token); err != nil {
+		t.Fatalf("expected token to validate, got %v", err)
+	}
+
+	bad := signJWTEC(ek, settings.Issuer, "wrong")
+	if err := engine.authConfig.Validate(ctx, bad); err == nil {
+		t.Fatal("expected audience mismatch to fail")
+	}
+}
+
+func buildRSAJWKS(key *rsa.PrivateKey) string {
 	n := base64.RawURLEncoding.EncodeToString(key.N.Bytes())
 	buf := make([]byte, 0)
 	e := key.E
@@ -231,7 +274,13 @@ func buildJWKS(key *rsa.PrivateKey) string {
 	return fmt.Sprintf(`{"keys":[{"kty":"RSA","kid":"test","use":"sig","alg":"RS256","n":"%s","e":"%s"}]}`, n, encodedE)
 }
 
-func signJWT(key *rsa.PrivateKey, issuer, audience string) string {
+func buildECJWKS(key *ecdsa.PrivateKey) string {
+	x := base64.RawURLEncoding.EncodeToString(key.X.Bytes())
+	y := base64.RawURLEncoding.EncodeToString(key.Y.Bytes())
+	return fmt.Sprintf(`{"keys":[{"kty":"EC","kid":"test","use":"sig","alg":"ES256","crv":"P-256","x":"%s","y":"%s"}]}`, x, y)
+}
+
+func signJWTRSA(key *rsa.PrivateKey, issuer, audience string) string {
 	claims := jwt.RegisteredClaims{
 		Issuer:    issuer,
 		Subject:   "user",
@@ -240,6 +289,23 @@ func signJWT(key *rsa.PrivateKey, issuer, audience string) string {
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = "test"
+	signed, err := token.SignedString(key)
+	if err != nil {
+		panic(err)
+	}
+	return signed
+}
+
+func signJWTEC(key *ecdsa.PrivateKey, issuer, audience string) string {
+	claims := jwt.RegisteredClaims{
+		Issuer:    issuer,
+		Subject:   "user",
+		Audience:  jwt.ClaimStrings{audience},
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
 	token.Header["kid"] = "test"
 	signed, err := token.SignedString(key)
 	if err != nil {

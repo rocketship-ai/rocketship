@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
@@ -93,28 +95,32 @@ func newOIDCVerifier(ctx context.Context, settings OIDCSettings) (*oidcVerifier,
 		httpClient = &http.Client{Timeout: 10 * time.Second}
 	}
 
-	keys, err := fetchJWKS(ctx, httpClient, settings.JWKSURL)
-	if err != nil {
-		return nil, err
-	}
+    keys, err := fetchJWKS(ctx, httpClient, settings.JWKSURL)
+    if err != nil {
+        return nil, err
+    }
 
-	algs := map[string]struct{}{}
-	if len(settings.AllowedAlgorithms) == 0 {
-		settings.AllowedAlgorithms = []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}
-	}
-	for _, alg := range settings.AllowedAlgorithms {
-		algs[strings.ToUpper(strings.TrimSpace(alg))] = struct{}{}
-	}
+    if len(settings.AllowedAlgorithms) == 0 {
+        settings.AllowedAlgorithms = []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}
+    }
+    algs := make(map[string]struct{}, len(settings.AllowedAlgorithms))
+    for _, alg := range settings.AllowedAlgorithms {
+        trimmed := strings.ToUpper(strings.TrimSpace(alg))
+        if trimmed == "" {
+            continue
+        }
+        algs[trimmed] = struct{}{}
+    }
 
-	return &oidcVerifier{
-		httpClient: httpClient,
-		jwksURL:    settings.JWKSURL,
-		issuer:     settings.Issuer,
-		audience:   settings.Audience,
-		algorithms: algs,
-		keys:       keys,
-		lastFetch:  time.Now(),
-	}, nil
+    return &oidcVerifier{
+        httpClient: httpClient,
+        jwksURL:    settings.JWKSURL,
+        issuer:     settings.Issuer,
+        audience:   settings.Audience,
+        algorithms: algs,
+        keys:       keys,
+        lastFetch:  time.Now(),
+    }, nil
 }
 
 func (o *oidcVerifier) Verify(ctx context.Context, token string) error {
@@ -220,6 +226,9 @@ type jwk struct {
 	Alg string `json:"alg"`
 	N   string `json:"n"`
 	E   string `json:"e"`
+	Crv string `json:"crv"`
+	X   string `json:"x"`
+	Y   string `json:"y"`
 }
 
 func fetchJWKS(ctx context.Context, client *http.Client, url string) (map[string]interface{}, error) {
@@ -247,25 +256,35 @@ func fetchJWKS(ctx context.Context, client *http.Client, url string) (map[string
 		return nil, errors.New("jwks document contained no keys")
 	}
 
-	keys := make(map[string]interface{}, len(doc.Keys))
-	for _, k := range doc.Keys {
-		if strings.ToUpper(k.Kty) != "RSA" {
-			continue
-		}
-		pub, err := parseRSAJWK(k)
-		if err != nil {
-			continue
-		}
-		kid := k.Kid
-		if kid == "" {
-			kid = fmt.Sprintf("rsa_%d", len(keys)+1)
-		}
-		keys[kid] = pub
-	}
-	if len(keys) == 0 {
-		return nil, errors.New("no usable RSA keys in JWKS document")
-	}
-	return keys, nil
+    keys := make(map[string]interface{}, len(doc.Keys))
+    for _, k := range doc.Keys {
+        var (
+            public interface{}
+            err    error
+        )
+
+        switch strings.ToUpper(k.Kty) {
+        case "RSA":
+            public, err = parseRSAJWK(k)
+        case "EC":
+            public, err = parseECJWK(k)
+        default:
+            continue
+        }
+        if err != nil {
+            continue
+        }
+
+        kid := k.Kid
+        if kid == "" {
+            kid = fmt.Sprintf("%s_%d", strings.ToLower(k.Kty), len(keys)+1)
+        }
+        keys[kid] = public
+    }
+    if len(keys) == 0 {
+        return nil, errors.New("no usable keys in JWKS document")
+    }
+    return keys, nil
 }
 
 func parseRSAJWK(j jwk) (*rsa.PublicKey, error) {
@@ -294,6 +313,47 @@ func parseRSAJWK(j jwk) (*rsa.PublicKey, error) {
 	}
 
 	return &rsa.PublicKey{N: modulus, E: exponent}, nil
+}
+
+func parseECJWK(j jwk) (*ecdsa.PublicKey, error) {
+	curve := curveFromName(j.Crv)
+	if curve == nil {
+		return nil, fmt.Errorf("unsupported curve: %s", j.Crv)
+	}
+	xBytes, err := base64.RawURLEncoding.DecodeString(j.X)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode x coordinate: %w", err)
+	}
+	yBytes, err := base64.RawURLEncoding.DecodeString(j.Y)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode y coordinate: %w", err)
+	}
+	if len(xBytes) == 0 || len(yBytes) == 0 {
+		return nil, errors.New("ec jwk missing coordinates")
+	}
+
+	pub := &ecdsa.PublicKey{
+		Curve: curve,
+		X:     new(big.Int).SetBytes(xBytes),
+		Y:     new(big.Int).SetBytes(yBytes),
+	}
+	if !curve.IsOnCurve(pub.X, pub.Y) {
+		return nil, errors.New("ec jwk point not on curve")
+	}
+	return pub, nil
+}
+
+func curveFromName(name string) elliptic.Curve {
+	switch strings.ToUpper(name) {
+	case "P-256", "secp256r1":
+		return elliptic.P256()
+	case "P-384":
+		return elliptic.P384()
+	case "P-521":
+		return elliptic.P521()
+	default:
+		return nil
+	}
 }
 
 func audienceContains(list jwt.ClaimStrings, target string) bool {
