@@ -17,8 +17,8 @@ if ! grep -q "default" <<<"${DEFAULT_LIST_OUTPUT}"; then
   echo "❌ default profile missing after reset"
   exit 1
 fi
-if ! grep -q "app.rocketship.sh" <<<"${DEFAULT_LIST_OUTPUT}"; then
-  echo "❌ default profile should point to app.rocketship.sh"
+if ! grep -q "cli.rocketship.sh" <<<"${DEFAULT_LIST_OUTPUT}"; then
+  echo "❌ default profile should point to cli.rocketship.sh"
   exit 1
 fi
 log "✅ default profile detected"

@@ -47,11 +47,11 @@ type TeamContext struct {
 func GetDefaultProfile() Profile {
     return Profile{
         Name:          "default",
-        // Store host:port and rely on TLS config for transport semantics
-        EngineAddress: "app.rocketship.sh:443",
+        // Default cloud-hosted CLI endpoint
+        EngineAddress: "cli.rocketship.sh:443",
         TLS: TLSConfig{
             Enabled: true,
-            Domain:  "app.rocketship.sh",
+            Domain:  "cli.rocketship.sh",
         },
         Environment: make(map[string]string),
     }

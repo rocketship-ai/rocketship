@@ -269,6 +269,17 @@ rocketship status            # confirm expiry and identity
 
 The CLI stores access tokens securely and will refresh them as needed when contacting the engine.
 
+### RBAC considerations
+
+Regardless of where Rocketship runs (cloud usage-based, dedicated enterprise, or self-hosted), the recommended RBAC model is the same:
+
+1. **Issue Rocketship JWTs that carry organisation/team roles.** The broker (or customer IdP) mints access tokens with claims such as `org`, `project`, and `role` (`admin`, `editor`, `viewer`, `service-account`).
+2. **Engine enforces on every RPC.** When the CLI calls `CreateRun`, `ListRuns`, etc., the engine reads the claims and rejects calls from users without the required role. Tokens are short-lived and verified via JWKS, so enforcement is consistent across cloud and self-hosted clusters.
+3. **Role management lives in Rocketship.** Maintain an RBAC table in Rocketship Cloud (or the broker) so you can invite users, sync GitHub teams if desired, or import roles from customer IdPs. The engine only consumes the resulting claims; it doesn’t need to know whether they originated from GitHub, Okta, or internal configuration.
+4. **Future enhancements** (optional): provide an `rbac.yaml` or Terraform provider so self-hosted clusters can seed organisations/roles declaratively, and add UI to sync GitHub org/team membership if customers opt in.
+
+This approach lets you offer the same RBAC semantics in every environment. Usage-based customers can rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.
+
 ## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
