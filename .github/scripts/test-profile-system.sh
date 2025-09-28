@@ -40,17 +40,21 @@ if ! grep -q "enabled (globalbank.rocketship.sh)" <<<"${PROFILE_LIST}"; then
 fi
 log "✅ globalbank profile active with TLS"
 
-log "Running list against globalbank cluster"
-LIST_OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship list)
-if ! grep -q "Using engine address from active profile" <<<"${LIST_OUTPUT}"; then
-  echo "❌ did not route through active profile"
+log "Running list against globalbank cluster (should require token)"
+set +e
+LIST_OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship list 2>&1)
+STATUS=$?
+set -e
+if [ ${STATUS} -eq 0 ]; then
+  echo "❌ expected token enforcement to fail without ROCKETSHIP_TOKEN"
+  exit 1
+fi
+if ! grep -q "requires a token" <<<"${LIST_OUTPUT}"; then
+  echo "❌ missing token guidance in failure output"
   echo "${LIST_OUTPUT}"
   exit 1
 fi
-if ! grep -q "No test runs found." <<<"${LIST_OUTPUT}"; then
-  echo "⚠️ expected informational output when cluster has no runs"
-fi
-log "✅ profile-based list executed"
+log "✅ cloud profile correctly demands a token"
 
 log "Starting local engine for discovery checks"
 rocketship start server --background >/tmp/rocketship-profile-test.log 2>&1
