@@ -1466,18 +1466,42 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-point-dns-at-the-load-balancer" class="md-nav__link">
+  <a href="#10-point-dns-at-the-load-balancer" class="md-nav__link">
     <span class="md-ellipsis">
-      9. Point DNS at the Load Balancer
+      10. Point DNS at the Load Balancer
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#10-smoke-test-the-endpoint" class="md-nav__link">
+  <a href="#9-enable-oidc-authentication-for-cli-optional" class="md-nav__link">
     <span class="md-ellipsis">
-      10. Smoke Test the Endpoint
+      9. Enable OIDC Authentication for CLI (optional)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Enable OIDC Authentication for CLI (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rbac-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      RBAC considerations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-smoke-test-the-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Smoke Test the Endpoint
     </span>
   </a>
   
@@ -2217,18 +2241,42 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#9-point-dns-at-the-load-balancer" class="md-nav__link">
+  <a href="#10-point-dns-at-the-load-balancer" class="md-nav__link">
     <span class="md-ellipsis">
-      9. Point DNS at the Load Balancer
+      10. Point DNS at the Load Balancer
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#10-smoke-test-the-endpoint" class="md-nav__link">
+  <a href="#9-enable-oidc-authentication-for-cli-optional" class="md-nav__link">
     <span class="md-ellipsis">
-      10. Smoke Test the Endpoint
+      9. Enable OIDC Authentication for CLI (optional)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Enable OIDC Authentication for CLI (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rbac-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      RBAC considerations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-smoke-test-the-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      11. Smoke Test the Endpoint
     </span>
   </a>
   
@@ -2458,7 +2506,7 @@
 <blockquote>
 <p>The token lives entirely in Kubernetes secrets and short-lived environment variables; no code changes are required in the chart. Rotate it by updating the secret and re-running the Helm upgrade.</p>
 </blockquote>
-<h2 id="9-point-dns-at-the-load-balancer">9. Point DNS at the Load Balancer</h2>
+<h2 id="10-point-dns-at-the-load-balancer">10. Point DNS at the Load Balancer</h2>
 <p>Retrieve the ingress address and configure an A record for your domain:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div>
@@ -2478,20 +2526,53 @@
 </tbody>
 </table>
 <p>Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.</p>
-<h2 id="10-smoke-test-the-endpoint">10. Smoke Test the Endpoint</h2>
+<h2 id="9-enable-oidc-authentication-for-cli-optional">9. Enable OIDC Authentication for CLI (optional)</h2>
+<p>The Helm chart now ships a turn-key configuration that enables both the UI oauth2-proxy and the engine’s gRPC JWT validation. To use it with Auth0 (or a similar IdP), provision two clients and an API:</p>
+<ol>
+<li><strong>Create a custom API</strong> (<code>Applications → APIs → Create API</code>). Any URL-style identifier works (e.g. <code>https://rocketship-engine</code>). Enable <strong>Allow Offline Access</strong> so the CLI can request refresh tokens.</li>
+<li><strong>Create or clone a Native application</strong> for the CLI. Under <em>Advanced Settings → Grant Types</em> enable <strong>Device Authorization</strong> (Auth0 shows this only for Native apps) and <strong>Refresh Token</strong>. Then open the API you created in step 1, switch to <strong>Machine to Machine Applications</strong>, and authorise the Native client for the scopes you need (<code>openid profile email offline_access</code> etc.). Note the client ID.</li>
+<li><strong>Keep your existing Regular Web Application</strong> (or oauth2-proxy client) for the UI. Its client ID/secret remain in the <code>oauth2-proxy-credentials</code> secret.</li>
+</ol>
+<p>With those pieces in place, edit <code>charts/rocketship/values-oidc-web.yaml</code> so <code>auth.oidc.*</code> matches your tenant (issuer, native client ID, audience/API identifier, and—if your IdP doesn’t expose discovery—explicit device/token/JWKS endpoints). Then deploy with the one-line command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-oidc-web.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">  </span>--wait
+</code></pre></div>
+<p>After rollout, each developer runs <code>rocketship login</code> once (device flow) and the CLI will attach validated JWTs to every gRPC call. If your IdP lacks discovery metadata, override <code>auth.oidc.deviceEndpoint</code>, <code>auth.oidc.tokenEndpoint</code>, and <code>auth.oidc.jwksURL</code> in the values file or via <code>--set</code> flags.</p>
+<p>After deploying, ask users to sign in once with the CLI:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>rocketship<span class="w"> </span>login<span class="w"> </span>-p<span class="w"> </span>globalbank
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>rocketship<span class="w"> </span>status<span class="w">            </span><span class="c1"># confirm expiry and identity</span>
+</code></pre></div>
+<p>The CLI stores access tokens securely and will refresh them as needed when contacting the engine.</p>
+<h3 id="rbac-considerations">RBAC considerations</h3>
+<p>Regardless of where Rocketship runs (cloud usage-based, dedicated enterprise, or self-hosted), the recommended RBAC model is the same:</p>
+<ol>
+<li><strong>Issue Rocketship JWTs that carry organisation/team roles.</strong> The broker (or customer IdP) mints access tokens with claims such as <code>org</code>, <code>project</code>, and <code>role</code> (<code>admin</code>, <code>editor</code>, <code>viewer</code>, <code>service-account</code>).</li>
+<li><strong>Engine enforces on every RPC.</strong> When the CLI calls <code>CreateRun</code>, <code>ListRuns</code>, etc., the engine reads the claims and rejects calls from users without the required role. Tokens are short-lived and verified via JWKS, so enforcement is consistent across cloud and self-hosted clusters.</li>
+<li><strong>Role management lives in Rocketship.</strong> Maintain an RBAC table in Rocketship Cloud (or the broker) so you can invite users, sync GitHub teams if desired, or import roles from customer IdPs. The engine only consumes the resulting claims; it doesn’t need to know whether they originated from GitHub, Okta, or internal configuration.</li>
+<li><strong>Future enhancements</strong> (optional): provide an <code>rbac.yaml</code> or Terraform provider so self-hosted clusters can seed organisations/roles declaratively, and add UI to sync GitHub org/team membership if customers opt in.</li>
+</ol>
+<p>This approach lets you offer the same RBAC semantics in every environment. Usage-based customers can rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.</p>
+<h2 id="11-smoke-test-the-endpoint">11. Smoke Test the Endpoint</h2>
 <p>The Rocketship health endpoint answers gRPC, so an HTTPS request returns <code>415</code> with <code>application/grpc</code>, which confirms end-to-end TLS:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://globalbank.rocketship.sh/healthz
 </code></pre></div>
 <p>Output snippet:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>&lt; HTTP/2 415
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>&lt; content-type: application/grpc
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>&lt; grpc-status: 3
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>&lt; HTTP/2 415
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>&lt; content-type: application/grpc
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>&lt; grpc-status: 3
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>&lt; grpc-message: invalid gRPC request content-type &quot;&quot;
 </code></pre></div>
 <p>Create and use a profile from the CLI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>globalbank<span class="w"> </span>grpcs://globalbank.rocketship.sh
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>globalbank
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>rocketship<span class="w"> </span>list<span class="w">    </span><span class="c1"># Should connect through TLS without --engine</span>
 </code></pre></div>
 <p>If you see a <code>connection refused</code> message against <code>127.0.0.1:7700</code>, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.</p>
 <h2 id="10-updating-the-deployment">10. Updating the Deployment</h2>
@@ -2499,8 +2580,8 @@
 <li>Rebuild and push the images with the same tag (or bump the <code>TAG</code>).</li>
 <li>Run <code>helm upgrade rocketship charts/rocketship ...</code> with the updated values.</li>
 <li>Watch rollout status:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div></li>
 </ol>
 <h2 id="11-troubleshooting-tips">11. Troubleshooting Tips</h2>
