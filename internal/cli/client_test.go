@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"net"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/cli/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -408,6 +410,65 @@ func TestEngineClient_AttachesBearerToken(t *testing.T) {
 	}
 }
 
+func TestEngineClientUsesStoredToken(t *testing.T) {
+	InitLogging()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("ROCKETSHIP_DISABLE_KEYRING", "1")
+	t.Setenv(tokenEnvVar, "")
+
+	mock := &mockEngineServer{
+		runResponse: &generated.CreateRunResponse{RunId: "abc"},
+	}
+	addr, cleanup := setupMockServer(t, mock)
+	defer cleanup()
+
+	// Persist profile configuration using the stored token.
+	cfg := DefaultConfig()
+	profile := Profile{
+		Name:          "stored",
+		EngineAddress: addr,
+	}
+	cfg.AddProfile(profile)
+	cfg.DefaultProfile = "stored"
+	if err := cfg.SaveConfig(); err != nil {
+		t.Fatalf("failed to save config: %v", err)
+	}
+
+	storeDir := filepath.Join(home, ".rocketship", "tokens")
+	store, err := auth.NewFileStore(storeDir)
+	if err != nil {
+		t.Fatalf("NewFileStore failed: %v", err)
+	}
+	if err := store.Save("stored", auth.TokenData{
+		AccessToken: "stored-token",
+		TokenType:   "Bearer",
+		Expiry:      time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("failed to save token: %v", err)
+	}
+
+	// Give server time to start
+	time.Sleep(100 * time.Millisecond)
+
+	client, err := NewEngineClient("")
+	if err != nil {
+		t.Fatalf("NewEngineClient failed: %v", err)
+	}
+	defer func() { _ = client.Close() }()
+
+	if _, err := client.RunTest(context.Background(), []byte("name: test")); err != nil {
+		t.Fatalf("RunTest failed: %v", err)
+	}
+
+	if len(mock.authHeaders) == 0 {
+		t.Fatal("expected authorization header to be captured")
+	}
+	if got, want := mock.authHeaders[0], "Bearer stored-token"; got != want {
+		t.Fatalf("authorization header mismatch: got %q, want %q", got, want)
+	}
+}
+
 func TestTranslateAuthError(t *testing.T) {
 	unauth := status.Error(codes.Unauthenticated, "missing metadata")
 	if err := translateAuthError("failed op", unauth); err == nil || !strings.Contains(err.Error(), "requires a token") {
@@ -527,9 +588,15 @@ func TestResolveDialOptionsUsesActiveProfile(t *testing.T) {
 		t.Fatalf("failed to save config: %v", err)
 	}
 
-	target, creds, err := resolveDialOptions("")
+	target, creds, profileName, usedProfile, err := resolveDialOptions("")
 	if err != nil {
 		t.Fatalf("resolveDialOptions returned error: %v", err)
+	}
+	if !usedProfile {
+		t.Fatalf("expected to use active profile")
+	}
+	if profileName != "globalbank" {
+		t.Fatalf("profileName = %q, want %q", profileName, "globalbank")
 	}
 
 	if target != "globalbank.rocketship.sh:443" {
@@ -554,7 +621,7 @@ func TestResolveDialOptionsMissingProfile(t *testing.T) {
 		t.Fatalf("failed to save config: %v", err)
 	}
 
-	_, _, err := resolveDialOptions("")
+	_, _, _, _, err := resolveDialOptions("")
 	if err == nil {
 		t.Fatal("expected error when active profile is missing")
 	}

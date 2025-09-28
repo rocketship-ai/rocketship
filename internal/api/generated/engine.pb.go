@@ -1303,15 +1303,21 @@ func (x *ServerEndpoint) GetAddress() string {
 }
 
 type GetServerInfoResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	AuthEnabled   bool                   `protobuf:"varint,2,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
-	AuthType      string                 `protobuf:"bytes,3,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`             // "none", "cloud", "oidc", "token"
-	AuthEndpoint  string                 `protobuf:"bytes,4,opt,name=auth_endpoint,json=authEndpoint,proto3" json:"auth_endpoint,omitempty"` // OAuth/OIDC endpoint for authentication flows
-	Capabilities  []string               `protobuf:"bytes,5,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
-	Endpoints     []*ServerEndpoint      `protobuf:"bytes,6,rep,name=endpoints,proto3" json:"endpoints,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	Version                     string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	AuthEnabled                 bool                   `protobuf:"varint,2,opt,name=auth_enabled,json=authEnabled,proto3" json:"auth_enabled,omitempty"`
+	AuthType                    string                 `protobuf:"bytes,3,opt,name=auth_type,json=authType,proto3" json:"auth_type,omitempty"`             // "none", "cloud", "oidc", "token"
+	AuthEndpoint                string                 `protobuf:"bytes,4,opt,name=auth_endpoint,json=authEndpoint,proto3" json:"auth_endpoint,omitempty"` // OAuth/OIDC endpoint for authentication flows
+	Capabilities                []string               `protobuf:"bytes,5,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	Endpoints                   []*ServerEndpoint      `protobuf:"bytes,6,rep,name=endpoints,proto3" json:"endpoints,omitempty"`
+	DeviceAuthorizationEndpoint string                 `protobuf:"bytes,7,opt,name=device_authorization_endpoint,json=deviceAuthorizationEndpoint,proto3" json:"device_authorization_endpoint,omitempty"`
+	TokenEndpoint               string                 `protobuf:"bytes,8,opt,name=token_endpoint,json=tokenEndpoint,proto3" json:"token_endpoint,omitempty"`
+	Issuer                      string                 `protobuf:"bytes,9,opt,name=issuer,proto3" json:"issuer,omitempty"`
+	Audience                    string                 `protobuf:"bytes,10,opt,name=audience,proto3" json:"audience,omitempty"`
+	Scopes                      []string               `protobuf:"bytes,11,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	ClientId                    string                 `protobuf:"bytes,12,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *GetServerInfoResponse) Reset() {
@@ -1384,6 +1390,48 @@ func (x *GetServerInfoResponse) GetEndpoints() []*ServerEndpoint {
 		return x.Endpoints
 	}
 	return nil
+}
+
+func (x *GetServerInfoResponse) GetDeviceAuthorizationEndpoint() string {
+	if x != nil {
+		return x.DeviceAuthorizationEndpoint
+	}
+	return ""
+}
+
+func (x *GetServerInfoResponse) GetTokenEndpoint() string {
+	if x != nil {
+		return x.TokenEndpoint
+	}
+	return ""
+}
+
+func (x *GetServerInfoResponse) GetIssuer() string {
+	if x != nil {
+		return x.Issuer
+	}
+	return ""
+}
+
+func (x *GetServerInfoResponse) GetAudience() string {
+	if x != nil {
+		return x.Audience
+	}
+	return ""
+}
+
+func (x *GetServerInfoResponse) GetScopes() []string {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+func (x *GetServerInfoResponse) GetClientId() string {
+	if x != nil {
+		return x.ClientId
+	}
+	return ""
 }
 
 var File_engine_proto protoreflect.FileDescriptor
@@ -1504,14 +1552,21 @@ const file_engine_proto_rawDesc = "" +
 	"\x14GetServerInfoRequest\">\n" +
 	"\x0eServerEndpoint\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x18\n" +
-	"\aaddress\x18\x02 \x01(\tR\aaddress\"\xf7\x01\n" +
+	"\aaddress\x18\x02 \x01(\tR\aaddress\"\xcb\x03\n" +
 	"\x15GetServerInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12!\n" +
 	"\fauth_enabled\x18\x02 \x01(\bR\vauthEnabled\x12\x1b\n" +
 	"\tauth_type\x18\x03 \x01(\tR\bauthType\x12#\n" +
 	"\rauth_endpoint\x18\x04 \x01(\tR\fauthEndpoint\x12\"\n" +
 	"\fcapabilities\x18\x05 \x03(\tR\fcapabilities\x12;\n" +
-	"\tendpoints\x18\x06 \x03(\v2\x1d.rocketship.v1.ServerEndpointR\tendpoints2\xef\x04\n" +
+	"\tendpoints\x18\x06 \x03(\v2\x1d.rocketship.v1.ServerEndpointR\tendpoints\x12B\n" +
+	"\x1ddevice_authorization_endpoint\x18\a \x01(\tR\x1bdeviceAuthorizationEndpoint\x12%\n" +
+	"\x0etoken_endpoint\x18\b \x01(\tR\rtokenEndpoint\x12\x16\n" +
+	"\x06issuer\x18\t \x01(\tR\x06issuer\x12\x1a\n" +
+	"\baudience\x18\n" +
+	" \x01(\tR\baudience\x12\x16\n" +
+	"\x06scopes\x18\v \x03(\tR\x06scopes\x12\x1b\n" +
+	"\tclient_id\x18\f \x01(\tR\bclientId2\xef\x04\n" +
 	"\x06Engine\x12N\n" +
 	"\tCreateRun\x12\x1f.rocketship.v1.CreateRunRequest\x1a .rocketship.v1.CreateRunResponse\x12G\n" +
 	"\n" +

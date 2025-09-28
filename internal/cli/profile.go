@@ -340,6 +340,24 @@ func printServerDiscovery(profile Profile) {
 	if info.AuthEndpoint != "" {
 		fmt.Printf("  Auth Endpoint: %s\n", info.AuthEndpoint)
 	}
+	if info.DeviceEndpoint != "" {
+		fmt.Printf("  Device Endpoint: %s\n", info.DeviceEndpoint)
+	}
+	if info.TokenEndpoint != "" {
+		fmt.Printf("  Token Endpoint: %s\n", info.TokenEndpoint)
+	}
+	if info.Issuer != "" {
+		fmt.Printf("  Issuer: %s\n", info.Issuer)
+	}
+	if info.Audience != "" {
+		fmt.Printf("  Audience: %s\n", info.Audience)
+	}
+	if len(info.Scopes) > 0 {
+		fmt.Printf("  Scopes: %s\n", strings.Join(info.Scopes, " "))
+	}
+	if info.ClientID != "" {
+		fmt.Printf("  Client ID: %s\n", info.ClientID)
+	}
 
 	if len(info.Capabilities) > 0 {
 		caps := append([]string(nil), info.Capabilities...)

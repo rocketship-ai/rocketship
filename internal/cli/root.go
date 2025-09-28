@@ -38,6 +38,9 @@ func NewRootCmd() *cobra.Command {
 		NewListCmd(),
 		NewGetCmd(),
 		NewProfileCmd(),
+		NewLoginCmd(),
+		NewLogoutCmd(),
+		NewAuthStatusCmd(),
 	)
 
 	return cmd

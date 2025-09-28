@@ -54,6 +54,17 @@ The `-a` flag tells Rocketship to automatically start and stop the local server,
 
 Rocketship automatically tracks your test runs with context information, making it easy to organize and find results.
 
+### Authenticating Against Remote Engines
+
+If you're connecting to a remote Rocketship deployment that requires OIDC, sign in once with the device-flow helper:
+
+```bash
+rocketship login
+# follow the printed URL to approve the device
+```
+
+The CLI stores short-lived tokens securely and will refresh them automatically when they expire. Run `rocketship status` to confirm the current profile is authenticated or `rocketship logout` to clear credentials.
+
 ### Adding Context to Your Runs
 
 You can add context to your test runs for better organization:

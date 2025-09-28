@@ -16,9 +16,12 @@ Rocketship is a CLI tool for running automated tests.
 ### SEE ALSO
 
 * [rocketship get](rocketship_get.md)	 - Get details of a specific test run
+* [rocketship login](rocketship_login.md)	 - Authenticate the CLI via OIDC device flow
 * [rocketship list](rocketship_list.md)	 - List test runs
+* [rocketship logout](rocketship_logout.md)	 - Remove stored authentication tokens
 * [rocketship profile](rocketship_profile.md)	 - Manage connection profiles
 * [rocketship run](rocketship_run.md)	 - Run rocketship tests
+* [rocketship status](rocketship_status.md)	 - Show authentication status for a profile
 * [rocketship start](rocketship_start.md)	 - Start rocketship the rocketship server
 * [rocketship stop](rocketship_stop.md)	 - Stop rocketship the rocketship server
 * [rocketship validate](rocketship_validate.md)	 - Validate Rocketship test files against the JSON schema
