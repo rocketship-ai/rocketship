@@ -111,7 +111,6 @@ func (g *GitHubClient) ExchangeDeviceCode(ctx context.Context, deviceCode string
 	form.Set("client_id", g.cfg.ClientID)
 	form.Set("device_code", deviceCode)
 	form.Set("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
-	form.Set("client_secret", g.cfg.ClientSecret)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.cfg.TokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
@@ -131,6 +130,9 @@ func (g *GitHubClient) ExchangeDeviceCode(ctx context.Context, deviceCode string
 		if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
 			return TokenResponse{}, tokenError{}, err
 		}
+		if strings.TrimSpace(token.AccessToken) == "" {
+			return TokenResponse{}, tokenError{Error: "authorization_pending", ErrorDescription: "GitHub has not issued an access token yet"}, nil
+		}
 		return token, tokenError{}, nil
 	}
 
@@ -149,6 +151,7 @@ func (g *GitHubClient) FetchUser(ctx context.Context, accessToken string) (GitHu
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("User-Agent", "rocketship-auth-broker")
 	resp, err := g.client.Do(req)
 	if err != nil {
 		return GitHubUser{}, err
@@ -182,6 +185,7 @@ func (g *GitHubClient) fetchPrimaryEmail(ctx context.Context, accessToken string
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("User-Agent", "rocketship-auth-broker")
 
 	resp, err := g.client.Do(req)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -114,6 +115,7 @@ func (s *Server) handleDeviceCode(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	dc, err := s.github.RequestDeviceCode(ctx, s.cfg.GitHub.Scopes)
 	if err != nil {
+		log.Printf("github device flow error: %v", err)
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("github device flow error: %v", err))
 		return
 	}
@@ -192,16 +194,20 @@ func (s *Server) handleDeviceGrant(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token, terr, err := s.github.ExchangeDeviceCode(ctx, deviceCode)
 	if err != nil {
+		log.Printf("github token exchange failed: %v", err)
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("github token exchange failed: %v", err))
 		return
 	}
 	if terr.Error != "" {
+		log.Printf("github token exchange error: %s (%s)", terr.Error, terr.ErrorDescription)
 		writeOAuthError(w, terr.Error, terr.ErrorDescription)
 		return
 	}
+	log.Printf("github token exchange success: type=%s scope=%q len=%d", token.TokenType, token.Scope, len(token.AccessToken))
 
 	user, err := s.github.FetchUser(ctx, token.AccessToken)
 	if err != nil {
+		log.Printf("github user lookup failed: %v", err)
 		writeError(w, http.StatusBadGateway, fmt.Sprintf("github user lookup failed: %v", err))
 		return
 	}
@@ -290,11 +296,13 @@ func (s *Server) handleRefreshGrant(w http.ResponseWriter, r *http.Request) {
 
 	record, err := s.store.Get(refreshToken)
 	if err != nil {
+		log.Printf("invalid refresh token provided: %v", err)
 		writeOAuthError(w, "invalid_grant", "refresh token invalid or expired")
 		return
 	}
 	if time.Now().After(record.ExpiresAt) {
 		_ = s.store.Delete(refreshToken)
+		log.Printf("refresh token expired for subject %s", record.Subject)
 		writeOAuthError(w, "invalid_grant", "refresh token expired")
 		return
 	}
@@ -324,12 +332,14 @@ func (s *Server) handleRefreshGrant(w http.ResponseWriter, r *http.Request) {
 
 	signed, err := s.signer.Sign(claims)
 	if err != nil {
+		log.Printf("failed to sign access token: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to sign token")
 		return
 	}
 
 	newRefresh, err := generateRandomToken()
 	if err != nil {
+		log.Printf("failed to mint refresh token: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to mint refresh token")
 		return
 	}
@@ -341,6 +351,7 @@ func (s *Server) handleRefreshGrant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.store.Save(newRefresh, record); err != nil {
+		log.Printf("failed to persist rotated refresh token: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to persist refresh token")
 		return
 	}

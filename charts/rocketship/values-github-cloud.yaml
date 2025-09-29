@@ -1,38 +1,30 @@
-# Preset values for the usage-based Rocketship Cloud deployment leveraging the GitHub auth broker.
-# These values assume you create the following Kubernetes secrets in the target namespace:
-#   rocketship-auth-broker-signing : contains key `signing-key.pem` with the PEM encoded private key used to sign JWTs
-#   rocketship-auth-broker-store   : contains key `ROCKETSHIP_BROKER_STORE_KEY` with a base64 encoded 32-byte encryption key
-#   rocketship-github-oauth   : contains keys `ROCKETSHIP_GITHUB_CLIENT_SECRET` (GitHub OAuth client secret) and optionally `ROCKETSHIP_GITHUB_CLIENT_ID`
-# Adjust hostnames and client identifiers to match your environment.
-
 auth:
   mode: oidc
   oidc:
     mode: github
-    issuer: https://cli.rocketship.sh
+    issuer: https://auth.rocketship.sh
     clientID: rocketship-cli
     audience: rocketship-cli
+    deviceEndpoint: https://auth.rocketship.sh/device/code
+    tokenEndpoint: https://auth.rocketship.sh/token
+    jwksURL: https://auth.rocketship.sh/.well-known/jwks.json
     scopes:
-      - openid
-      - profile
-      - email
-      - offline_access
+    - read:user
+    - user:email
   broker:
     enabled: true
-    issuer: https://cli.rocketship.sh
+    issuer: https://auth.rocketship.sh
     audience: rocketship-cli
     clientID: rocketship-cli
     scopes:
-      - openid
-      - profile
-      - email
-      - offline_access
+    - read:user
+    - user:email
     github:
-      clientID: your-github-oauth-client-id
+      clientID: Ov23li6jRbnoviVURzs9
       clientSecretSecret: rocketship-github-oauth
       scopes:
-        - read:user
-        - user:email
+      - read:user
+      - user:email
     signingKey:
       secretName: rocketship-auth-broker-signing
       key: signing-key.pem
@@ -45,27 +37,44 @@ auth:
       encryptionKeyKey: ROCKETSHIP_BROKER_STORE_KEY
       emptyDir: true
     env:
-      - name: ROCKETSHIP_BROKER_ACCESS_TTL
-        value: 15m
-      - name: ROCKETSHIP_BROKER_REFRESH_TTL
-        value: 720h
+    - name: ROCKETSHIP_BROKER_ACCESS_TTL
+      value: 15m
+    - name: ROCKETSHIP_BROKER_REFRESH_TTL
+      value: 720h
     service:
       type: ClusterIP
       port: 8080
-
+    ingress:
+      enabled: true
+      className: nginx
+      annotations: {}
+      hosts:
+      - host: auth.rocketship.sh
+        paths:
+        - path: /
+          pathType: Prefix
+      tls:
+      - secretName: rocketship-cloud-tls
+        hosts:
+        - auth.rocketship.sh
+    envFrom:
+    - secretRef:
+        name: rocketship-github-oauth
+    - secretRef:
+        name: rocketship-auth-broker-store
 ingress:
   enabled: true
   className: nginx
   annotations:
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/backend-protocol: GRPC
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/proxy-body-size: '0'
   hosts:
-    - host: cli.rocketship.sh
-      paths:
-        - path: /
-          pathType: Prefix
+  - host: cli.rocketship.sh
+    paths:
+    - path: /
+      pathType: Prefix
   tls:
-    - secretName: rocketship-cloud-tls
-      hosts:
-        - cli.rocketship.sh
+  - secretName: rocketship-cloud-tls
+    hosts:
+    - cli.rocketship.sh

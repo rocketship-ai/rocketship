@@ -2,7 +2,7 @@
 
 This walkthrough recreates the production proof-of-concept we validated on DigitalOcean Kubernetes (DOKS). It covers standing up Temporal, publishing Rocketship images to DigitalOcean Container Registry (DOCR), terminating TLS through an NGINX ingress, and wiring the CLI via profiles.
 
-The steps assume you have a domain (e.g. `globalbank.rocketship.sh`) with a valid certificate bundle from ZeroSSL or a similar CA.
+The steps assume you control public DNS for `cli.rocketship.sh`, `app.rocketship.sh`, and `auth.rocketship.sh` (or equivalent) and can issue a SAN certificate that covers all three hosts.
 
 ## Prerequisites
 
@@ -63,17 +63,17 @@ kubectl exec -n rocketship deploy/temporal-admintools -- \
 
 ## 3. Create the TLS Secret
 
-Issue a SAN certificate that covers both `globalbank.rocketship.sh` and `app.globalbank.rocketship.sh` (Let's Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
+Issue a SAN certificate that covers `cli.rocketship.sh`, `app.rocketship.sh`, and `auth.rocketship.sh` (Let’s Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
 
 ```bash
 # optional: remove the old secret if it exists
-kubectl delete secret globalbank-rocketship-tls -n rocketship 2>/dev/null || true
+kubectl delete secret rocketship-cloud-tls -n rocketship 2>/dev/null || true
 
 # create the secret with the new cert/key
-kubectl create secret tls globalbank-rocketship-tls \
+kubectl create secret tls rocketship-cloud-tls \
   --namespace rocketship \
-  --cert=/etc/letsencrypt/live/globalbank.rocketship.sh/fullchain.pem \
-  --key=/etc/letsencrypt/live/globalbank.rocketship.sh/privkey.pem
+  --cert=/etc/letsencrypt/live/rocketship.sh/fullchain.pem \
+  --key=/etc/letsencrypt/live/rocketship.sh/privkey.pem
 ```
 
 ## 4. Authenticate the Registry Inside the Cluster
@@ -138,9 +138,9 @@ helm install rocketship charts/rocketship \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/backend-protocol"=GRPC \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="true" \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-body-size"="0" \
-  --set ingress.tls[0].secretName=globalbank-rocketship-tls \
-  --set ingress.tls[0].hosts[0]=cli.globalbank.rocketship.sh \
-  --set ingress.hosts[0].host=cli.globalbank.rocketship.sh \
+  --set ingress.tls[0].secretName=rocketship-cloud-tls \
+  --set ingress.tls[0].hosts[0]=cli.rocketship.sh \
+  --set ingress.hosts[0].host=cli.rocketship.sh \
   --set ingress.hosts[0].paths[0].path=/ \
   --set ingress.hosts[0].paths[0].pathType=Prefix \
   --wait
@@ -152,25 +152,27 @@ Confirm the pods are healthy:
 kubectl get pods -n rocketship
 ```
 
-`rocketship-engine` and `rocketship-worker` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
+`rocketship-engine`, `rocketship-worker`, `rocketship-auth-broker`, and `rocketship-web-oauth2-proxy` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
 
 ## 7. Enable OIDC for the Web UI (optional)
 
 If you want browser users to authenticate via Auth0/Okta before reaching Rocketship’s HTTP endpoints, layer oauth2-proxy in front of the engine’s HTTP port:
 
-1. **Create the credentials secret** (keys consumed by the preset):
+1. **Create the credentials secret** (keys consumed by the preset). Use the *same* GitHub OAuth application you configured for the CLI, so both flows share a client ID and secret:
    ```bash
+   COOKIE_SECRET=$(python3 - <<'PY'
+import secrets
+print(secrets.token_hex(16))
+PY
+)
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
-     --from-literal=clientID=YOUR_AUTH0_CLIENT_ID \
-     --from-literal=clientSecret=YOUR_AUTH0_CLIENT_SECRET \
-     --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
+     --from-literal=clientID=Ov23li6jRbnoviVURzs9 \
+     --from-literal=clientSecret=<github-client-secret> \
+     --from-literal=cookieSecret="$COOKIE_SECRET"
    ```
 
-2. **Review `charts/rocketship/values-oidc-web.yaml`:**
-   - Set `OAUTH2_PROXY_OIDC_ISSUER_URL` to your Auth0 domain (e.g. `https://rocketship-demo.us.auth0.com/`).
-   - Update `OAUTH2_PROXY_REDIRECT_URL` to match the web hostname (`https://app.globalbank.rocketship.sh/oauth2/callback`).
-   - Adjust hosts/TLS to match your ingress.
+2. **Review `charts/rocketship/values-oidc-web.yaml`:** the preset already targets GitHub, sets the redirect URL to `https://app.rocketship.sh/oauth2/callback`, and reuses `rocketship-cloud-tls`. Adjust only if you are customising domains.
 
 3. **Apply the preset alongside the existing gRPC values:**
    ```bash
@@ -181,7 +183,7 @@ If you want browser users to authenticate via Auth0/Okta before reaching Rockets
      --wait
    ```
 
-4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `cli.globalbank.rocketship.sh:443` and is expected to be protected with JWTs minted by the broker (see the next section).
+4. **Verify the flow:** visit `https://app.rocketship.sh/` in a fresh session. You should be redirected to GitHub, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `cli.rocketship.sh:443` and is expected to be protected with JWTs minted by the broker (see the next section).
 
 ## 8. Configure GitHub Device Flow for the CLI (recommended)
 
@@ -215,8 +217,9 @@ Usage-based Rocketship Cloud relies on the GitHub auth broker to mint Rocketship
      --namespace rocketship \
      --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
    ```
+   > Use the same GitHub OAuth application for the web UI. When you create the `oauth2-proxy-credentials` secret (step 7), set `clientID` to this exact value so both the CLI and UI share the same app.
 
-5. **Deploy the chart with the GitHub preset.** Provide the GitHub Client ID while secrets keep everything sensitive out of the values file.
+5. **Deploy the chart with the GitHub preset.** Provide the GitHub Client ID while secrets keep everything sensitive out of the values file. (If you hard-code the client ID in your copied values file, you can drop the `--set auth.broker.github.clientID=…` flag.)
    ```bash
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
@@ -266,29 +269,23 @@ Regardless of where Rocketship runs (cloud usage-based, dedicated enterprise, or
 This approach lets you offer the same RBAC semantics in every environment. Usage-based customers rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.
 
 ## 10. Point DNS at the Load Balancer
+
+Create A (or CNAME) records for `cli.rocketship.sh`, `app.rocketship.sh`, and `auth.rocketship.sh` pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.
 ## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 
 ```bash
-curl -v https://cli.globalbank.rocketship.sh/healthz
+curl -v https://cli.rocketship.sh/healthz
+curl -v https://auth.rocketship.sh/healthz
 ```
 
-Output snippet:
-
-```
-< HTTP/2 415
-< content-type: application/grpc
-< grpc-status: 3
-< grpc-message: invalid gRPC request content-type ""
-```
-
-Create and use a profile from the CLI:
+Create and use the default cloud profile from the CLI (already pointing at `cli.rocketship.sh:443`):
 
 ```bash
-rocketship profile create globalbank grpcs://cli.globalbank.rocketship.sh
-rocketship profile use globalbank
-rocketship list    # Should connect through TLS without --engine
+rocketship profile list
+rocketship login
+rocketship run -f examples/simple-http/rocketship.yaml
 ```
 
 If you see a `connection refused` message against `127.0.0.1:7700`, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.
