@@ -17,7 +17,7 @@ auth:
       - read:user
       - user:email
     github:
-      clientID: Ov23li6jRbnoviVURzs9
+      clientID: YOUR_GITHUB_CLIENT_ID
       clientSecretSecret: globalbank-github-oauth
       scopes:
         - read:user

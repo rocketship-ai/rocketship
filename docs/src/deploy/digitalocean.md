@@ -153,13 +153,15 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
 
 ### Option A — GitHub broker (reuse CLI device flow)
 
-1. **Create the broker secrets:**
+1. **Create or reuse a GitHub OAuth app:** visit <https://github.com/settings/developers> (or your organisation equivalent) and register an OAuth App for the CLI device flow. Record the generated Client ID and Client Secret – you will supply them via Kubernetes secrets. The Authorization callback can be any valid HTTPS URL because device flow does not redirect end users.
+
+2. **Create the broker secrets:** use the client ID/secret captured in the previous step.
    ```bash
    # GitHub OAuth app credentials
    kubectl create secret generic globalbank-github-oauth \
      --namespace rocketship \
-     --from-literal=ROCKETSHIP_GITHUB_CLIENT_ID=Ov23li6jRbnoviVURzs9 \
-     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=REPLACE_ME
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_ID=YOUR_GITHUB_CLIENT_ID \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=YOUR_GITHUB_CLIENT_SECRET
 
    # Encrypted refresh-token store key
    kubectl create secret generic globalbank-auth-broker-store \
@@ -171,20 +173,21 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
      --namespace rocketship \
      --from-file=signing-key.pem=./signing-key.pem
 
-   # Web front-door OAuth client (used by oauth2-proxy)
+   # Web front-door OAuth client (used by oauth2-proxy). Create a SECOND GitHub OAuth app with
+   # callback URL https://app.globalbank.rocketship.sh/oauth2/callback and plug its credentials below.
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
-     --from-literal=clientID=rocketship-web \
-     --from-literal=clientSecret=REPLACE_ME \
+     --from-literal=clientID=YOUR_WEB_OAUTH_CLIENT_ID \
+     --from-literal=clientSecret=YOUR_WEB_OAUTH_CLIENT_SECRET \
      --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
    ```
 
-2. **Review `charts/rocketship/values-github-selfhost.yaml` and `charts/rocketship/values-github-web.yaml`:**
+3. **Review `charts/rocketship/values-github-selfhost.yaml` and `charts/rocketship/values-github-web.yaml`:**
    - Ensure the public hostnames (`cli/globalbank/app/globalbank`) match your ingress controller.
-   - Update the GitHub OAuth app ID/secret (and TLS secret) if you generated different values.
+   - Replace the placeholder `YOUR_GITHUB_CLIENT_ID` (and the corresponding secret) with the values from your OAuth app.
    - The oauth2-proxy preset points its issuer at `https://auth.globalbank.rocketship.sh`, which is served by the broker deployment.
 
-3. **Apply the presets alongside the base ingress values:**
+4. **Apply the presets alongside the base ingress values:**
    ```bash
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
@@ -194,7 +197,7 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
      --wait
    ```
 
-4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a new session. You should be redirected to GitHub, approve the `rocketship-cli` app, and land on the proxied Rocketship health page (`/healthz`).
+5. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a new session. You should be redirected to GitHub, approve the OAuth app you created, and land on the proxied Rocketship health page (`/healthz`).
 
 ### Option B — Bring your own IdP (Auth0/Okta/Azure AD)
 
