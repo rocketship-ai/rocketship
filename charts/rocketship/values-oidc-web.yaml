@@ -22,7 +22,7 @@ web:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: rocketship-cloud-tls
+      - secretName: globalbank-tls
         hosts:
           - app.rocketship.globalbank.com
   oauth2Proxy:

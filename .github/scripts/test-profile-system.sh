@@ -23,24 +23,24 @@ if ! grep -q "cli.rocketship.sh" <<<"${DEFAULT_LIST_OUTPUT}"; then
 fi
 log "✅ default profile detected"
 
-log "Creating globalbank profile"
-rocketship profile create globalbank grpcs://globalbank.rocketship.sh >/dev/null
-rocketship profile use globalbank >/dev/null
+log "Creating cloud profile"
+rocketship profile create cloud grpcs://cli.rocketship.sh >/dev/null
+rocketship profile use cloud >/dev/null
 
 PROFILE_LIST=$(rocketship profile list)
-if ! grep -q "globalbank.*\\*" <<<"${PROFILE_LIST}"; then
-  echo "❌ globalbank profile not marked active"
+if ! grep -q "cloud.*\\*" <<<"${PROFILE_LIST}"; then
+  echo "❌ cloud profile not marked active"
   echo "${PROFILE_LIST}"
   exit 1
 fi
-if ! grep -q "enabled (globalbank.rocketship.sh)" <<<"${PROFILE_LIST}"; then
-  echo "❌ TLS expectation mismatch for globalbank"
+if ! grep -q "enabled (cli.rocketship.sh)" <<<"${PROFILE_LIST}"; then
+  echo "❌ TLS expectation mismatch for cloud"
   echo "${PROFILE_LIST}"
   exit 1
 fi
-log "✅ globalbank profile active with TLS"
+log "✅ cloud profile active with TLS"
 
-log "Running list against globalbank cluster (should require token)"
+log "Running list against cloud profile (should require token)"
 set +e
 LIST_OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship list 2>&1)
 STATUS=$?
@@ -49,7 +49,7 @@ if [ ${STATUS} -eq 0 ]; then
   echo "❌ expected token enforcement to fail without ROCKETSHIP_TOKEN"
   exit 1
 fi
-if ! grep -q "requires a token" <<<"${LIST_OUTPUT}"; then
+if ! grep -q "engine requires a token" <<<"${LIST_OUTPUT}" || ! grep -q "ROCKETSHIP_TOKEN" <<<"${LIST_OUTPUT}"; then
   echo "❌ missing token guidance in failure output"
   echo "${LIST_OUTPUT}"
   exit 1
@@ -97,7 +97,7 @@ log "✅ discovery v2 surfaced via profile show"
 log "Stopping local engine"
 rocketship stop server >/dev/null 2>&1 || true
 
-rocketship profile use globalbank >/dev/null 2>&1 || true
+rocketship profile use cloud >/dev/null 2>&1 || true
 rocketship profile delete local >/dev/null 2>&1 || true
 
 log "Starting token-protected engine"
@@ -117,7 +117,7 @@ if [ ${STATUS} -eq 0 ]; then
   rocketship stop server >/dev/null 2>&1 || true
   exit 1
 fi
-if ! grep -q "requires a token" <<<"${TOKENLESS_OUTPUT}"; then
+if ! grep -q "engine requires a token" <<<"${TOKENLESS_OUTPUT}" || ! grep -q "ROCKETSHIP_TOKEN" <<<"${TOKENLESS_OUTPUT}"; then
   echo "❌ missing token guidance in failure output"
   echo "${TOKENLESS_OUTPUT}"
   rocketship stop server >/dev/null 2>&1 || true
@@ -145,7 +145,7 @@ log "✅ command succeeds when token supplied"
 log "Stopping token-protected engine"
 rocketship stop server >/dev/null 2>&1 || true
 
-rocketship profile use globalbank >/dev/null 2>&1 || true
+rocketship profile use cloud >/dev/null 2>&1 || true
 rocketship profile delete local-token >/dev/null 2>&1 || true
 
 log "Testing failure path with unreachable profile"
@@ -169,6 +169,6 @@ if ! grep -q "unreachable" <<<"${UNREACHABLE_OUTPUT}" && ! grep -q "127.0.0.1" <
 fi
 log "✅ unreachable profile produces explicit failure"
 
-log "Restoring globalbank profile for downstream tests"
-rocketship profile use globalbank >/dev/null
+log "Restoring cloud profile for downstream tests"
+rocketship profile use cloud >/dev/null
 log "✅ profile tests complete"

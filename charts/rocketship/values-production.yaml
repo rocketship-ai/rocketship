@@ -12,6 +12,6 @@ ingress:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: rocketship-cloud-tls
+    - secretName: globalbank-tls
       hosts:
-    - cli.rocketship.globalbank.com
+        - cli.rocketship.globalbank.com

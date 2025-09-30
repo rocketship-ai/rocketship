@@ -22,21 +22,21 @@ auth:
     - read:user
     - user:email
     github:
-      clientID: Ov23li6jRbnoviVURzs9
-      clientSecretSecret: rocketship-github-oauth
+      clientID: your-github-client-id
+      clientSecretSecret: globalbank-github-oauth
       scopes:
       - read:org
       - read:user
       - user:email
     signingKey:
-      secretName: rocketship-auth-broker-signing
+      secretName: globalbank-auth-broker-signing
       key: signing-key.pem
       mountPath: /var/run/rocketship
       fileName: signing-key.pem
     store:
       path: /var/lib/rocketship/broker-store.enc
       mountPath: /var/lib/rocketship
-      encryptionKeySecret: rocketship-auth-broker-store
+      encryptionKeySecret: globalbank-auth-broker-store
       encryptionKeyKey: ROCKETSHIP_BROKER_STORE_KEY
       emptyDir: true
     env:
@@ -57,14 +57,14 @@ auth:
         - path: /
           pathType: Prefix
       tls:
-      - secretName: rocketship-cloud-tls
+      - secretName: globalbank-tls
         hosts:
         - auth.rocketship.globalbank.com
     envFrom:
     - secretRef:
-        name: rocketship-github-oauth
+        name: globalbank-github-oauth
     - secretRef:
-        name: rocketship-auth-broker-store
+        name: globalbank-auth-broker-store
 ingress:
   enabled: true
   className: nginx
@@ -78,6 +78,6 @@ ingress:
     - path: /
       pathType: Prefix
   tls:
-  - secretName: rocketship-cloud-tls
+  - secretName: globalbank-tls
     hosts:
     - cli.rocketship.globalbank.com

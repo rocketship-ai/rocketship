@@ -67,10 +67,10 @@ Issue a SAN certificate that covers `cli.rocketship.globalbank.com`, `app.rocket
 
 ```bash
 # optional: remove the old secret if it exists
-kubectl delete secret rocketship-cloud-tls -n rocketship 2>/dev/null || true
+kubectl delete secret globalbank-tls -n rocketship 2>/dev/null || true
 
 # create the secret with the new cert/key
-kubectl create secret tls rocketship-cloud-tls \
+kubectl create secret tls globalbank-tls \
   --namespace rocketship \
   --cert=/etc/letsencrypt/live/rocketship.sh/fullchain.pem \
   --key=/etc/letsencrypt/live/rocketship.sh/privkey.pem
@@ -138,7 +138,7 @@ helm install rocketship charts/rocketship \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/backend-protocol"=GRPC \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="true" \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-body-size"="0" \
-  --set ingress.tls[0].secretName=rocketship-cloud-tls \
+  --set ingress.tls[0].secretName=globalbank-tls \
   --set ingress.tls[0].hosts[0]=cli.rocketship.globalbank.com \
   --set ingress.hosts[0].host=cli.rocketship.globalbank.com \
   --set ingress.hosts[0].paths[0].path=/ \
@@ -172,7 +172,7 @@ PY
      --from-literal=cookieSecret="$COOKIE_SECRET"
    ```
 
-2. **Review `charts/rocketship/values-oidc-web.yaml`:** the preset already targets GitHub, sets the redirect URL to `https://app.rocketship.globalbank.com/oauth2/callback`, and reuses `rocketship-cloud-tls`. Adjust only if you are customising domains.
+2. **Review `charts/rocketship/values-oidc-web.yaml`:** the preset already targets GitHub, sets the redirect URL to `https://app.rocketship.globalbank.com/oauth2/callback`, and reuses `globalbank-tls`. Adjust only if you are customising domains.
 
 3. **Apply the preset alongside the existing gRPC values:**
    ```bash
@@ -192,7 +192,7 @@ GlobalBank’s GitHub auth broker mints Rocketship-signed JWTs so every develope
 1. **Create the signing key secret.** Generate a 2048-bit RSA key (or reuse an existing one) and store it as `signing-key.pem`.
    ```bash
    openssl genrsa -out signing-key.pem 2048
-   kubectl create secret generic rocketship-auth-broker-signing \
+   kubectl create secret generic globalbank-auth-broker-signing \
      --namespace rocketship \
      --from-file=signing-key.pem
    ```
@@ -200,7 +200,7 @@ GlobalBank’s GitHub auth broker mints Rocketship-signed JWTs so every develope
 2. **Provision an encryption key for the refresh-token store.**
    ```bash
    python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())" > broker-store.key
-   kubectl create secret generic rocketship-auth-broker-store \
+   kubectl create secret generic globalbank-auth-broker-store \
      --namespace rocketship \
      --from-file=ROCKETSHIP_BROKER_STORE_KEY=broker-store.key
    ```
@@ -213,7 +213,7 @@ GlobalBank’s GitHub auth broker mints Rocketship-signed JWTs so every develope
 
 4. **Store the GitHub client secret.**
    ```bash
-   kubectl create secret generic rocketship-github-oauth \
+   kubectl create secret generic globalbank-github-oauth \
      --namespace rocketship \
      --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
    ```
@@ -224,7 +224,7 @@ GlobalBank’s GitHub auth broker mints Rocketship-signed JWTs so every develope
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
      -f charts/rocketship/values-production.yaml \
-     -f charts/rocketship/values-github-cloud.yaml \
+     -f charts/rocketship/values-github-globalbank.yaml \
      --set engine.image.repository=$REGISTRY/rocketship-engine \
      --set engine.image.tag=$TAG \
      --set worker.image.repository=$REGISTRY/rocketship-worker \

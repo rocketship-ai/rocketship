@@ -33,7 +33,7 @@ Deliver a production-ready, usage-based Rocketship Cloud offering where customer
 - Add `internal/authbroker/` service and `cmd/authbroker` entrypoint (Go) with endpoints: `/device/code`, `/token`, `/refresh`, `/.well-known/jwks.json`.
 - JWT signer backed by RSA/ECDSA key; refresh token store encrypted at rest (file for dev, KMS/Vault later).
 - Helm templates for broker Deployment/Service/ConfigMap, and engine env var wiring when GitHub mode is enabled.
-- Usage preset `charts/rocketship/values-github-cloud.yaml` (or update `values-oidc-web.yaml`) pointing to the broker.
+- Usage preset `charts/rocketship/values-github-globalbank.yaml` (or update `values-oidc-web.yaml`) pointing to the broker.
 
 **Tests / validation**
 - Unit tests for broker endpoints with mocked GitHub responses.
