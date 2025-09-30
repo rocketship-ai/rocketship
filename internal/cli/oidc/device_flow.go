@@ -205,7 +205,11 @@ func exchangeDeviceCode(ctx context.Context, cfg FlowConfig, deviceCode string) 
 	case "access_denied":
 		return auth.TokenData{}, retryNone, fmt.Errorf("end user denied the request")
 	default:
-		return auth.TokenData{}, retryNone, fmt.Errorf("token exchange failed: %s", er.ErrorDescription)
+		desc := strings.TrimSpace(er.ErrorDescription)
+		if desc == "" {
+			desc = er.Error
+		}
+		return auth.TokenData{}, retryNone, fmt.Errorf("token exchange failed: %s", desc)
 	}
 }
 

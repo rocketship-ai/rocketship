@@ -44,3 +44,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "rocketship.webProxy.fullname" -}}
 {{- printf "%s-web-oauth2-proxy" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "rocketship.authbroker.fullname" -}}
+{{- printf "%s-auth-broker" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}

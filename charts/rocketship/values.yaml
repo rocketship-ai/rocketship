@@ -21,8 +21,10 @@ temporal:
   namespace: "default"
 
 auth:
+  mode: ""
   oidc:
     enabled: false
+    mode: ""
     issuer: ""
     clientID: ""
     audience: ""
@@ -31,6 +33,43 @@ auth:
     jwksURL: ""
     scopes: []
     allowedAlgorithms: []
+  broker:
+    enabled: false
+    image:
+      repository: rocketshipai/rocketship-auth-broker
+      tag: latest
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 8080
+      annotations: {}
+    issuer: ""
+    audience: ""
+    clientID: ""
+    scopes: []
+    github:
+      clientID: ""
+      clientSecretSecret: ""
+      clientSecretKey: github-client-secret
+      scopes: []
+    signingKey:
+      secretName: ""
+      key: signing-key.pem
+      mountPath: /var/run/rocketship
+      fileName: signing-key.pem
+    store:
+      path: /var/lib/rocketship/broker-store.enc
+      mountPath: /var/lib/rocketship
+      encryptionKeySecret: ""
+      encryptionKeyKey: broker-store-key
+      emptyDir: true
+      existingClaim: ""
+    env: []
+    envFrom: []
+    resources: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
 
 engine:
   replicaCount: 1
