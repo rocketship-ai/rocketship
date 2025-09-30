@@ -27,5 +27,5 @@ cli-introspection.json
 
 # informative .md files
 
-# certs
-globalbank.rocketship.sh/
+# rocketship-internal code
+charts/rocketship-internal/

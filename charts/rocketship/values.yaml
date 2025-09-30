@@ -52,6 +52,12 @@ auth:
       clientSecretSecret: ""
       clientSecretKey: github-client-secret
       scopes: []
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts: []
+      tls: []
     signingKey:
       secretName: ""
       key: signing-key.pem

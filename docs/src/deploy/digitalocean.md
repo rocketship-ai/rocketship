@@ -154,16 +154,61 @@ kubectl get pods -n rocketship
 
 `rocketship-engine`, `rocketship-worker`, `rocketship-auth-broker`, and `rocketship-web-oauth2-proxy` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
 
-## 7. Choose an authentication path
+## 7. Enable Auth for the Web UI (optional)
 
-Self-hosted teams typically pick one of two flows:
+After the gRPC ingress is live you can optionally front the engine’s HTTP port with oauth2-proxy. Choose the option that matches your organisation:
 
-### Option 1 – GitHub OAuth with the bundled auth broker
+### Option A — GitHub broker (reuse CLI device flow)
 
-This keeps everything inside the chart. The broker handles CLI device flow, and oauth2-proxy fronts the web UI with the same GitHub app.
+1. **Create or reuse a GitHub OAuth app:** visit <https://github.com/settings/developers> (or your organisation equivalent) and register an OAuth App for the CLI device flow. Record the generated Client ID and Client Secret – you will supply them via Kubernetes secrets. The Authorization callback can be any valid HTTPS URL because device flow does not redirect end users.
 
-1. **Provision broker secrets.**
+2. **Create the broker secrets:** use the client ID/secret captured in the previous step.
+   ```bash
+   # GitHub OAuth app credentials
+   kubectl create secret generic globalbank-github-oauth \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_ID=YOUR_GITHUB_CLIENT_ID \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=YOUR_GITHUB_CLIENT_SECRET
 
+   # Encrypted refresh-token store key
+   kubectl create secret generic globalbank-auth-broker-store \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_BROKER_STORE_KEY=$(openssl rand -hex 32)
+
+   # JWKS signing material (PEM formatted private key + matching cert)
+   kubectl create secret generic globalbank-auth-broker-signing \
+     --namespace rocketship \
+     --from-file=signing-key.pem=./signing-key.pem
+
+   # Web front-door OAuth client (used by oauth2-proxy). Create a SECOND GitHub OAuth app with
+   # callback URL https://app.globalbank.rocketship.sh/oauth2/callback and plug its credentials below.
+   kubectl create secret generic oauth2-proxy-credentials \
+     --namespace rocketship \
+     --from-literal=clientID=YOUR_WEB_OAUTH_CLIENT_ID \
+     --from-literal=clientSecret=YOUR_WEB_OAUTH_CLIENT_SECRET \
+     --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
+   ```
+
+3. **Review `charts/rocketship/values-github-selfhost.yaml` and `charts/rocketship/values-github-web.yaml`:**
+   - Ensure the public hostnames (`cli/globalbank/app/globalbank`) match your ingress controller.
+   - Replace the placeholder `YOUR_GITHUB_CLIENT_ID` (and the corresponding secret) with the values from your OAuth app.
+   - The oauth2-proxy preset points its issuer at `https://auth.globalbank.rocketship.sh`, which is served by the broker deployment.
+
+4. **Apply the presets alongside the base ingress values:**
+   ```bash
+   helm upgrade --install rocketship charts/rocketship \
+     --namespace rocketship \
+     -f charts/rocketship/values-production.yaml \
+     -f charts/rocketship/values-github-selfhost.yaml \
+     -f charts/rocketship/values-github-web.yaml \
+     --wait
+   ```
+
+5. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a new session. You should be redirected to GitHub, approve the OAuth app you created, and land on the proxied Rocketship health page (`/healthz`).
+
+### Option B — Bring your own IdP (Auth0/Okta/Azure AD)
+
+1. **Create the oauth2-proxy credentials secret:**
    ```bash
    openssl genrsa -out signing-key.pem 2048
    kubectl create secret generic globalbank-auth-broker-signing \
@@ -190,12 +235,51 @@ This keeps everything inside the chart. The broker handles CLI device flow, and 
    )
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
-     --from-literal=clientID=<github-client-id> \
-     --from-literal=clientSecret=<github-client-secret> \
-     --from-literal=cookieSecret="$COOKIE_SECRET"
+     --from-literal=clientID=YOUR_IDP_CLIENT_ID \
+     --from-literal=clientSecret=YOUR_IDP_CLIENT_SECRET \
+     --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
    ```
 
-3. **Deploy with the GitHub presets.**
+2. **Review `charts/rocketship/values-oidc-web.yaml`:**
+   - Set `OAUTH2_PROXY_OIDC_ISSUER_URL` to your IdP’s issuer URL (e.g. `https://auth.globalbank.com/oidc`).
+   - Update `OAUTH2_PROXY_REDIRECT_URL` to match the web hostname (`https://app.globalbank.rocketship.sh/oauth2/callback`).
+   - Populate `auth.oidc.*` with the native-app client (CLI device flow) details from your IdP.
+
+3. **Apply the preset:**
+   ```bash
+   helm upgrade --install rocketship charts/rocketship \
+     --namespace rocketship \
+     -f charts/rocketship/values-production.yaml \
+     -f charts/rocketship/values-oidc-web.yaml \
+     --wait
+   ```
+
+4. **Verify the flow:** browse to `https://app.globalbank.rocketship.sh/`, complete your IdP login, and confirm the proxied Rocketship health page renders (`/healthz`).
+
+## 8. Enable Token Authentication for gRPC (recommended)
+
+Issue a long-lived token for the engine so only authenticated CLI or CI jobs can invoke workflows.
+
+1. **Generate a token and store it in a Kubernetes secret** (replace the example value):
+   ```bash
+   kubectl create secret generic rocketship-engine-token \
+     --namespace rocketship \
+     --from-literal=token="rst_self_$(openssl rand -hex 32)"
+   ```
+
+2. **Patch your Helm values (or create `values-token.yaml`) to inject the token:**
+
+   ```yaml
+   engine:
+     env:
+       - name: ROCKETSHIP_ENGINE_TOKEN
+         valueFrom:
+           secretKeyRef:
+             name: rocketship-engine-token
+             key: token
+   ```
+
+   Apply it alongside the production values:
 
    ```bash
    helm upgrade --install rocketship charts/rocketship \

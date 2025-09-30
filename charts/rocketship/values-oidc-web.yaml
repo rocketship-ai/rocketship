@@ -1,11 +1,6 @@
 # Example values for enabling oauth2-proxy in front of the Rocketship web endpoints
-# This configuration assumes:
-# - A GitHub OAuth application configured for the Rocketship web UI (same app as the CLI device flow)
-# - A Kubernetes secret named `oauth2-proxy-credentials` with keys:
-#     clientID          -> OAuth client ID (plain text)
-#     clientSecret      -> OAuth client secret
-#     cookieSecret      -> 16-byte random string (hex or base64)
-# - The Rocketship engine service will serve HTTP traffic (health/UI) on port 7701
+# using an external IdP (Auth0, Okta, Azure AD, etc.). Update the domains, secret
+# names, and client identifiers for your environment.
 
 web:
   enabled: true
@@ -28,13 +23,12 @@ web:
   oauth2Proxy:
     enabled: true
     replicaCount: 1
-    # Set to empty to let the chart route requests to the engine HTTP port (7701)
     upstreamOverride: ""
     extraArgs:
       - --cookie-name=_rocketship_auth
       - --cookie-secure=true
       - --cookie-samesite=lax
-      - --scope=openid profile email
+      - --scope=openid profile email offline_access
       - --email-domain=*
       - --skip-provider-button=true
     env:
@@ -58,9 +52,7 @@ web:
       - name: OAUTH2_PROXY_REDIRECT_URL
         value: https://app.rocketship.globalbank.com/oauth2/callback
       - name: OAUTH2_PROXY_OIDC_ISSUER_URL
-        value: https://dev-0ankenxegmh7xfjm.us.auth0.com/ # e.g. https://rocketship-demo.us.auth0.com/
-      - name: OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL
-        value: "false"
+        value: https://auth.globalbank.com/oidc
       - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
         value: "true"
       - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER
@@ -78,5 +70,21 @@ web:
         value: "*"
 
 auth:
+  mode: oidc
   oidc:
+    enabled: true
+    issuer: https://auth.globalbank.com/oidc
+    clientID: rocketship-cli
+    audience: rocketship-cli
+    tokenEndpoint: https://auth.globalbank.com/oauth2/token
+    deviceEndpoint: https://auth.globalbank.com/oauth/device/code
+    jwksURL: https://auth.globalbank.com/.well-known/jwks.json
+    scopes:
+      - openid
+      - profile
+      - email
+      - offline_access
+    allowedAlgorithms:
+      - RS256
+  broker:
     enabled: false

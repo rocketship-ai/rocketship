@@ -1,11 +1,5 @@
-# Example values for enabling oauth2-proxy in front of the Rocketship web endpoints
-# This configuration assumes:
-# - A GitHub OAuth application configured for the Rocketship web UI (same app as the CLI device flow)
-# - A Kubernetes secret named `oauth2-proxy-credentials` with keys:
-#     clientID          -> OAuth client ID (plain text)
-#     clientSecret      -> OAuth client secret
-#     cookieSecret      -> 16-byte random string (hex or base64)
-# - The Rocketship engine service will serve HTTP traffic (health/UI) on port 7701
+# Companion values file for enabling oauth2-proxy when using the GitHub auth broker.
+# Users must create the oauth2-proxy-credentials secret with client ID/secret/cookie data.
 
 web:
   enabled: true
@@ -17,28 +11,28 @@ web:
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     hosts:
-      - host: app.rocketship.globalbank.com
+      - host: app.globalbank.rocketship.sh
         paths:
           - path: /
             pathType: Prefix
     tls:
-      - secretName: globalbank-tls
+      - secretName: globalbank-rocketship-tls
         hosts:
-          - app.rocketship.globalbank.com
+          - app.globalbank.rocketship.sh
   oauth2Proxy:
     enabled: true
     replicaCount: 1
-    # Set to empty to let the chart route requests to the engine HTTP port (7701)
     upstreamOverride: ""
     extraArgs:
       - --cookie-name=_rocketship_auth
       - --cookie-secure=true
       - --cookie-samesite=lax
+      - --scope=read:user user:email
       - --email-domain=*
       - --skip-provider-button=true
     env:
       - name: OAUTH2_PROXY_PROVIDER
-        value: github
+        value: oidc
       - name: OAUTH2_PROXY_CLIENT_ID
         valueFrom:
           secretKeyRef:
@@ -55,7 +49,9 @@ web:
             name: oauth2-proxy-credentials
             key: cookieSecret
       - name: OAUTH2_PROXY_REDIRECT_URL
-        value: https://app.rocketship.globalbank.com/oauth2/callback
+        value: https://app.globalbank.rocketship.sh/oauth2/callback
+      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+        value: https://auth.globalbank.rocketship.sh
       - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
         value: "true"
       - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER
@@ -67,11 +63,5 @@ web:
       - name: OAUTH2_PROXY_HTTPS_ADDRESS
         value: ":0"
 
-      - name: OAUTH2_PROXY_SCOPE
-        value: "read:org read:user user:email"
-      - name: OAUTH2_PROXY_EMAIL_DOMAINS
-        value: "*"
-
 auth:
-  oidc:
-    enabled: false
+  mode: github
