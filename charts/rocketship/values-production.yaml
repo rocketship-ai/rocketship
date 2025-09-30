@@ -7,11 +7,11 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
   hosts:
-    - host: cli.globalbank.rocketship.sh
+    - host: cli.rocketship.globalbank.com
       paths:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: globalbank-rocketship-tls
+    - secretName: globalbank-tls
       hosts:
-        - cli.globalbank.rocketship.sh
+        - cli.rocketship.globalbank.com

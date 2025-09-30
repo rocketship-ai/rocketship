@@ -2,7 +2,7 @@
 
 This walkthrough recreates the production proof-of-concept we validated on DigitalOcean Kubernetes (DOKS). It covers standing up Temporal, publishing Rocketship images to DigitalOcean Container Registry (DOCR), terminating TLS through an NGINX ingress, and wiring the CLI via profiles.
 
-The steps assume you have a domain (e.g. `globalbank.rocketship.sh`) with a valid certificate bundle from ZeroSSL or a similar CA.
+The steps assume you control public DNS for `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` (or equivalent) and can issue a SAN certificate that covers all three hosts.
 
 ## Prerequisites
 
@@ -63,17 +63,17 @@ kubectl exec -n rocketship deploy/temporal-admintools -- \
 
 ## 3. Create the TLS Secret
 
-Issue a SAN certificate that covers both `globalbank.rocketship.sh` and `app.globalbank.rocketship.sh` (Let's Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
+Issue a SAN certificate that covers `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` (Let’s Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
 
 ```bash
 # optional: remove the old secret if it exists
-kubectl delete secret globalbank-rocketship-tls -n rocketship 2>/dev/null || true
+kubectl delete secret globalbank-tls -n rocketship 2>/dev/null || true
 
 # create the secret with the new cert/key
-kubectl create secret tls globalbank-rocketship-tls \
+kubectl create secret tls globalbank-tls \
   --namespace rocketship \
-  --cert=/etc/letsencrypt/live/globalbank.rocketship.sh/fullchain.pem \
-  --key=/etc/letsencrypt/live/globalbank.rocketship.sh/privkey.pem
+  --cert=/etc/letsencrypt/live/rocketship.sh/fullchain.pem \
+  --key=/etc/letsencrypt/live/rocketship.sh/privkey.pem
 ```
 
 ## 4. Authenticate the Registry Inside the Cluster
@@ -108,6 +108,13 @@ docker buildx build \
   -f .docker/Dockerfile.worker \
   -t $REGISTRY/rocketship-worker:$TAG . \
   --push
+
+# Auth broker
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -f .docker/Dockerfile.authbroker \
+  -t $REGISTRY/rocketship-auth-broker:$TAG . \
+  --push
 ```
 
 > Re-run these commands whenever you change code; keep the tag stable (for example `v0.1-test`) so the Helm release pulls the updated digest.
@@ -131,9 +138,9 @@ helm install rocketship charts/rocketship \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/backend-protocol"=GRPC \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="true" \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-body-size"="0" \
-  --set ingress.tls[0].secretName=globalbank-rocketship-tls \
-  --set ingress.tls[0].hosts[0]=globalbank.rocketship.sh \
-  --set ingress.hosts[0].host=globalbank.rocketship.sh \
+  --set ingress.tls[0].secretName=globalbank-tls \
+  --set ingress.tls[0].hosts[0]=cli.rocketship.globalbank.com \
+  --set ingress.hosts[0].host=cli.rocketship.globalbank.com \
   --set ingress.hosts[0].paths[0].path=/ \
   --set ingress.hosts[0].paths[0].pathType=Prefix \
   --wait
@@ -145,7 +152,7 @@ Confirm the pods are healthy:
 kubectl get pods -n rocketship
 ```
 
-`rocketship-engine` and `rocketship-worker` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
+`rocketship-engine`, `rocketship-worker`, `rocketship-auth-broker`, and `rocketship-web-oauth2-proxy` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
 
 ## 7. Enable Auth for the Web UI (optional)
 
@@ -203,6 +210,29 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
 
 1. **Create the oauth2-proxy credentials secret:**
    ```bash
+   openssl genrsa -out signing-key.pem 2048
+   kubectl create secret generic globalbank-auth-broker-signing \
+     --namespace rocketship \
+     --from-file=signing-key.pem
+
+   python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())" > broker-store.key
+   kubectl create secret generic globalbank-auth-broker-store \
+     --namespace rocketship \
+     --from-file=ROCKETSHIP_BROKER_STORE_KEY=broker-store.key
+
+   kubectl create secret generic globalbank-github-oauth \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
+   ```
+
+2. **Bootstrap oauth2-proxy credentials.** Use the same GitHub OAuth application (client ID/secret) so both CLI and UI share it.
+
+   ```bash
+   COOKIE_SECRET=$(python3 - <<'PY'
+   import secrets
+   print(secrets.token_hex(16))
+   PY
+   )
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
      --from-literal=clientID=YOUR_IDP_CLIENT_ID \
@@ -255,46 +285,31 @@ Issue a long-lived token for the engine so only authenticated CLI or CI jobs can
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
      -f charts/rocketship/values-production.yaml \
-     -f values-token.yaml \
+     -f charts/rocketship/values-github-cloud.yaml \
+     -f charts/rocketship/values-github-web.yaml \
+     --set engine.image.repository=$REGISTRY/rocketship-engine \
+     --set engine.image.tag=$TAG \
+     --set worker.image.repository=$REGISTRY/rocketship-worker \
+     --set worker.image.tag=$TAG \
+     --set auth.broker.image.repository=$REGISTRY/rocketship-auth-broker \
+     --set auth.broker.image.tag=$TAG \
      --wait
    ```
 
-3. **Configure the CLI** by setting `ROCKETSHIP_TOKEN` before invoking commands or within your CI secret store:
-
+4. **Validate the flows.**
    ```bash
-   export ROCKETSHIP_TOKEN="rst_self_yourtoken"
-   rocketship list
+   rocketship profile create cloud grpcs://cli.rocketship.globalbank.com
+   rocketship profile use cloud
+   rocketship login
+   rocketship status
    ```
+   Browse to `https://app.rocketship.globalbank.com/` in a fresh session—you should be redirected through GitHub and land back on the proxied Rocketship UI after approval. The CLI command above walks you through device flow (`https://github.com/login/device`) and persists the refresh token locally.
 
-   When the environment variable is absent, the CLI now returns a clear error instructing you to supply the token.
+> The broker stores only hashed refresh tokens encrypted at rest. Rotate the signing key or store key by updating the Kubernetes secrets and rerunning `helm upgrade`.
 
-> The token lives entirely in Kubernetes secrets and short-lived environment variables; no code changes are required in the chart. Rotate it by updating the secret and re-running the Helm upgrade.
+### Option 2 – Bring your own IdP (Auth0, Okta, Azure AD, …)
 
-## 10. Point DNS at the Load Balancer
-
-Retrieve the ingress address and configure an A record for your domain:
-
-```bash
-kubectl get ingress -n rocketship
-```
-
-For example, the ingress might resolve to `104.248.110.90`. Create an A record such as:
-
-| Host | Value |
-| --- | --- |
-| `globalbank` | `104.248.110.90` |
-
-Propagation is usually near-immediate within DigitalOcean DNS but may take longer with external registrars.
-
-## 9. Enable OIDC Authentication for CLI (optional)
-
-The Helm chart now ships a turn-key configuration that enables both the UI oauth2-proxy and the engine’s gRPC JWT validation. To use it with Auth0 (or a similar IdP), provision two clients and an API:
-
-1. **Create a custom API** (`Applications → APIs → Create API`). Any URL-style identifier works (e.g. `https://rocketship-engine`). Enable **Allow Offline Access** so the CLI can request refresh tokens.
-2. **Create or clone a Native application** for the CLI. Under *Advanced Settings → Grant Types* enable **Device Authorization** (Auth0 shows this only for Native apps) and **Refresh Token**. Then open the API you created in step 1, switch to **Machine to Machine Applications**, and authorise the Native client for the scopes you need (`openid profile email offline_access` etc.). Note the client ID.
-3. **Keep your existing Regular Web Application** (or oauth2-proxy client) for the UI. Its client ID/secret remain in the `oauth2-proxy-credentials` secret.
-
-With those pieces in place, edit `charts/rocketship/values-oidc-web.yaml` so `auth.oidc.*` matches your tenant (issuer, native client ID, audience/API identifier, and—if your IdP doesn’t expose discovery—explicit device/token/JWKS endpoints). Then deploy with the one-line command:
+If you already manage an internal IdP, point the chart at it. Provision the necessary applications in your provider (typically a native app for the CLI device flow and a web app for oauth2-proxy), then update `charts/rocketship/values-oidc-web.yaml` with your issuer, client IDs, and scopes.
 
 ```bash
 helm upgrade --install rocketship charts/rocketship \
@@ -305,19 +320,12 @@ helm upgrade --install rocketship charts/rocketship \
   --set engine.image.tag=$TAG \
   --set worker.image.repository=$REGISTRY/rocketship-worker \
   --set worker.image.tag=$TAG \
+  --set auth.broker.image.repository=$REGISTRY/rocketship-auth-broker \
+  --set auth.broker.image.tag=$TAG \
   --wait
 ```
 
-After rollout, each developer runs `rocketship login` once (device flow) and the CLI will attach validated JWTs to every gRPC call. If your IdP lacks discovery metadata, override `auth.oidc.deviceEndpoint`, `auth.oidc.tokenEndpoint`, and `auth.oidc.jwksURL` in the values file or via `--set` flags.
-
-After deploying, ask users to sign in once with the CLI:
-
-```bash
-rocketship login -p globalbank
-rocketship status            # confirm expiry and identity
-```
-
-The CLI stores access tokens securely and will refresh them as needed when contacting the engine.
+After rollout, point your CLI profile at the engine (`rocketship profile create <name> grpcs://cli.rocketship.globalbank.com`) and run `rocketship login`. The CLI follows the device flow your IdP exposes and automatically refreshes the issued token on subsequent commands.
 
 ### RBAC considerations
 
@@ -328,31 +336,27 @@ Regardless of where Rocketship runs (cloud usage-based, dedicated enterprise, or
 3. **Role management lives in Rocketship.** Maintain an RBAC table in Rocketship Cloud (or the broker) so you can invite users, sync GitHub teams if desired, or import roles from customer IdPs. The engine only consumes the resulting claims; it doesn’t need to know whether they originated from GitHub, Okta, or internal configuration.
 4. **Future enhancements** (optional): provide an `rbac.yaml` or Terraform provider so self-hosted clusters can seed organisations/roles declaratively, and add UI to sync GitHub org/team membership if customers opt in.
 
-This approach lets you offer the same RBAC semantics in every environment. Usage-based customers can rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.
+This approach lets you offer the same RBAC semantics in every environment. Usage-based customers rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.
+
+## 10. Point DNS at the Load Balancer
+
+Create A (or CNAME) records for `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.
 
 ## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 
 ```bash
-curl -v https://globalbank.rocketship.sh/healthz
+curl -v https://cli.rocketship.globalbank.com/healthz
+curl -v https://auth.rocketship.globalbank.com/healthz
 ```
 
-Output snippet:
-
-```
-< HTTP/2 415
-< content-type: application/grpc
-< grpc-status: 3
-< grpc-message: invalid gRPC request content-type ""
-```
-
-Create and use a profile from the CLI:
+Create and use the default cloud profile from the CLI (already pointing at `cli.rocketship.globalbank.com:443`):
 
 ```bash
-rocketship profile create globalbank grpcs://globalbank.rocketship.sh
-rocketship profile use globalbank
-rocketship list    # Should connect through TLS without --engine
+rocketship profile list
+rocketship login
+rocketship run -f examples/simple-http/rocketship.yaml
 ```
 
 If you see a `connection refused` message against `127.0.0.1:7700`, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.

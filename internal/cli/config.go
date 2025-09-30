@@ -9,7 +9,7 @@ import (
 
 // Config represents the overall CLI configuration
 type Config struct {
-	DefaultProfile string            `json:"default_profile"`
+	DefaultProfile string             `json:"default_profile"`
 	Profiles       map[string]Profile `json:"profiles"`
 }
 
@@ -45,16 +45,16 @@ type TeamContext struct {
 
 // GetDefaultProfile returns the built-in default profile for app.rocketship.sh
 func GetDefaultProfile() Profile {
-    return Profile{
-        Name:          "default",
-        // Default cloud-hosted CLI endpoint
-        EngineAddress: "cli.rocketship.sh:443",
-        TLS: TLSConfig{
-            Enabled: true,
-            Domain:  "cli.rocketship.sh",
-        },
-        Environment: make(map[string]string),
-    }
+	return Profile{
+		Name: "default",
+		// Default cloud-hosted CLI endpoint
+		EngineAddress: "cli.rocketship.sh:443",
+		TLS: TLSConfig{
+			Enabled: true,
+			Domain:  "cli.rocketship.sh",
+		},
+		Environment: make(map[string]string),
+	}
 }
 
 // DefaultConfig returns a new config with sensible defaults
@@ -71,14 +71,14 @@ func ConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
-	
+
 	configDir := filepath.Join(home, ".rocketship")
-	
+
 	// Ensure config directory exists
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create config directory: %w", err)
 	}
-	
+
 	return filepath.Join(configDir, "config.json"), nil
 }
 
@@ -88,32 +88,32 @@ func LoadConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// If config file doesn't exist, return default config
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return DefaultConfig(), nil
 	}
-	
+
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
-	
+
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
-	
+
 	// Ensure we have a default profile if none is set
 	if config.DefaultProfile == "" {
 		config.DefaultProfile = "default"
 	}
-	
+
 	// Ensure profiles map exists
 	if config.Profiles == nil {
 		config.Profiles = make(map[string]Profile)
 	}
-	
+
 	return &config, nil
 }
 
@@ -123,16 +123,16 @@ func (c *Config) SaveConfig() error {
 	if err != nil {
 		return err
 	}
-	
+
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	
+
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (c *Config) GetProfile(name string) (Profile, bool) {
 	if name == "default" {
 		return GetDefaultProfile(), true
 	}
-	
+
 	profile, exists := c.Profiles[name]
 	return profile, exists
 }
@@ -159,15 +159,15 @@ func (c *Config) GetCurrentProfile() Profile {
 // ListAllProfiles returns all profiles including the built-in default
 func (c *Config) ListAllProfiles() map[string]Profile {
 	allProfiles := make(map[string]Profile)
-	
+
 	// Add built-in default profile
 	allProfiles["default"] = GetDefaultProfile()
-	
+
 	// Add user-defined profiles
 	for name, profile := range c.Profiles {
 		allProfiles[name] = profile
 	}
-	
+
 	return allProfiles
 }
 
@@ -184,34 +184,32 @@ func (c *Config) DeleteProfile(name string) error {
 	if name == "default" {
 		return fmt.Errorf("cannot delete the built-in default profile")
 	}
-	
+
 	if _, exists := c.Profiles[name]; !exists {
 		return fmt.Errorf("profile '%s' not found", name)
 	}
-	
+
 	delete(c.Profiles, name)
-	
-	// If we deleted the active profile, reset to default
+
+	// Reset active profile if we deleted it
 	if c.DefaultProfile == name {
 		c.DefaultProfile = "default"
 	}
-	
+
 	return nil
 }
 
 // SetDefaultProfile sets the active profile
 func (c *Config) SetDefaultProfile(name string) error {
-	// Allow setting to built-in default
 	if name == "default" {
 		c.DefaultProfile = name
 		return nil
 	}
-	
-	// Check if user-defined profile exists
+
 	if _, exists := c.Profiles[name]; !exists {
 		return fmt.Errorf("profile '%s' not found", name)
 	}
-	
+
 	c.DefaultProfile = name
 	return nil
 }

@@ -53,6 +53,13 @@ jobs:
           GOOS=linux GOARCH=arm64 go build -o bin/engine-linux-arm64 cmd/engine/main.go
           GOOS=windows GOARCH=amd64 go build -o bin/engine-windows-amd64.exe cmd/engine/main.go
 
+          # Build auth broker binaries
+          GOOS=darwin GOARCH=amd64 go build -o bin/auth-broker-darwin-amd64 cmd/authbroker/main.go
+          GOOS=darwin GOARCH=arm64 go build -o bin/auth-broker-darwin-arm64 cmd/authbroker/main.go
+          GOOS=linux GOARCH=amd64 go build -o bin/auth-broker-linux-amd64 cmd/authbroker/main.go
+          GOOS=linux GOARCH=arm64 go build -o bin/auth-broker-linux-arm64 cmd/authbroker/main.go
+          GOOS=windows GOARCH=amd64 go build -o bin/auth-broker-windows-amd64.exe cmd/authbroker/main.go
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -73,6 +80,11 @@ jobs:
             bin/engine-linux-amd64
             bin/engine-linux-arm64
             bin/engine-windows-amd64.exe
+            bin/auth-broker-darwin-amd64
+            bin/auth-broker-darwin-arm64
+            bin/auth-broker-linux-amd64
+            bin/auth-broker-linux-arm64
+            bin/auth-broker-windows-amd64.exe
           draft: false
           prerelease: false
           generate_release_notes: true
@@ -146,6 +158,18 @@ jobs:
           tags: |
             rocketshipai/rocketship-worker:${{ steps.get_version.outputs.VERSION }}
             rocketshipai/rocketship-worker:latest
+
+      - name: Build and push Auth broker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .docker/Dockerfile.authbroker
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: |
+            rocketshipai/rocketship-auth-broker:${{ steps.get_version.outputs.VERSION }}
+            rocketshipai/rocketship-auth-broker:latest
 
       - name: Trigger Go proxy to index new version
         run: |
