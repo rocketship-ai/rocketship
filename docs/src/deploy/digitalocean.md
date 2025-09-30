@@ -2,7 +2,7 @@
 
 This walkthrough recreates the production proof-of-concept we validated on DigitalOcean Kubernetes (DOKS). It covers standing up Temporal, publishing Rocketship images to DigitalOcean Container Registry (DOCR), terminating TLS through an NGINX ingress, and wiring the CLI via profiles.
 
-The steps assume you control public DNS for `cli.rocketship.sh`, `app.rocketship.sh`, and `auth.rocketship.sh` (or equivalent) and can issue a SAN certificate that covers all three hosts.
+The steps assume you control public DNS for `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` (or equivalent) and can issue a SAN certificate that covers all three hosts.
 
 ## Prerequisites
 
@@ -63,7 +63,7 @@ kubectl exec -n rocketship deploy/temporal-admintools -- \
 
 ## 3. Create the TLS Secret
 
-Issue a SAN certificate that covers `cli.rocketship.sh`, `app.rocketship.sh`, and `auth.rocketship.sh` (Let’s Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
+Issue a SAN certificate that covers `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` (Let’s Encrypt or ZeroSSL work well). After you have the combined cert/key, update the secret:
 
 ```bash
 # optional: remove the old secret if it exists
@@ -139,8 +139,8 @@ helm install rocketship charts/rocketship \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/ssl-redirect"="true" \
   --set ingress.annotations."nginx\.ingress\.kubernetes\.io/proxy-body-size"="0" \
   --set ingress.tls[0].secretName=rocketship-cloud-tls \
-  --set ingress.tls[0].hosts[0]=cli.rocketship.sh \
-  --set ingress.hosts[0].host=cli.rocketship.sh \
+  --set ingress.tls[0].hosts[0]=cli.rocketship.globalbank.com \
+  --set ingress.hosts[0].host=cli.rocketship.globalbank.com \
   --set ingress.hosts[0].paths[0].path=/ \
   --set ingress.hosts[0].paths[0].pathType=Prefix \
   --wait
@@ -172,7 +172,7 @@ PY
      --from-literal=cookieSecret="$COOKIE_SECRET"
    ```
 
-2. **Review `charts/rocketship/values-oidc-web.yaml`:** the preset already targets GitHub, sets the redirect URL to `https://app.rocketship.sh/oauth2/callback`, and reuses `rocketship-cloud-tls`. Adjust only if you are customising domains.
+2. **Review `charts/rocketship/values-oidc-web.yaml`:** the preset already targets GitHub, sets the redirect URL to `https://app.rocketship.globalbank.com/oauth2/callback`, and reuses `rocketship-cloud-tls`. Adjust only if you are customising domains.
 
 3. **Apply the preset alongside the existing gRPC values:**
    ```bash
@@ -183,11 +183,11 @@ PY
      --wait
    ```
 
-4. **Verify the flow:** visit `https://app.rocketship.sh/` in a fresh session. You should be redirected to GitHub, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `cli.rocketship.sh:443` and is expected to be protected with JWTs minted by the broker (see the next section).
+4. **Verify the flow:** visit `https://app.rocketship.globalbank.com/` in a fresh session. You should be redirected to GitHub, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `cli.rocketship.globalbank.com:443` and is expected to be protected with JWTs minted by the broker (see the next section).
 
 ## 8. Configure GitHub Device Flow for the CLI (recommended)
 
-Usage-based Rocketship Cloud relies on the GitHub auth broker to mint Rocketship-signed JWTs. Configure it once and every developer can authenticate with `rocketship login`.
+GlobalBank’s GitHub auth broker mints Rocketship-signed JWTs so every developer (or CI job) can authenticate with `rocketship login`.
 
 1. **Create the signing key secret.** Generate a 2048-bit RSA key (or reuse an existing one) and store it as `signing-key.pem`.
    ```bash
@@ -206,8 +206,8 @@ Usage-based Rocketship Cloud relies on the GitHub auth broker to mint Rocketship
    ```
 
 3. **Create a GitHub OAuth App (device flow).**
-   - Homepage URL: `https://cli.rocketship.sh`
-   - Callback URL: `https://cli.rocketship.sh/oauth2/callback`
+   - Homepage URL: `https://cli.rocketship.globalbank.com`
+   - Callback URL: `https://cli.rocketship.globalbank.com/oauth2/callback`
    - Under *Device Flow*, enable **Allow device flow**.
    - Copy the Client ID and Client Secret.
 
@@ -235,7 +235,7 @@ Usage-based Rocketship Cloud relies on the GitHub auth broker to mint Rocketship
 
 6. **Log in from the CLI.**
    ```bash
-   rocketship profile create cloud grpcs://cli.rocketship.sh
+   rocketship profile create cloud grpcs://cli.rocketship.globalbank.com
    rocketship profile use cloud
    rocketship login
    rocketship status
@@ -270,17 +270,17 @@ This approach lets you offer the same RBAC semantics in every environment. Usage
 
 ## 10. Point DNS at the Load Balancer
 
-Create A (or CNAME) records for `cli.rocketship.sh`, `app.rocketship.sh`, and `auth.rocketship.sh` pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.
+Create A (or CNAME) records for `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.
 ## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
 
 ```bash
-curl -v https://cli.rocketship.sh/healthz
-curl -v https://auth.rocketship.sh/healthz
+curl -v https://cli.rocketship.globalbank.com/healthz
+curl -v https://auth.rocketship.globalbank.com/healthz
 ```
 
-Create and use the default cloud profile from the CLI (already pointing at `cli.rocketship.sh:443`):
+Create and use the default cloud profile from the CLI (already pointing at `cli.rocketship.globalbank.com:443`):
 
 ```bash
 rocketship profile list

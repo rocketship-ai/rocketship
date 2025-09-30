@@ -8,7 +8,7 @@ Create a new connection profile for a Rocketship deployment.
 
 The URL should be the base URL of your Rocketship deployment, e.g.:
   https://rocketship.company.com
-  https://globalbank.rocketship.sh
+  https://cli.rocketship.globalbank.com
 
 TLS settings will be automatically detected from the URL scheme.
 

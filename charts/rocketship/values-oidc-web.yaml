@@ -17,14 +17,14 @@ web:
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
       nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     hosts:
-      - host: app.rocketship.sh
+      - host: app.rocketship.globalbank.com
         paths:
           - path: /
             pathType: Prefix
     tls:
       - secretName: rocketship-cloud-tls
         hosts:
-          - app.rocketship.sh
+          - app.rocketship.globalbank.com
   oauth2Proxy:
     enabled: true
     replicaCount: 1
@@ -56,7 +56,7 @@ web:
             name: oauth2-proxy-credentials
             key: cookieSecret
       - name: OAUTH2_PROXY_REDIRECT_URL
-        value: https://app.rocketship.sh/oauth2/callback
+        value: https://app.rocketship.globalbank.com/oauth2/callback
       - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
         value: "true"
       - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER

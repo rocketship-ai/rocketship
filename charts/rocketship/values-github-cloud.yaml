@@ -2,27 +2,30 @@ auth:
   mode: oidc
   oidc:
     mode: github
-    issuer: https://auth.rocketship.sh
+    issuer: https://auth.rocketship.globalbank.com
     clientID: rocketship-cli
     audience: rocketship-cli
-    deviceEndpoint: https://auth.rocketship.sh/device/code
-    tokenEndpoint: https://auth.rocketship.sh/token
-    jwksURL: https://auth.rocketship.sh/.well-known/jwks.json
+    deviceEndpoint: https://auth.rocketship.globalbank.com/device/code
+    tokenEndpoint: https://auth.rocketship.globalbank.com/token
+    jwksURL: https://auth.rocketship.globalbank.com/.well-known/jwks.json
     scopes:
+    - read:org
     - read:user
     - user:email
   broker:
     enabled: true
-    issuer: https://auth.rocketship.sh
+    issuer: https://auth.rocketship.globalbank.com
     audience: rocketship-cli
     clientID: rocketship-cli
     scopes:
+    - read:org
     - read:user
     - user:email
     github:
       clientID: Ov23li6jRbnoviVURzs9
       clientSecretSecret: rocketship-github-oauth
       scopes:
+      - read:org
       - read:user
       - user:email
     signingKey:
@@ -49,14 +52,14 @@ auth:
       className: nginx
       annotations: {}
       hosts:
-      - host: auth.rocketship.sh
+      - host: auth.rocketship.globalbank.com
         paths:
         - path: /
           pathType: Prefix
       tls:
       - secretName: rocketship-cloud-tls
         hosts:
-        - auth.rocketship.sh
+        - auth.rocketship.globalbank.com
     envFrom:
     - secretRef:
         name: rocketship-github-oauth
@@ -70,11 +73,11 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: 'true'
     nginx.ingress.kubernetes.io/proxy-body-size: '0'
   hosts:
-  - host: cli.rocketship.sh
+  - host: cli.rocketship.globalbank.com
     paths:
     - path: /
       pathType: Prefix
   tls:
   - secretName: rocketship-cloud-tls
     hosts:
-    - cli.rocketship.sh
+    - cli.rocketship.globalbank.com

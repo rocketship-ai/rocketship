@@ -57,7 +57,7 @@ if ! grep -q "ROCKETSHIP_BROKER_SIGNING_KEY_FILE" <<<"$github_output"; then
   echo "Expected broker configuration env vars in GitHub preset" >&2
   exit 1
 fi
-if ! grep -q "auth.rocketship.sh" <<<"$github_output"; then
+if ! grep -q "auth.rocketship.globalbank.com" <<<"$github_output"; then
   echo "Expected auth broker ingress host in GitHub preset" >&2
   exit 1
 fi

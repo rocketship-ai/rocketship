@@ -14,8 +14,8 @@ Deliver a production-ready, usage-based Rocketship Cloud offering where customer
 ## Outcome Overview
 
 - Shared DigitalOcean cluster hosts Rocketship Cloud:
-  - CLI endpoint: `cli.rocketship.sh`
-  - UI (oauth2-proxy + web): `app.rocketship.sh`
+  - CLI endpoint: `cli.rocketship.globalbank.com`
+  - UI (oauth2-proxy + web): `app.rocketship.globalbank.com`
   - GitHub SSO powers device flow via Rocketship broker.
 - CLI experiences (`rocketship login/status/logout`) work out-of-the-box with GitHub accounts.
 - Engine validates Rocketship JWTs for gRPC requests, enforcing basic RBAC.
