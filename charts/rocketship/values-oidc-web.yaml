@@ -1,10 +1,10 @@
 # Example values for enabling oauth2-proxy in front of the Rocketship web endpoints
 # This configuration assumes:
-# - An Auth0 (or compatible OIDC) application configured for the Rocketship web UI
+# - A GitHub OAuth application configured for the Rocketship web UI (same app as the CLI device flow)
 # - A Kubernetes secret named `oauth2-proxy-credentials` with keys:
 #     clientID          -> OAuth client ID (plain text)
 #     clientSecret      -> OAuth client secret
-#     cookieSecret      -> 32-byte random string, base64 encoded (e.g. `python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`)
+#     cookieSecret      -> 16-byte random string (hex or base64)
 # - The Rocketship engine service will serve HTTP traffic (health/UI) on port 7701
 
 web:
@@ -39,7 +39,7 @@ web:
       - --skip-provider-button=true
     env:
       - name: OAUTH2_PROXY_PROVIDER
-        value: oidc
+        value: github
       - name: OAUTH2_PROXY_CLIENT_ID
         valueFrom:
           secretKeyRef:
@@ -72,18 +72,11 @@ web:
       - name: OAUTH2_PROXY_HTTPS_ADDRESS
         value: ":0"
 
+      - name: OAUTH2_PROXY_SCOPE
+        value: "read:user user:email"
+      - name: OAUTH2_PROXY_EMAIL_DOMAINS
+        value: "*"
+
 auth:
   oidc:
-    enabled: true
-    issuer: https://dev-0ankenxegmh7xfjm.us.auth0.com/
-    clientID: rocketship-cli
-    tokenEndpoint: https://dev-0ankenxegmh7xfjm.us.auth0.com/oauth/token
-    deviceEndpoint: https://dev-0ankenxegmh7xfjm.us.auth0.com/oauth/device/code
-    jwksURL: https://dev-0ankenxegmh7xfjm.us.auth0.com/.well-known/jwks.json
-    scopes:
-      - openid
-      - profile
-      - email
-      - offline_access
-    allowedAlgorithms:
-      - RS256
+    enabled: false

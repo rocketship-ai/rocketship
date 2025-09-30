@@ -163,6 +163,7 @@ Self-hosted teams typically pick one of two flows:
 This keeps everything inside the chart. The broker handles CLI device flow, and oauth2-proxy fronts the web UI with the same GitHub app.
 
 1. **Provision broker secrets.**
+
    ```bash
    openssl genrsa -out signing-key.pem 2048
    kubectl create secret generic globalbank-auth-broker-signing \
@@ -180,12 +181,13 @@ This keeps everything inside the chart. The broker handles CLI device flow, and 
    ```
 
 2. **Bootstrap oauth2-proxy credentials.** Use the same GitHub OAuth application (client ID/secret) so both CLI and UI share it.
+
    ```bash
    COOKIE_SECRET=$(python3 - <<'PY'
-import secrets
-print(secrets.token_hex(16))
-PY
-)
+   import secrets
+   print(secrets.token_hex(16))
+   PY
+   )
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
      --from-literal=clientID=<github-client-id> \
@@ -194,6 +196,7 @@ PY
    ```
 
 3. **Deploy with the GitHub presets.**
+
    ```bash
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
@@ -254,6 +257,7 @@ This approach lets you offer the same RBAC semantics in every environment. Usage
 ## 10. Point DNS at the Load Balancer
 
 Create A (or CNAME) records for `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.
+
 ## 11. Smoke Test the Endpoint
 
 The Rocketship health endpoint answers gRPC, so an HTTPS request returns `415` with `application/grpc`, which confirms end-to-end TLS:
