@@ -34,7 +34,6 @@ web:
       - --cookie-name=_rocketship_auth
       - --cookie-secure=true
       - --cookie-samesite=lax
-      - --scope=openid profile email
       - --email-domain=*
       - --skip-provider-button=true
     env:
@@ -57,10 +56,6 @@ web:
             key: cookieSecret
       - name: OAUTH2_PROXY_REDIRECT_URL
         value: https://app.rocketship.globalbank.com/oauth2/callback
-      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
-        value: https://dev-0ankenxegmh7xfjm.us.auth0.com/ # e.g. https://rocketship-demo.us.auth0.com/
-      - name: OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL
-        value: "false"
       - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
         value: "true"
       - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER
@@ -73,7 +68,7 @@ web:
         value: ":0"
 
       - name: OAUTH2_PROXY_SCOPE
-        value: "read:user user:email"
+        value: "read:org read:user user:email"
       - name: OAUTH2_PROXY_EMAIL_DOMAINS
         value: "*"
 

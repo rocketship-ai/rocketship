@@ -48,9 +48,9 @@ if ! grep -q "OAUTH2_PROXY_PROVIDER" <<<"$oidc_output"; then
 fi
 
 # GitHub broker preset should render broker deployment and env vars
-github_output=$(render -f "$CHART_DIR/values-github-globalbank.yaml")
+github_output=$(render -f "$CHART_DIR/values-github-cloud.yaml")
 if ! grep -q "rocketship-auth-broker" <<<"$github_output"; then
-  echo "Expected broker resources in values-github-globalbank.yaml render" >&2
+  echo "Expected broker resources in values-github-cloud.yaml render" >&2
   exit 1
 fi
 if ! grep -q "ROCKETSHIP_BROKER_SIGNING_KEY_FILE" <<<"$github_output"; then
@@ -59,5 +59,16 @@ if ! grep -q "ROCKETSHIP_BROKER_SIGNING_KEY_FILE" <<<"$github_output"; then
 fi
 if ! grep -q "auth.rocketship.globalbank.com" <<<"$github_output"; then
   echo "Expected auth broker ingress host in GitHub preset" >&2
+  exit 1
+fi
+
+# GitHub web preset should render oauth2-proxy wiring when combined with production values
+github_web_output=$(render -f "$CHART_DIR/values-production.yaml" -f "$CHART_DIR/values-github-web.yaml")
+if ! grep -q "oauth2-proxy" <<<"$github_web_output"; then
+  echo "Expected oauth2-proxy resources when values-github-web.yaml is applied" >&2
+  exit 1
+fi
+if ! grep -q "app.rocketship.globalbank.com" <<<"$github_web_output"; then
+  echo "Expected web ingress host in GitHub web preset" >&2
   exit 1
 fi
