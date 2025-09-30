@@ -147,25 +147,72 @@ kubectl get pods -n rocketship
 
 `rocketship-engine` and `rocketship-worker` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
 
-## 7. Enable OIDC for the Web UI (optional)
+## 7. Enable Auth for the Web UI (optional)
 
-If you want browser users to authenticate via Auth0/Okta before reaching Rocketship’s HTTP endpoints, layer oauth2-proxy in front of the engine’s HTTP port:
+After the gRPC ingress is live you can optionally front the engine’s HTTP port with oauth2-proxy. Choose the option that matches your organisation:
 
-1. **Create the credentials secret** (keys consumed by the preset):
+### Option A — GitHub broker (reuse CLI device flow)
+
+1. **Create the broker secrets:**
+   ```bash
+   # GitHub OAuth app credentials
+   kubectl create secret generic globalbank-github-oauth \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_ID=Ov23li6jRbnoviVURzs9 \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=REPLACE_ME
+
+   # Encrypted refresh-token store key
+   kubectl create secret generic globalbank-auth-broker-store \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_BROKER_STORE_KEY=$(openssl rand -hex 32)
+
+   # JWKS signing material (PEM formatted private key + matching cert)
+   kubectl create secret generic globalbank-auth-broker-signing \
+     --namespace rocketship \
+     --from-file=signing-key.pem=./signing-key.pem
+
+   # Web front-door OAuth client (used by oauth2-proxy)
+   kubectl create secret generic oauth2-proxy-credentials \
+     --namespace rocketship \
+     --from-literal=clientID=rocketship-web \
+     --from-literal=clientSecret=REPLACE_ME \
+     --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
+   ```
+
+2. **Review `charts/rocketship/values-github-selfhost.yaml` and `charts/rocketship/values-github-web.yaml`:**
+   - Ensure the public hostnames (`cli/globalbank/app/globalbank`) match your ingress controller.
+   - Update the GitHub OAuth app ID/secret (and TLS secret) if you generated different values.
+   - The oauth2-proxy preset points its issuer at `https://auth.globalbank.rocketship.sh`, which is served by the broker deployment.
+
+3. **Apply the presets alongside the base ingress values:**
+   ```bash
+   helm upgrade --install rocketship charts/rocketship \
+     --namespace rocketship \
+     -f charts/rocketship/values-production.yaml \
+     -f charts/rocketship/values-github-selfhost.yaml \
+     -f charts/rocketship/values-github-web.yaml \
+     --wait
+   ```
+
+4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a new session. You should be redirected to GitHub, approve the `rocketship-cli` app, and land on the proxied Rocketship health page (`/healthz`).
+
+### Option B — Bring your own IdP (Auth0/Okta/Azure AD)
+
+1. **Create the oauth2-proxy credentials secret:**
    ```bash
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
-     --from-literal=clientID=YOUR_AUTH0_CLIENT_ID \
-     --from-literal=clientSecret=YOUR_AUTH0_CLIENT_SECRET \
+     --from-literal=clientID=YOUR_IDP_CLIENT_ID \
+     --from-literal=clientSecret=YOUR_IDP_CLIENT_SECRET \
      --from-literal=cookieSecret=$(python -c "import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())")
    ```
 
 2. **Review `charts/rocketship/values-oidc-web.yaml`:**
-   - Set `OAUTH2_PROXY_OIDC_ISSUER_URL` to your Auth0 domain (e.g. `https://rocketship-demo.us.auth0.com/`).
+   - Set `OAUTH2_PROXY_OIDC_ISSUER_URL` to your IdP’s issuer URL (e.g. `https://auth.globalbank.com/oidc`).
    - Update `OAUTH2_PROXY_REDIRECT_URL` to match the web hostname (`https://app.globalbank.rocketship.sh/oauth2/callback`).
-   - Adjust hosts/TLS to match your ingress.
+   - Populate `auth.oidc.*` with the native-app client (CLI device flow) details from your IdP.
 
-3. **Apply the preset alongside the existing gRPC values:**
+3. **Apply the preset:**
    ```bash
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
@@ -174,7 +221,7 @@ If you want browser users to authenticate via Auth0/Okta before reaching Rockets
      --wait
    ```
 
-4. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a fresh session. You should be redirected to Auth0, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `globalbank.rocketship.sh:7700` and is expected to be protected with bearer tokens (see the next section).
+4. **Verify the flow:** browse to `https://app.globalbank.rocketship.sh/`, complete your IdP login, and confirm the proxied Rocketship health page renders (`/healthz`).
 
 ## 8. Enable Token Authentication for gRPC (recommended)
 

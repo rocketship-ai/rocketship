@@ -46,3 +46,14 @@ if ! grep -q "OAUTH2_PROXY_PROVIDER" <<<"$oidc_output"; then
   echo "Expected OIDC environment variables in oauth2-proxy deployment" >&2
   exit 1
 fi
+
+# GitHub broker preset should render auth-broker deployment and env wiring
+github_output=$(render -f "$CHART_DIR/values-github-selfhost.yaml" -f "$CHART_DIR/values-github-web.yaml")
+if ! grep -q "auth-broker" <<<"$github_output"; then
+  echo "Expected auth-broker resources in values-github-selfhost.yaml render" >&2
+  exit 1
+fi
+if ! grep -q "ROCKETSHIP_GITHUB_CLIENT_ID" <<<"$github_output"; then
+  echo "Expected GitHub client configuration in auth-broker deployment" >&2
+  exit 1
+fi

@@ -1,6 +1,5 @@
-# Example values for enabling oauth2-proxy in front of the Rocketship web endpoints
-# using an external IdP (Auth0, Okta, Azure AD, etc.). Update the domains, secret
-# names, and client identifiers for your environment.
+# Companion values file for enabling oauth2-proxy when using the GitHub auth broker.
+# Users must create the oauth2-proxy-credentials secret with client ID/secret/cookie data.
 
 web:
   enabled: true
@@ -28,7 +27,7 @@ web:
       - --cookie-name=_rocketship_auth
       - --cookie-secure=true
       - --cookie-samesite=lax
-      - --scope=openid profile email offline_access
+      - --scope=read:user user:email
       - --email-domain=*
       - --skip-provider-button=true
     env:
@@ -52,7 +51,7 @@ web:
       - name: OAUTH2_PROXY_REDIRECT_URL
         value: https://app.globalbank.rocketship.sh/oauth2/callback
       - name: OAUTH2_PROXY_OIDC_ISSUER_URL
-        value: https://auth.globalbank.com/oidc
+        value: https://auth.globalbank.rocketship.sh
       - name: OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER
         value: "true"
       - name: OAUTH2_PROXY_SET_AUTHORIZATION_HEADER
@@ -65,21 +64,4 @@ web:
         value: ":0"
 
 auth:
-  mode: oidc
-  oidc:
-    enabled: true
-    issuer: https://auth.globalbank.com/oidc
-    clientID: rocketship-cli
-    audience: rocketship-cli
-    tokenEndpoint: https://auth.globalbank.com/oauth2/token
-    deviceEndpoint: https://auth.globalbank.com/oauth/device/code
-    jwksURL: https://auth.globalbank.com/.well-known/jwks.json
-    scopes:
-      - openid
-      - profile
-      - email
-      - offline_access
-    allowedAlgorithms:
-      - RS256
-  broker:
-    enabled: false
+  mode: github

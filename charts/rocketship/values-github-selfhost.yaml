@@ -1,0 +1,58 @@
+# Example values to enable the GitHub device-flow auth broker for self-hosted clusters.
+# Replace client IDs, secrets, and TLS secret names with values from your environment.
+
+auth:
+  mode: github
+  oidc:
+    enabled: false
+  broker:
+    enabled: true
+    image:
+      repository: rocketshipai/rocketship-auth-broker
+      tag: latest
+    issuer: https://auth.globalbank.rocketship.sh
+    audience: rocketship-cli
+    clientID: rocketship-cli
+    scopes:
+      - read:user
+      - user:email
+    github:
+      clientID: Ov23li6jRbnoviVURzs9
+      clientSecretSecret: globalbank-github-oauth
+      scopes:
+        - read:user
+        - user:email
+    signingKey:
+      secretName: globalbank-auth-broker-signing
+      key: signing-key.pem
+      mountPath: /var/run/rocketship
+      fileName: signing-key.pem
+    store:
+      path: /var/lib/rocketship/broker-store.enc
+      mountPath: /var/lib/rocketship
+      encryptionKeySecret: globalbank-auth-broker-store
+      encryptionKeyKey: ROCKETSHIP_BROKER_STORE_KEY
+      emptyDir: true
+    ingress:
+      enabled: true
+      className: nginx
+      annotations: {}
+      hosts:
+        - host: auth.globalbank.rocketship.sh
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: globalbank-rocketship-tls
+          hosts:
+            - auth.globalbank.rocketship.sh
+    env:
+      - name: ROCKETSHIP_BROKER_ACCESS_TTL
+        value: 15m
+      - name: ROCKETSHIP_BROKER_REFRESH_TTL
+        value: 720h
+    envFrom:
+      - secretRef:
+          name: globalbank-github-oauth
+      - secretRef:
+          name: globalbank-auth-broker-store
