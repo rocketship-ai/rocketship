@@ -154,11 +154,32 @@ kubectl get pods -n rocketship
 
 `rocketship-engine`, `rocketship-worker`, `rocketship-auth-broker`, and `rocketship-web-oauth2-proxy` should report `READY 1/1`. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.
 
-## 7. Enable OIDC for the Web UI (optional)
+## 7. Choose an authentication path
 
-If you want browser users to authenticate via Auth0/Okta before reaching Rocketship’s HTTP endpoints, layer oauth2-proxy in front of the engine’s HTTP port:
+Self-hosted teams typically pick one of two flows:
 
-1. **Create the credentials secret** (keys consumed by the preset). Use the *same* GitHub OAuth application you configured for the CLI, so both flows share a client ID and secret:
+### Option 1 – GitHub OAuth with the bundled auth broker
+
+This keeps everything inside the chart. The broker handles CLI device flow, and oauth2-proxy fronts the web UI with the same GitHub app.
+
+1. **Provision broker secrets.**
+   ```bash
+   openssl genrsa -out signing-key.pem 2048
+   kubectl create secret generic globalbank-auth-broker-signing \
+     --namespace rocketship \
+     --from-file=signing-key.pem
+
+   python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())" > broker-store.key
+   kubectl create secret generic globalbank-auth-broker-store \
+     --namespace rocketship \
+     --from-file=ROCKETSHIP_BROKER_STORE_KEY=broker-store.key
+
+   kubectl create secret generic globalbank-github-oauth \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
+   ```
+
+2. **Bootstrap oauth2-proxy credentials.** Use the same GitHub OAuth application (client ID/secret) so both CLI and UI share it.
    ```bash
    COOKIE_SECRET=$(python3 - <<'PY'
 import secrets
@@ -167,95 +188,57 @@ PY
 )
    kubectl create secret generic oauth2-proxy-credentials \
      --namespace rocketship \
-     --from-literal=clientID=Ov23li6jRbnoviVURzs9 \
+     --from-literal=clientID=<github-client-id> \
      --from-literal=clientSecret=<github-client-secret> \
      --from-literal=cookieSecret="$COOKIE_SECRET"
    ```
 
-2. **Review `charts/rocketship/values-oidc-web.yaml`:** the preset already targets GitHub, sets the redirect URL to `https://app.rocketship.globalbank.com/oauth2/callback`, and reuses `globalbank-tls`. Adjust only if you are customising domains.
-
-3. **Apply the preset alongside the existing gRPC values:**
+3. **Deploy with the GitHub presets.**
    ```bash
    helm upgrade --install rocketship charts/rocketship \
      --namespace rocketship \
      -f charts/rocketship/values-production.yaml \
-     -f charts/rocketship/values-oidc-web.yaml \
-     --wait
-   ```
-
-4. **Verify the flow:** visit `https://app.rocketship.globalbank.com/` in a fresh session. You should be redirected to GitHub, and after login you should land on the proxied Rocketship health page (`/healthz`). gRPC traffic remains on `cli.rocketship.globalbank.com:443` and is expected to be protected with JWTs minted by the broker (see the next section).
-
-## 8. Configure GitHub Device Flow for the CLI (recommended)
-
-GlobalBank’s GitHub auth broker mints Rocketship-signed JWTs so every developer (or CI job) can authenticate with `rocketship login`.
-
-1. **Create the signing key secret.** Generate a 2048-bit RSA key (or reuse an existing one) and store it as `signing-key.pem`.
-   ```bash
-   openssl genrsa -out signing-key.pem 2048
-   kubectl create secret generic globalbank-auth-broker-signing \
-     --namespace rocketship \
-     --from-file=signing-key.pem
-   ```
-
-2. **Provision an encryption key for the refresh-token store.**
-   ```bash
-   python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())" > broker-store.key
-   kubectl create secret generic globalbank-auth-broker-store \
-     --namespace rocketship \
-     --from-file=ROCKETSHIP_BROKER_STORE_KEY=broker-store.key
-   ```
-
-3. **Create a GitHub OAuth App (device flow).**
-   - Homepage URL: `https://cli.rocketship.globalbank.com`
-   - Callback URL: `https://cli.rocketship.globalbank.com/oauth2/callback`
-   - Under *Device Flow*, enable **Allow device flow**.
-   - Copy the Client ID and Client Secret.
-
-4. **Store the GitHub client secret.**
-   ```bash
-   kubectl create secret generic globalbank-github-oauth \
-     --namespace rocketship \
-     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
-   ```
-   > Use the same GitHub OAuth application for the web UI. When you create the `oauth2-proxy-credentials` secret (step 7), set `clientID` to this exact value so both the CLI and UI share the same app.
-
-5. **Deploy the chart with the GitHub preset.** Provide the GitHub Client ID while secrets keep everything sensitive out of the values file. (If you hard-code the client ID in your copied values file, you can drop the `--set auth.broker.github.clientID=…` flag.)
-   ```bash
-   helm upgrade --install rocketship charts/rocketship \
-     --namespace rocketship \
-     -f charts/rocketship/values-production.yaml \
-     -f charts/rocketship/values-github-globalbank.yaml \
+     -f charts/rocketship/values-github-cloud.yaml \
+     -f charts/rocketship/values-github-web.yaml \
      --set engine.image.repository=$REGISTRY/rocketship-engine \
      --set engine.image.tag=$TAG \
      --set worker.image.repository=$REGISTRY/rocketship-worker \
      --set worker.image.tag=$TAG \
-     --set auth.broker.github.clientID=<github-client-id> \
+     --set auth.broker.image.repository=$REGISTRY/rocketship-auth-broker \
+     --set auth.broker.image.tag=$TAG \
      --wait
    ```
 
-6. **Log in from the CLI.**
+4. **Validate the flows.**
    ```bash
    rocketship profile create cloud grpcs://cli.rocketship.globalbank.com
    rocketship profile use cloud
    rocketship login
    rocketship status
    ```
-
-   The CLI guides you through GitHub device flow (`https://github.com/login/device`), stores access + refresh tokens in the OS keyring, and automatically refreshes them on subsequent commands.
+   Browse to `https://app.rocketship.globalbank.com/` in a fresh session—you should be redirected through GitHub and land back on the proxied Rocketship UI after approval. The CLI command above walks you through device flow (`https://github.com/login/device`) and persists the refresh token locally.
 
 > The broker stores only hashed refresh tokens encrypted at rest. Rotate the signing key or store key by updating the Kubernetes secrets and rerunning `helm upgrade`.
 
-## 9. Bring Your Own OIDC Provider (enterprise/self-hosted)
+### Option 2 – Bring your own IdP (Auth0, Okta, Azure AD, …)
 
-If your organisation mandates an internal IdP (Auth0, Okta, Azure AD, etc.), the chart still supports direct OIDC configuration without the GitHub broker. Provision two clients—one Native app for the CLI (device flow + refresh tokens) and one Regular Web Application for oauth2-proxy—and optionally an API/audience according to your provider’s terminology.
-
-Update `charts/rocketship/values-oidc-web.yaml` with your issuer, audience, and client IDs. Then deploy with both the production and OIDC presets:
+If you already manage an internal IdP, point the chart at it. Provision the necessary applications in your provider (typically a native app for the CLI device flow and a web app for oauth2-proxy), then update `charts/rocketship/values-oidc-web.yaml` with your issuer, client IDs, and scopes.
 
 ```bash
-helm upgrade --install rocketship charts/rocketship   --namespace rocketship   -f charts/rocketship/values-production.yaml   -f charts/rocketship/values-oidc-web.yaml   --set engine.image.repository=$REGISTRY/rocketship-engine   --set engine.image.tag=$TAG   --set worker.image.repository=$REGISTRY/rocketship-worker   --set worker.image.tag=$TAG   --wait
+helm upgrade --install rocketship charts/rocketship \
+  --namespace rocketship \
+  -f charts/rocketship/values-production.yaml \
+  -f charts/rocketship/values-oidc-web.yaml \
+  --set engine.image.repository=$REGISTRY/rocketship-engine \
+  --set engine.image.tag=$TAG \
+  --set worker.image.repository=$REGISTRY/rocketship-worker \
+  --set worker.image.tag=$TAG \
+  --set auth.broker.image.repository=$REGISTRY/rocketship-auth-broker \
+  --set auth.broker.image.tag=$TAG \
+  --wait
 ```
 
-After rollout, developers run `rocketship login -p <profile>` to complete device flow against your IdP. The CLI persists the refresh token and renews access tokens automatically.
+After rollout, point your CLI profile at the engine (`rocketship profile create <name> grpcs://cli.rocketship.globalbank.com`) and run `rocketship login`. The CLI follows the device flow your IdP exposes and automatically refreshes the issued token on subsequent commands.
 
 ### RBAC considerations
 
