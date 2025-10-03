@@ -2,6 +2,8 @@
 
 This file provides guidance to AI coding agents (including this Codex CLI assistant) when working with code in this repository.
 
+> **Versioning note:** Rocketship is still pre-1.0. There is **no backwards-compatibility requirement** for any interface, schema, or behaviour. Optimise for the current epic even if it means breaking past behaviour; do not preserve legacy code paths for compatibility unless the user explicitly asks.
+
 ## Architecture Overview
 
 Rocketship is an open-source testing framework for browser and API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.

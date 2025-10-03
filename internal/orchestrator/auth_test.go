@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -60,12 +61,11 @@ func TestAuthInterceptor_EnforcesToken(t *testing.T) {
 
 	interceptor := engine.NewAuthUnaryInterceptor()
 	info := &grpc.UnaryServerInfo{FullMethod: "/rocketship.v1.Engine/CreateRun"}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return "ok", nil
-	}
 
 	t.Run("missing metadata", func(t *testing.T) {
-		_, err := interceptor(context.Background(), nil, info, handler)
+		_, err := interceptor(context.Background(), nil, info, func(ctx context.Context, req interface{}) (interface{}, error) {
+			return nil, nil
+		})
 		if status.Code(err) != codes.Unauthenticated {
 			t.Fatalf("expected unauthenticated, got %v", err)
 		}
@@ -73,7 +73,9 @@ func TestAuthInterceptor_EnforcesToken(t *testing.T) {
 
 	t.Run("invalid header", func(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Token abc"))
-		_, err := interceptor(ctx, nil, info, handler)
+		_, err := interceptor(ctx, nil, info, func(ctx context.Context, req interface{}) (interface{}, error) {
+			return nil, nil
+		})
 		if status.Code(err) != codes.Unauthenticated {
 			t.Fatalf("expected unauthenticated for bad prefix, got %v", err)
 		}
@@ -81,7 +83,9 @@ func TestAuthInterceptor_EnforcesToken(t *testing.T) {
 
 	t.Run("wrong token", func(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer other"))
-		_, err := interceptor(ctx, nil, info, handler)
+		_, err := interceptor(ctx, nil, info, func(ctx context.Context, req interface{}) (interface{}, error) {
+			return nil, nil
+		})
 		if status.Code(err) != codes.PermissionDenied {
 			t.Fatalf("expected permission denied, got %v", err)
 		}
@@ -89,12 +93,32 @@ func TestAuthInterceptor_EnforcesToken(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer secret-token"))
-		resp, err := interceptor(ctx, nil, info, handler)
+		resp, err := interceptor(ctx, nil, info, func(ctx context.Context, req interface{}) (interface{}, error) {
+			principal, ok := PrincipalFromContext(ctx)
+			if !ok {
+				t.Fatal("expected principal in context")
+			}
+			if principal.Subject != "token" {
+				t.Fatalf("unexpected principal subject %q", principal.Subject)
+			}
+			return "ok", nil
+		})
 		if err != nil {
 			t.Fatalf("expected success, got %v", err)
 		}
 		if resp != "ok" {
 			t.Fatalf("unexpected response %v", resp)
+		}
+	})
+
+	t.Run("unknown method", func(t *testing.T) {
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer secret-token"))
+		unknown := &grpc.UnaryServerInfo{FullMethod: "/rocketship.v1.Engine/Unknown"}
+		_, err := interceptor(ctx, nil, unknown, func(ctx context.Context, req interface{}) (interface{}, error) {
+			return "ok", nil
+		})
+		if status.Code(err) != codes.PermissionDenied {
+			t.Fatalf("expected permission denied for unknown method, got %v", err)
 		}
 	})
 }
@@ -122,14 +146,13 @@ func TestAuthStreamInterceptor(t *testing.T) {
 
 	info := &grpc.StreamServerInfo{FullMethod: "/rocketship.v1.Engine/StreamLogs"}
 	handlerCalled := false
-	handler := func(_ interface{}, _ grpc.ServerStream) error {
-		handlerCalled = true
-		return nil
-	}
 
 	t.Run("missing token", func(t *testing.T) {
 		handlerCalled = false
-		err := interceptor(nil, &testServerStream{ctx: context.Background()}, info, handler)
+		err := interceptor(nil, &testServerStream{ctx: context.Background()}, info, func(_ interface{}, stream grpc.ServerStream) error {
+			handlerCalled = true
+			return nil
+		})
 		if status.Code(err) != codes.Unauthenticated {
 			t.Fatalf("expected unauthenticated, got %v", err)
 		}
@@ -141,7 +164,18 @@ func TestAuthStreamInterceptor(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		handlerCalled = false
 		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer secret-token"))
-		if err := interceptor(nil, &testServerStream{ctx: ctx}, info, handler); err != nil {
+		err := interceptor(nil, &testServerStream{ctx: ctx}, info, func(_ interface{}, stream grpc.ServerStream) error {
+			handlerCalled = true
+			principal, ok := PrincipalFromContext(stream.Context())
+			if !ok {
+				t.Fatal("expected principal on stream context")
+			}
+			if len(principal.Roles) == 0 {
+				t.Fatal("expected principal roles to be populated")
+			}
+			return nil
+		})
+		if err != nil {
 			t.Fatalf("expected success, got %v", err)
 		}
 		if !handlerCalled {
@@ -210,14 +244,57 @@ func TestOIDCValidationRSA(t *testing.T) {
 		t.Fatalf("ConfigureOIDC failed: %v", err)
 	}
 
-	if err := engine.authConfig.Validate(ctx, token); err != nil {
+	principal, err := engine.authConfig.Validate(ctx, token)
+	if err != nil {
 		t.Fatalf("expected token to validate, got %v", err)
+	}
+	if principal == nil || principal.Subject != "user" {
+		t.Fatalf("unexpected principal %+v", principal)
 	}
 
 	// Wrong audience should fail
 	bad := signJWTRSA(key, settings.Issuer, "wrong")
-	if err := engine.authConfig.Validate(ctx, bad); err == nil {
+	if _, err := engine.authConfig.Validate(ctx, bad); err == nil {
 		t.Fatal("expected audience mismatch to fail")
+	}
+}
+
+func TestOIDCValidationRSAMissingRolesFails(t *testing.T) {
+	engine := NewEngine(&noopTemporalClient{})
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	jwksJSON := buildRSAJWKS(key)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(jwksJSON))
+	}))
+	defer server.Close()
+
+	settings := OIDCSettings{
+		Issuer:         "https://example.com",
+		Audience:       "api",
+		ClientID:       "rocketship-cli",
+		JWKSURL:        server.URL,
+		TokenEndpoint:  "https://example.com/token",
+		DeviceEndpoint: "https://example.com/device",
+		Scopes:         []string{"openid"},
+	}
+
+	ctx := context.Background()
+	if err := engine.ConfigureOIDC(ctx, settings); err != nil {
+		t.Fatalf("ConfigureOIDC failed: %v", err)
+	}
+
+	missingRoles := signJWTRSAWithoutRoles(key, settings.Issuer, settings.Audience)
+	if _, err := engine.authConfig.Validate(ctx, missingRoles); err == nil {
+		t.Fatal("expected missing roles to fail validation")
+	} else if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected permission denied, got %v", err)
+	} else if !strings.Contains(err.Error(), "roles") {
+		t.Fatalf("expected roles hint in error, got %v", err)
 	}
 }
 
@@ -252,13 +329,91 @@ func TestOIDCValidationEC(t *testing.T) {
 	}
 
 	token := signJWTEC(ek, settings.Issuer, settings.Audience)
-	if err := engine.authConfig.Validate(ctx, token); err != nil {
+	principal, err := engine.authConfig.Validate(ctx, token)
+	if err != nil {
 		t.Fatalf("expected token to validate, got %v", err)
+	}
+	if principal == nil || principal.Subject != "user" {
+		t.Fatalf("unexpected principal %+v", principal)
 	}
 
 	bad := signJWTEC(ek, settings.Issuer, "wrong")
-	if err := engine.authConfig.Validate(ctx, bad); err == nil {
+	if _, err := engine.authConfig.Validate(ctx, bad); err == nil {
 		t.Fatal("expected audience mismatch to fail")
+	}
+}
+
+func TestAuthorizeRequiresWriteRole(t *testing.T) {
+	engine := NewEngine(&noopTemporalClient{})
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	jwksJSON := buildRSAJWKS(key)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(jwksJSON))
+	}))
+	defer server.Close()
+
+	settings := OIDCSettings{
+		Issuer:         "https://example.com",
+		Audience:       "api",
+		ClientID:       "rocketship-cli",
+		JWKSURL:        server.URL,
+		TokenEndpoint:  "https://example.com/token",
+		DeviceEndpoint: "https://example.com/device",
+		Scopes:         []string{"openid"},
+	}
+
+	if err := engine.ConfigureOIDC(context.Background(), settings); err != nil {
+		t.Fatalf("ConfigureOIDC failed: %v", err)
+	}
+
+	viewerToken := signJWTRSAWithRoles(key, settings.Issuer, settings.Audience, []string{"viewer"})
+	viewerCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+viewerToken))
+	unary := engine.NewAuthUnaryInterceptor()
+
+	writeInfo := &grpc.UnaryServerInfo{FullMethod: "/rocketship.v1.Engine/CreateRun"}
+	_, err = unary(viewerCtx, nil, writeInfo, func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "ok", nil
+	})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected permission denied for viewer, got %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "write access") {
+		t.Fatalf("expected write access error detail, got %v", err)
+	}
+
+	readInfo := &grpc.UnaryServerInfo{FullMethod: "/rocketship.v1.Engine/ListRuns"}
+	resp, err := unary(viewerCtx, nil, readInfo, func(ctx context.Context, req interface{}) (interface{}, error) {
+		principal, ok := PrincipalFromContext(ctx)
+		if !ok {
+			t.Fatal("expected principal in read context")
+		}
+		if len(principal.Roles) == 0 || principal.Roles[0] != "viewer" {
+			t.Fatalf("unexpected roles: %v", principal.Roles)
+		}
+		return "ok", nil
+	})
+	if err != nil {
+		t.Fatalf("expected viewer to list runs, got %v", err)
+	}
+	if resp != "ok" {
+		t.Fatalf("unexpected response: %v", resp)
+	}
+
+	serviceToken := signJWTRSAWithRoles(key, settings.Issuer, settings.Audience, []string{"service_account"})
+	serviceCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+serviceToken))
+	resp, err = unary(serviceCtx, nil, writeInfo, func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "ok", nil
+	})
+	if err != nil {
+		t.Fatalf("expected service account to have write access, got %v", err)
+	}
+	if resp != "ok" {
+		t.Fatalf("unexpected response for service account: %v", resp)
 	}
 }
 
@@ -281,12 +436,20 @@ func buildECJWKS(key *ecdsa.PrivateKey) string {
 }
 
 func signJWTRSA(key *rsa.PrivateKey, issuer, audience string) string {
-	claims := jwt.RegisteredClaims{
-		Issuer:    issuer,
-		Subject:   "user",
-		Audience:  jwt.ClaimStrings{audience},
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	return signJWTRSAWithRoles(key, issuer, audience, []string{"owner"})
+}
+
+func signJWTRSAWithRoles(key *rsa.PrivateKey, issuer, audience string, roles []string) string {
+	if len(roles) == 0 {
+		roles = []string{"owner"}
+	}
+	claims := jwt.MapClaims{
+		"iss":   issuer,
+		"sub":   "user",
+		"aud":   audience,
+		"exp":   time.Now().Add(time.Minute).Unix(),
+		"iat":   time.Now().Unix(),
+		"roles": roles,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = "test"
@@ -298,14 +461,32 @@ func signJWTRSA(key *rsa.PrivateKey, issuer, audience string) string {
 }
 
 func signJWTEC(key *ecdsa.PrivateKey, issuer, audience string) string {
-	claims := jwt.RegisteredClaims{
-		Issuer:    issuer,
-		Subject:   "user",
-		Audience:  jwt.ClaimStrings{audience},
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	claims := jwt.MapClaims{
+		"iss":   issuer,
+		"sub":   "user",
+		"aud":   audience,
+		"exp":   time.Now().Add(time.Minute).Unix(),
+		"iat":   time.Now().Unix(),
+		"roles": []string{"owner"},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token.Header["kid"] = "test"
+	signed, err := token.SignedString(key)
+	if err != nil {
+		panic(err)
+	}
+	return signed
+}
+
+func signJWTRSAWithoutRoles(key *rsa.PrivateKey, issuer, audience string) string {
+	claims := jwt.MapClaims{
+		"iss": issuer,
+		"sub": "user",
+		"aud": audience,
+		"exp": time.Now().Add(time.Minute).Unix(),
+		"iat": time.Now().Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = "test"
 	signed, err := token.SignedString(key)
 	if err != nil {

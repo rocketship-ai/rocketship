@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Versioning note:** Rocketship remains a v0 product. There are **no backwards-compatibility guarantees**. Remove or break legacy behaviours whenever it simplifies the current work, unless the user explicitly requests otherwise.
+
 ## Architecture Overview
 
 Rocketship is an open-source testing framework for browser and API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.

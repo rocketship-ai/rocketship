@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
@@ -22,57 +23,167 @@ var authExemptMethods = map[string]struct{}{
 	"/rocketship.v1.Engine/GetServerInfo": {},
 }
 
+type permission int
+
+const (
+	permNone permission = iota
+	permRead
+	permWrite
+)
+
+func (p permission) String() string {
+	switch p {
+	case permRead:
+		return "read"
+	case permWrite:
+		return "write"
+	default:
+		return "unknown"
+	}
+}
+
+var methodPermissions = map[string]permission{
+	"/rocketship.v1.Engine/CreateRun":  permWrite,
+	"/rocketship.v1.Engine/AddLog":     permWrite,
+	"/rocketship.v1.Engine/CancelRun":  permWrite,
+	"/rocketship.v1.Engine/ListRuns":   permRead,
+	"/rocketship.v1.Engine/GetRun":     permRead,
+	"/rocketship.v1.Engine/StreamLogs": permRead,
+}
+
+type principalContextKey struct{}
+
+// Principal represents the authenticated caller derived from the bearer token.
+type Principal struct {
+	Subject  string
+	Email    string
+	Name     string
+	Username string
+	Roles    []string
+	Scopes   []string
+	TokenID  string
+}
+
+func (p *Principal) allows(perm permission) bool {
+	if len(p.Roles) == 0 {
+		return perm == permNone
+	}
+	for _, role := range p.Roles {
+		switch strings.TrimSpace(strings.ToLower(role)) {
+		case "owner", "admin", "editor", "service_account":
+			return true
+		case "viewer":
+			if perm == permRead {
+				return true
+			}
+		}
+	}
+	return perm == permNone
+}
+
+func (p *Principal) denialMessage(required permission) string {
+	roles := strings.Join(p.Roles, ", ")
+	if roles == "" {
+		roles = "none"
+	}
+	return fmt.Sprintf("requires %s access (roles: %s)", required.String(), roles)
+}
+
+func contextWithPrincipal(ctx context.Context, p *Principal) context.Context {
+	if p == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, principalContextKey{}, p)
+}
+
+// PrincipalFromContext extracts the authenticated principal from context when available.
+func PrincipalFromContext(ctx context.Context) (*Principal, bool) {
+	if ctx == nil {
+		return nil, false
+	}
+	p, ok := ctx.Value(principalContextKey{}).(*Principal)
+	return p, ok
+}
+
 func (e *Engine) NewAuthUnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		if err := e.authorize(ctx, info.FullMethod); err != nil {
+		authCtx, err := e.authorize(ctx, info.FullMethod)
+		if err != nil {
 			return nil, err
 		}
-		return handler(ctx, req)
+		return handler(authCtx, req)
 	}
 }
 
 func (e *Engine) NewAuthStreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		if err := e.authorize(stream.Context(), info.FullMethod); err != nil {
+		authCtx, err := e.authorize(stream.Context(), info.FullMethod)
+		if err != nil {
 			return err
 		}
-		return handler(srv, stream)
+		wrapped := &contextServerStream{ServerStream: stream, ctx: authCtx}
+		return handler(srv, wrapped)
 	}
 }
 
-func (e *Engine) authorize(ctx context.Context, fullMethod string) error {
+type contextServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s *contextServerStream) Context() context.Context {
+	return s.ctx
+}
+
+func (e *Engine) authorize(ctx context.Context, fullMethod string) (context.Context, error) {
 	if e.authConfig.Disabled() {
-		return nil
+		return ctx, nil
 	}
 	if _, exempt := authExemptMethods[fullMethod]; exempt {
-		return nil
+		return ctx, nil
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return status.Error(codes.Unauthenticated, "missing metadata")
+		return nil, status.Error(codes.Unauthenticated, "missing metadata")
 	}
 
 	tokens := md.Get(authorizationHeader)
 	if len(tokens) == 0 {
-		return status.Error(codes.Unauthenticated, "missing authorization token")
+		return nil, status.Error(codes.Unauthenticated, "missing authorization token")
 	}
 
 	header := strings.TrimSpace(tokens[0])
 	if header == "" {
-		return status.Error(codes.Unauthenticated, "empty authorization header")
+		return nil, status.Error(codes.Unauthenticated, "empty authorization header")
 	}
 
 	if len(header) < len(bearerPrefix) || !strings.EqualFold(header[:len(bearerPrefix)], bearerPrefix) {
-		return status.Error(codes.Unauthenticated, "invalid authorization header")
+		return nil, status.Error(codes.Unauthenticated, "invalid authorization header")
 	}
 
 	token := strings.TrimSpace(header[len(bearerPrefix):])
 	if token == "" {
-		return status.Error(codes.Unauthenticated, "empty bearer token")
+		return nil, status.Error(codes.Unauthenticated, "empty bearer token")
 	}
 
-	return e.authConfig.Validate(ctx, token)
+	principal, err := e.authConfig.Validate(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	if principal == nil {
+		principal = &Principal{}
+	}
+
+	required, ok := methodPermissions[fullMethod]
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "method not authorised")
+	}
+	if !principal.allows(required) {
+		return nil, status.Error(codes.PermissionDenied, principal.denialMessage(required))
+	}
+
+	return contextWithPrincipal(ctx, principal), nil
 }
 
 type authMode int
@@ -109,20 +220,23 @@ func (a authConfig) Type() string {
 	}
 }
 
-func (a authConfig) Validate(ctx context.Context, bearer string) error {
+func (a authConfig) Validate(ctx context.Context, bearer string) (*Principal, error) {
 	switch a.mode {
 	case authModeToken:
 		if bearer == a.token {
-			return nil
+			return &Principal{
+				Subject: "token",
+				Roles:   []string{"owner"},
+			}, nil
 		}
-		return status.Error(codes.PermissionDenied, "invalid token")
+		return nil, status.Error(codes.PermissionDenied, "invalid token")
 	case authModeOIDC:
 		if a.oidc == nil {
-			return status.Error(codes.Internal, "oidc verifier misconfigured")
+			return nil, status.Error(codes.Internal, "oidc verifier misconfigured")
 		}
 		return a.oidc.Validate(ctx, bearer)
 	default:
-		return nil
+		return &Principal{Roles: []string{"owner"}}, nil
 	}
 }
 
