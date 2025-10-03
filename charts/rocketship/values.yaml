@@ -78,6 +78,17 @@ auth:
     tolerations: []
     affinity: {}
 
+postgres:
+  enabled: false
+  auth:
+    username: rocketship
+    password: ""
+    database: rocketship
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+
 engine:
   replicaCount: 1
   image:

@@ -136,6 +136,7 @@ kubectl create secret generic globalbank-auth-broker-secrets \
 ```
 
 > The Postgres database backs user/org membership and refresh tokens. The generated `ROCKETSHIP_BROKER_REFRESH_KEY` is used to HMAC refresh tokens before they are stored, so rotate it carefully (invalidate existing sessions as needed).
+> Enabling the chart’s bundled Postgres (`--set postgres.enabled=true`) auto-generates the broker database secret, so you can skip the `globalbank-auth-broker-database` step and simply supply `postgres.auth.password` in the Helm command.
 
 Create a values override file (`deploy/do-values.yaml`) or inline the settings:
 
@@ -148,6 +149,9 @@ helm install rocketship charts/rocketship \
   --set engine.image.tag=$TAG \
   --set worker.image.repository=$REGISTRY/rocketship-worker \
   --set worker.image.tag=$TAG \
+  # Uncomment the two lines below to use the bundled Postgres chart instead of an external DB
+  # --set postgres.enabled=true \
+  # --set postgres.auth.password=$POSTGRES_PASSWORD \
   --set imagePullSecrets[0].name=registry-rocketship \
   --set ingress.enabled=true \
   --set ingress.className=nginx \

@@ -54,3 +54,14 @@ auth:
     envFrom:
       - secretRef:
           name: globalbank-github-oauth
+
+postgres:
+  enabled: true
+  auth:
+    username: rocketship
+    password: CHANGE_ME
+    database: rocketship
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi

@@ -65,3 +65,22 @@ if ! grep -q "ROCKETSHIP_BROKER_REFRESH_KEY" <<<"$github_output"; then
   echo "Expected refresh key env var in auth-broker deployment" >&2
   exit 1
 fi
+
+postgres_output=$(render \
+  --set auth.broker.enabled=true \
+  --set auth.broker.clientID=test-client \
+  --set auth.broker.issuer=https://example.com \
+  --set auth.broker.audience=test-audience \
+  --set auth.broker.signingKey.secretName=test-signing \
+  --set auth.broker.github.clientID=test-gh \
+  --set postgres.enabled=true \
+  --set postgres.auth.password=changeme \
+  --set auth.broker.refreshTokenKey.value=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=)
+if ! grep -q "rocketship-test-rocketship-auth-broker-db" <<<"$postgres_output"; then
+  echo "Expected generated database secret when postgres.enabled=true" >&2
+  exit 1
+fi
+if ! grep -q "ROCKETSHIP_BROKER_DATABASE_URL" <<<"$postgres_output"; then
+  echo "Expected database URL env var when postgres.enabled" >&2
+  exit 1
+fi

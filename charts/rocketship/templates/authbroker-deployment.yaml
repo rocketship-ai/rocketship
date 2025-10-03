@@ -43,12 +43,17 @@ spec:
             {{- end }}
             - name: ROCKETSHIP_BROKER_SIGNING_KEY_FILE
               value: {{ printf "%s/%s" .Values.auth.broker.signingKey.mountPath .Values.auth.broker.signingKey.fileName | quote }}
-            {{- if .Values.auth.broker.database.secretName }}
+            {{- $dbSecret := .Values.auth.broker.database.secretName }}
+            {{- if and .Values.postgres.enabled (eq $dbSecret "") }}
+            {{- $dbSecret = include "rocketship.authbroker.databaseSecretName" . -}}
+            {{- end }}
+            {{- $dbKey := default "DATABASE_URL" .Values.auth.broker.database.secretKey -}}
+            {{- if ne $dbSecret "" }}
             - name: ROCKETSHIP_BROKER_DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.auth.broker.database.secretName }}
-                  key: {{ .Values.auth.broker.database.secretKey }}
+                  name: {{ $dbSecret }}
+                  key: {{ $dbKey }}
             {{- else if .Values.auth.broker.database.url }}
             - name: ROCKETSHIP_BROKER_DATABASE_URL
               value: {{ .Values.auth.broker.database.url | quote }}
@@ -81,7 +86,7 @@ spec:
               value: {{ .value | quote }}
             {{- end }}
           {{- $hasSecrets := .Values.auth.broker.github.clientSecretSecret }}
-          {{- if or (gt (len .Values.auth.broker.envFrom) 0) $hasSecrets }}
+         {{- if or (gt (len .Values.auth.broker.envFrom) 0) $hasSecrets }}
           envFrom:
             {{- if .Values.auth.broker.envFrom }}
             {{ toYaml .Values.auth.broker.envFrom | nindent 12 }}

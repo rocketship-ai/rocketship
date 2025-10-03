@@ -22,7 +22,7 @@ Both Rocketship services require the Temporal frontend host and namespace; every
 | Production-ready proof of concept | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md) | Walks through preparing a managed cluster, wiring an NGINX ingress with TLS, publishing custom images to DigitalOcean Container Registry, and installing the Rocketship + Temporal Helm releases. |
 | Web UI with OIDC front-door | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md#7-enable-auth-for-the-web-ui-optional) | Layer oauth2-proxy + NGINX annotations. Use `values-github-selfhost.yaml` + `values-github-web.yaml` for GitHub device-flow reuse, or `values-oidc-web.yaml` to integrate with an external IdP. |
 
-> Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands.
+> Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands. If you do not already operate Postgres, enable the bundled Bitnami dependency with `--set postgres.enabled=true` and provide a password via `postgres.auth.password`.
 
 ## After Deployment
 
