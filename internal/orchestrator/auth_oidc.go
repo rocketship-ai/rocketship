@@ -404,7 +404,7 @@ func principalFromClaims(claims jwt.MapClaims) (*Principal, error) {
 	}
 	roles = dedupeStrings(roles)
 	if len(roles) == 0 {
-		roles = []string{"owner"}
+		return nil, fmt.Errorf("token missing roles")
 	}
 	scopes := parseScopeClaim(claims["scope"])
 	return &Principal{

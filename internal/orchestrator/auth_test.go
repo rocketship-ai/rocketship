@@ -248,6 +248,45 @@ func TestOIDCValidationRSA(t *testing.T) {
 	}
 }
 
+func TestOIDCValidationRSAMissingRolesFails(t *testing.T) {
+	engine := NewEngine(&noopTemporalClient{})
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	jwksJSON := buildRSAJWKS(key)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(jwksJSON))
+	}))
+	defer server.Close()
+
+	settings := OIDCSettings{
+		Issuer:         "https://example.com",
+		Audience:       "api",
+		ClientID:       "rocketship-cli",
+		JWKSURL:        server.URL,
+		TokenEndpoint:  "https://example.com/token",
+		DeviceEndpoint: "https://example.com/device",
+		Scopes:         []string{"openid"},
+	}
+
+	ctx := context.Background()
+	if err := engine.ConfigureOIDC(ctx, settings); err != nil {
+		t.Fatalf("ConfigureOIDC failed: %v", err)
+	}
+
+	missingRoles := signJWTRSAWithoutRoles(key, settings.Issuer, settings.Audience)
+	if _, err := engine.authConfig.Validate(ctx, missingRoles); err == nil {
+		t.Fatal("expected missing roles to fail validation")
+	} else if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected permission denied, got %v", err)
+	} else if !strings.Contains(err.Error(), "roles") {
+		t.Fatalf("expected roles hint in error, got %v", err)
+	}
+}
+
 func TestOIDCValidationEC(t *testing.T) {
 	engine := NewEngine(&noopTemporalClient{})
 
@@ -420,6 +459,23 @@ func signJWTEC(key *ecdsa.PrivateKey, issuer, audience string) string {
 		"roles": []string{"owner"},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token.Header["kid"] = "test"
+	signed, err := token.SignedString(key)
+	if err != nil {
+		panic(err)
+	}
+	return signed
+}
+
+func signJWTRSAWithoutRoles(key *rsa.PrivateKey, issuer, audience string) string {
+	claims := jwt.MapClaims{
+		"iss": issuer,
+		"sub": "user",
+		"aud": audience,
+		"exp": time.Now().Add(time.Minute).Unix(),
+		"iat": time.Now().Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = "test"
 	signed, err := token.SignedString(key)
 	if err != nil {

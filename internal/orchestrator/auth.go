@@ -65,11 +65,10 @@ type Principal struct {
 }
 
 func (p *Principal) allows(perm permission) bool {
-	roles := p.Roles
-	if len(roles) == 0 {
-		roles = []string{"owner"}
+	if len(p.Roles) == 0 {
+		return perm == permNone
 	}
-	for _, role := range roles {
+	for _, role := range p.Roles {
 		switch strings.TrimSpace(strings.ToLower(role)) {
 		case "owner", "admin", "editor", "service_account":
 			return true
