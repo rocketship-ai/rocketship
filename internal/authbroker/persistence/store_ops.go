@@ -111,6 +111,26 @@ func (r RoleSummary) AggregatedRoles() []string {
 	return ordered
 }
 
+func (s *Store) ProjectOrganizationID(ctx context.Context, projectID uuid.UUID) (uuid.UUID, error) {
+	var orgID uuid.UUID
+	if err := s.db.GetContext(ctx, &orgID, `SELECT organization_id FROM projects WHERE id = $1`, projectID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return uuid.Nil, sql.ErrNoRows
+		}
+		return uuid.Nil, fmt.Errorf("failed to load project organization: %w", err)
+	}
+	return orgID, nil
+}
+
+func (s *Store) IsOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
+	const query = `SELECT COUNT(1) FROM organization_admins WHERE organization_id = $1 AND user_id = $2`
+	var count int
+	if err := s.db.GetContext(ctx, &count, query, orgID, userID); err != nil {
+		return false, fmt.Errorf("failed to check organization admin: %w", err)
+	}
+	return count > 0, nil
+}
+
 type RefreshTokenRecord struct {
 	TokenID        uuid.UUID
 	User           User

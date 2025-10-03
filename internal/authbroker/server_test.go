@@ -5,7 +5,9 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -49,20 +51,54 @@ func (f *fakeGitHub) FetchUser(_ context.Context, _ string) (GitHubUser, error) 
 }
 
 type fakeStore struct {
-	mu      sync.Mutex
-	user    persistence.User
-	summary persistence.RoleSummary
-	refresh map[string]persistence.RefreshTokenRecord
+	mu             sync.Mutex
+	user           persistence.User
+	summary        persistence.RoleSummary
+	refresh        map[string]persistence.RefreshTokenRecord
+	projectOrg     map[uuid.UUID]uuid.UUID
+	members        map[uuid.UUID][]persistence.ProjectMember
+	primaryOrg     uuid.UUID
+	primaryProject uuid.UUID
 }
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{
-		refresh: make(map[string]persistence.RefreshTokenRecord),
-		summary: persistence.RoleSummary{
-			Organizations: []persistence.OrganizationMembership{
-				{OrganizationID: uuid.New(), IsAdmin: true},
-			},
+	orgID := uuid.New()
+	projectID := uuid.New()
+	userID := uuid.New()
+	now := time.Now()
+
+	user := persistence.User{
+		ID:           userID,
+		GitHubUserID: 1234,
+		Email:        "owner@example.com",
+		Name:         "Owner",
+		Username:     "owner",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	members := []persistence.ProjectMember{
+		{
+			UserID:    userID,
+			Email:     user.Email,
+			Name:      user.Name,
+			Username:  user.Username,
+			Role:      "write",
+			JoinedAt:  now,
+			UpdatedAt: now,
 		},
+	}
+
+	return &fakeStore{
+		user: user,
+		summary: persistence.RoleSummary{
+			Organizations: []persistence.OrganizationMembership{{OrganizationID: orgID, IsAdmin: true}},
+		},
+		refresh:        make(map[string]persistence.RefreshTokenRecord),
+		projectOrg:     map[uuid.UUID]uuid.UUID{projectID: orgID},
+		members:        map[uuid.UUID][]persistence.ProjectMember{projectID: members},
+		primaryOrg:     orgID,
+		primaryProject: projectID,
 	}
 }
 
@@ -131,15 +167,71 @@ func (f *fakeStore) CreateOrganizationWithProject(context.Context, uuid.UUID, pe
 	return persistence.Organization{}, persistence.Project{}, nil
 }
 
-func (f *fakeStore) ListProjectMembers(context.Context, uuid.UUID) ([]persistence.ProjectMember, error) {
-	return nil, nil
+func (f *fakeStore) ProjectOrganizationID(_ context.Context, projectID uuid.UUID) (uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if org, ok := f.projectOrg[projectID]; ok {
+		return org, nil
+	}
+	return uuid.Nil, sql.ErrNoRows
 }
 
-func (f *fakeStore) SetProjectMemberRole(context.Context, uuid.UUID, uuid.UUID, string) error {
-	return nil
+func (f *fakeStore) IsOrganizationAdmin(_ context.Context, orgID, userID uuid.UUID) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return orgID == f.primaryOrg && f.user.ID == userID, nil
 }
 
-func (f *fakeStore) RemoveProjectMember(context.Context, uuid.UUID, uuid.UUID) error {
+func (f *fakeStore) ListProjectMembers(_ context.Context, projectID uuid.UUID) ([]persistence.ProjectMember, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	m, ok := f.members[projectID]
+	if !ok {
+		return nil, nil
+	}
+	out := make([]persistence.ProjectMember, len(m))
+	copy(out, m)
+	return out, nil
+}
+
+func (f *fakeStore) SetProjectMemberRole(_ context.Context, projectID, userID uuid.UUID, role string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	members, ok := f.members[projectID]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	for i := range members {
+		if members[i].UserID == userID {
+			members[i].Role = role
+			members[i].UpdatedAt = time.Now()
+			f.members[projectID] = members
+			return nil
+		}
+	}
+	return sql.ErrNoRows
+}
+
+func (f *fakeStore) RemoveProjectMember(_ context.Context, projectID, userID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	members, ok := f.members[projectID]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	updated := make([]persistence.ProjectMember, 0, len(members))
+	found := false
+	for _, m := range members {
+		if m.UserID == userID {
+			found = true
+			continue
+		}
+		updated = append(updated, m)
+	}
+	if !found {
+		return sql.ErrNoRows
+	}
+	f.members[projectID] = updated
 	return nil
 }
 
@@ -378,5 +470,58 @@ func TestServerJWKS(t *testing.T) {
 	body := rec.Body.Bytes()
 	if !bytes.Contains(body, []byte("\"keys\"")) {
 		t.Fatalf("jwks response missing keys: %s", string(body))
+	}
+}
+
+func TestProjectMembersScopedToOrganization(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	signer, err := buildSigner(key, "test-key")
+	if err != nil {
+		t.Fatalf("failed to build signer: %v", err)
+	}
+
+	cfg := Config{
+		Issuer:          "https://cli.test",
+		Audience:        "rocketship-cli",
+		ClientID:        "rocketship-cli",
+		AccessTokenTTL:  time.Minute,
+		RefreshTokenTTL: time.Hour,
+		GitHub:          GitHubConfig{ClientID: "gh", ClientSecret: "secret"},
+	}
+
+	store := newFakeStore()
+
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, store)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	principal := brokerPrincipal{
+		UserID: store.user.ID,
+		Roles:  []string{"owner"},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/projects/%s/members", store.primaryProject), nil)
+	rec := httptest.NewRecorder()
+	srv.handleProjectRoutes(rec, req, principal)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected success listing members, got %d", rec.Code)
+	}
+
+	store.mu.Lock()
+	otherOrg := uuid.New()
+	otherProject := uuid.New()
+	store.projectOrg[otherProject] = otherOrg
+	store.members[otherProject] = nil
+	store.mu.Unlock()
+
+	req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/projects/%s/members", otherProject), nil)
+	rec = httptest.NewRecorder()
+	srv.handleProjectRoutes(rec, req, principal)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden for cross-org access, got %d", rec.Code)
 	}
 }

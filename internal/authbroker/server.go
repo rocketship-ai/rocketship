@@ -47,6 +47,8 @@ type dataStore interface {
 	ListProjectMembers(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectMember, error)
 	SetProjectMemberRole(ctx context.Context, projectID, userID uuid.UUID, role string) error
 	RemoveProjectMember(ctx context.Context, projectID, userID uuid.UUID) error
+	ProjectOrganizationID(ctx context.Context, projectID uuid.UUID) (uuid.UUID, error)
+	IsOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) (bool, error)
 }
 
 type brokerPrincipal struct {
@@ -785,6 +787,28 @@ func (s *Server) handleProjectRoutes(w http.ResponseWriter, r *http.Request, pri
 
 	if len(segments) < 2 {
 		writeError(w, http.StatusNotFound, "resource not found")
+		return
+	}
+
+	orgID, err := s.store.ProjectOrganizationID(r.Context(), projectID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		log.Printf("failed to resolve project organization: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to resolve project")
+		return
+	}
+
+	isAdmin, err := s.store.IsOrganizationAdmin(r.Context(), orgID, principal.UserID)
+	if err != nil {
+		log.Printf("failed to verify organization admin: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to authorize request")
+		return
+	}
+	if !isAdmin {
+		writeError(w, http.StatusForbidden, "owner role required for target organization")
 		return
 	}
 
