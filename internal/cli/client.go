@@ -314,7 +314,11 @@ func translateAuthError(prefix string, err error) error {
 		case codes.Unauthenticated:
 			return fmt.Errorf("%s: engine requires a token (set %s or update your profile)", prefix, tokenEnvVar)
 		case codes.PermissionDenied:
-			return fmt.Errorf("%s: provided token was rejected (%s)", prefix, s.Message())
+			detail := s.Message()
+			if detail == "" {
+				detail = "server rejected the request"
+			}
+			return fmt.Errorf("%s: permission denied (%s). Ensure your token has the required role or contact an administrator", prefix, detail)
 		default:
 			return fmt.Errorf("%s: %s", prefix, s.Message())
 		}

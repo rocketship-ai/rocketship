@@ -71,11 +71,19 @@ func newOIDCProvider(ctx context.Context, settings OIDCSettings) (*oidcProvider,
 	return provider, nil
 }
 
-func (o *oidcProvider) Validate(ctx context.Context, bearer string) error {
+func (o *oidcProvider) Validate(ctx context.Context, bearer string) (*Principal, error) {
 	if o.verifier == nil {
-		return status.Error(codes.Internal, "oidc verifier not initialised")
+		return nil, status.Error(codes.Internal, "oidc verifier not initialised")
 	}
-	return o.verifier.Verify(ctx, bearer)
+	claims, err := o.verifier.Verify(ctx, bearer)
+	if err != nil {
+		return nil, err
+	}
+	principal, err := principalFromClaims(claims)
+	if err != nil {
+		return nil, status.Error(codes.PermissionDenied, err.Error())
+	}
+	return principal, nil
 }
 
 type oidcVerifier struct {
@@ -95,60 +103,63 @@ func newOIDCVerifier(ctx context.Context, settings OIDCSettings) (*oidcVerifier,
 		httpClient = &http.Client{Timeout: 10 * time.Second}
 	}
 
-    keys, err := fetchJWKS(ctx, httpClient, settings.JWKSURL)
-    if err != nil {
-        return nil, err
-    }
+	keys, err := fetchJWKS(ctx, httpClient, settings.JWKSURL)
+	if err != nil {
+		return nil, err
+	}
 
-    if len(settings.AllowedAlgorithms) == 0 {
-        settings.AllowedAlgorithms = []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}
-    }
-    algs := make(map[string]struct{}, len(settings.AllowedAlgorithms))
-    for _, alg := range settings.AllowedAlgorithms {
-        trimmed := strings.ToUpper(strings.TrimSpace(alg))
-        if trimmed == "" {
-            continue
-        }
-        algs[trimmed] = struct{}{}
-    }
+	if len(settings.AllowedAlgorithms) == 0 {
+		settings.AllowedAlgorithms = []string{"RS256", "RS384", "RS512", "ES256", "ES384", "ES512"}
+	}
+	algs := make(map[string]struct{}, len(settings.AllowedAlgorithms))
+	for _, alg := range settings.AllowedAlgorithms {
+		trimmed := strings.ToUpper(strings.TrimSpace(alg))
+		if trimmed == "" {
+			continue
+		}
+		algs[trimmed] = struct{}{}
+	}
 
-    return &oidcVerifier{
-        httpClient: httpClient,
-        jwksURL:    settings.JWKSURL,
-        issuer:     settings.Issuer,
-        audience:   settings.Audience,
-        algorithms: algs,
-        keys:       keys,
-        lastFetch:  time.Now(),
-    }, nil
+	return &oidcVerifier{
+		httpClient: httpClient,
+		jwksURL:    settings.JWKSURL,
+		issuer:     settings.Issuer,
+		audience:   settings.Audience,
+		algorithms: algs,
+		keys:       keys,
+		lastFetch:  time.Now(),
+	}, nil
 }
 
-func (o *oidcVerifier) Verify(ctx context.Context, token string) error {
+func (o *oidcVerifier) Verify(ctx context.Context, token string) (jwt.MapClaims, error) {
 	parser := jwt.NewParser(jwt.WithValidMethods(o.allowedAlgorithms()))
-	claims := &jwt.RegisteredClaims{}
+	claims := jwt.MapClaims{}
 	parsed, err := parser.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
 		return o.keyFunc(ctx, t)
 	})
 	if err != nil {
-		return status.Error(codes.PermissionDenied, fmt.Sprintf("invalid token: %v", err))
+		return nil, status.Error(codes.PermissionDenied, fmt.Sprintf("invalid token: %v", err))
 	}
 	if !parsed.Valid {
-		return status.Error(codes.PermissionDenied, "invalid token")
+		return nil, status.Error(codes.PermissionDenied, "invalid token")
 	}
 
 	if err := claims.Valid(); err != nil {
-		return status.Error(codes.PermissionDenied, fmt.Sprintf("token validation failed: %v", err))
+		return nil, status.Error(codes.PermissionDenied, fmt.Sprintf("token validation failed: %v", err))
 	}
 
-	if o.issuer != "" && claims.Issuer != o.issuer {
-		return status.Error(codes.PermissionDenied, "issuer mismatch")
-	}
-	if o.audience != "" {
-		if !audienceContains(claims.Audience, o.audience) {
-			return status.Error(codes.PermissionDenied, "audience mismatch")
+	if o.issuer != "" {
+		issuer, _ := claims["iss"].(string)
+		if issuer != o.issuer {
+			return nil, status.Error(codes.PermissionDenied, "issuer mismatch")
 		}
 	}
-	return nil
+	if o.audience != "" {
+		if !audienceMatches(claims["aud"], o.audience) {
+			return nil, status.Error(codes.PermissionDenied, "audience mismatch")
+		}
+	}
+	return claims, nil
 }
 
 func (o *oidcVerifier) allowedAlgorithms() []string {
@@ -256,35 +267,35 @@ func fetchJWKS(ctx context.Context, client *http.Client, url string) (map[string
 		return nil, errors.New("jwks document contained no keys")
 	}
 
-    keys := make(map[string]interface{}, len(doc.Keys))
-    for _, k := range doc.Keys {
-        var (
-            public interface{}
-            err    error
-        )
+	keys := make(map[string]interface{}, len(doc.Keys))
+	for _, k := range doc.Keys {
+		var (
+			public interface{}
+			err    error
+		)
 
-        switch strings.ToUpper(k.Kty) {
-        case "RSA":
-            public, err = parseRSAJWK(k)
-        case "EC":
-            public, err = parseECJWK(k)
-        default:
-            continue
-        }
-        if err != nil {
-            continue
-        }
+		switch strings.ToUpper(k.Kty) {
+		case "RSA":
+			public, err = parseRSAJWK(k)
+		case "EC":
+			public, err = parseECJWK(k)
+		default:
+			continue
+		}
+		if err != nil {
+			continue
+		}
 
-        kid := k.Kid
-        if kid == "" {
-            kid = fmt.Sprintf("%s_%d", strings.ToLower(k.Kty), len(keys)+1)
-        }
-        keys[kid] = public
-    }
-    if len(keys) == 0 {
-        return nil, errors.New("no usable keys in JWKS document")
-    }
-    return keys, nil
+		kid := k.Kid
+		if kid == "" {
+			kid = fmt.Sprintf("%s_%d", strings.ToLower(k.Kty), len(keys)+1)
+		}
+		keys[kid] = public
+	}
+	if len(keys) == 0 {
+		return nil, errors.New("no usable keys in JWKS document")
+	}
+	return keys, nil
 }
 
 func parseRSAJWK(j jwk) (*rsa.PublicKey, error) {
@@ -356,11 +367,125 @@ func curveFromName(name string) elliptic.Curve {
 	}
 }
 
-func audienceContains(list jwt.ClaimStrings, target string) bool {
-	for _, v := range list {
-		if v == target {
-			return true
+func audienceMatches(claim interface{}, target string) bool {
+	switch v := claim.(type) {
+	case string:
+		return v == target
+	case []string:
+		for _, item := range v {
+			if item == target {
+				return true
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			if s, ok := item.(string); ok && s == target {
+				return true
+			}
+		}
+	case jwt.ClaimStrings:
+		for _, item := range v {
+			if item == target {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+func principalFromClaims(claims jwt.MapClaims) (*Principal, error) {
+	subject := stringClaim(claims["sub"])
+	if subject == "" {
+		return nil, fmt.Errorf("token missing subject")
+	}
+	roles, err := stringSliceClaim(claims["roles"])
+	if err != nil {
+		return nil, fmt.Errorf("invalid roles claim: %w", err)
+	}
+	roles = dedupeStrings(roles)
+	if len(roles) == 0 {
+		roles = []string{"owner"}
+	}
+	scopes := parseScopeClaim(claims["scope"])
+	return &Principal{
+		Subject:  subject,
+		Email:    stringClaim(claims["email"]),
+		Name:     stringClaim(claims["name"]),
+		Username: stringClaim(claims["preferred_username"]),
+		Roles:    roles,
+		Scopes:   scopes,
+		TokenID:  stringClaim(claims["jti"]),
+	}, nil
+}
+
+func stringClaim(value interface{}) string {
+	s, _ := value.(string)
+	return strings.TrimSpace(s)
+}
+
+func stringSliceClaim(value interface{}) ([]string, error) {
+	switch v := value.(type) {
+	case nil:
+		return nil, nil
+	case []string:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			item = strings.TrimSpace(item)
+			if item == "" {
+				continue
+			}
+			out = append(out, item)
+		}
+		return out, nil
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			s, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("non-string role value")
+			}
+			s = strings.TrimSpace(s)
+			if s == "" {
+				continue
+			}
+			out = append(out, s)
+		}
+		return out, nil
+	case string:
+		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			return nil, nil
+		}
+		return []string{trimmed}, nil
+	default:
+		return nil, fmt.Errorf("unexpected type %T", value)
+	}
+}
+
+func parseScopeClaim(value interface{}) []string {
+	str := stringClaim(value)
+	if str == "" {
+		return nil
+	}
+	return dedupeStrings(strings.Fields(str))
+}
+
+func dedupeStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, v := range values {
+		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result
 }

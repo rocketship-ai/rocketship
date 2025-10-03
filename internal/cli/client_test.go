@@ -476,8 +476,8 @@ func TestTranslateAuthError(t *testing.T) {
 	}
 
 	denied := status.Error(codes.PermissionDenied, "invalid token")
-	if err := translateAuthError("failed op", denied); err == nil || !strings.Contains(err.Error(), "rejected") || !strings.Contains(err.Error(), "invalid token") {
-		t.Fatalf("expected rejection message with detail, got %v", err)
+	if err := translateAuthError("failed op", denied); err == nil || !strings.Contains(err.Error(), "permission denied") || !strings.Contains(err.Error(), "invalid token") || !strings.Contains(err.Error(), "Ensure your token") {
+		t.Fatalf("expected permission guidance with detail, got %v", err)
 	}
 
 	other := status.Error(codes.InvalidArgument, "bad input")
