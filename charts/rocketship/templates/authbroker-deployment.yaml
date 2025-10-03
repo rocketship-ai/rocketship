@@ -43,8 +43,26 @@ spec:
             {{- end }}
             - name: ROCKETSHIP_BROKER_SIGNING_KEY_FILE
               value: {{ printf "%s/%s" .Values.auth.broker.signingKey.mountPath .Values.auth.broker.signingKey.fileName | quote }}
-            - name: ROCKETSHIP_BROKER_STORE_PATH
-              value: {{ .Values.auth.broker.store.path | quote }}
+            {{- if .Values.auth.broker.database.secretName }}
+            - name: ROCKETSHIP_BROKER_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.broker.database.secretName }}
+                  key: {{ .Values.auth.broker.database.secretKey }}
+            {{- else if .Values.auth.broker.database.url }}
+            - name: ROCKETSHIP_BROKER_DATABASE_URL
+              value: {{ .Values.auth.broker.database.url | quote }}
+            {{- end }}
+            {{- if .Values.auth.broker.refreshTokenKey.secretName }}
+            - name: ROCKETSHIP_BROKER_REFRESH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.broker.refreshTokenKey.secretName }}
+                  key: {{ .Values.auth.broker.refreshTokenKey.secretKey }}
+            {{- else if .Values.auth.broker.refreshTokenKey.value }}
+            - name: ROCKETSHIP_BROKER_REFRESH_KEY
+              value: {{ .Values.auth.broker.refreshTokenKey.value | quote }}
+            {{- end }}
             {{- $scopes := default .Values.auth.oidc.scopes .Values.auth.broker.scopes }}
             {{- if $scopes }}
             - name: ROCKETSHIP_BROKER_SCOPES
@@ -62,7 +80,7 @@ spec:
             - name: {{ .name }}
               value: {{ .value | quote }}
             {{- end }}
-          {{- $hasSecrets := or .Values.auth.broker.github.clientSecretSecret .Values.auth.broker.store.encryptionKeySecret }}
+          {{- $hasSecrets := .Values.auth.broker.github.clientSecretSecret }}
           {{- if or (gt (len .Values.auth.broker.envFrom) 0) $hasSecrets }}
           envFrom:
             {{- if .Values.auth.broker.envFrom }}
@@ -71,10 +89,6 @@ spec:
             {{- if .Values.auth.broker.github.clientSecretSecret }}
             - secretRef:
                 name: {{ .Values.auth.broker.github.clientSecretSecret }}
-            {{- end }}
-            {{- if .Values.auth.broker.store.encryptionKeySecret }}
-            - secretRef:
-                name: {{ .Values.auth.broker.store.encryptionKeySecret }}
             {{- end }}
           {{- end }}
           ports:
@@ -87,8 +101,6 @@ spec:
               mountPath: {{ .Values.auth.broker.signingKey.mountPath }}
               readOnly: true
             {{- end }}
-            - name: broker-store
-              mountPath: {{ .Values.auth.broker.store.mountPath }}
           {{- with .Values.auth.broker.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -102,13 +114,6 @@ spec:
               - key: {{ .Values.auth.broker.signingKey.key }}
                 path: {{ .Values.auth.broker.signingKey.fileName }}
         {{- end }}
-        - name: broker-store
-          {{- if and (not .Values.auth.broker.store.emptyDir) .Values.auth.broker.store.existingClaim }}
-          persistentVolumeClaim:
-            claimName: {{ .Values.auth.broker.store.existingClaim }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
       {{- with .Values.auth.broker.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

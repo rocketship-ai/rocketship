@@ -57,3 +57,11 @@ if ! grep -q "ROCKETSHIP_GITHUB_CLIENT_ID" <<<"$github_output"; then
   echo "Expected GitHub client configuration in auth-broker deployment" >&2
   exit 1
 fi
+if ! grep -q "ROCKETSHIP_BROKER_DATABASE_URL" <<<"$github_output"; then
+  echo "Expected database configuration env var in auth-broker deployment" >&2
+  exit 1
+fi
+if ! grep -q "ROCKETSHIP_BROKER_REFRESH_KEY" <<<"$github_output"; then
+  echo "Expected refresh key env var in auth-broker deployment" >&2
+  exit 1
+fi

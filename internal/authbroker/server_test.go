@@ -15,7 +15,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/rocketship-ai/rocketship/internal/authbroker/store"
+	"github.com/google/uuid"
+	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
 )
 
 type fakeGitHub struct {
@@ -47,39 +48,98 @@ func (f *fakeGitHub) FetchUser(_ context.Context, _ string) (GitHubUser, error) 
 	return f.user, nil
 }
 
-type memoryStore struct {
-	mu   sync.Mutex
-	data map[string]store.RefreshRecord
+type fakeStore struct {
+	mu      sync.Mutex
+	user    persistence.User
+	summary persistence.RoleSummary
+	refresh map[string]persistence.RefreshTokenRecord
 }
 
-func newMemoryStore() *memoryStore {
-	return &memoryStore{data: make(map[string]store.RefreshRecord)}
+func newFakeStore() *fakeStore {
+	return &fakeStore{
+		refresh: make(map[string]persistence.RefreshTokenRecord),
+		summary: persistence.RoleSummary{
+			Organizations: []persistence.OrganizationMembership{
+				{OrganizationID: uuid.New(), IsAdmin: true},
+			},
+		},
+	}
 }
 
-func (m *memoryStore) Save(token string, record store.RefreshRecord) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.data[token] = record
+func (f *fakeStore) UpsertGitHubUser(_ context.Context, input persistence.GitHubUserInput) (persistence.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.user.ID == uuid.Nil {
+		f.user = persistence.User{
+			ID:           uuid.New(),
+			GitHubUserID: input.GitHubUserID,
+			Email:        input.Email,
+			Name:         input.Name,
+			Username:     input.Username,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+	} else {
+		f.user.GitHubUserID = input.GitHubUserID
+		f.user.Email = input.Email
+		f.user.Name = input.Name
+		f.user.Username = input.Username
+		f.user.UpdatedAt = time.Now()
+	}
+	return f.user, nil
+}
+
+func (f *fakeStore) RoleSummary(context.Context, uuid.UUID) (persistence.RoleSummary, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.summary, nil
+}
+
+func (f *fakeStore) SaveRefreshToken(_ context.Context, token string, rec persistence.RefreshTokenRecord) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.refresh == nil {
+		f.refresh = make(map[string]persistence.RefreshTokenRecord)
+	}
+	recordCopy := rec
+	recordCopy.Scopes = append([]string(nil), rec.Scopes...)
+	f.refresh[token] = recordCopy
 	return nil
 }
 
-func (m *memoryStore) Get(token string) (store.RefreshRecord, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	rec, ok := m.data[token]
+func (f *fakeStore) GetRefreshToken(_ context.Context, token string) (persistence.RefreshTokenRecord, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	rec, ok := f.refresh[token]
 	if !ok {
-		return store.RefreshRecord{}, store.ErrNotFound
+		return persistence.RefreshTokenRecord{}, persistence.ErrRefreshTokenNotFound
 	}
 	return rec, nil
 }
 
-func (m *memoryStore) Delete(token string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.data[token]; !ok {
-		return store.ErrNotFound
+func (f *fakeStore) DeleteRefreshToken(_ context.Context, token string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.refresh[token]; !ok {
+		return persistence.ErrRefreshTokenNotFound
 	}
-	delete(m.data, token)
+	delete(f.refresh, token)
+	return nil
+}
+
+func (f *fakeStore) CreateOrganizationWithProject(context.Context, uuid.UUID, persistence.CreateOrgInput) (persistence.Organization, persistence.Project, error) {
+	return persistence.Organization{}, persistence.Project{}, nil
+}
+
+func (f *fakeStore) ListProjectMembers(context.Context, uuid.UUID) ([]persistence.ProjectMember, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) SetProjectMemberRole(context.Context, uuid.UUID, uuid.UUID, string) error {
+	return nil
+}
+
+func (f *fakeStore) RemoveProjectMember(context.Context, uuid.UUID, uuid.UUID) error {
 	return nil
 }
 
@@ -131,9 +191,9 @@ func TestServerDeviceFlowAndRefresh(t *testing.T) {
 		},
 	}
 
-	memStore := newMemoryStore()
+	fs := newFakeStore()
 
-	srv, err := newServerWithComponents(cfg, signer, fake, memStore)
+	srv, err := newServerWithComponents(cfg, signer, fake, fs)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -194,6 +254,29 @@ func TestServerDeviceFlowAndRefresh(t *testing.T) {
 		t.Fatalf("issued token failed validation: %v", err)
 	}
 
+	sub, _ := claims["sub"].(string)
+	if !strings.HasPrefix(sub, "user:") {
+		t.Fatalf("unexpected subject claim: %v", sub)
+	}
+	rolesVal, ok := claims["roles"].([]interface{})
+	if !ok || len(rolesVal) == 0 {
+		t.Fatalf("roles claim missing: %v", claims["roles"])
+	}
+	firstRole, _ := rolesVal[0].(string)
+	if strings.ToLower(firstRole) != "owner" {
+		t.Fatalf("expected owner role, got %v", rolesVal)
+	}
+	if _, ok := claims["org_id"].(string); !ok {
+		t.Fatalf("expected org_id claim, got %v", claims["org_id"])
+	}
+
+	fs.mu.Lock()
+	if _, ok := fs.refresh[tokenResp.RefreshToken]; !ok {
+		fs.mu.Unlock()
+		t.Fatalf("refresh token not stored in fake store")
+	}
+	fs.mu.Unlock()
+
 	refreshReq := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {tokenResp.RefreshToken},
@@ -218,6 +301,17 @@ func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	if refreshResp.AccessToken == tokenResp.AccessToken {
 		t.Fatalf("expected new access token")
 	}
+
+	fs.mu.Lock()
+	if _, ok := fs.refresh[tokenResp.RefreshToken]; ok {
+		fs.mu.Unlock()
+		t.Fatalf("old refresh token still persisted")
+	}
+	if _, ok := fs.refresh[refreshResp.RefreshToken]; !ok {
+		fs.mu.Unlock()
+		t.Fatalf("new refresh token not persisted")
+	}
+	fs.mu.Unlock()
 }
 
 func TestServerRejectsUnknownClient(t *testing.T) {
@@ -241,7 +335,7 @@ func TestServerRejectsUnknownClient(t *testing.T) {
 	}
 
 	fake := &fakeGitHub{deviceResp: DeviceCodeResponse{}}
-	srv, err := newServerWithComponents(cfg, signer, fake, newMemoryStore())
+	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore())
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -270,7 +364,7 @@ func TestServerJWKS(t *testing.T) {
 
 	cfg := Config{}
 	fake := &fakeGitHub{}
-	srv, err := newServerWithComponents(cfg, signer, fake, newMemoryStore())
+	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore())
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

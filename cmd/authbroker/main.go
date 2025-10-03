@@ -23,6 +23,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialise broker: %v", err)
 	}
+	defer func() {
+		if err := srv.Close(); err != nil {
+			log.Printf("broker close error: %v", err)
+		}
+	}()
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,

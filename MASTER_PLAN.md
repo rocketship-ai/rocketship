@@ -72,21 +72,22 @@ Deliver a production-ready, usage-based Rocketship Cloud offering where customer
 
 What it accomplishes
 
-- Introduces a lightweight persistence layer (Postgres table or Redis) for users, organisations, memberships, invitations, and role assignments.
+- Adds a Postgres-backed persistence layer for organisations, users, project memberships, refresh tokens, and (future) invitations.
 
 Changes
 
-- Broker (or new `internal/cloud` service) handles user onboarding, role management, and invitation/activation flows.
-- API endpoints to list/update org members (usable by future UI/CLI commands).
+- Broker owns the onboarding flow: logins upsert GitHub users, fetch project/org roles, and emit JWTs with aggregated claims. Users without membership receive a `pending` role until they create or join an org via `POST /api/orgs`.
+- Refresh tokens move from the encrypted file store to Postgres (hashed via `ROCKETSHIP_BROKER_REFRESH_KEY`).
+- New REST endpoints expose project membership management to prep for UI/CLI experiences.
 
 Tests
 
-- Unit tests for storage layer (CRUD operations, invitation acceptance).
-- Broker integration tests verifying `rocketship login` seeds default org and rewrites token claims accordingly.
+- Unit tests for persistence (role summaries, membership updates, refresh token CRUD) and broker auth interceptors (viewer/service-account cases, unknown RPC guardrail, pending-role short circuit).
+- CLI unit tests assert the permission-denied guidance now references RBAC/pending instructions.
 
 Manual tests
 
-- Create org, invite additional GitHub usernames, login as invitee, ensure token carries correct org/role.
+- Create org, invite additional GitHub usernames, login as invitee, ensure tokens carry the right roles and pending users cannot run suites until membership exists.
 
 ---
 

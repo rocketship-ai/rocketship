@@ -27,12 +27,12 @@ auth:
       key: signing-key.pem
       mountPath: /var/run/rocketship
       fileName: signing-key.pem
-    store:
-      path: /var/lib/rocketship/broker-store.enc
-      mountPath: /var/lib/rocketship
-      encryptionKeySecret: globalbank-auth-broker-store
-      encryptionKeyKey: ROCKETSHIP_BROKER_STORE_KEY
-      emptyDir: true
+    database:
+      secretName: globalbank-auth-broker-database
+      secretKey: DATABASE_URL
+    refreshTokenKey:
+      secretName: globalbank-auth-broker-secrets
+      secretKey: ROCKETSHIP_BROKER_REFRESH_KEY
     ingress:
       enabled: true
       className: nginx
@@ -54,5 +54,3 @@ auth:
     envFrom:
       - secretRef:
           name: globalbank-github-oauth
-      - secretRef:
-          name: globalbank-auth-broker-store
