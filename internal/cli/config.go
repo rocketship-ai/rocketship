@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,21 +66,61 @@ func DefaultConfig() *Config {
 	}
 }
 
-// ConfigPath returns the path to the configuration file
-func ConfigPath() (string, error) {
+// platformConfigDir returns the preferred directory for CLI config.
+func platformConfigDir() (string, error) {
+	if override := os.Getenv("ROCKETSHIP_CONFIG_DIR"); override != "" {
+		return override, nil
+	}
+
+	if cfgDir, err := os.UserConfigDir(); err == nil && cfgDir != "" {
+		return filepath.Join(cfgDir, "Rocketship"), nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
+		return "", err
+	}
+	return filepath.Join(home, ".config", "rocketship"), nil
+}
+
+func ensure0700(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return os.Chmod(dir, 0o700)
+}
+
+// ConfigPath returns the path to the configuration file
+func ConfigPath() (string, error) {
+	newDir, err := platformConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("config dir resolve failed: %w", err)
 	}
 
-	configDir := filepath.Join(home, ".rocketship")
-
-	// Ensure config directory exists
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create config directory: %w", err)
+	home, _ := os.UserHomeDir()
+	legacyDir := ""
+	if home != "" {
+		legacyDir = filepath.Join(home, ".rocketship")
 	}
 
-	return filepath.Join(configDir, "config.json"), nil
+	newCfg := filepath.Join(newDir, "config.json")
+	legacyCfg := filepath.Join(legacyDir, "config.json")
+
+	if _, err := os.Stat(newCfg); errors.Is(err, os.ErrNotExist) {
+		if _, legacyErr := os.Stat(legacyCfg); legacyErr == nil {
+			if mkErr := os.MkdirAll(newDir, 0o700); mkErr == nil {
+				if content, readErr := os.ReadFile(legacyCfg); readErr == nil {
+					_ = os.WriteFile(newCfg, content, 0o600)
+				}
+			}
+		}
+	}
+
+	if err := ensure0700(newDir); err != nil {
+		return "", fmt.Errorf("failed to prepare config dir: %w", err)
+	}
+
+	return newCfg, nil
 }
 
 // LoadConfig loads the configuration from disk
@@ -129,7 +170,7 @@ func (c *Config) SaveConfig() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 

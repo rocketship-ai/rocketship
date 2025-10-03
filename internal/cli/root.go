@@ -19,7 +19,7 @@ func NewRootCmd() *cobra.Command {
 				// Set the environment variable for debug logging
 				_ = os.Setenv("ROCKETSHIP_LOG", "DEBUG")
 			}
-			
+
 			// Initialize logging after potentially setting the debug env var
 			InitLogging()
 		},
@@ -41,6 +41,7 @@ func NewRootCmd() *cobra.Command {
 		NewLoginCmd(),
 		NewLogoutCmd(),
 		NewAuthStatusCmd(),
+		NewDoctorCmd(),
 	)
 
 	return cmd
