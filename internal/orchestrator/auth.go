@@ -175,7 +175,10 @@ func (e *Engine) authorize(ctx context.Context, fullMethod string) (context.Cont
 		principal = &Principal{}
 	}
 
-	required := methodPermissions[fullMethod]
+	required, ok := methodPermissions[fullMethod]
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "method not authorised")
+	}
 	if !principal.allows(required) {
 		return nil, status.Error(codes.PermissionDenied, principal.denialMessage(required))
 	}

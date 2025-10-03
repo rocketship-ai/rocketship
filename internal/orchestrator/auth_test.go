@@ -110,6 +110,17 @@ func TestAuthInterceptor_EnforcesToken(t *testing.T) {
 			t.Fatalf("unexpected response %v", resp)
 		}
 	})
+
+	t.Run("unknown method", func(t *testing.T) {
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer secret-token"))
+		unknown := &grpc.UnaryServerInfo{FullMethod: "/rocketship.v1.Engine/Unknown"}
+		_, err := interceptor(ctx, nil, unknown, func(ctx context.Context, req interface{}) (interface{}, error) {
+			return "ok", nil
+		})
+		if status.Code(err) != codes.PermissionDenied {
+			t.Fatalf("expected permission denied for unknown method, got %v", err)
+		}
+	})
 }
 
 func TestAuthInterceptor_ExemptMethods(t *testing.T) {
