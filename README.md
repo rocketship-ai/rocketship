@@ -34,7 +34,7 @@ Core features:
 
 #### Install
 
-Install the CLI with Homebrew on macOS, or use the no-sudo script on Linux/macOS. Detailed steps live in the [Installation Guide](https://docs.rocketship.sh/installation).
+Install the CLI with Homebrew on macOS, or use the install script on for other platforms. Detailed steps live in the [Installation Guide](https://docs.rocketship.sh/installation).
 
 ```bash
 # macOS

@@ -23,7 +23,7 @@ The formula installs the latest tagged CLI, handles upgrades with `brew upgrade 
 
 ## Linux and macOS (portable installer)
 
-For environments without Homebrew or where you need a no-sudo flow, run the installer script:
+For environments without Homebrew run the installer script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
