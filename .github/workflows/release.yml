@@ -12,6 +12,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - uses: actions/checkout@v4
 
@@ -181,6 +183,81 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           curl -X POST "https://proxy.golang.org/github.com/rocketship-ai/rocketship/@v/${VERSION}.info" || true
+
+  sync-internal-chart:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+    steps:
+
+      - name: GH_PAT not configured
+        if: env.GH_PAT == ''
+        run: echo "GH_PAT secret not configured; skipping internal chart sync."
+
+      - name: Skip when GH_PAT missing
+        if: env.GH_PAT == ''
+        run: exit 0
+
+      - name: Checkout public repository
+        uses: actions/checkout@v4
+
+      - name: Checkout internal charts repo
+        uses: actions/checkout@v4
+        with:
+          repository: rocketship-ai/rocketship-internal
+          token: ${{ env.GH_PAT }}
+          path: internal
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Update image tags in internal chart
+        id: update
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd internal
+
+          update_file() {
+            local file="$1"
+            if [ -f "$file" ]; then
+              yq -i '.engine.image.tag = strenv(VERSION)' "$file"
+              yq -i '.worker.image.tag = strenv(VERSION)' "$file"
+              yq -i '.auth.broker.image.tag = strenv(VERSION)' "$file"
+            fi
+          }
+
+          update_file charts/rocketship/values-production.yaml
+          update_file charts/rocketship/values-github-cloud.yaml
+          update_file charts/rocketship/values-github-web.yaml
+
+          if git status --porcelain | grep . >/dev/null; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create PR in internal repo
+        if: steps.update.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ env.GH_PAT }}
+          path: internal
+          commit-message: "chore: bump rocketship images to ${{ needs.release.outputs.version }}"
+          branch: bump/${{ needs.release.outputs.version }}
+          delete-branch: true
+          title: "Bump Rocketship images to ${{ needs.release.outputs.version }}"
+          body: |
+            Automated update created from the public release pipeline.
+            - engine/worker/auth-broker image tags set to `${{ needs.release.outputs.version }}`.
+
+      - name: No changes detected
+        if: steps.update.outputs.changes != 'true'
+        run: echo "Internal chart already up to date; no PR created."
 
   update-homebrew-tap:
     needs: release
