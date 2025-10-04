@@ -183,11 +183,23 @@ jobs:
           curl -X POST "https://proxy.golang.org/github.com/rocketship-ai/rocketship/@v/${VERSION}.info" || true
 
   update-homebrew-tap:
-    if: ${{ secrets.GH_PAT != '' }}
     needs: release
     runs-on: ubuntu-latest
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
     steps:
+      - name: GH_PAT not configured
+        if: env.GH_PAT == ''
+        run: echo "GH_PAT secret not configured; skipping tap update."
+
+      - name: Checkout rocketship repo
+        if: env.GH_PAT != ''
+        uses: actions/checkout@v4
+        with:
+          path: rocketship
+
       - name: Fetch release assets JSON
+        if: env.GH_PAT != ''
         id: rel
         run: |
           set -euo pipefail
@@ -209,77 +221,17 @@ jobs:
           done
 
       - name: Checkout tap repository
+        if: env.GH_PAT != ''
         uses: actions/checkout@v4
         with:
           repository: rocketship-ai/homebrew-tap
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ env.GH_PAT }}
+          path: tap
 
       - name: Update formula
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.rel.outputs.tag }}"
-          cat <<'EOF' > Formula/rocketship.rb
-class Rocketship < Formula
-  desc "Rocketship CLI"
-  homepage "https://github.com/rocketship-ai/rocketship"
-  version "TAG_PLACEHOLDER"
-
-  on_macos do
-    on_arm do
-      url "URL_ROCKETSHIP_DARWIN_ARM64"
-      sha256 "SHA_ROCKETSHIP_DARWIN_ARM64"
-    end
-    on_intel do
-      url "URL_ROCKETSHIP_DARWIN_AMD64"
-      sha256 "SHA_ROCKETSHIP_DARWIN_AMD64"
-    end
-  end
-
-  on_linux do
-    on_arm do
-      url "URL_ROCKETSHIP_LINUX_ARM64"
-      sha256 "SHA_ROCKETSHIP_LINUX_ARM64"
-    end
-    on_intel do
-      url "URL_ROCKETSHIP_LINUX_AMD64"
-      sha256 "SHA_ROCKETSHIP_LINUX_AMD64"
-    end
-  end
-
-  def install
-    target = if OS.mac?
-              "rocketship-darwin-#{Hardware::CPU.arm? ? "arm64" : "amd64"}"
-            else
-              "rocketship-linux-#{Hardware::CPU.arm? ? "arm64" : "amd64"}"
-            end
-    bin.install target => "rocketship"
-  end
-
-  test do
-    system "#{bin}/rocketship", "--version"
-  end
-end
-EOF
-          ruby <<'RUBY'
-require "pathname"
-file = Pathname.new("Formula/rocketship.rb")
-content = file.read
-mapping = {
-  "TAG_PLACEHOLDER" => ENV.fetch("TAG"),
-  "URL_ROCKETSHIP_DARWIN_ARM64" => ENV.fetch("URL_ROCKETSHIP_DARWIN_ARM64"),
-  "SHA_ROCKETSHIP_DARWIN_ARM64" => ENV.fetch("SHA_ROCKETSHIP_DARWIN_ARM64"),
-  "URL_ROCKETSHIP_DARWIN_AMD64" => ENV.fetch("URL_ROCKETSHIP_DARWIN_AMD64"),
-  "SHA_ROCKETSHIP_DARWIN_AMD64" => ENV.fetch("SHA_ROCKETSHIP_DARWIN_AMD64"),
-  "URL_ROCKETSHIP_LINUX_ARM64" => ENV.fetch("URL_ROCKETSHIP_LINUX_ARM64"),
-  "SHA_ROCKETSHIP_LINUX_ARM64" => ENV.fetch("SHA_ROCKETSHIP_LINUX_ARM64"),
-  "URL_ROCKETSHIP_LINUX_AMD64" => ENV.fetch("URL_ROCKETSHIP_LINUX_AMD64"),
-  "SHA_ROCKETSHIP_LINUX_AMD64" => ENV.fetch("SHA_ROCKETSHIP_LINUX_AMD64"),
-}
-mapping.each do |marker, value|
-  content = content.gsub(marker, value)
-end
-file.write(content)
-RUBY
+        if: env.GH_PAT != ''
+        working-directory: tap
+        run: ruby ../rocketship/.github/scripts/update_tap.rb
         env:
           TAG: ${{ steps.rel.outputs.tag }}
           URL_ROCKETSHIP_DARWIN_ARM64: ${{ steps.rel.outputs.url_rocketship_darwin_arm64 }}
@@ -292,6 +244,8 @@ RUBY
           SHA_ROCKETSHIP_LINUX_AMD64: ${{ steps.rel.outputs.sha_rocketship_linux_amd64 }}
 
       - name: Commit and open PR
+        if: env.GH_PAT != ''
+        working-directory: tap
         run: |
           set -euo pipefail
           git config user.name "rocketship-release-bot"
@@ -303,4 +257,4 @@ RUBY
           git push -u origin "$branch"
           gh pr create --fill --title "Update to ${{ steps.rel.outputs.tag }}" --body "Automated tap update"
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ env.GH_PAT }}
