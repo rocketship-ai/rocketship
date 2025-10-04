@@ -2463,30 +2463,48 @@
 <p>Re-run these commands whenever you change code; keep the tag stable (for example <code>v0.1-test</code>) so the Helm release pulls the updated digest.</p>
 </blockquote>
 <h2 id="6-deploy-the-rocketship-helm-chart">6. Deploy the Rocketship Helm Chart</h2>
+<p>Before installing the chart, create the secrets that hold the auth broker’s configuration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 1) Postgres connection string (replace with the managed database DSN)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-database<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">DATABASE_URL</span><span class="o">=</span><span class="s1">&#39;postgres://rocketship:&lt;password&gt;@&lt;host&gt;:5432/rocketship?sslmode=require&#39;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># 2) 32-byte refresh-token signing key (base64 encoded)</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-secrets<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+</code></pre></div>
+<blockquote>
+<p>The Postgres database backs user/org membership and refresh tokens. The generated <code>ROCKETSHIP_BROKER_REFRESH_KEY</code> is used to HMAC refresh tokens before they are stored, so rotate it carefully (invalidate existing sessions as needed).
+Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code>) auto-generates the broker database secret, so you can skip the <code>globalbank-auth-broker-database</code> step and simply supply <code>postgres.auth.password</code> in the Helm command.</p>
+</blockquote>
 <p>Create a values override file (<code>deploy/do-values.yaml</code>) or inline the settings:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>helm<span class="w"> </span>install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--set<span class="w"> </span>temporal.host<span class="o">=</span>temporal-frontend.rocketship:7233<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>default<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--set<span class="w"> </span>imagePullSecrets<span class="o">[</span><span class="m">0</span><span class="o">]</span>.name<span class="o">=</span>registry-rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--set<span class="w"> </span>ingress.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--set<span class="w"> </span>ingress.className<span class="o">=</span>nginx<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/backend-protocol&quot;</span><span class="o">=</span>GRPC<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/ssl-redirect&quot;</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/proxy-body-size&quot;</span><span class="o">=</span><span class="s2">&quot;0&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">[</span><span class="m">0</span><span class="o">]</span>.secretName<span class="o">=</span>globalbank-tls<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">[</span><span class="m">0</span><span class="o">]</span>.hosts<span class="o">[</span><span class="m">0</span><span class="o">]=</span>cli.rocketship.globalbank.com<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.host<span class="o">=</span>cli.rocketship.globalbank.com<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.paths<span class="o">[</span><span class="m">0</span><span class="o">]</span>.path<span class="o">=</span>/<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.paths<span class="o">[</span><span class="m">0</span><span class="o">]</span>.pathType<span class="o">=</span>Prefix<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span>--wait
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--set<span class="w"> </span>temporal.host<span class="o">=</span>temporal-frontend.rocketship:7233<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>default<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="c1"># Uncomment the two lines below to use the bundled Postgres chart instead of an external DB</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span><span class="c1"># --set postgres.enabled=true \</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span><span class="c1"># --set postgres.auth.password=$POSTGRES_PASSWORD \</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>--set<span class="w"> </span>imagePullSecrets<span class="o">[</span><span class="m">0</span><span class="o">]</span>.name<span class="o">=</span>registry-rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span>--set<span class="w"> </span>ingress.enabled<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span>--set<span class="w"> </span>ingress.className<span class="o">=</span>nginx<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/backend-protocol&quot;</span><span class="o">=</span>GRPC<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/ssl-redirect&quot;</span><span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">  </span>--set<span class="w"> </span>ingress.annotations.<span class="s2">&quot;nginx\.ingress\.kubernetes\.io/proxy-body-size&quot;</span><span class="o">=</span><span class="s2">&quot;0&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">[</span><span class="m">0</span><span class="o">]</span>.secretName<span class="o">=</span>globalbank-tls<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">[</span><span class="m">0</span><span class="o">]</span>.hosts<span class="o">[</span><span class="m">0</span><span class="o">]=</span>cli.rocketship.globalbank.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.host<span class="o">=</span>cli.rocketship.globalbank.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.paths<span class="o">[</span><span class="m">0</span><span class="o">]</span>.path<span class="o">=</span>/<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">  </span>--set<span class="w"> </span>ingress.hosts<span class="o">[</span><span class="m">0</span><span class="o">]</span>.paths<span class="o">[</span><span class="m">0</span><span class="o">]</span>.pathType<span class="o">=</span>Prefix<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="w">  </span>--wait
 </code></pre></div>
 <p>Confirm the pods are healthy:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>rocketship
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div>
 <p><code>rocketship-engine</code>, <code>rocketship-worker</code>, <code>rocketship-auth-broker</code>, and <code>rocketship-web-oauth2-proxy</code> should report <code>READY 1/1</code>. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.</p>
 <h2 id="7-enable-auth-for-the-web-ui-optional">7. Enable Auth for the Web UI (optional)</h2>
@@ -2498,29 +2516,34 @@
 </li>
 <li>
 <p><strong>Create the broker secrets:</strong> use the client ID/secret captured in the previous step.
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># GitHub OAuth app credentials</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-github-oauth<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_GITHUB_CLIENT_ID</span><span class="o">=</span>YOUR_GITHUB_CLIENT_ID<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_GITHUB_CLIENT_SECRET</span><span class="o">=</span>YOUR_GITHUB_CLIENT_SECRET
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Encrypted refresh-token store key</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-store<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_STORE_KEY</span><span class="o">=</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="c1"># JWKS signing material (PEM formatted private key + matching cert)</span>
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-signing<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">  </span>--from-file<span class="o">=</span>signing-key.pem<span class="o">=</span>./signing-key.pem
-<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
-<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="c1"># Web front-door OAuth client (used by oauth2-proxy). Create a SECOND GitHub OAuth app with</span>
-<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="c1"># callback URL https://app.globalbank.rocketship.sh/oauth2/callback and plug its credentials below.</span>
-<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>oauth2-proxy-credentials<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientID</span><span class="o">=</span>YOUR_WEB_OAUTH_CLIENT_ID<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientSecret</span><span class="o">=</span>YOUR_WEB_OAUTH_CLIENT_SECRET<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">cookieSecret</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())&quot;</span><span class="k">)</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># GitHub OAuth app credentials</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-github-oauth<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_GITHUB_CLIENT_ID</span><span class="o">=</span>YOUR_GITHUB_CLIENT_ID<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_GITHUB_CLIENT_SECRET</span><span class="o">=</span>YOUR_GITHUB_CLIENT_SECRET
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Database DSN (managed Postgres or self-hosted)</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-database<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">DATABASE_URL</span><span class="o">=</span><span class="s1">&#39;postgres://rocketship:&lt;password&gt;@&lt;host&gt;:5432/rocketship?sslmode=require&#39;</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="c1"># Refresh-token HMAC key (32 bytes, base64 encoded)</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-secrets<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="c1"># JWKS signing material (PEM formatted private key + matching cert)</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-signing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">  </span>--from-file<span class="o">=</span>signing-key.pem<span class="o">=</span>./signing-key.pem
+<a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>
+<a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a><span class="c1"># Web front-door OAuth client (used by oauth2-proxy). Create a SECOND GitHub OAuth app with</span>
+<a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="c1"># callback URL https://app.globalbank.rocketship.sh/oauth2/callback and plug its credentials below.</span>
+<a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>oauth2-proxy-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientID</span><span class="o">=</span>YOUR_WEB_OAUTH_CLIENT_ID<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientSecret</span><span class="o">=</span>YOUR_WEB_OAUTH_CLIENT_SECRET<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">cookieSecret</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())&quot;</span><span class="k">)</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -2533,51 +2556,53 @@
 </li>
 <li>
 <p><strong>Apply the presets alongside the base ingress values:</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-selfhost.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-web.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span>--wait
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-selfhost.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-web.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--wait
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>Verify the flow:</strong> visit <code>https://app.globalbank.rocketship.sh/</code> in a new session. You should be redirected to GitHub, approve the OAuth app you created, and land on the proxied Rocketship health page (<code>/healthz</code>).</p>
 </li>
 </ol>
+<blockquote>
+<p>If the CLI returns <code>permission denied (roles: pending)</code> after logging in, call <code>POST https://auth.globalbank.rocketship.sh/api/orgs</code> with the bearer token to create the first organisation/project, or ask an existing admin to invite you. Pending users cannot run suites until they belong to a project.</p>
+</blockquote>
 <h3 id="option-b-bring-your-own-idp-auth0oktaazure-ad">Option B — Bring your own IdP (Auth0/Okta/Azure AD)</h3>
 <ol>
 <li>
 <p><strong>Create the oauth2-proxy credentials secret:</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>openssl<span class="w"> </span>genrsa<span class="w"> </span>-out<span class="w"> </span>signing-key.pem<span class="w"> </span><span class="m">2048</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-signing<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--from-file<span class="o">=</span>signing-key.pem
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import os,base64;print(base64.b64encode(os.urandom(32)).decode())&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>broker-store.key
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-store<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span>--from-file<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_STORE_KEY</span><span class="o">=</span>broker-store.key
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-github-oauth<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_GITHUB_CLIENT_SECRET</span><span class="o">=</span>&lt;github-client-secret&gt;
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>openssl<span class="w"> </span>genrsa<span class="w"> </span>-out<span class="w"> </span>signing-key.pem<span class="w"> </span><span class="m">2048</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-signing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--from-file<span class="o">=</span>signing-key.pem
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-database<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">DATABASE_URL</span><span class="o">=</span><span class="s1">&#39;postgres://rocketship:&lt;password&gt;@&lt;host&gt;:5432/rocketship?sslmode=require&#39;</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-secrets<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>Bootstrap oauth2-proxy credentials.</strong> Use the same GitHub OAuth application (client ID/secret) so both CLI and UI share it.</p>
 </li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">COOKIE_SECRET</span><span class="o">=</span><span class="k">$(</span>python3<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="s">import secrets</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="s">print(secrets.token_hex(16))</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="s">PY</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">)</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>oauth2-proxy-credentials<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientID</span><span class="o">=</span>YOUR_IDP_CLIENT_ID<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientSecret</span><span class="o">=</span>YOUR_IDP_CLIENT_SECRET<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">cookieSecret</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())&quot;</span><span class="k">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nv">COOKIE_SECRET</span><span class="o">=</span><span class="k">$(</span>python3<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;&#39;PY&#39;</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="s">import secrets</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="s">print(secrets.token_hex(16))</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="s">PY</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="k">)</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>oauth2-proxy-credentials<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientID</span><span class="o">=</span>YOUR_IDP_CLIENT_ID<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">clientSecret</span><span class="o">=</span>YOUR_IDP_CLIENT_SECRET<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">cookieSecret</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets, base64; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())&quot;</span><span class="k">)</span>
 </code></pre></div>
 <ol>
 <li><strong>Review <code>charts/rocketship/values-oidc-web.yaml</code>:</strong></li>
@@ -2588,11 +2613,11 @@
 </li>
 <li>
 <p><strong>Apply the preset:</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-oidc-web.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span>--wait
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-oidc-web.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--wait
 </code></pre></div></p>
 </li>
 <li>
@@ -2604,62 +2629,62 @@
 <ol>
 <li>
 <p><strong>Generate a token and store it in a Kubernetes secret</strong> (replace the example value):
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>rocketship-engine-token<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">token</span><span class="o">=</span><span class="s2">&quot;rst_self_</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>rocketship-engine-token<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">token</span><span class="o">=</span><span class="s2">&quot;rst_self_</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>Patch your Helm values (or create <code>values-token.yaml</code>) to inject the token:</strong></p>
 </li>
 </ol>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">engine</span><span class="p">:</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ROCKETSHIP_ENGINE_TOKEN</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">      </span><span class="nt">valueFrom</span><span class="p">:</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="nt">secretKeyRef</span><span class="p">:</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rocketship-engine-token</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">engine</span><span class="p">:</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ROCKETSHIP_ENGINE_TOKEN</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">      </span><span class="nt">valueFrom</span><span class="p">:</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">        </span><span class="nt">secretKeyRef</span><span class="p">:</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">rocketship-engine-token</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">token</span>
 </code></pre></div>
 <p>Apply it alongside the production values:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-cloud.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-web.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-auth-broker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="w">  </span>--wait
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-cloud.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-github-web.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-auth-broker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">  </span>--wait
 </code></pre></div>
 <ol>
 <li><strong>Validate the flows.</strong>
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>cloud<span class="w"> </span>grpcs://cli.rocketship.globalbank.com
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>cloud
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>rocketship<span class="w"> </span>login
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>rocketship<span class="w"> </span>status
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>cloud<span class="w"> </span>grpcs://cli.rocketship.globalbank.com
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>cloud
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>rocketship<span class="w"> </span>login
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>rocketship<span class="w"> </span>status
 </code></pre></div>
    Browse to <code>https://app.rocketship.globalbank.com/</code> in a fresh session—you should be redirected through GitHub and land back on the proxied Rocketship UI after approval. The CLI command above walks you through device flow (<code>https://github.com/login/device</code>) and persists the refresh token locally.</li>
 </ol>
 <blockquote>
-<p>The broker stores only hashed refresh tokens encrypted at rest. Rotate the signing key or store key by updating the Kubernetes secrets and rerunning <code>helm upgrade</code>.</p>
+<p>The broker stores only hashed refresh tokens in Postgres (keyed via <code>ROCKETSHIP_BROKER_REFRESH_KEY</code>). Rotate that secret—and the signing key—by updating the Kubernetes secrets and rerunning <code>helm upgrade</code>. If the CLI reports <code>permission denied (roles: pending)</code>, use the issued bearer token to call <code>POST https://auth.globalbank.rocketship.sh/api/orgs</code> and create the first organisation, or ask an administrator to invite you.</p>
 </blockquote>
 <h3 id="option-2-bring-your-own-idp-auth0-okta-azure-ad">Option 2 – Bring your own IdP (Auth0, Okta, Azure AD, …)</h3>
 <p>If you already manage an internal IdP, point the chart at it. Provision the necessary applications in your provider (typically a native app for the CLI device flow and a web app for oauth2-proxy), then update <code>charts/rocketship/values-oidc-web.yaml</code> with your issuer, client IDs, and scopes.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-oidc-web.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-auth-broker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="w">  </span>--wait
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>--install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-production.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>-f<span class="w"> </span>charts/rocketship/values-oidc-web.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-engine<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-auth-broker<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="w">  </span>--wait
 </code></pre></div>
 <p>After rollout, point your CLI profile at the engine (<code>rocketship profile create &lt;name&gt; grpcs://cli.rocketship.globalbank.com</code>) and run <code>rocketship login</code>. The CLI follows the device flow your IdP exposes and automatically refreshes the issued token on subsequent commands.</p>
 <h3 id="rbac-considerations">RBAC considerations</h3>
@@ -2675,13 +2700,13 @@
 <p>Create A (or CNAME) records for <code>cli.rocketship.globalbank.com</code>, <code>app.rocketship.globalbank.com</code>, and <code>auth.rocketship.globalbank.com</code> pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.</p>
 <h2 id="11-smoke-test-the-endpoint">11. Smoke Test the Endpoint</h2>
 <p>The Rocketship health endpoint answers gRPC, so an HTTPS request returns <code>415</code> with <code>application/grpc</code>, which confirms end-to-end TLS:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://cli.rocketship.globalbank.com/healthz
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://auth.rocketship.globalbank.com/healthz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://cli.rocketship.globalbank.com/healthz
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>curl<span class="w"> </span>-v<span class="w"> </span>https://auth.rocketship.globalbank.com/healthz
 </code></pre></div>
 <p>Create and use the default cloud profile from the CLI (already pointing at <code>cli.rocketship.globalbank.com:443</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>list
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>rocketship<span class="w"> </span>login
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>examples/simple-http/rocketship.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>list
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>rocketship<span class="w"> </span>login
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>examples/simple-http/rocketship.yaml
 </code></pre></div>
 <p>If you see a <code>connection refused</code> message against <code>127.0.0.1:7700</code>, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.</p>
 <h2 id="10-updating-the-deployment">10. Updating the Deployment</h2>
@@ -2689,8 +2714,8 @@
 <li>Rebuild and push the images with the same tag (or bump the <code>TAG</code>).</li>
 <li>Run <code>helm upgrade rocketship charts/rocketship ...</code> with the updated values.</li>
 <li>Watch rollout status:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-engine<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/rocketship-worker<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div></li>
 </ol>
 <h2 id="11-troubleshooting-tips">11. Troubleshooting Tips</h2>

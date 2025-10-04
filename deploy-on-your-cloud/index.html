@@ -2129,17 +2129,21 @@
 </tbody>
 </table>
 <blockquote>
-<p>Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands.</p>
+<p>Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands. If you do not already operate Postgres, enable the bundled Bitnami dependency with <code>--set postgres.enabled=true</code> and provide a password via <code>postgres.auth.password</code>.</p>
 </blockquote>
 <h2 id="after-deployment">After Deployment</h2>
 <ul>
 <li>Use <code>rocketship profile create</code> and <code>rocketship profile use</code> to store the engine endpoint (<code>grpcs://…</code>) and default to TLS where appropriate.</li>
 <li>Inject a secret token into the engine (<code>ROCKETSHIP_ENGINE_TOKEN</code>) and export the same value as <code>ROCKETSHIP_TOKEN</code> in the CLI/CI environment so gRPC calls are authenticated.</li>
 <li>Alternatively, set <code>ROCKETSHIP_AUTH_MODE=oidc</code> with the issuer/client metadata so the engine validates JWTs. Team members then run <code>rocketship login</code> (device flow) or <code>rocketship status</code> to manage their own credentials.</li>
+<li>When enabling the GitHub auth broker, provision a Postgres instance and pass the DSN via <code>auth.broker.database.secretName</code>/<code>secretKey</code>, and generate a 32-byte base64 <code>ROCKETSHIP_BROKER_REFRESH_KEY</code> secret. The Helm presets reference the <code>globalbank-auth-broker-database</code> and <code>globalbank-auth-broker-secrets</code> names shown in the DigitalOcean guide.</li>
 <li>Run suites with <code>rocketship run --engine</code>. When profiles are active, the CLI resolves the engine address automatically.</li>
 <li>Expose Prometheus/Grafana, RBAC, and authentication once the core stack is stable (tracked for future epics).</li>
 </ul>
 <p>Once the core stack is running, you can optionally apply the OIDC preset to front any HTTP/UI endpoints with your IdP before traffic reaches Rocketship.</p>
+<blockquote>
+<p>First-time logins on a fresh cluster return access tokens with a <code>pending</code> role. Use the bearer token to call <code>POST /api/orgs</code> on the auth broker to create the first organisation/project, or invite the user via the forthcoming org management endpoints.</p>
+</blockquote>
 
 
 
