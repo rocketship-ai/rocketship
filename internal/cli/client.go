@@ -318,6 +318,9 @@ func translateAuthError(prefix string, err error) error {
 			if detail == "" {
 				detail = "server rejected the request"
 			}
+			if strings.Contains(strings.ToLower(detail), "pending") {
+				detail += "; first-time users must create an organisation via POST /api/orgs or accept an invitation"
+			}
 			return fmt.Errorf("%s: permission denied (%s). Ensure your token has the required role or contact an administrator", prefix, detail)
 		default:
 			return fmt.Errorf("%s: %s", prefix, s.Message())

@@ -48,3 +48,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "rocketship.authbroker.fullname" -}}
 {{- printf "%s-auth-broker" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "rocketship.authbroker.databaseSecretName" -}}
+{{- printf "%s-auth-broker-db" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "rocketship.postgresql.host" -}}
+{{- printf "%s-postgresql" .Release.Name -}}
+{{- end -}}

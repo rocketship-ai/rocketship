@@ -121,6 +121,23 @@ docker buildx build \
 
 ## 6. Deploy the Rocketship Helm Chart
 
+Before installing the chart, create the secrets that hold the auth broker’s configuration:
+
+```bash
+# 1) Postgres connection string (replace with the managed database DSN)
+kubectl create secret generic globalbank-auth-broker-database \
+  --namespace rocketship \
+  --from-literal=DATABASE_URL='postgres://rocketship:<password>@<host>:5432/rocketship?sslmode=require'
+
+# 2) 32-byte refresh-token signing key (base64 encoded)
+kubectl create secret generic globalbank-auth-broker-secrets \
+  --namespace rocketship \
+  --from-literal=ROCKETSHIP_BROKER_REFRESH_KEY="$(openssl rand -base64 32)"
+```
+
+> The Postgres database backs user/org membership and refresh tokens. The generated `ROCKETSHIP_BROKER_REFRESH_KEY` is used to HMAC refresh tokens before they are stored, so rotate it carefully (invalidate existing sessions as needed).
+> Enabling the chart’s bundled Postgres (`--set postgres.enabled=true`) auto-generates the broker database secret, so you can skip the `globalbank-auth-broker-database` step and simply supply `postgres.auth.password` in the Helm command.
+
 Create a values override file (`deploy/do-values.yaml`) or inline the settings:
 
 ```bash
@@ -132,6 +149,9 @@ helm install rocketship charts/rocketship \
   --set engine.image.tag=$TAG \
   --set worker.image.repository=$REGISTRY/rocketship-worker \
   --set worker.image.tag=$TAG \
+  # Uncomment the two lines below to use the bundled Postgres chart instead of an external DB
+  # --set postgres.enabled=true \
+  # --set postgres.auth.password=$POSTGRES_PASSWORD \
   --set imagePullSecrets[0].name=registry-rocketship \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
@@ -170,10 +190,15 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
      --from-literal=ROCKETSHIP_GITHUB_CLIENT_ID=YOUR_GITHUB_CLIENT_ID \
      --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=YOUR_GITHUB_CLIENT_SECRET
 
-   # Encrypted refresh-token store key
-   kubectl create secret generic globalbank-auth-broker-store \
+   # Database DSN (managed Postgres or self-hosted)
+   kubectl create secret generic globalbank-auth-broker-database \
      --namespace rocketship \
-     --from-literal=ROCKETSHIP_BROKER_STORE_KEY=$(openssl rand -hex 32)
+     --from-literal=DATABASE_URL='postgres://rocketship:<password>@<host>:5432/rocketship?sslmode=require'
+
+   # Refresh-token HMAC key (32 bytes, base64 encoded)
+   kubectl create secret generic globalbank-auth-broker-secrets \
+     --namespace rocketship \
+     --from-literal=ROCKETSHIP_BROKER_REFRESH_KEY="$(openssl rand -base64 32)"
 
    # JWKS signing material (PEM formatted private key + matching cert)
    kubectl create secret generic globalbank-auth-broker-signing \
@@ -206,6 +231,8 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
 
 5. **Verify the flow:** visit `https://app.globalbank.rocketship.sh/` in a new session. You should be redirected to GitHub, approve the OAuth app you created, and land on the proxied Rocketship health page (`/healthz`).
 
+> If the CLI returns `permission denied (roles: pending)` after logging in, call `POST https://auth.globalbank.rocketship.sh/api/orgs` with the bearer token to create the first organisation/project, or ask an existing admin to invite you. Pending users cannot run suites until they belong to a project.
+
 ### Option B — Bring your own IdP (Auth0/Okta/Azure AD)
 
 1. **Create the oauth2-proxy credentials secret:**
@@ -215,14 +242,13 @@ After the gRPC ingress is live you can optionally front the engine’s HTTP port
      --namespace rocketship \
      --from-file=signing-key.pem
 
-   python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())" > broker-store.key
-   kubectl create secret generic globalbank-auth-broker-store \
+   kubectl create secret generic globalbank-auth-broker-database \
      --namespace rocketship \
-     --from-file=ROCKETSHIP_BROKER_STORE_KEY=broker-store.key
+     --from-literal=DATABASE_URL='postgres://rocketship:<password>@<host>:5432/rocketship?sslmode=require'
 
-   kubectl create secret generic globalbank-github-oauth \
+   kubectl create secret generic globalbank-auth-broker-secrets \
      --namespace rocketship \
-     --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-client-secret>
+     --from-literal=ROCKETSHIP_BROKER_REFRESH_KEY="$(openssl rand -base64 32)"
    ```
 
 2. **Bootstrap oauth2-proxy credentials.** Use the same GitHub OAuth application (client ID/secret) so both CLI and UI share it.
@@ -305,7 +331,7 @@ Issue a long-lived token for the engine so only authenticated CLI or CI jobs can
    ```
    Browse to `https://app.rocketship.globalbank.com/` in a fresh session—you should be redirected through GitHub and land back on the proxied Rocketship UI after approval. The CLI command above walks you through device flow (`https://github.com/login/device`) and persists the refresh token locally.
 
-> The broker stores only hashed refresh tokens encrypted at rest. Rotate the signing key or store key by updating the Kubernetes secrets and rerunning `helm upgrade`.
+> The broker stores only hashed refresh tokens in Postgres (keyed via `ROCKETSHIP_BROKER_REFRESH_KEY`). Rotate that secret—and the signing key—by updating the Kubernetes secrets and rerunning `helm upgrade`. If the CLI reports `permission denied (roles: pending)`, use the issued bearer token to call `POST https://auth.globalbank.rocketship.sh/api/orgs` and create the first organisation, or ask an administrator to invite you.
 
 ### Option 2 – Bring your own IdP (Auth0, Okta, Azure AD, …)
 

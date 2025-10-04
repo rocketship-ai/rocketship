@@ -4,6 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **Versioning note:** Rocketship remains a v0 product. There are **no backwards-compatibility guarantees**. Remove or break legacy behaviours whenever it simplifies the current work, unless the user explicitly requests otherwise.
 
+## Rocketship Cloud v1 Snapshot (for agents)
+
+- Hosted experience uses GitHub device flow/OAuth via the auth-broker; broker issues Rocketship JWTs checked by the engine. Engine, worker, Temporal remain the execution core.
+- Tenancy model is **Org → Project** (no workspaces). Projects capture repo URL, default branch, and `path_scope` globs to stay mono-repo friendly.
+- RBAC: project roles are **Read** and **Write**; Org Admins implicitly have Write everywhere. Tokens without role claims must be rejected.
+- Git-as-Source-of-Truth: UI/CLI can run uncommitted edits (labelled `config_source=uncommitted`). Rocketship helps users open PRs/commits but does not host approval workflows—everything merges in GitHub.
+- Tokens: user access/refresh pair (JWT + opaque refresh) plus per-project CI tokens with scopes and TTL. Engine annotates runs with initiator/environment/config source metadata for auditing.
+- Auth broker persists users/orgs in Postgres. Initial logins return `pending` roles until an org is created (`POST /api/orgs`) or the user is invited by an admin.
+- Guardrails & direction: enforce path scopes, deny unknown RPCs, keep minikube Helm flow as reference implementation.
+
 ## Architecture Overview
 
 Rocketship is an open-source testing framework for browser and API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.
@@ -140,12 +150,14 @@ Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, 
 - `dsl.TemplateContext` for providing runtime variables to the template system
 
 **Supported Variable Types:**
+
 - Config variables: `{{ .vars.variable_name }}` (processed by CLI before plugin execution)
 - Runtime variables: `{{ variable_name }}` (processed by plugins using DSL system)
 - Environment variables: `{{ .env.VARIABLE_NAME }}` (processed by DSL system)
 - Escaped handlebars: `\{{ literal_handlebars }}` (handled by DSL system)
 
 **Standard Implementation Pattern:**
+
 ```go
 // Convert state to interface{} map for DSL compatibility
 runtime := make(map[string]interface{})
@@ -194,14 +206,14 @@ The script will:
 
 Environment variables let you change resource names without editing the script:
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
-| `ROCKETSHIP_NAMESPACE` | `rocketship` | Namespace for Rocketship resources |
-| `TEMPORAL_NAMESPACE` | `rocketship` | Namespace for the Temporal Helm release |
+| Variable                      | Default      | Description                                   |
+| ----------------------------- | ------------ | --------------------------------------------- |
+| `MINIKUBE_PROFILE`            | `rocketship` | Minikube profile name                         |
+| `ROCKETSHIP_NAMESPACE`        | `rocketship` | Namespace for Rocketship resources            |
+| `TEMPORAL_NAMESPACE`          | `rocketship` | Namespace for the Temporal Helm release       |
 | `TEMPORAL_WORKFLOW_NAMESPACE` | `rocketship` | Temporal logical namespace registered via CLI |
-| `ROCKETSHIP_RELEASE` | `rocketship` | Helm release name for Rocketship |
-| `TEMPORAL_RELEASE` | `temporal` | Helm release name for Temporal |
+| `ROCKETSHIP_RELEASE`          | `rocketship` | Helm release name for Rocketship              |
+| `TEMPORAL_RELEASE`            | `temporal`   | Helm release name for Temporal                |
 
 Example (single shared namespace):
 
@@ -319,6 +331,7 @@ rocketship run -af examples/browser-automation/rocketship.yaml
 For testing purposes, there's a hosted test server at `tryme.rocketship.sh` that provides endpoints for testing HTTP requests. This server is useful for development and testing without requiring external services.
 
 The tryme server features:
+
 - Test CRUD operations for a resource type
 - Resources are isolated based off a session header
 - Resource cleanup is done hourly (every :00)
@@ -350,6 +363,7 @@ steps:
 - Each agent gets its own isolated test environment
 
 Example session ID patterns:
+
 - `agent-1-timestamp-hash`
 - `worktree-name-uuid`
 - `feature-branch-random-id`

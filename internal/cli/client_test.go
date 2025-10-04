@@ -480,6 +480,11 @@ func TestTranslateAuthError(t *testing.T) {
 		t.Fatalf("expected permission guidance with detail, got %v", err)
 	}
 
+	deniedPending := status.Error(codes.PermissionDenied, "requires write access (roles: pending)")
+	if err := translateAuthError("failed op", deniedPending); err == nil || !strings.Contains(err.Error(), "first-time users must create an organisation") {
+		t.Fatalf("expected pending guidance, got %v", err)
+	}
+
 	other := status.Error(codes.InvalidArgument, "bad input")
 	if err := translateAuthError("failed op", other); err == nil || !strings.Contains(err.Error(), "bad input") {
 		t.Fatalf("expected passthrough message, got %v", err)

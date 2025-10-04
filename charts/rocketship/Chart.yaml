@@ -12,3 +12,8 @@ keywords:
   - temporal
 sources:
   - https://github.com/rocketship-ai/rocketship
+dependencies:
+  - name: postgresql
+    version: 15.5.20
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgres.enabled
