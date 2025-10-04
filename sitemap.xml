@@ -116,6 +116,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://docs.rocketship.sh/reference/rocketship_doctor/</loc>
+         <lastmod>2025-10-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_get/</loc>
          <lastmod>2025-10-04</lastmod>
          <changefreq>daily</changefreq>
