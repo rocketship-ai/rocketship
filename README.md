@@ -34,17 +34,16 @@ Core features:
 
 #### Install
 
-```bash
-brew install temporal # pre-req for if you want to run the local engine
-```
+Install the CLI with Homebrew on macOS, or use the install script on for other platforms. Detailed steps live in the [Installation Guide](https://docs.rocketship.sh/installation).
 
 ```bash
-# for arm64 macos
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64
-chmod +x /usr/local/bin/rocketship
-```
+# macOS
+brew tap rocketship-ai/tap
+brew install rocketship
 
-For detailed installation instructions for other platforms and optional aliases, see the [Installation Guide](https://docs.rocketship.sh/installation).
+# Linux / fallback
+curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
+```
 
 #### Save a test spec
 

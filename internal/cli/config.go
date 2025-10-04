@@ -65,21 +65,44 @@ func DefaultConfig() *Config {
 	}
 }
 
-// ConfigPath returns the path to the configuration file
-func ConfigPath() (string, error) {
+// platformConfigDir returns the preferred directory for CLI config.
+func platformConfigDir() (string, error) {
+	if override := os.Getenv("ROCKETSHIP_CONFIG_DIR"); override != "" {
+		return override, nil
+	}
+
+	if cfgDir, err := os.UserConfigDir(); err == nil && cfgDir != "" {
+		return filepath.Join(cfgDir, "Rocketship"), nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
+		return "", err
+	}
+	return filepath.Join(home, ".config", "rocketship"), nil
+}
+
+func ensure0700(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return os.Chmod(dir, 0o700)
+}
+
+// ConfigPath returns the path to the configuration file
+func ConfigPath() (string, error) {
+	newDir, err := platformConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("config dir resolve failed: %w", err)
 	}
 
-	configDir := filepath.Join(home, ".rocketship")
+	newCfg := filepath.Join(newDir, "config.json")
 
-	// Ensure config directory exists
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create config directory: %w", err)
+	if err := ensure0700(newDir); err != nil {
+		return "", fmt.Errorf("failed to prepare config dir: %w", err)
 	}
 
-	return filepath.Join(configDir, "config.json"), nil
+	return newCfg, nil
 }
 
 // LoadConfig loads the configuration from disk
@@ -129,7 +152,7 @@ func (c *Config) SaveConfig() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
