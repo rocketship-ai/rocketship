@@ -34,28 +34,16 @@ Core features:
 
 #### Install
 
-**macOS (Homebrew)**
+Install the CLI with Homebrew on macOS, or use the no-sudo script on Linux/macOS. Detailed steps live in the [Installation Guide](https://docs.rocketship.sh/installation).
 
 ```bash
+# macOS
 brew tap rocketship-ai/tap
 brew install rocketship
-```
 
-**Linux and macOS fallback (no sudo required)**
-
-```bash
+# Linux / fallback
 curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
 ```
-
-The fallback installer downloads the correct release for your platform, verifies its SHA256 against `checksums.txt`, installs to `~/.local/bin`, and removes macOS quarantine attributes for you. If `~/.local/bin` is not on your `PATH`, the script appends an export to your shell rc file.
-
-**Configuration**
-
-Rocketship keeps configuration under your OS-specific user config directory (for example `~/Library/Application Support/Rocketship` on macOS or `~/.config/rocketship` on Linux) with `0700` directories and `0600` files. Running the CLI as root is blocked unless you set `ROCKETSHIP_ALLOW_ROOT=1` (not recommended).
-
-Run `rocketship doctor` anytime to verify PATH, file ownership, writability, and quarantine status across environments.
-
-For deeper setup details, including Temporal and Docker prerequisites, see the [Installation Guide](https://docs.rocketship.sh/installation).
 
 #### Save a test spec
 
