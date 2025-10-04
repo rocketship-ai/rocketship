@@ -232,8 +232,6 @@ jobs:
           }
 
           update_file charts/rocketship/values-production.yaml
-          update_file charts/rocketship/values-github-cloud.yaml
-          update_file charts/rocketship/values-github-web.yaml
 
           if git status --porcelain | grep . >/dev/null; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
