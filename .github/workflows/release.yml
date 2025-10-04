@@ -183,16 +183,23 @@ jobs:
           curl -X POST "https://proxy.golang.org/github.com/rocketship-ai/rocketship/@v/${VERSION}.info" || true
 
   update-homebrew-tap:
-    if: ${{ secrets.GH_PAT != '' }}
     needs: release
     runs-on: ubuntu-latest
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
     steps:
+      - name: GH_PAT not configured
+        if: env.GH_PAT == ''
+        run: echo "GH_PAT secret not configured; skipping tap update."
+
       - name: Checkout rocketship repo
+        if: env.GH_PAT != ''
         uses: actions/checkout@v4
         with:
           path: rocketship
 
       - name: Fetch release assets JSON
+        if: env.GH_PAT != ''
         id: rel
         run: |
           set -euo pipefail
@@ -214,13 +221,15 @@ jobs:
           done
 
       - name: Checkout tap repository
+        if: env.GH_PAT != ''
         uses: actions/checkout@v4
         with:
           repository: rocketship-ai/homebrew-tap
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ env.GH_PAT }}
           path: tap
 
       - name: Update formula
+        if: env.GH_PAT != ''
         working-directory: tap
         run: ruby ../rocketship/.github/scripts/update_tap.rb
         env:
@@ -235,6 +244,7 @@ jobs:
           SHA_ROCKETSHIP_LINUX_AMD64: ${{ steps.rel.outputs.sha_rocketship_linux_amd64 }}
 
       - name: Commit and open PR
+        if: env.GH_PAT != ''
         working-directory: tap
         run: |
           set -euo pipefail
@@ -247,4 +257,4 @@ jobs:
           git push -u origin "$branch"
           gh pr create --fill --title "Update to ${{ steps.rel.outputs.tag }}" --body "Automated tap update"
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ env.GH_PAT }}
