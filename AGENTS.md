@@ -4,6 +4,16 @@ This file provides guidance to AI coding agents (including this Codex CLI assist
 
 > **Versioning note:** Rocketship is still pre-1.0. There is **no backwards-compatibility requirement** for any interface, schema, or behaviour. Optimise for the current epic even if it means breaking past behaviour; do not preserve legacy code paths for compatibility unless the user explicitly asks.
 
+## Rocketship Cloud v1 Snapshot (for agents)
+
+- Product focus: hosted cloud with GitHub SSO (device flow for CLI, OAuth for web) backed by our auth-broker that mints Rocketship JWTs. Engine + worker still run tests via Temporal.
+- Tenancy: **Org → Project**. Projects reference repo URL, default branch, and `path_scope` globs for mono-repo isolation. No “workspace” layer.
+- Roles: project-level **Read** (view only) and **Write** (run/edit). Org Admins inherit Write on all projects. Tokens must carry explicit roles; missing roles are rejected.
+- Git-as-SoT: UI/CLI can run uncommitted edits immediately (flagged as `config_source=uncommitted`). Approvals/merges happen in GitHub; Rocketship can optionally open PRs or commits if the user has push rights.
+- Tokens: user JWT + refresh issued by broker; CI tokens are opaque secrets scoped per project with explicit permissions + TTL. Engine tags runs with `initiator`, `environment`, `config_source`, `commit_sha`/`bundle_sha` for auditability.
+- Auth broker persists orgs/users/memberships in Postgres. Fresh logins return `pending` roles until the user creates or joins an org via `POST /api/orgs`.
+- Guardrails: enforce path scopes, reject unknown RPCs in auth, clarify uncommitted runs, prefer minikube Helm flow for reproducible clusters.
+
 ## Architecture Overview
 
 Rocketship is an open-source testing framework for browser and API testing that uses Temporal for durable execution. The system is built with Go and follows a plugin-based architecture.
@@ -115,7 +125,7 @@ Tests are defined in YAML files with this structure:
 - `name`: Test suite name
 - `tests[]`: Array of test cases
 - `tests[].steps[]`: Sequential steps within a test
-- `steps[].plugin`: Plugin to use (http, delay, aws/*)
+- `steps[].plugin`: Plugin to use (http, delay, aws/\*)
 - `steps[].assertions[]`: Validation rules
 - `steps[].save[]`: Variable extraction for step chaining
 
@@ -140,12 +150,14 @@ Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, 
 - `dsl.TemplateContext` for providing runtime variables to the template system
 
 **Supported Variable Types:**
+
 - Config variables: `{{ .vars.variable_name }}` (processed by CLI before plugin execution)
 - Runtime variables: `{{ variable_name }}` (processed by plugins using DSL system)
 - Environment variables: `{{ .env.VARIABLE_NAME }}` (processed by DSL system)
 - Escaped handlebars: `\{{ literal_handlebars }}` (handled by DSL system)
 
 **Standard Implementation Pattern:**
+
 ```go
 // Convert state to interface{} map for DSL compatibility
 runtime := make(map[string]interface{})
@@ -187,14 +199,14 @@ The script initializes (or reuses) a Minikube profile, builds fresh engine/worke
 
 Environment variables you can override:
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
-| `ROCKETSHIP_NAMESPACE` | `rocketship` | Namespace for Rocketship deployments |
-| `TEMPORAL_NAMESPACE` | `rocketship` | Namespace for the Temporal release |
+| Variable                      | Default      | Description                                   |
+| ----------------------------- | ------------ | --------------------------------------------- |
+| `MINIKUBE_PROFILE`            | `rocketship` | Minikube profile name                         |
+| `ROCKETSHIP_NAMESPACE`        | `rocketship` | Namespace for Rocketship deployments          |
+| `TEMPORAL_NAMESPACE`          | `rocketship` | Namespace for the Temporal release            |
 | `TEMPORAL_WORKFLOW_NAMESPACE` | `rocketship` | Temporal logical namespace used by Rocketship |
-| `ROCKETSHIP_RELEASE` | `rocketship` | Helm release for Rocketship |
-| `TEMPORAL_RELEASE` | `temporal` | Helm release for Temporal |
+| `ROCKETSHIP_RELEASE`          | `rocketship` | Helm release for Rocketship                   |
+| `TEMPORAL_RELEASE`            | `temporal`   | Helm release for Temporal                     |
 
 ### Usage Workflow
 
@@ -263,11 +275,13 @@ rocketship stop server
 
 - **Minikube stack:** run `scripts/install-minikube.sh`, port-forward the engine, then execute `rocketship run -af examples/sql-testing/rocketship.yaml`.
 - **Standalone Docker containers:**
+
   ```bash
   docker run --rm -d --name rocketship-postgres     -e POSTGRES_PASSWORD=testpass     -e POSTGRES_DB=testdb     -p 5433:5432     postgres:13
 
   docker run --rm -d --name rocketship-mysql     -e MYSQL_ROOT_PASSWORD=testpass     -e MYSQL_DATABASE=testdb     -p 3306:3306     mysql:8.0
   ```
+
   Update DSNs accordingly and stop the containers after testing.
 
 ## Running Tests with Browser Plugin
@@ -291,6 +305,7 @@ rocketship run -af examples/browser-automation/rocketship.yaml
 For testing purposes, there's a hosted test server at `tryme.rocketship.sh` that provides endpoints for testing HTTP requests. This server is useful for development and testing without requiring external services.
 
 The tryme server features:
+
 - Test CRUD operations for a resource type
 - Resources are isolated based off a session header
 - Resource cleanup is done hourly (every :00)
@@ -322,6 +337,7 @@ steps:
 - Each agent gets its own isolated test environment
 
 Example session ID patterns:
+
 - `agent-1-timestamp-hash`
 - `worktree-name-uuid`
 - `feature-branch-random-id`

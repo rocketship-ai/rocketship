@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -20,7 +19,8 @@ type Config struct {
 	RefreshTokenTTL time.Duration
 	Scopes          []string
 	GitHub          GitHubConfig
-	Store           StoreConfig
+	DatabaseURL     string
+	RefreshTokenKey []byte
 }
 
 type GitHubConfig struct {
@@ -33,20 +33,14 @@ type GitHubConfig struct {
 	Scopes       []string
 }
 
-type StoreConfig struct {
-	Path          string
-	EncryptionKey []byte
-}
-
 const (
-	defaultListenAddr    = ":8080"
-	defaultAccessTTL     = time.Hour
-	defaultRefreshTTL    = 30 * 24 * time.Hour
-	defaultGitHubDevice  = "https://github.com/login/device/code"
-	defaultGitHubToken   = "https://github.com/login/oauth/access_token"
-	defaultGitHubUser    = "https://api.github.com/user"
-	defaultGitHubEmails  = "https://api.github.com/user/emails"
-	defaultStoreFilename = "rocketship-auth-broker.enc"
+	defaultListenAddr   = ":8080"
+	defaultAccessTTL    = time.Hour
+	defaultRefreshTTL   = 30 * 24 * time.Hour
+	defaultGitHubDevice = "https://github.com/login/device/code"
+	defaultGitHubToken  = "https://github.com/login/oauth/access_token"
+	defaultGitHubUser   = "https://api.github.com/user"
+	defaultGitHubEmails = "https://api.github.com/user/emails"
 )
 
 func LoadConfigFromEnv() (Config, error) {
@@ -67,10 +61,9 @@ func LoadConfigFromEnv() (Config, error) {
 			UserURL:      getEnvDefault("ROCKETSHIP_GITHUB_USER_URL", defaultGitHubUser),
 			EmailsURL:    getEnvDefault("ROCKETSHIP_GITHUB_EMAILS_URL", defaultGitHubEmails),
 		},
-		Store: StoreConfig{
-			Path: getEnvDefault("ROCKETSHIP_BROKER_STORE_PATH", defaultStorePath()),
-		},
 	}
+
+	cfg.DatabaseURL = strings.TrimSpace(os.Getenv("ROCKETSHIP_BROKER_DATABASE_URL"))
 
 	if ttlStr := strings.TrimSpace(os.Getenv("ROCKETSHIP_BROKER_ACCESS_TTL")); ttlStr != "" {
 		ttl, err := time.ParseDuration(ttlStr)
@@ -97,15 +90,19 @@ func LoadConfigFromEnv() (Config, error) {
 	cfg.Scopes = defaultScopes(os.Getenv("ROCKETSHIP_BROKER_SCOPES"))
 	cfg.GitHub.Scopes = defaultGitHubScopes(os.Getenv("ROCKETSHIP_GITHUB_SCOPES"))
 
-	if key := strings.TrimSpace(os.Getenv("ROCKETSHIP_BROKER_STORE_KEY")); key != "" {
+	key := strings.TrimSpace(os.Getenv("ROCKETSHIP_BROKER_REFRESH_KEY"))
+	if key == "" {
+		key = strings.TrimSpace(os.Getenv("ROCKETSHIP_BROKER_STORE_KEY"))
+	}
+	if key != "" {
 		decoded, err := base64.StdEncoding.DecodeString(key)
 		if err != nil {
-			return Config{}, fmt.Errorf("failed to decode ROCKETSHIP_BROKER_STORE_KEY: %w", err)
+			return Config{}, fmt.Errorf("failed to decode refresh token key: %w", err)
 		}
 		if len(decoded) != 32 {
-			return Config{}, fmt.Errorf("ROCKETSHIP_BROKER_STORE_KEY must decode to 32 bytes")
+			return Config{}, fmt.Errorf("refresh token key must decode to 32 bytes")
 		}
-		cfg.Store.EncryptionKey = decoded
+		cfg.RefreshTokenKey = decoded
 	}
 
 	if cfg.Issuer == "" {
@@ -126,8 +123,11 @@ func LoadConfigFromEnv() (Config, error) {
 	if cfg.GitHub.ClientSecret == "" {
 		return Config{}, fmt.Errorf("ROCKETSHIP_GITHUB_CLIENT_SECRET is required")
 	}
-	if len(cfg.Store.EncryptionKey) == 0 {
-		return Config{}, fmt.Errorf("ROCKETSHIP_BROKER_STORE_KEY is required")
+	if cfg.DatabaseURL == "" {
+		return Config{}, fmt.Errorf("ROCKETSHIP_BROKER_DATABASE_URL is required")
+	}
+	if len(cfg.RefreshTokenKey) == 0 {
+		return Config{}, fmt.Errorf("ROCKETSHIP_BROKER_REFRESH_KEY is required")
 	}
 
 	return cfg, nil
@@ -141,14 +141,6 @@ func getEnvDefault(key, def string) string {
 		}
 	}
 	return def
-}
-
-func defaultStorePath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return defaultStoreFilename
-	}
-	return filepath.Join(home, ".rocketship", defaultStoreFilename)
 }
 
 func defaultScopes(input string) []string {

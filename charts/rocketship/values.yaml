@@ -63,19 +63,31 @@ auth:
       key: signing-key.pem
       mountPath: /var/run/rocketship
       fileName: signing-key.pem
-    store:
-      path: /var/lib/rocketship/broker-store.enc
-      mountPath: /var/lib/rocketship
-      encryptionKeySecret: ""
-      encryptionKeyKey: broker-store-key
-      emptyDir: true
-      existingClaim: ""
+    database:
+      url: ""
+      secretName: ""
+      secretKey: database-url
+    refreshTokenKey:
+      secretName: ""
+      secretKey: broker-refresh-key
+      value: ""
     env: []
     envFrom: []
     resources: {}
     nodeSelector: {}
     tolerations: []
     affinity: {}
+
+postgres:
+  enabled: false
+  auth:
+    username: rocketship
+    password: ""
+    database: rocketship
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
 
 engine:
   replicaCount: 1
