@@ -2,7 +2,6 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -97,24 +96,7 @@ func ConfigPath() (string, error) {
 		return "", fmt.Errorf("config dir resolve failed: %w", err)
 	}
 
-	home, _ := os.UserHomeDir()
-	legacyDir := ""
-	if home != "" {
-		legacyDir = filepath.Join(home, ".rocketship")
-	}
-
 	newCfg := filepath.Join(newDir, "config.json")
-	legacyCfg := filepath.Join(legacyDir, "config.json")
-
-	if _, err := os.Stat(newCfg); errors.Is(err, os.ErrNotExist) {
-		if _, legacyErr := os.Stat(legacyCfg); legacyErr == nil {
-			if mkErr := os.MkdirAll(newDir, 0o700); mkErr == nil {
-				if content, readErr := os.ReadFile(legacyCfg); readErr == nil {
-					_ = os.WriteFile(newCfg, content, 0o600)
-				}
-			}
-		}
-	}
 
 	if err := ensure0700(newDir); err != nil {
 		return "", fmt.Errorf("failed to prepare config dir: %w", err)

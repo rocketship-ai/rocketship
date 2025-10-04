@@ -62,7 +62,6 @@ func runDoctorChecks() []checkResult {
 	return []checkResult{
 		checkPath(execPath, execErr),
 		checkConfig(),
-		checkLegacyDir(),
 		checkQuarantine(execPath, execErr),
 	}
 }
@@ -176,47 +175,6 @@ func checkConfig() checkResult {
 
 	res.ok = true
 	res.messages = []string{fmt.Sprintf("config directory %s has correct ownership and permissions", dir)}
-	return res
-}
-
-func checkLegacyDir() checkResult {
-	res := checkResult{name: "Legacy ~/.rocketship directory"}
-	home, err := os.UserHomeDir()
-	if err != nil || home == "" {
-		res.ok = true
-		return res
-	}
-
-	legacyDir := filepath.Join(home, ".rocketship")
-	info, statErr := os.Stat(legacyDir)
-	if errors.Is(statErr, os.ErrNotExist) {
-		res.ok = true
-		return res
-	}
-
-	if statErr != nil {
-		res.ok = false
-		res.critical = true
-		res.messages = []string{fmt.Sprintf("failed to stat %s: %v", legacyDir, statErr)}
-		return res
-	}
-
-	if info.IsDir() {
-		if owned, ownErr := pathOwnedByCurrentUser(legacyDir); ownErr == nil && !owned {
-			res.ok = false
-			res.critical = true
-			res.messages = []string{
-				"found legacy ~/.rocketship directory not owned by current user.",
-				"Run:",
-				"  sudo chown -R \"$USER\":\"$(id -gn)\" \"$HOME/.rocketship\"",
-				"  chmod -R u+rwX,go-rwx \"$HOME/.rocketship\"",
-			}
-			return res
-		}
-	}
-
-	res.ok = true
-	res.messages = []string{"legacy directory, if present, has valid ownership"}
 	return res
 }
 

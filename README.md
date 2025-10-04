@@ -49,18 +49,11 @@ curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scrip
 
 The fallback installer downloads the correct release for your platform, verifies its SHA256 against `checksums.txt`, installs to `~/.local/bin`, and removes macOS quarantine attributes for you. If `~/.local/bin` is not on your `PATH`, the script appends an export to your shell rc file.
 
-**Locked-down laptops and config**
+**Configuration**
 
 Rocketship keeps configuration under your OS-specific user config directory (for example `~/Library/Application Support/Rocketship` on macOS or `~/.config/rocketship` on Linux) with `0700` directories and `0600` files. Running the CLI as root is blocked unless you set `ROCKETSHIP_ALLOW_ROOT=1` (not recommended).
 
-If you previously installed with `sudo` and see permission issues, fix the legacy directory with:
-
-```bash
-sudo chown -R "$USER":"$(id -gn)" "$HOME/.rocketship"
-chmod -R u+rwX,go-rwx "$HOME/.rocketship"
-```
-
-Use `rocketship doctor` to verify PATH, file ownership, writability, and quarantine status across environments.
+Run `rocketship doctor` anytime to verify PATH, file ownership, writability, and quarantine status across environments.
 
 For deeper setup details, including Temporal and Docker prerequisites, see the [Installation Guide](https://docs.rocketship.sh/installation).
 
