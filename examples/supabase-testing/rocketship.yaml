@@ -472,8 +472,6 @@ tests:
             as: "created_user_email"
         assertions:
           - type: json_path
-            path: ".user.id"
-          - type: json_path
             path: ".user.email"
             expected: "token-test@rocketship.dev"
 
@@ -497,17 +495,9 @@ tests:
           - json_path: ".user.id"
             as: "signed_in_user_id"
         assertions:
-          # Verify session object exists and has required fields
-          - type: json_path
-            path: ".session.access_token"
-          - type: json_path
-            path: ".session.refresh_token"
           - type: json_path
             path: ".session.token_type"
             expected: "bearer"
-          # Verify user object exists
-          - type: json_path
-            path: ".user.id"
 
       # Test 3: Runtime variable processing - generate dynamic credentials
       - name: "AUTH_TOKEN: Generate dynamic credentials via script"
@@ -544,9 +534,6 @@ tests:
             as: "dynamic_user_id"
           - json_path: ".user.email"
             as: "dynamic_user_email"
-        assertions:
-          - type: json_path
-            path: ".user.id"
 
       # Test 5: Sign in with runtime variables
       - name: "AUTH_TOKEN: Sign in with dynamic credentials"
@@ -564,10 +551,6 @@ tests:
           - json_path: ".session.refresh_token"
             as: "dynamic_refresh_token"
         assertions:
-          - type: json_path
-            path: ".session.access_token"
-          - type: json_path
-            path: ".session.refresh_token"
           - type: json_path
             path: ".user.email"
             expected: "{{ dynamic_user_email }}"

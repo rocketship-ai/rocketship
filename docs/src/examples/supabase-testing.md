@@ -194,11 +194,11 @@ storage:
 
 ## Assertions
 
-**Check existence** (omit `expected` field):
+**Check existence** - Use `save` instead of assertions (fails if path doesn't exist):
 ```yaml
-assertions:
-  - type: json_path
-    path: ".user.id"  # Passes if field exists
+save:
+  - json_path: ".user.id"
+    as: "user_id"  # Automatically validates existence
 ```
 
 **Exact value match:**
@@ -266,9 +266,6 @@ tests:
         save:
           - json_path: ".session.access_token"
             as: "access_token"
-        assertions:
-          - type: json_path
-            path: ".session.access_token"
 
       # Use token in HTTP request
       - name: "Access protected endpoint"
