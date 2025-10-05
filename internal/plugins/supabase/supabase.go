@@ -104,7 +104,6 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 
 	// Process runtime variables in Auth config
 	if config.Auth != nil {
-		logger.Info("DEBUG Auth config", "email", config.Auth.Email, "emailConfirm", config.Auth.EmailConfirm)
 		config.Auth.Email = replaceVariables(config.Auth.Email, state)
 		config.Auth.Password = replaceVariables(config.Auth.Password, state)
 		config.Auth.UserID = replaceVariables(config.Auth.UserID, state)
@@ -603,9 +602,6 @@ func executeAuthCreateUser(ctx context.Context, client *http.Client, config *Sup
 		return nil, fmt.Errorf("failed to marshal auth data: %w", err)
 	}
 
-	logger := activity.GetLogger(ctx)
-	logger.Info("DEBUG auth_create_user request", "endpoint", endpoint, "body", string(jsonData))
-
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -630,22 +626,14 @@ func executeAuthCreateUser(ctx context.Context, client *http.Client, config *Sup
 		return nil, err
 	}
 
-	rawDataJSON, _ := json.Marshal(response.Data)
-	logger.Info("DEBUG auth_create_user raw response", "statusCode", resp.StatusCode, "data", string(rawDataJSON), "error", response.Error)
-
 	// Transform response to match expected structure
 	// Raw API returns user object directly: { id, email, ... }
 	// Tests expect: { user: { id, email, ... } }
 	if response.Data != nil && response.Error == nil {
-		logger.Info("DEBUG auth_create_user wrapping user data")
 		// Wrap the user data in a user object for consistency
 		response.Data = map[string]interface{}{
 			"user": response.Data,
 		}
-		wrappedDataJSON, _ := json.Marshal(response.Data)
-		logger.Info("DEBUG auth_create_user wrapped response", "data", string(wrappedDataJSON))
-	} else {
-		logger.Info("DEBUG auth_create_user NOT wrapping", "dataIsNil", response.Data == nil, "errorNotNil", response.Error != nil)
 	}
 
 	return response, nil
@@ -809,17 +797,11 @@ func executeAuthSignIn(ctx context.Context, client *http.Client, config *Supabas
 		return nil, err
 	}
 
-	logger := activity.GetLogger(ctx)
-	rawDataJSON, _ := json.Marshal(response.Data)
-	logger.Info("DEBUG auth_sign_in raw response", "data", string(rawDataJSON), "error", response.Error)
-
 	// Transform response to match Supabase SDK structure
 	// Raw API returns: { access_token, refresh_token, user, ... }
 	// SDK expects: { user, session: { access_token, refresh_token, ... } }
 	if response.Data != nil && response.Error == nil {
-		logger.Info("DEBUG auth_sign_in transforming response", "dataNotNil", response.Data != nil, "errorNil", response.Error == nil)
 		if authData, ok := response.Data.(map[string]interface{}); ok {
-			logger.Info("DEBUG auth_sign_in authData is map", "authData", authData)
 			// Extract user and session data
 			user := authData["user"]
 
@@ -846,14 +828,7 @@ func executeAuthSignIn(ctx context.Context, client *http.Client, config *Supabas
 				"user":    user,
 				"session": session,
 			}
-
-			transformedDataJSON, _ := json.Marshal(response.Data)
-			logger.Info("DEBUG auth_sign_in transformed response", "data", string(transformedDataJSON))
-		} else {
-			logger.Info("DEBUG auth_sign_in authData is NOT a map", "dataType", fmt.Sprintf("%T", response.Data))
 		}
-	} else {
-		logger.Info("DEBUG auth_sign_in NOT transforming", "dataIsNil", response.Data == nil, "errorNotNil", response.Error != nil)
 	}
 
 	return response, nil
@@ -1359,12 +1334,6 @@ func parseOrder(order []interface{}) []OrderConfig {
 
 // processSave handles saving values from response
 func processSave(ctx context.Context, response *SupabaseResponse, saveConfig map[string]interface{}, saved map[string]string) error {
-	logger := activity.GetLogger(ctx)
-
-	// DEBUG: Log the response data structure
-	responseDataJSON, _ := json.Marshal(response.Data)
-	logger.Info("DEBUG processSave", "responseData", string(responseDataJSON), "saveConfig", saveConfig)
-
 	asName, ok := saveConfig["as"].(string)
 	if !ok {
 		return fmt.Errorf("'as' field is required for save config")
@@ -1391,7 +1360,6 @@ func processSave(ctx context.Context, response *SupabaseResponse, saveConfig map
 			return fmt.Errorf("error evaluating JSON path %s: %w", jsonPath, err)
 		}
 		value = v
-		logger.Info("DEBUG JSON path result", "jsonPath", jsonPath, "value", value, "valueType", fmt.Sprintf("%T", value))
 	} else if header, ok := saveConfig["header"].(string); ok {
 		// Extract from headers
 		if response.Metadata != nil && response.Metadata.Headers != nil {

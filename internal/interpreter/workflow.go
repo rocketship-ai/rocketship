@@ -227,20 +227,12 @@ func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
 
 // extractSavedValues extracts saved values from plugin response using deterministic iteration
 func extractSavedValues(ctx workflow.Context, response interface{}) map[string]string {
-	logger := workflow.GetLogger(ctx)
 	savedValues := make(map[string]string)
-
-	// DEBUG: Log the response structure
-	logger.Info("DEBUG extractSavedValues called", "responseType", fmt.Sprintf("%T", response))
 
 	// Handle response - it comes back as map[string]interface{} due to JSON serialization
 	if respMap, ok := response.(map[string]interface{}); ok {
-		keys := workflow.DeterministicKeys(respMap)
-		logger.Info("DEBUG Response is a map", "keys", keys)
-
 		// Check for saved values in response
 		if savedInterface, exists := respMap["saved"]; exists {
-			logger.Info("DEBUG Found 'saved' field", "type", fmt.Sprintf("%T", savedInterface), "value", savedInterface)
 			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
 				// Use deterministic keys for Temporal workflow compliance
 				keys := workflow.DeterministicKeys(savedMap)
@@ -253,13 +245,10 @@ func extractSavedValues(ctx workflow.Context, response interface{}) map[string]s
 					}
 				}
 			}
-		} else {
-			logger.Info("DEBUG 'saved' field NOT FOUND")
 		}
 
 		// For HTTP plugin compatibility - check for "Saved" field
 		if savedInterface, exists := respMap["Saved"]; exists {
-			logger.Info("DEBUG Found 'Saved' field", "type", fmt.Sprintf("%T", savedInterface), "value", savedInterface)
 			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
 				// Use deterministic keys for Temporal workflow compliance
 				keys := workflow.DeterministicKeys(savedMap)
@@ -272,14 +261,9 @@ func extractSavedValues(ctx workflow.Context, response interface{}) map[string]s
 					}
 				}
 			}
-		} else {
-			logger.Info("DEBUG 'Saved' field NOT FOUND")
 		}
-	} else {
-		logger.Info("DEBUG Response is NOT a map", "actualType", fmt.Sprintf("%T", response))
 	}
 
-	logger.Info("DEBUG Returning saved values", "savedValues", savedValues)
 	return savedValues
 }
 
