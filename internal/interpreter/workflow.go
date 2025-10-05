@@ -90,13 +90,6 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	logger.Info(fmt.Sprintf("Executing %s plugin step: %s", step.Plugin, step.Name))
 	logger.Info(fmt.Sprintf("Current state: %v", state))
 
-	// DEBUG: Log save configuration
-	if step.Save != nil {
-		logger.Info(fmt.Sprintf("Step has save config: %d items", len(step.Save)))
-	} else {
-		logger.Info("Step has NO save config (nil)")
-	}
-
 	// Build plugin parameters
 	pluginParams := map[string]interface{}{
 		"name":   step.Name,
