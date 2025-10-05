@@ -103,6 +103,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		pluginParams["assertions"] = step.Assertions
 	}
 	if step.Save != nil {
+		logger.Info(fmt.Sprintf("Adding save to pluginParams: %v", step.Save))
 		pluginParams["save"] = step.Save
 	}
 	// Pass vars for script plugin usage (other plugins ignore them since CLI processes config vars)
@@ -147,7 +148,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 
 	// Update workflow state with saved values (if any)
 	if activityResp != nil {
-		savedValues := extractSavedValues(activityResp)
+		savedValues := extractSavedValues(ctx, activityResp)
 		if len(savedValues) > 0 {
 			logger.Info(fmt.Sprintf("Saved values from %s plugin: %v", step.Plugin, savedValues))
 			keys := workflow.DeterministicKeys(savedValues)
@@ -218,7 +219,7 @@ func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
 }
 
 // extractSavedValues extracts saved values from plugin response using deterministic iteration
-func extractSavedValues(response interface{}) map[string]string {
+func extractSavedValues(ctx workflow.Context, response interface{}) map[string]string {
 	savedValues := make(map[string]string)
 
 	// Handle response - it comes back as map[string]interface{} due to JSON serialization

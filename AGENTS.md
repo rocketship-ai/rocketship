@@ -92,6 +92,44 @@ Debug logging shows:
 
 DEBUG LOGGING IS EXTREMELY USEFUL DURING DEVELOPMENT.
 
+### Advanced Debugging Techniques
+
+When debugging complex issues with plugins or workflow state:
+
+```bash
+# Run with debug logging and save to file for analysis
+export ROCKETSHIP_LOG=DEBUG && rocketship run -af test.yaml --env-file .env 2>&1 > /tmp/debug.log
+
+# Search for specific plugin activity logs
+cat /tmp/debug.log | grep -A 10 "SUPABASE Activity"
+
+# Find logs for a specific step by Activity ID
+cat /tmp/debug.log | grep -A 5 "ActivityID 47"
+
+# Search for save/state-related logs
+cat /tmp/debug.log | grep -E "(Processing save|saved values|State after step)"
+
+# Find all logs for a specific workflow step
+cat /tmp/debug.log | grep -A 20 "step 2:"
+
+# Check for variable replacement issues
+cat /tmp/debug.log | grep -E "(undefined variables|failed to parse template)"
+```
+
+**Key Log Patterns to Look For:**
+
+- `SUPABASE Activity called` - Shows parameters passed to Supabase plugin
+- `Processing save configs` - Indicates save operations are being processed
+- `State after step N` - Shows workflow state after each step (check if variables are saved)
+- `DEBUG processSave` - Shows response data structure during save operations
+- `Successfully saved value` - Confirms a value was extracted and saved
+
+**Common Issues:**
+
+1. **Empty state after step**: Variable extraction failed, check `responseData` in logs
+2. **undefined variables error**: Variable not saved in previous step, check save configs
+3. **null responseData**: API returned error or empty response, check for error logs
+
 ### Development Workflow
 
 1. **Make code changes** to engine/worker/CLI

@@ -12,13 +12,18 @@ brew install temporal
 
 Then install the Rocketship CLI:
 
+**macOS (recommended via Homebrew):**
 ```bash
-# for arm64 macos
-curl -Lo /usr/local/bin/rocketship https://github.com/rocketship-ai/rocketship/releases/latest/download/rocketship-darwin-arm64
-chmod +x /usr/local/bin/rocketship
+brew tap rocketship-ai/tap
+brew install rocketship
 ```
 
-For detailed installation instructions for other platforms and optional aliases, see the [Installation Guide](installation.md).
+**Linux and macOS (portable installer):**
+```bash
+curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
+```
+
+For detailed installation instructions including Windows, Docker, and optional aliases, see the [Installation Guide](installation.md).
 
 ## Your First Test
 

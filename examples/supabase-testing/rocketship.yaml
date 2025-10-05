@@ -444,3 +444,162 @@ tests:
           - type: json_path
             path: ".auth_users"
             expected: 0
+
+  # =============================================================================
+  # AUTH TOKEN EXTRACTION AND VARIABLE PROCESSING TEST
+  # Tests the new functionality added for token extraction and runtime variables
+  # =============================================================================
+  - name: "Auth Token Extraction and Runtime Variable Processing"
+    steps:
+      # Test 1: Create user with email_confirm and extract user ID
+      - name: "AUTH_TOKEN: Create user with auto-confirm"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "auth_create_user"
+          auth:
+            email: "token-test@rocketship.dev"
+            password: "TokenTest123!"
+            email_confirm: true
+            user_metadata:
+              test_type: "token_extraction"
+              created_by: "ci_test"
+        save:
+          - json_path: ".user.id"
+            as: "token_test_user_id"
+          - json_path: ".user.email"
+            as: "created_user_email"
+        assertions:
+          - type: json_path
+            path: ".user.email"
+            expected: "token-test@rocketship.dev"
+
+      # Test 2: Sign in and extract access/refresh tokens
+      - name: "AUTH_TOKEN: Sign in and extract tokens"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "auth_sign_in"
+          auth:
+            email: "token-test@rocketship.dev"
+            password: "TokenTest123!"
+        save:
+          - json_path: ".session.access_token"
+            as: "access_token"
+          - json_path: ".session.refresh_token"
+            as: "refresh_token"
+          - json_path: ".session.token_type"
+            as: "token_type"
+          - json_path: ".user.id"
+            as: "signed_in_user_id"
+        assertions:
+          - type: json_path
+            path: ".session.token_type"
+            expected: "bearer"
+
+      # Test 3: Runtime variable processing - generate dynamic credentials
+      - name: "AUTH_TOKEN: Generate dynamic credentials via script"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            // Generate unique email based on timestamp
+            const timestamp = Date.now();
+            const randomHex = Math.floor(Math.random() * 0xFFFFFF).toString(16);
+            const email = `dynamic-${timestamp}-${randomHex}@rocketship.dev`;
+            const password = `DynamicPass${timestamp}!`;
+
+            // Save for next steps
+            save("dynamic_email", email);
+            save("dynamic_password", password);
+
+      # Test 4: Create user with runtime variables from script
+      - name: "AUTH_TOKEN: Create user with runtime variables"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "auth_create_user"
+          auth:
+            email: "{{ dynamic_email }}"
+            password: "{{ dynamic_password }}"
+            email_confirm: true
+            user_metadata:
+              test_type: "runtime_variable_processing"
+              created_via: "dynamic_script"
+        save:
+          - json_path: ".user.id"
+            as: "dynamic_user_id"
+          - json_path: ".user.email"
+            as: "dynamic_user_email"
+
+      # Test 5: Sign in with runtime variables
+      - name: "AUTH_TOKEN: Sign in with dynamic credentials"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "auth_sign_in"
+          auth:
+            email: "{{ dynamic_email }}"
+            password: "{{ dynamic_password }}"
+        save:
+          - json_path: ".session.access_token"
+            as: "dynamic_access_token"
+          - json_path: ".session.refresh_token"
+            as: "dynamic_refresh_token"
+        assertions:
+          - type: json_path
+            path: ".user.email"
+            expected: "{{ dynamic_user_email }}"
+
+      # Test 6: Verify both access tokens are different (unique sessions)
+      - name: "AUTH_TOKEN: Verify tokens are unique"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            // Verify we have both tokens
+            assert(state.access_token, "First access token must exist");
+            assert(state.dynamic_access_token, "Dynamic access token must exist");
+
+            // Verify tokens are different (different sessions)
+            assert(
+              state.access_token !== state.dynamic_access_token,
+              "Access tokens should be different for different sessions"
+            );
+
+      # Cleanup: Delete test users
+      - name: "AUTH_TOKEN: Cleanup first test user"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "auth_delete_user"
+          auth:
+            user_id: "{{ token_test_user_id }}"
+
+      - name: "AUTH_TOKEN: Cleanup dynamic test user"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "auth_delete_user"
+          auth:
+            user_id: "{{ dynamic_user_id }}"
+
+      # Final verification: Confirm cleanup
+      - name: "AUTH_TOKEN: Verify cleanup completed"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "get_test_data_status"
+        assertions:
+          - type: json_path
+            path: ".auth_users"
+            expected: 0

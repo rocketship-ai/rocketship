@@ -1,137 +1,49 @@
 # Custom Scripting - JavaScript Integration
 
-This example demonstrates how to use custom scripting in Rocketship test suites. The script plugin allows you to execute custom JavaScript code within your test workflows, enabling complex data processing, validation, and business logic that goes beyond simple HTTP assertions.
+Execute custom JavaScript code within your test workflows for complex data processing, validation, and business logic.
 
-## Key Features Demonstrated
-
-- **Inline JavaScript**: Execute scripts directly in your YAML test files
-- **External JavaScript Files**: Reference external `.js` files for complex logic
-- **State Integration**: Access and modify test state between HTTP and script steps
-- **Configuration Variables**: Access config variables from script code
-- **Bidirectional Data Flow**: Pass data from HTTP → Script → HTTP seamlessly
-- **Built-in Functions**: Use `save()` and `assert()` functions
-- **Business Logic**: Implement complex data validation and transformation
-
-## Script Plugin Configuration
-
-The script plugin supports two execution modes:
-
-### Inline Scripts
+## Quick Start
 
 ```yaml
-- name: "Process data with inline JavaScript"
+- name: "Process data"
   plugin: "script"
   config:
     language: "javascript"
     script: |
-      // Access config variables
-      let apiUrl = vars.api_url;
-      
       // Access state from previous steps
       let userName = state.user_name;
-      
+
       // Process and save data
-      let processedName = state.user_name.toUpperCase();
+      let processedName = userName.toUpperCase();
       save("processed_name", processedName);
-      
+
       // Validate data
-      assert(state.user_name, "User name must be present");
+      assert(userName.length > 0, "User name must not be empty");
 ```
 
-### External JavaScript Files
+## Configuration Modes
 
+### Inline Scripts
 ```yaml
-- name: "Process data with external file"
-  plugin: "script"
-  config:
-    language: "javascript"
-    file: "examples/custom-scripting/validate-and-process.js"
+plugin: "script"
+config:
+  language: "javascript"
+  script: |
+    // Your JavaScript code here
 ```
 
-## Complete Integration Example
-
-The example demonstrates a complete HTTP ↔ Script integration workflow:
-
+### External Files
 ```yaml
-name: "Custom Scripting Demo - HTTP↔Script State Integration"
-vars:
-  api_url: "https://tryme.rocketship.sh"
-  max_retries: 3
-  user_name: "test_user"
-
-tests:
-  - name: "Complete HTTP and Script State Integration"
-    steps:
-      # 1. HTTP: Create initial data
-      - name: "HTTP Step 1 - Create Animal Data"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "{{ .vars.api_url }}/animals"
-          body: |
-            {
-              "name": "African Elephant",
-              "species": "Loxodonta africana",
-              "habitat": "Savanna",
-              "weight_kg": 6000,
-              "conservation_status": "Endangered"
-            }
-        save:
-          - json_path: ".id"
-            as: "animal_id"
-          - json_path: ".name"
-            as: "animal_name"
-
-      # 2. Script: Process HTTP data
-      - name: "Script Step 1 - Initial Processing"
-        plugin: "script"
-        config:
-          language: "javascript"
-          script: |
-            // Access config variables and HTTP data
-            let apiUrl = vars.api_url;
-            let userName = vars.user_name;
-            let animalName = state.animal_name;
-            let animalId = state.animal_id;
-            
-            // Process user and config data
-            let processedUserName = vars.user_name.toUpperCase();
-            let animalWeight = parseInt(state.animal_weight);
-            let weightCategory = animalWeight > 1000 ? "large" : "medium";
-            
-            // Save processed results for next steps
-            save("processed_user_name", processedUserName);
-            save("weight_category", weightCategory);
-
-      # 3. Script: External file processing
-      - name: "Script Step 2 - External File Processing"
-        plugin: "script"
-        config:
-          language: "javascript"
-          file: "examples/custom-scripting/validate-and-process.js"
-
-      # 4. HTTP: Use script data
-      - name: "HTTP Step 2 - Create Assessment"
-        plugin: "http"
-        config:
-          method: "POST"
-          url: "{{ .vars.api_url }}/animals/assessments"
-          headers:
-            X-Processed-By: "{{ processed_user_name }}"
-          body: |
-            {
-              "animal_id": "{{ animal_id }}",
-              "category": "{{ animal_category }}",
-              "score": {{ animal_score }},
-              "weight_category": "{{ weight_category }}"
-            }
+plugin: "script"
+config:
+  language: "javascript"
+  file: "scripts/validate-and-process.js"
 ```
 
 ## Built-in Functions
 
 ### `save(key, value)`
-
-Save data to the test state for use in subsequent steps:
+Save data to test state for use in subsequent steps:
 
 ```javascript
 // Save simple values
@@ -144,7 +56,6 @@ save("user_profile", JSON.stringify(profile));
 ```
 
 ### `assert(condition, message)`
-
 Validate data and fail the test if conditions aren't met:
 
 ```javascript
@@ -154,229 +65,225 @@ assert(state.score > 0, "Score must be positive");
 
 // Complex validations
 assert(state.email.includes("@"), "Email must be valid");
-assert(Array.isArray(JSON.parse(state.items)), "Items must be an array");
 ```
 
-## State and Variable Access
+## Accessing Data
 
 ### Configuration Variables
-
 Access variables defined in the `vars` section:
 
 ```javascript
-// Simple variables
 let apiUrl = vars.api_url;
 let timeout = vars.timeout;
-
-// Nested variables
-let authToken = vars.auth.token;
-let dbHost = vars.database.host;
 ```
 
 ### Test State
-
 Access data saved from previous HTTP or script steps:
 
 ```javascript
-// Data from HTTP responses
-let userId = state.user_id;        // From save: json_path: ".id"
-let userName = state.user_name;    // From save: json_path: ".name"
+// From HTTP save operations
+let userId = state.user_id;
+let userName = state.user_name;
 
-// Data from previous scripts
-let processed = state.processed_flag;  // From save("processed_flag", "true")
-let score = parseInt(state.user_score); // Convert saved strings to numbers
+// Convert types (state values are strings)
+let score = parseInt(state.user_score);
+let price = parseFloat(state.price);
+let isActive = state.active === "true";
+```
+
+## Complete Integration Example
+
+```yaml
+name: "HTTP ↔ Script Integration"
+
+vars:
+  api_url: "https://api.example.com"
+
+tests:
+  - name: "Data Processing Pipeline"
+    steps:
+      # 1. HTTP: Fetch data
+      - name: "Get user data"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "{{ .vars.api_url }}/users/123"
+        save:
+          - json_path: ".id"
+            as: "user_id"
+          - json_path: ".name"
+            as: "user_name"
+          - json_path: ".age"
+            as: "user_age"
+
+      # 2. Script: Process data
+      - name: "Process user data"
+        plugin: "script"
+        config:
+          language: "javascript"
+          script: |
+            // Access HTTP response data
+            let name = state.user_name;
+            let age = parseInt(state.user_age);
+
+            // Calculate derived values
+            let category = age >= 18 ? "adult" : "minor";
+            let nameUpper = name.toUpperCase();
+
+            // Save for next steps
+            save("user_category", category);
+            save("display_name", nameUpper);
+
+      # 3. HTTP: Use processed data
+      - name: "Update user category"
+        plugin: "http"
+        config:
+          method: "PATCH"
+          url: "{{ .vars.api_url }}/users/{{ user_id }}"
+          body: |
+            {
+              "category": "{{ user_category }}",
+              "display_name": "{{ display_name }}"
+            }
+        assertions:
+          - type: status_code
+            expected: 200
 ```
 
 ## External JavaScript Files
 
-For complex logic, use external JavaScript files:
+For complex logic, use external files:
 
 ```javascript
-// validate-and-process.js
+// scripts/validate-and-process.js
 
 // Validate required data
-if (!state.animal_name || !state.animal_species) {
-    assert(false, "Missing required animal data");
-}
+assert(state.animal_name, "Animal name is required");
+assert(state.animal_species, "Animal species is required");
 
-// Complex business logic
+// Business logic
 let animalCategory = "unknown";
 const domesticAnimals = ["dog", "cat", "horse"];
-const wildAnimals = ["lion", "tiger", "elephant", "bear"];
+const wildAnimals = ["lion", "tiger", "elephant"];
 
-if (domesticAnimals.some(animal => state.animal_name.toLowerCase().includes(animal))) {
+if (domesticAnimals.some(a => state.animal_name.toLowerCase().includes(a))) {
     animalCategory = "domestic";
-} else if (wildAnimals.some(animal => state.animal_name.toLowerCase().includes(animal))) {
+} else if (wildAnimals.some(a => state.animal_name.toLowerCase().includes(a))) {
     animalCategory = "wild";
-} else {
-    animalCategory = "exotic";
 }
 
 // Calculate scores
-let animalScore = state.animal_name.length + state.animal_species.length;
-if (animalCategory === "wild") animalScore += 10;
+let score = state.animal_name.length + state.animal_species.length;
+if (animalCategory === "wild") score += 10;
 
-// Generate recommendations
-let recommendations = [];
-if (animalCategory === "domestic") {
-    recommendations.push("suitable_for_families");
-} else if (animalCategory === "wild") {
-    recommendations.push("observe_from_distance");
-}
-
-// Save results for HTTP steps
+// Save results
 save("animal_category", animalCategory);
-save("animal_score", animalScore.toString());
-save("recommendations_count", recommendations.length.toString());
-
-// Save individual recommendations for template access
-recommendations.forEach((rec, index) => {
-    save(`recommendation_${index + 1}`, rec);
-});
+save("animal_score", score.toString());
 ```
 
-## Running the Example
-
-```bash
-# Run the complete custom scripting example
-rocketship run -af examples/custom-scripting/rocketship.yaml
-```
-
-## Understanding the Data Flow
-
-The example demonstrates a complete data processing pipeline:
-
-1. **HTTP Step 1**: Create animal data via API, save ID and attributes
-2. **Script Step 1**: Process config variables and HTTP data, create derived values
-3. **Script Step 2**: External file performs complex business logic and categorization
-4. **HTTP Step 2**: Use script-processed data to create a comprehensive assessment
-5. **Script Step 3**: Final validation ensures all data flows worked correctly
-
-Each step builds on the previous ones, showing:
-
-- **HTTP → Script**: Pass API response data to JavaScript for processing
-- **Script → Script**: Share state between inline and external scripts
-- **Script → HTTP**: Use processed data in API requests
-- **Config Integration**: Mix configuration variables with runtime processing
-
-## Use Cases for Custom Scripting
+## Common Use Cases
 
 ### Data Transformation
-
 ```javascript
-// Transform API responses
+// Transform API response
 let rawData = JSON.parse(state.api_response);
-let transformedData = rawData.map(item => ({
+let transformed = rawData.map(item => ({
     id: item.identifier,
     name: item.display_name.toUpperCase(),
     active: item.status === "enabled"
 }));
-save("transformed_data", JSON.stringify(transformedData));
+save("transformed_data", JSON.stringify(transformed));
 ```
 
-### Complex Validations
-
+### Complex Validation
 ```javascript
 // Business rule validation
-let orderData = JSON.parse(state.order_details);
-let isValidOrder = orderData.items.length > 0 && 
-                   orderData.total > 0 && 
-                   orderData.customer_id;
+let order = JSON.parse(state.order_details);
+assert(
+    order.items.length > 0 && order.total > 0,
+    "Order must have items and positive total"
+);
 
-assert(isValidOrder, "Order must have items, positive total, and customer ID");
-
-// Multi-step validation logic
-if (orderData.total > 1000) {
-    assert(orderData.approval_required, "High-value orders require approval");
+// Conditional validation
+if (order.total > 1000) {
+    assert(order.approval_required, "High-value orders require approval");
 }
 ```
 
-### Dynamic Test Data Generation
-
+### Dynamic Test Data
 ```javascript
-// Generate test data based on conditions
-let testUsers = [];
-for (let i = 0; i < vars.user_count; i++) {
-    testUsers.push({
-        id: `user_${i}`,
-        email: `test${i}@example.com`,
-        role: i % 2 === 0 ? "admin" : "user"
-    });
-}
-save("test_users", JSON.stringify(testUsers));
+// Generate test data
+const suffix = Date.now();
+save("test_email", `test-${suffix}@example.com`);
+save("test_password", `Pass${suffix}!`);
+save("test_user", `user_${suffix}`);
 ```
 
-### API Response Analysis
-
+### Response Analysis
 ```javascript
-// Analyze API performance and content
+// Performance categorization
 let responseTime = parseInt(state.response_time_ms);
-let responseSize = state.response_body.length;
-
-save("performance_category", 
-     responseTime < 100 ? "fast" : 
+save("perf_category",
+     responseTime < 100 ? "fast" :
      responseTime < 500 ? "medium" : "slow");
 
-assert(responseTime < 2000, "Response time must be under 2 seconds");
-assert(responseSize > 0, "Response must not be empty");
+assert(responseTime < 2000, "Response must be under 2 seconds");
 ```
 
 ## Best Practices
 
 ### 1. Keep Scripts Focused
-
-Use scripts for data processing and validation, not for replacing HTTP operations:
+Use scripts for data processing, not HTTP operations:
 
 ```javascript
-// Good: Data processing
-let processedData = state.raw_data.toUpperCase().trim();
-save("clean_data", processedData);
+// ✅ Good: Data processing
+let cleaned = state.raw_data.trim().toUpperCase();
+save("clean_data", cleaned);
 
-// Avoid: HTTP operations (use http plugin instead)
-// Don't try to make HTTP requests from scripts
+// ❌ Avoid: Use HTTP plugin instead
+// Don't make HTTP requests from scripts
 ```
 
-### 2. Use External Files for Complex Logic
-
-Move complex business logic to external files:
-
+### 2. External Files for Complex Logic
 ```yaml
-# Simple processing: inline
+# Simple: inline
 - plugin: "script"
   config:
     script: 'save("doubled", (parseInt(state.value) * 2).toString());'
 
-# Complex processing: external file
+# Complex: external file
 - plugin: "script"
   config:
     file: "scripts/complex-analysis.js"
 ```
 
 ### 3. Clear Error Messages
-
-Provide helpful assertion messages:
-
 ```javascript
-// Good: Descriptive messages
-assert(state.user_id, "User ID is required for profile operations");
-assert(state.email.includes("@"), "Email format validation failed");
+// ✅ Good: Descriptive
+assert(state.user_id, "User ID required for profile operations");
+assert(state.email.includes("@"), "Invalid email format");
 
-// Poor: Vague messages
+// ❌ Poor: Vague
 assert(state.user_id, "Missing data");
 ```
 
 ### 4. Type Conversions
-
-Remember that saved state is always strings:
+State values are always strings:
 
 ```javascript
-// Convert types when needed
+// Convert when needed
 let count = parseInt(state.item_count);
 let price = parseFloat(state.price);
 let isActive = state.active === "true";
 
-// Save with explicit string conversion
-save("calculated_total", (price * count).toString());
+// Save with explicit conversion
+save("total", (price * count).toString());
 ```
 
-The custom scripting plugin enables powerful data processing and validation workflows while maintaining the simplicity and clarity of Rocketship's declarative test approach.
+## Running the Example
+
+```bash
+rocketship run -af examples/custom-scripting/rocketship.yaml
+```
+
+See the [full example](../../examples/custom-scripting/rocketship.yaml) for comprehensive script integration patterns.
