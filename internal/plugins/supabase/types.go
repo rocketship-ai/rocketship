@@ -72,11 +72,12 @@ type RPCConfig struct {
 
 // AuthConfig defines configuration for auth operations
 type AuthConfig struct {
-	Email        string                 `json:"email,omitempty" yaml:"email,omitempty"`               // User email
-	Password     string                 `json:"password,omitempty" yaml:"password,omitempty"`         // User password
-	UserID       string                 `json:"user_id,omitempty" yaml:"user_id,omitempty"`           // User ID for admin operations
-	UserMetadata map[string]interface{} `json:"user_metadata,omitempty" yaml:"user_metadata,omitempty"` // User metadata
-	AppMetadata  map[string]interface{} `json:"app_metadata,omitempty" yaml:"app_metadata,omitempty"`   // App metadata
+	Email         string                 `json:"email,omitempty" yaml:"email,omitempty"`                   // User email
+	Password      string                 `json:"password,omitempty" yaml:"password,omitempty"`             // User password
+	UserID        string                 `json:"user_id,omitempty" yaml:"user_id,omitempty"`               // User ID for admin operations
+	EmailConfirm  bool                   `json:"email_confirm,omitempty" yaml:"email_confirm,omitempty"`   // Auto-confirm email (admin only)
+	UserMetadata  map[string]interface{} `json:"user_metadata,omitempty" yaml:"user_metadata,omitempty"`   // User metadata
+	AppMetadata   map[string]interface{} `json:"app_metadata,omitempty" yaml:"app_metadata,omitempty"`     // App metadata
 }
 
 // StorageConfig defines configuration for storage operations

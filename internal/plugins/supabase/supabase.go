@@ -31,7 +31,20 @@ func (sp *SupabasePlugin) GetType() string {
 // Activity executes Supabase operations and returns results
 func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	logger := activity.GetLogger(ctx)
-	
+
+	// Debug: Log all parameter keys
+	paramKeys := make([]string, 0, len(p))
+	for k := range p {
+		paramKeys = append(paramKeys, k)
+	}
+	logger.Info("SUPABASE Activity called", "paramKeys", paramKeys)
+	if saveData, ok := p["save"]; ok {
+		saveDataJSON, _ := json.Marshal(saveData)
+		logger.Info("SUPABASE save parameter exists", "save", string(saveDataJSON))
+	} else {
+		logger.Info("SUPABASE save parameter NOT FOUND")
+	}
+
 	// Parse configuration from parameters
 	configData, ok := p["config"].(map[string]interface{})
 	if !ok {
@@ -88,7 +101,21 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 	if config.Delete != nil {
 		config.Delete.Filters = processFilters(config.Delete.Filters, state)
 	}
-	
+
+	// Process runtime variables in Auth config
+	if config.Auth != nil {
+		logger.Info("DEBUG Auth config", "email", config.Auth.Email, "emailConfirm", config.Auth.EmailConfirm)
+		config.Auth.Email = replaceVariables(config.Auth.Email, state)
+		config.Auth.Password = replaceVariables(config.Auth.Password, state)
+		config.Auth.UserID = replaceVariables(config.Auth.UserID, state)
+		if config.Auth.UserMetadata != nil {
+			config.Auth.UserMetadata = processVariablesInMap(config.Auth.UserMetadata, state)
+		}
+		if config.Auth.AppMetadata != nil {
+			config.Auth.AppMetadata = processVariablesInMap(config.Auth.AppMetadata, state)
+		}
+	}
+
 	// Log parsed config for debugging
 	logger.Info("Parsed Supabase config",
 		"operation", config.Operation,
@@ -161,14 +188,19 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 	// Handle save operations
 	saved := make(map[string]string)
 	if saveConfigs, ok := p["save"].([]interface{}); ok {
+		logger.Info("Processing save configs", "count", len(saveConfigs))
 		for _, saveConfigInterface := range saveConfigs {
 			if saveConfig, ok := saveConfigInterface.(map[string]interface{}); ok {
-				if err := processSave(response, saveConfig, saved); err != nil {
-					logger.Warn("Failed to save value", "error", err)
+				logger.Info("Processing save config", "config", saveConfig)
+				if err := processSave(ctx, response, saveConfig, saved); err != nil {
+					logger.Error("Failed to save value", "error", err, "config", saveConfig)
+				} else {
+					logger.Info("Successfully saved value", "saved", saved)
 				}
 			}
 		}
 	}
+	logger.Info("Final saved values", "saved", saved)
 
 	return &ActivityResponse{
 		Response: response,
@@ -555,6 +587,9 @@ func executeAuthCreateUser(ctx context.Context, client *http.Client, config *Sup
 	if config.Auth.Password != "" {
 		reqBody["password"] = config.Auth.Password
 	}
+	if config.Auth.EmailConfirm {
+		reqBody["email_confirm"] = true
+	}
 	if config.Auth.UserMetadata != nil {
 		reqBody["user_metadata"] = config.Auth.UserMetadata
 	}
@@ -567,6 +602,9 @@ func executeAuthCreateUser(ctx context.Context, client *http.Client, config *Sup
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal auth data: %w", err)
 	}
+
+	logger := activity.GetLogger(ctx)
+	logger.Info("DEBUG auth_create_user request", "endpoint", endpoint, "body", string(jsonData))
 
 	// Create request
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonData))
@@ -586,7 +624,31 @@ func executeAuthCreateUser(ctx context.Context, client *http.Client, config *Sup
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	return parseSupabaseResponse(resp)
+	// Parse the raw response
+	response, err := parseSupabaseResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	rawDataJSON, _ := json.Marshal(response.Data)
+	logger.Info("DEBUG auth_create_user raw response", "statusCode", resp.StatusCode, "data", string(rawDataJSON), "error", response.Error)
+
+	// Transform response to match expected structure
+	// Raw API returns user object directly: { id, email, ... }
+	// Tests expect: { user: { id, email, ... } }
+	if response.Data != nil && response.Error == nil {
+		logger.Info("DEBUG auth_create_user wrapping user data")
+		// Wrap the user data in a user object for consistency
+		response.Data = map[string]interface{}{
+			"user": response.Data,
+		}
+		wrappedDataJSON, _ := json.Marshal(response.Data)
+		logger.Info("DEBUG auth_create_user wrapped response", "data", string(wrappedDataJSON))
+	} else {
+		logger.Info("DEBUG auth_create_user NOT wrapping", "dataIsNil", response.Data == nil, "errorNotNil", response.Error != nil)
+	}
+
+	return response, nil
 }
 
 // executeAuthDeleteUser handles auth user deletion (admin)
@@ -660,7 +722,47 @@ func executeAuthSignUp(ctx context.Context, client *http.Client, config *Supabas
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	return parseSupabaseResponse(resp)
+	// Parse the raw response
+	response, err := parseSupabaseResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Transform response to match Supabase SDK structure
+	// Raw API returns: { access_token, refresh_token, user, ... }
+	// SDK expects: { user, session: { access_token, refresh_token, ... } }
+	if response.Data != nil && response.Error == nil {
+		if authData, ok := response.Data.(map[string]interface{}); ok {
+			// Extract user and session data
+			user := authData["user"]
+
+			// Build session object with all token-related fields
+			session := make(map[string]interface{})
+			if accessToken, ok := authData["access_token"]; ok {
+				session["access_token"] = accessToken
+			}
+			if refreshToken, ok := authData["refresh_token"]; ok {
+				session["refresh_token"] = refreshToken
+			}
+			if tokenType, ok := authData["token_type"]; ok {
+				session["token_type"] = tokenType
+			}
+			if expiresIn, ok := authData["expires_in"]; ok {
+				session["expires_in"] = expiresIn
+			}
+			if expiresAt, ok := authData["expires_at"]; ok {
+				session["expires_at"] = expiresAt
+			}
+
+			// Create SDK-compatible structure
+			response.Data = map[string]interface{}{
+				"user":    user,
+				"session": session,
+			}
+		}
+	}
+
+	return response, nil
 }
 
 // executeAuthSignIn handles user sign in
@@ -701,7 +803,60 @@ func executeAuthSignIn(ctx context.Context, client *http.Client, config *Supabas
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	return parseSupabaseResponse(resp)
+	// Parse the raw response
+	response, err := parseSupabaseResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := activity.GetLogger(ctx)
+	rawDataJSON, _ := json.Marshal(response.Data)
+	logger.Info("DEBUG auth_sign_in raw response", "data", string(rawDataJSON), "error", response.Error)
+
+	// Transform response to match Supabase SDK structure
+	// Raw API returns: { access_token, refresh_token, user, ... }
+	// SDK expects: { user, session: { access_token, refresh_token, ... } }
+	if response.Data != nil && response.Error == nil {
+		logger.Info("DEBUG auth_sign_in transforming response", "dataNotNil", response.Data != nil, "errorNil", response.Error == nil)
+		if authData, ok := response.Data.(map[string]interface{}); ok {
+			logger.Info("DEBUG auth_sign_in authData is map", "authData", authData)
+			// Extract user and session data
+			user := authData["user"]
+
+			// Build session object with all token-related fields
+			session := make(map[string]interface{})
+			if accessToken, ok := authData["access_token"]; ok {
+				session["access_token"] = accessToken
+			}
+			if refreshToken, ok := authData["refresh_token"]; ok {
+				session["refresh_token"] = refreshToken
+			}
+			if tokenType, ok := authData["token_type"]; ok {
+				session["token_type"] = tokenType
+			}
+			if expiresIn, ok := authData["expires_in"]; ok {
+				session["expires_in"] = expiresIn
+			}
+			if expiresAt, ok := authData["expires_at"]; ok {
+				session["expires_at"] = expiresAt
+			}
+
+			// Create SDK-compatible structure
+			response.Data = map[string]interface{}{
+				"user":    user,
+				"session": session,
+			}
+
+			transformedDataJSON, _ := json.Marshal(response.Data)
+			logger.Info("DEBUG auth_sign_in transformed response", "data", string(transformedDataJSON))
+		} else {
+			logger.Info("DEBUG auth_sign_in authData is NOT a map", "dataType", fmt.Sprintf("%T", response.Data))
+		}
+	} else {
+		logger.Info("DEBUG auth_sign_in NOT transforming", "dataIsNil", response.Data == nil, "errorNotNil", response.Error != nil)
+	}
+
+	return response, nil
 }
 
 // Storage operations implementation
@@ -1130,6 +1285,9 @@ func parseAuthConfig(data map[string]interface{}, config *AuthConfig) {
 	if userID, ok := data["user_id"].(string); ok {
 		config.UserID = userID
 	}
+	if emailConfirm, ok := data["email_confirm"].(bool); ok {
+		config.EmailConfirm = emailConfirm
+	}
 	if userMetadata, ok := data["user_metadata"].(map[string]interface{}); ok {
 		config.UserMetadata = userMetadata
 	}
@@ -1200,7 +1358,13 @@ func parseOrder(order []interface{}) []OrderConfig {
 }
 
 // processSave handles saving values from response
-func processSave(response *SupabaseResponse, saveConfig map[string]interface{}, saved map[string]string) error {
+func processSave(ctx context.Context, response *SupabaseResponse, saveConfig map[string]interface{}, saved map[string]string) error {
+	logger := activity.GetLogger(ctx)
+
+	// DEBUG: Log the response data structure
+	responseDataJSON, _ := json.Marshal(response.Data)
+	logger.Info("DEBUG processSave", "responseData", string(responseDataJSON), "saveConfig", saveConfig)
+
 	asName, ok := saveConfig["as"].(string)
 	if !ok {
 		return fmt.Errorf("'as' field is required for save config")
@@ -1220,12 +1384,14 @@ func processSave(response *SupabaseResponse, saveConfig map[string]interface{}, 
 		iter := query.Run(response.Data)
 		v, ok := iter.Next()
 		if !ok {
-			return fmt.Errorf("no results from JSON path %s", jsonPath)
+			responseDataJSON, _ := json.Marshal(response.Data)
+			return fmt.Errorf("no results from JSON path %s on data %s", jsonPath, string(responseDataJSON))
 		}
 		if err, ok := v.(error); ok {
 			return fmt.Errorf("error evaluating JSON path %s: %w", jsonPath, err)
 		}
 		value = v
+		logger.Info("DEBUG JSON path result", "jsonPath", jsonPath, "value", value, "valueType", fmt.Sprintf("%T", value))
 	} else if header, ok := saveConfig["header"].(string); ok {
 		// Extract from headers
 		if response.Metadata != nil && response.Metadata.Headers != nil {

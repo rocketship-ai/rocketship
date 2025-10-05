@@ -90,6 +90,13 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	logger.Info(fmt.Sprintf("Executing %s plugin step: %s", step.Plugin, step.Name))
 	logger.Info(fmt.Sprintf("Current state: %v", state))
 
+	// DEBUG: Log save configuration
+	if step.Save != nil {
+		logger.Info(fmt.Sprintf("Step has save config: %d items", len(step.Save)))
+	} else {
+		logger.Info("Step has NO save config (nil)")
+	}
+
 	// Build plugin parameters
 	pluginParams := map[string]interface{}{
 		"name":   step.Name,
@@ -103,6 +110,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		pluginParams["assertions"] = step.Assertions
 	}
 	if step.Save != nil {
+		logger.Info(fmt.Sprintf("Adding save to pluginParams: %v", step.Save))
 		pluginParams["save"] = step.Save
 	}
 	// Pass vars for script plugin usage (other plugins ignore them since CLI processes config vars)
@@ -147,7 +155,7 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 
 	// Update workflow state with saved values (if any)
 	if activityResp != nil {
-		savedValues := extractSavedValues(activityResp)
+		savedValues := extractSavedValues(ctx, activityResp)
 		if len(savedValues) > 0 {
 			logger.Info(fmt.Sprintf("Saved values from %s plugin: %v", step.Plugin, savedValues))
 			keys := workflow.DeterministicKeys(savedValues)
@@ -218,13 +226,21 @@ func buildRetryPolicy(retryConfig *dsl.RetryPolicy) *temporal.RetryPolicy {
 }
 
 // extractSavedValues extracts saved values from plugin response using deterministic iteration
-func extractSavedValues(response interface{}) map[string]string {
+func extractSavedValues(ctx workflow.Context, response interface{}) map[string]string {
+	logger := workflow.GetLogger(ctx)
 	savedValues := make(map[string]string)
+
+	// DEBUG: Log the response structure
+	logger.Info("DEBUG extractSavedValues called", "responseType", fmt.Sprintf("%T", response))
 
 	// Handle response - it comes back as map[string]interface{} due to JSON serialization
 	if respMap, ok := response.(map[string]interface{}); ok {
+		keys := workflow.DeterministicKeys(respMap)
+		logger.Info("DEBUG Response is a map", "keys", keys)
+
 		// Check for saved values in response
 		if savedInterface, exists := respMap["saved"]; exists {
+			logger.Info("DEBUG Found 'saved' field", "type", fmt.Sprintf("%T", savedInterface), "value", savedInterface)
 			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
 				// Use deterministic keys for Temporal workflow compliance
 				keys := workflow.DeterministicKeys(savedMap)
@@ -237,10 +253,13 @@ func extractSavedValues(response interface{}) map[string]string {
 					}
 				}
 			}
+		} else {
+			logger.Info("DEBUG 'saved' field NOT FOUND")
 		}
 
 		// For HTTP plugin compatibility - check for "Saved" field
 		if savedInterface, exists := respMap["Saved"]; exists {
+			logger.Info("DEBUG Found 'Saved' field", "type", fmt.Sprintf("%T", savedInterface), "value", savedInterface)
 			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
 				// Use deterministic keys for Temporal workflow compliance
 				keys := workflow.DeterministicKeys(savedMap)
@@ -253,9 +272,14 @@ func extractSavedValues(response interface{}) map[string]string {
 					}
 				}
 			}
+		} else {
+			logger.Info("DEBUG 'Saved' field NOT FOUND")
 		}
+	} else {
+		logger.Info("DEBUG Response is NOT a map", "actualType", fmt.Sprintf("%T", response))
 	}
 
+	logger.Info("DEBUG Returning saved values", "savedValues", savedValues)
 	return savedValues
 }
 

@@ -25,7 +25,9 @@ tmp/
 cli-introspection.json
 *.log
 
-# informative .md files
+# user testing
+.env
+.rocketship/
 
 # rocketship-internal code
 charts/rocketship-internal/
