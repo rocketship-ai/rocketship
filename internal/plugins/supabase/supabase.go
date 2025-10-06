@@ -166,6 +166,20 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 		return nil, err
 	}
 
+	// Check if the response contains an API error (HTTP 4xx/5xx)
+	if response.Error != nil {
+		statusCode := 0
+		if response.Metadata != nil {
+			statusCode = response.Metadata.StatusCode
+		}
+		logger.Error("Supabase API returned error",
+			"error_message", response.Error.Message,
+			"error_code", response.Error.Code,
+			"status_code", statusCode,
+			"duration", duration)
+		return nil, fmt.Errorf("supabase api error (status %d): %s", statusCode, response.Error.Message)
+	}
+
 	// Add metadata
 	if response.Metadata == nil {
 		response.Metadata = &ResponseMetadata{}
