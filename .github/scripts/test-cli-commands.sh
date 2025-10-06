@@ -20,6 +20,9 @@ log "Running targeted script tests"
 ./.github/scripts/test-retry-functionality.sh
 ./.github/scripts/test-http-openapi-form.sh
 
+log "Testing Supabase error handling"
+./.github/scripts/test-supabase-error-handling.sh
+
 log "Running browser plugin integration"
 OUTPUT=$(rocketship run -af examples/browser-testing/rocketship.yaml)
 echo "$OUTPUT"

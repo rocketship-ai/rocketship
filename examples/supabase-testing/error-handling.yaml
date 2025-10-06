@@ -1,0 +1,95 @@
+# Supabase Plugin Error Handling Tests
+#
+# This test suite verifies that the Supabase plugin properly fails when the API returns errors.
+# These tests are EXPECTED TO FAIL - they validate that error responses are properly surfaced.
+#
+# Tests cover:
+# - Invalid API key (401 Unauthorized)
+# - Non-existent table (404 Not Found)
+# - Invalid operation parameters (400 Bad Request)
+
+name: "Supabase Error Handling Tests"
+description: "Verifies that Supabase plugin properly fails on API errors"
+
+vars:
+  supabase_url: "https://aqfxxknampmkpvhzrnad.supabase.co"
+
+tests:
+  - name: "Invalid API Key Test"
+    steps:
+      - name: "Attempt operation with invalid API key"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "invalid-api-key-that-should-fail"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name"]
+            limit: 1
+
+  - name: "Non-existent Table Test"
+    steps:
+      - name: "Attempt to query non-existent table"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "this_table_does_not_exist_12345"
+          select:
+            columns: ["id"]
+
+  - name: "Invalid RPC Function Test"
+    steps:
+      - name: "Attempt to call non-existent RPC function"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "rpc"
+          rpc:
+            function: "this_function_does_not_exist_12345"
+
+  - name: "Duplicate Key Constraint Test"
+    steps:
+      - name: "Cleanup: Remove error_test companies"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "delete"
+          table: "companies"
+          delete:
+            filters:
+              - column: "type"
+                operator: "eq"
+                value: "error_test"
+
+      - name: "Insert first record"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              name: "Error Test Company"
+              type: "error_test"
+        save:
+          - json_path: ".[0].id"
+            as: "company_id"
+
+      - name: "Attempt duplicate insert without upsert (should fail)"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              id: "{{ company_id }}"
+              name: "Duplicate Company"
+              type: "error_test"
