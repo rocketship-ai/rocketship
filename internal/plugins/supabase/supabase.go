@@ -177,6 +177,7 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 			"error_code", response.Error.Code,
 			"status_code", statusCode,
 			"duration", duration)
+
 		return nil, fmt.Errorf("supabase api error (status %d): %s", statusCode, response.Error.Message)
 	}
 
