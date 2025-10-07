@@ -45,7 +45,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_create_bucket"
           storage:
             bucket: "integration-tests"
