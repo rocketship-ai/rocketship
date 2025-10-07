@@ -6,11 +6,13 @@ Rocketship comes with example test suites that demonstrate different features an
 
 ### HTTP Testing
 
-- [Request Chaining & Delays](examples/request-chaining.md) - Learn how to chain HTTP requests, handle responses, and use delays in your test suites
+- [Request Chaining & Delays](examples/http/request-chaining.md) - Learn how to chain HTTP requests, handle responses, and use delays in your test suites
 
 ### Variables
 
-- [Variables](examples/variables.md) - Learn how to parameterize tests with configuration variables, CLI overrides, and variable files
+- [Variables Overview](examples/variables/variables.md) - Quick comparison of environment, config, and runtime variables with decision guide
+- [Environment Variables](examples/variables/environment-variables.md) - Detailed guide for secrets and environment-specific configuration
+- [Config & Runtime Variables](examples/variables/config-variables.md) - Detailed guide for test parameters and runtime values
 
 ### Database Testing
 
@@ -18,11 +20,11 @@ Rocketship comes with example test suites that demonstrate different features an
 
 ### Scripting & Custom Logic
 
-- [Custom Scripting](examples/custom-scripting.md) - Learn how to add custom JavaScript logic to your test suites
+- [Custom Scripting](examples/scripting/custom-scripting.md) - Learn how to add custom JavaScript logic to your test suites
 
 ### Debugging & Logging
 
-- [Log Plugin](examples/log-plugin.md) - Learn how to add custom logging messages to your test suites for debugging and monitoring
+- [Log Plugin](examples/logging/log-plugin.md) - Learn how to add custom logging messages to your test suites for debugging and monitoring
 
 ## Running the Examples
 

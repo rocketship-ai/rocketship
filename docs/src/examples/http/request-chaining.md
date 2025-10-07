@@ -1,6 +1,6 @@
 # HTTP Request Chaining
 
-Rocketship’s HTTP plugin lets you stitch multiple calls together by passing data from one response into the next. This example extends the original request-chaining suite so you can see how state flows across steps while the delay plugin keeps the external system stable. For timing specifics, check out the [Managing Delays](delays.md) guide.
+Rocketship's HTTP plugin lets you stitch multiple calls together by passing data from one response into the next. This example extends the original request-chaining suite so you can see how state flows across steps while the delay plugin keeps the external system stable. For timing specifics, check out the [Managing Delays](../reliability/delays.md) guide.
 
 ## Full Test Specification
 
@@ -132,7 +132,7 @@ The example YAML above matches the suite shipped in `examples/request-chaining/r
 ## Understanding the Flow
 
 1. **Create first car** – capture the new car ID, its model, and the upstream `server` header.
-2. **Delay** – give the remote service a moment to settle before reusing data (details in [Managing Delays](delays.md)).
+2. **Delay** – give the remote service a moment to settle before reusing data (details in [Managing Delays](../reliability/delays.md)).
 3. **Create second car** – reuse the header value inside the body and save another ID.
 4. **Aggregate read** – verify both cars exist and the reused header value appears in the second payload.
 5. **Cleanup** – delete both resources to keep the shared tryme environment tidy.

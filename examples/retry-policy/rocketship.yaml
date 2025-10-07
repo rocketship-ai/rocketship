@@ -12,7 +12,7 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/delay/0"  # Fast endpoint that should succeed
+          url: "https://tryme.rocketship.sh/delay/0"  # Fast endpoint that should succeed
           headers:
             X-Test-Session: "retry-test-session"
         retry:
@@ -28,7 +28,7 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/delay/1"  # This should succeed after delay
+          url: "https://tryme.rocketship.sh/delay/1"  # This should succeed after delay
           headers:
             X-Test-Session: "retry-test-session"
         retry:
@@ -78,7 +78,7 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/json"
+          url: "https://tryme.rocketship.sh/json"
           headers:
             X-Test-Session: "retry-test-session"
         retry:
@@ -102,7 +102,7 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/headers"
+          url: "https://tryme.rocketship.sh/echo"
           headers:
             X-Test-Session: "retry-test-session"
             X-Custom-Header: "test-value"
@@ -134,7 +134,7 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/uuid"
+          url: "https://tryme.rocketship.sh/uuid"
           headers:
             X-Test-Session: "retry-test-session"
         assertions:

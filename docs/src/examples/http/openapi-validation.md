@@ -76,4 +76,4 @@ With the contract in place, Rocketship fails the run if the server returns extra
 ## Next Steps
 
 - Build the full [HTTP Request Chaining](request-chaining.md) flow.
-- Combine delays and contract validation for resilient suites by pairing this guide with [Managing Delays](delays.md).
+- Combine delays and contract validation for resilient suites by pairing this guide with [Managing Delays](../reliability/delays.md).

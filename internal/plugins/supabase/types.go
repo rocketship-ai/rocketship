@@ -134,6 +134,7 @@ const (
 	OpAuthSignUp       = "auth_sign_up"
 	OpAuthSignIn       = "auth_sign_in"
 	OpStorageCreateBucket = "storage_create_bucket"
+	OpStorageDeleteBucket = "storage_delete_bucket"
 	OpStorageUpload    = "storage_upload"
 	OpStorageDownload  = "storage_download"
 	OpStorageDelete    = "storage_delete"

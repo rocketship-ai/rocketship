@@ -153,7 +153,7 @@
 | ----- | -------- | ----------- | --------------------- | ----- |
 | `url` | ✅ | Supabase project URL | `string` | - |
 | `key` | ✅ | Supabase API key (anon or service key) | `string` | - |
-| `operation` | ✅ | Supabase operation to perform | `select`, `insert`, `update`, `delete`, `rpc`, `auth_create_user`, `auth_delete_user`, `auth_sign_up`, `auth_sign_in`, `storage_create_bucket`, `storage_upload`, `storage_download`, `storage_delete` | - |
+| `operation` | ✅ | Supabase operation to perform | `select`, `insert`, `update`, `delete`, `rpc`, `auth_create_user`, `auth_delete_user`, `auth_sign_up`, `auth_sign_in`, `storage_create_bucket`, `storage_delete_bucket`, `storage_upload`, `storage_download`, `storage_delete` | - |
 | `table` |  | Table name for database operations | `string` | - |
 | `select` |  | Configuration for select operation | `object` | - |
 | `select.columns[]` |  | Columns to select | `array of string` | - |

@@ -39,13 +39,13 @@ tests:
                 value: ["integration_test", "rpc_test"]
 
       # =============================================================================
-      # SETUP: Create storage bucket for tests
+      # SETUP: Create storage bucket for tests (reuses if exists)
       # =============================================================================
       - name: "Setup: Create storage bucket"
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_create_bucket"
           storage:
             bucket: "integration-tests"
@@ -169,8 +169,8 @@ tests:
               ["id", "name", "type", "description", "metadata", "created_at"]
             filters:
               - column: "type"
-                operator: "like"
-                value: "%test%"
+                operator: "in"
+                value: ["integration_test", "rpc_test"]
               - column: "created_at"
                 operator: "gte"
                 value: "2025-01-01"
@@ -233,22 +233,23 @@ tests:
       # =============================================================================
       # 3. AUTHENTICATION TESTS
       # =============================================================================
-      - name: "AUTH: User signup"
+      - name: "AUTH: Create user with auto-confirm"
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
-          operation: "auth_sign_up"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "auth_create_user"
           auth:
             email: "integration-test@rocketship.dev"
             password: "TestPassword123!"
+            email_confirm: true
             user_metadata:
               first_name: "Integration"
               last_name: "Test"
               role: "test_user"
               created_by: "rocketship_integration"
         save:
-          - json_path: ".id"
+          - json_path: ".user.id"
             as: "test_user_id"
         # Signup successful if it reaches this point - no assertions needed
 
@@ -259,7 +260,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_upload"
           storage:
             bucket: "integration-tests"
@@ -283,7 +284,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_upload"
           storage:
             bucket: "integration-tests"
@@ -308,7 +309,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_download"
           storage:
             bucket: "integration-tests"
@@ -319,7 +320,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_download"
           storage:
             bucket: "integration-tests"
@@ -386,7 +387,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_delete"
           storage:
             bucket: "integration-tests"
@@ -396,11 +397,20 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_delete"
           storage:
             bucket: "integration-tests"
             path: "test-files/test-data.json"
+
+      - name: "CLEANUP: Delete storage bucket"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "storage_delete_bucket"
+          storage:
+            bucket: "integration-tests"
 
       - name: "CLEANUP: Delete test auth users via RPC"
         plugin: supabase

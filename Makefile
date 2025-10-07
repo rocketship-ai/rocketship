@@ -63,7 +63,7 @@ go-lint:
 
 workflow-check:
 	@echo "Checking workflows..."
-	workflowcheck ./...
+	@PATH="$(shell go env GOPATH)/bin:$$PATH" workflowcheck ./...
 
 # Build MCP server with embedded knowledge
 build-mcp:

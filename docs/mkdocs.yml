@@ -61,24 +61,26 @@ nav:
       - Overview: examples.md
       - HTTP Testing:
           - Request Chaining: examples/http/request-chaining.md
-          - Managing Delays: examples/http/delays.md
           - Contract Validation: examples/http/openapi-validation.md
       - SQL Testing:
           - SQL Queries: examples/sql-testing.md
       - Supabase Testing:
           - Full-Stack Database Testing: examples/supabase-testing.md
       - Parameterizing Tests:
-          - All About Variables: examples/variables.md
+          - Variables Overview: examples/variables/variables.md
+          - Environment Variables: examples/variables/environment-variables.md
+          - Config & Runtime Variables: examples/variables/config-variables.md
       - Custom Scripting:
-          - JavaScript Integration: examples/custom-scripting.md
-          - Shell Scripting: examples/shell-scripting.md
+          - JavaScript Integration: examples/scripting/custom-scripting.md
+          - Shell Scripting: examples/scripting/shell-scripting.md
       - AI Testing:
-          - Agent Plugin: examples/agent-testing.md
-          - Browser Plugin: examples/browser-testing.md
+          - Agent Plugin: examples/ai/agent-testing.md
+          - Browser Plugin: examples/ai/browser-testing.md
       - Logging:
-          - Log Plugin: examples/log-plugin.md
+          - Log Plugin: examples/logging/log-plugin.md
       - Reliability:
-          - Retry Policies: examples/retry-policies.md
+          - Managing Delays: examples/reliability/delays.md
+          - Retry Policies: examples/reliability/retry-policies.md
   - YAML Reference:
       - Overview: yaml-reference/plugin-reference.md
   - MCP Server: mcp-server.md

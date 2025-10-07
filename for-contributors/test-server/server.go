@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/time/rate"
 )
 
@@ -106,7 +108,7 @@ func (s *TestServer) getSessionID(r *http.Request) string {
 	if sessionID := r.Header.Get("X-Test-Session"); sessionID != "" {
 		return "session_" + sessionID
 	}
-	
+
 	// Fallback to IP-based isolation for requests without session header
 	ip := r.RemoteAddr
 	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
@@ -115,12 +117,12 @@ func (s *TestServer) getSessionID(r *http.Request) string {
 			ip = strings.TrimSpace(ips[0])
 		}
 	}
-	
+
 	// Remove port if present
 	if colonIndex := strings.LastIndex(ip, ":"); colonIndex != -1 {
 		ip = ip[:colonIndex]
 	}
-	
+
 	return "ip_" + ip
 }
 
@@ -167,7 +169,30 @@ func (s *TestServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get session ID and corresponding store
+	// Parse the path for special endpoints
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) > 0 {
+		// Handle special utility endpoints (session-agnostic)
+		switch parts[0] {
+		case "status":
+			s.handleStatus(w, r, parts)
+			return
+		case "delay":
+			s.handleDelay(w, r, parts)
+			return
+		case "echo":
+			s.handleEcho(w, r)
+			return
+		case "uuid":
+			s.handleUUID(w, r)
+			return
+		case "json":
+			s.handleJSON(w, r)
+			return
+		}
+	}
+
+	// Get session ID and corresponding store for CRUD operations
 	sessionID := s.getSessionID(r)
 	store := s.getStore(sessionID)
 
@@ -182,7 +207,6 @@ func (s *TestServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the path to get resource type and ID
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) == 0 || parts[0] == "" {
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
@@ -339,6 +363,140 @@ func (s *TestServer) handleDelete(store *Store, resourceType, resourceID string)
 		}
 	}
 	return nil, fmt.Errorf("resource not found")
+}
+
+// handleStatus returns the specified HTTP status code
+func (s *TestServer) handleStatus(w http.ResponseWriter, r *http.Request, parts []string) {
+	if len(parts) < 2 {
+		http.Error(w, "Status code required: /status/{code}", http.StatusBadRequest)
+		return
+	}
+
+	code, err := strconv.Atoi(parts[1])
+	if err != nil || code < 100 || code > 599 {
+		http.Error(w, "Invalid status code", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"code":    code,
+		"message": http.StatusText(code),
+	})
+}
+
+// handleDelay delays the response by the specified number of seconds (max 10s)
+func (s *TestServer) handleDelay(w http.ResponseWriter, r *http.Request, parts []string) {
+	if len(parts) < 2 {
+		http.Error(w, "Delay seconds required: /delay/{seconds}", http.StatusBadRequest)
+		return
+	}
+
+	seconds, err := strconv.Atoi(parts[1])
+	if err != nil || seconds < 0 || seconds > 10 {
+		http.Error(w, "Invalid delay: must be 0-10 seconds", http.StatusBadRequest)
+		return
+	}
+
+	time.Sleep(time.Duration(seconds) * time.Second)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"delayed": seconds,
+		"message": fmt.Sprintf("Delayed for %d seconds", seconds),
+	})
+}
+
+// handleEcho echoes back request details (headers, body, query params)
+func (s *TestServer) handleEcho(w http.ResponseWriter, r *http.Request) {
+	// Parse query parameters
+	query := make(map[string]string)
+	for key, values := range r.URL.Query() {
+		if len(values) > 0 {
+			query[key] = values[0]
+		}
+	}
+
+	// Parse headers
+	headers := make(map[string]string)
+	for key, values := range r.Header {
+		if len(values) > 0 {
+			headers[key] = values[0]
+		}
+	}
+
+	response := map[string]interface{}{
+		"method":  r.Method,
+		"url":     r.URL.String(),
+		"headers": headers,
+		"query":   query,
+	}
+
+	// For POST requests, parse body and form data
+	if r.Method == http.MethodPost {
+		contentType := r.Header.Get("Content-Type")
+
+		if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+			if err := r.ParseForm(); err == nil {
+				form := make(map[string]string)
+				for key, values := range r.Form {
+					if len(values) > 0 {
+						form[key] = values[0]
+					}
+				}
+				response["form"] = form
+			}
+		} else if strings.Contains(contentType, "application/json") {
+			var body interface{}
+			if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+				response["json"] = body
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// handleUUID generates and returns a new UUID v4
+func (s *TestServer) handleUUID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"uuid": uuid.New().String(),
+	})
+}
+
+// handleJSON returns sample JSON data for testing
+func (s *TestServer) handleJSON(w http.ResponseWriter, r *http.Request) {
+	sampleJSON := map[string]interface{}{
+		"slideshow": map[string]interface{}{
+			"title":  "Sample Slide Show",
+			"author": "Yours Truly",
+			"date":   "date of publication",
+			"slides": []map[string]interface{}{
+				{
+					"title": "Wake up to WonderWidgets!",
+					"type":  "all",
+				},
+				{
+					"title": "Overview",
+					"type":  "all",
+					"items": []string{
+						"Why WonderWidgets are great",
+						"Who buys WonderWidgets",
+					},
+				},
+			},
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(sampleJSON)
 }
 
 func (s *TestServer) logRequest(r *http.Request) {

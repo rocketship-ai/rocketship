@@ -661,7 +661,7 @@
                           },
                           "operation": {
                             "type": "string",
-                            "enum": ["select", "insert", "update", "delete", "rpc", "auth_create_user", "auth_delete_user", "auth_sign_up", "auth_sign_in", "storage_create_bucket", "storage_upload", "storage_download", "storage_delete"],
+                            "enum": ["select", "insert", "update", "delete", "rpc", "auth_create_user", "auth_delete_user", "auth_sign_up", "auth_sign_in", "storage_create_bucket", "storage_delete_bucket", "storage_upload", "storage_download", "storage_delete"],
                             "description": "Supabase operation to perform"
                           },
                           "table": {

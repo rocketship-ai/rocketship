@@ -3,13 +3,15 @@ description: "Demonstrate application/x-www-form-urlencoded requests via http pl
 vars:
   name: "world"
 tests:
-  - name: "Form POST via httpbin"
+  - name: "Form POST via tryme"
     steps:
       - name: "Send form"
         plugin: http
         config:
           method: POST
-          url: "https://httpbin.org/post"
+          url: "https://tryme.rocketship.sh/echo"
+          headers:
+            X-Test-Session: "http-form-test"
           form:
             foo: "bar"
             templated: "hello {{ .vars.name }}"

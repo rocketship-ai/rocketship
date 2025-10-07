@@ -43,7 +43,7 @@ tests:
         plugin: http
         config:
           method: GET
-          url: "https://httpbin.org/status/503"
+          url: "https://tryme.rocketship.sh/status/503"
         retry:
           initial_interval: "50ms"
           maximum_interval: "200ms"
@@ -144,7 +144,7 @@ tests:
         plugin: http
         config:
           method: GET
-          url: "https://httpbin.org/status/404"
+          url: "https://tryme.rocketship.sh/status/404"
         assertions:
           - type: status_code
             expected: 200  # This will fail

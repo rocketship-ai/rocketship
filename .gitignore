@@ -26,7 +26,7 @@ cli-introspection.json
 *.log
 
 # user testing
-.env
+**/.env
 .rocketship/
 
 # rocketship-internal code

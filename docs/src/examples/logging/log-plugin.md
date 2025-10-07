@@ -20,12 +20,12 @@ tests:
       - plugin: log
         config:
           message: "Starting test execution"
-      
+
       - plugin: http
         config:
-          url: "https://httpbin.org/get"
+          url: "https://tryme.rocketship.sh/echo"
           method: "GET"
-      
+
       - plugin: log
         config:
           message: "HTTP request completed"
@@ -45,10 +45,10 @@ tests:
       - plugin: log
         config:
           message: "Starting test for session: {{ .vars.session }}"
-      
+
       - plugin: http
         config:
-          url: "https://httpbin.org/get"
+          url: "https://tryme.rocketship.sh/echo"
           method: "GET"
         save:
           - key: "response_data"
