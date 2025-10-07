@@ -38,17 +38,8 @@ tests:
                 operator: "in"
                 value: ["integration_test", "rpc_test"]
 
-      - name: "Pre-cleanup: Delete storage bucket if exists"
-        plugin: supabase
-        config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
-          operation: "storage_delete_bucket"
-          storage:
-            bucket: "integration-tests"
-
       # =============================================================================
-      # SETUP: Create storage bucket for tests
+      # SETUP: Create storage bucket for tests (reuses if exists)
       # =============================================================================
       - name: "Setup: Create storage bucket"
         plugin: supabase

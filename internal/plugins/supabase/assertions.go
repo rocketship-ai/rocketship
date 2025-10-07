@@ -250,11 +250,24 @@ func processRowCountAssertion(response *SupabaseResponse, assertion map[string]i
 		return fmt.Errorf("invalid expected row count type")
 	}
 
-	if response.Count == nil {
-		return fmt.Errorf("row count assertion failed: no count in response")
+	var actual int
+
+	// If response.Count is set (from Content-Range header), use it
+	// Otherwise, fall back to counting rows in response.Data
+	if response.Count != nil {
+		actual = *response.Count
+	} else {
+		// Try to count rows from response.Data
+		switch data := response.Data.(type) {
+		case []interface{}:
+			actual = len(data)
+		case []map[string]interface{}:
+			actual = len(data)
+		default:
+			return fmt.Errorf("row count assertion failed: no count in response and data is not an array")
+		}
 	}
 
-	actual := *response.Count
 	if actual != expected {
 		return fmt.Errorf("row count assertion failed: expected %d, got %d", expected, actual)
 	}
