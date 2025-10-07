@@ -40,7 +40,7 @@ tests:
         plugin: "http"
         config:
           method: "GET"
-          url: "https://httpbin.org/status/200"
+          url: "https://tryme.rocketship.sh/status/200"
         assertions:
           - type: "status_code"
             expected: 200
