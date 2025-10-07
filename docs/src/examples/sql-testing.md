@@ -174,7 +174,7 @@ For multiple levels of escaping:
 - `\\\\{{ }}` → `\\{{ }}` (escaped backslash + handlebars variable)
 - `\\\\\\{{ }}` → `\\{{ }}` (literal escaped handlebars)
 
-See the Handlebars Escaping section in (variables.md) for complete details and advanced usage.
+See the [Handlebars Escaping](variables/variables.md#handlebars-escaping) section in the Variables Overview for complete details and advanced usage.
 
 ## Complete Example
 

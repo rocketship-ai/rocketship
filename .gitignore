@@ -31,3 +31,4 @@ cli-introspection.json
 
 # rocketship-internal code
 charts/rocketship-internal/
+examples/supabase-testing/.env

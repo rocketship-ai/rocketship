@@ -200,10 +200,9 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 			if saveConfig, ok := saveConfigInterface.(map[string]interface{}); ok {
 				logger.Info("Processing save config", "config", saveConfig)
 				if err := processSave(ctx, response, saveConfig, saved); err != nil {
-					logger.Error("Failed to save value", "error", err, "config", saveConfig)
-				} else {
-					logger.Info("Successfully saved value", "saved", saved)
+					return nil, fmt.Errorf("failed to save value: %w", err)
 				}
+				logger.Info("Successfully saved value", "saved", saved)
 			}
 		}
 	}

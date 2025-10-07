@@ -6,7 +6,9 @@
 # Tests cover:
 # - Invalid API key (401 Unauthorized)
 # - Non-existent table (404 Not Found)
-# - Invalid operation parameters (400 Bad Request)
+# - Non-existent RPC function (404 Not Found)
+# - Duplicate key constraint (409 Conflict)
+# - Failed save operation (non-existent JSON path)
 
 name: "Supabase Error Handling Tests"
 description: "Verifies that Supabase plugin properly fails on API errors"
@@ -93,3 +95,19 @@ tests:
               id: "{{ company_id }}"
               name: "Duplicate Company"
               type: "error_test"
+
+  - name: "Failed Save Operation Test"
+    steps:
+      - name: "Attempt to save from non-existent JSON path"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name"]
+            limit: 1
+        save:
+          - json_path: ".does.not.exist.at.all"
+            as: "nonexistent_value"

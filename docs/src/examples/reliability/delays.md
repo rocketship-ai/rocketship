@@ -16,7 +16,7 @@ Most real-world APIs need a short breather between operations. Rocketship’s `d
 
 ## Where Delays Fit in the Request-Chaining Example
 
-The [HTTP Request Chaining](request-chaining.md) suite pauses twice:
+The [HTTP Request Chaining](../http/request-chaining.md) suite pauses twice:
 
 1. **After creating the first car** – a one-second delay so the remote service persists state before the next POST.
 2. **Before reading aggregated data** – a shorter pause ensures both creations are visible when the GET call runs.
@@ -32,5 +32,5 @@ Feel free to tweak the durations and observe how the tryme service responds. Whe
 
 ## Related Reading
 
-- [HTTP Request Chaining](request-chaining.md) – full end-to-end workflow using saved state and cleanup steps.
-- [Contract Validation](openapi-validation.md) – ensure responses conform to the OpenAPI contract even after delayed operations.
+- [HTTP Request Chaining](../http/request-chaining.md) – full end-to-end workflow using saved state and cleanup steps.
+- [Contract Validation](../http/openapi-validation.md) – ensure responses conform to the OpenAPI contract even after delayed operations.

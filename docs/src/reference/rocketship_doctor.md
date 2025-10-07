@@ -1,16 +1,15 @@
-## rocketship status
+## rocketship doctor
 
-Show authentication status
+Diagnose Rocketship CLI environment issues
 
 ```
-rocketship status [flags]
+rocketship doctor [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help             help for status
-  -p, --profile string   Profile to inspect (defaults to active profile)
+  -h, --help   help for doctor
 ```
 
 ### Options inherited from parent commands

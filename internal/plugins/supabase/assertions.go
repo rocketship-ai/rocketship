@@ -16,6 +16,12 @@ func processSave(ctx context.Context, response *SupabaseResponse, saveConfig map
 		return fmt.Errorf("'as' field is required for save config")
 	}
 
+	// Check if required is explicitly set to false (defaults to true)
+	required := true
+	if req, ok := saveConfig["required"].(bool); ok {
+		required = req
+	}
+
 	var value interface{}
 
 	// Check for JSON path extraction
@@ -30,8 +36,12 @@ func processSave(ctx context.Context, response *SupabaseResponse, saveConfig map
 		iter := query.Run(response.Data)
 		v, ok := iter.Next()
 		if !ok {
-			responseDataJSON, _ := json.Marshal(response.Data)
-			return fmt.Errorf("no results from JSON path %s on data %s", jsonPath, string(responseDataJSON))
+			if required {
+				responseDataJSON, _ := json.Marshal(response.Data)
+				return fmt.Errorf("no results from required JSON path %q on data %s", jsonPath, string(responseDataJSON))
+			}
+			// Optional save that returned no results - skip it
+			return nil
 		}
 		if err, ok := v.(error); ok {
 			return fmt.Errorf("error evaluating JSON path %s: %w", jsonPath, err)
@@ -42,13 +52,42 @@ func processSave(ctx context.Context, response *SupabaseResponse, saveConfig map
 		if response.Metadata != nil && response.Metadata.Headers != nil {
 			value = response.Metadata.Headers[header]
 		}
+		if value == nil || value == "" {
+			if required {
+				return fmt.Errorf("required header %s not found in response", header)
+			}
+			// Optional save that returned no value - skip it
+			return nil
+		}
 	} else {
 		return fmt.Errorf("either 'json_path' or 'header' must be specified for save config")
 	}
 
-	// Convert value to string
-	if value != nil {
-		saved[asName] = fmt.Sprintf("%v", value)
+	// Check for nil value (path exists but value is null)
+	if value == nil {
+		if required {
+			return fmt.Errorf("required value for %q is null", asName)
+		}
+		// Optional save with null value - save as empty string
+		saved[asName] = ""
+		return nil
+	}
+
+	// Convert value to string based on type
+	switch val := value.(type) {
+	case string:
+		saved[asName] = val
+	case float64:
+		saved[asName] = fmt.Sprintf("%.0f", val)
+	case bool:
+		saved[asName] = fmt.Sprintf("%t", val)
+	default:
+		// For complex types, use JSON marshaling
+		bytes, err := json.Marshal(val)
+		if err != nil {
+			return fmt.Errorf("failed to marshal value for %s: %w", asName, err)
+		}
+		saved[asName] = string(bytes)
 	}
 
 	return nil
