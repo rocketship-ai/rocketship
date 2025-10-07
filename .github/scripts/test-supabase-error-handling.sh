@@ -1,18 +1,6 @@
 #!/bin/bash
 set -e
 
-echo "Testing Supabase plugin error handling behavior..."
-
-# Determine rocketship binary path
-if command -v rocketship &> /dev/null; then
-    ROCKETSHIP_CMD="rocketship"
-elif [ -f "$HOME/go/bin/rocketship" ]; then
-    ROCKETSHIP_CMD="$HOME/go/bin/rocketship"
-else
-    echo "❌ rocketship binary not found"
-    exit 1
-fi
-
 echo "Running Supabase error handling tests (these should fail)..."
 # Use env file for local testing; in CI the env var is set by workflow
 if [ -f "examples/supabase-testing/.env" ]; then
