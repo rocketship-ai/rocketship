@@ -403,6 +403,15 @@ tests:
             bucket: "integration-tests"
             path: "test-files/test-data.json"
 
+      - name: "CLEANUP: Delete storage bucket"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "storage_delete_bucket"
+          storage:
+            bucket: "integration-tests"
+
       - name: "CLEANUP: Delete test auth users via RPC"
         plugin: supabase
         config:
