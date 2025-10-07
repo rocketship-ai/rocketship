@@ -29,6 +29,8 @@ func executeSupabaseOperation(ctx context.Context, client *http.Client, config *
 		return executeAuthSignIn(ctx, client, config)
 	case OpStorageCreateBucket:
 		return executeStorageCreateBucket(ctx, client, config)
+	case OpStorageDeleteBucket:
+		return executeStorageDeleteBucket(ctx, client, config)
 	case OpStorageUpload:
 		return executeStorageUpload(ctx, client, config)
 	case OpStorageDownload:

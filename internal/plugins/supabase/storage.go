@@ -52,6 +52,35 @@ func executeStorageCreateBucket(ctx context.Context, client *http.Client, config
 	return parseSupabaseResponse(resp)
 }
 
+// executeStorageDeleteBucket handles storage bucket deletion
+func executeStorageDeleteBucket(ctx context.Context, client *http.Client, config *SupabaseConfig) (*SupabaseResponse, error) {
+	if config.Storage == nil || config.Storage.Bucket == "" {
+		return nil, fmt.Errorf("bucket name is required for storage delete bucket operation")
+	}
+
+	// Build URL - bucket deletion uses the bucket ID/name in the path
+	endpoint := fmt.Sprintf("%s/storage/v1/bucket/%s", strings.TrimSuffix(config.URL, "/"), config.Storage.Bucket)
+
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, "DELETE", endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("apikey", config.Key)
+	req.Header.Set("Authorization", "Bearer "+config.Key)
+
+	// Execute request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	return parseSupabaseResponse(resp)
+}
+
 // executeStorageUpload handles file upload to storage
 func executeStorageUpload(ctx context.Context, client *http.Client, config *SupabaseConfig) (*SupabaseResponse, error) {
 	if config.Storage == nil || config.Storage.Bucket == "" || config.Storage.Path == "" {
