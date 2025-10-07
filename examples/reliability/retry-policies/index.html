@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/examples/http/delays/">
+        <link rel="canonical" href="https://docs.rocketship.sh/examples/reliability/retry-policies/">
       
       
-        <link rel="prev" href="../request-chaining/">
+        <link rel="prev" href="../delays/">
       
       
-        <link rel="next" href="../openapi-validation/">
+        <link rel="next" href="../../../yaml-reference/plugin-reference/">
       
       
       <link rel="icon" href="../../../assets/transparent.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Managing Delays - Rocketship CLI</title>
+        <title>Retry Policies - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#managing-delays-in-http-test-suites" class="md-skip">
+        <a href="#retry-policies" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Managing Delays
+              Retry Policies
             
           </span>
         </div>
@@ -475,10 +475,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -486,18 +484,18 @@
       
         
       
-        
-      
     
     
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
         
           
           <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
@@ -511,7 +509,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             HTTP Testing
@@ -525,7 +523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../request-chaining/" class="md-nav__link">
+      <a href="../../http/request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -543,107 +541,10 @@
                 
   
   
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Managing Delays
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  <span class="md-ellipsis">
-    Managing Delays
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#delay-plugin-basics" class="md-nav__link">
-    <span class="md-ellipsis">
-      Delay Plugin Basics
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#where-delays-fit-in-the-request-chaining-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Where Delays Fit in the Request-Chaining Example
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      Best Practices
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#related-reading" class="md-nav__link">
-    <span class="md-ellipsis">
-      Related Reading
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
   
   
     <li class="md-nav__item">
-      <a href="../openapi-validation/" class="md-nav__link">
+      <a href="../../http/openapi-validation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -820,6 +721,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -859,11 +764,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../../variables/" class="md-nav__link">
+      <a href="../../variables/variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    All About Variables
+    Variables Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../variables/environment-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Environment Variables
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../variables/config-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config & Runtime Variables
   </span>
   
 
@@ -933,7 +880,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../custom-scripting/" class="md-nav__link">
+      <a href="../../scripting/custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -954,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shell-scripting/" class="md-nav__link">
+      <a href="../../scripting/shell-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1028,7 +975,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-testing/" class="md-nav__link">
+      <a href="../../ai/agent-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1049,7 +996,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../browser-testing/" class="md-nav__link">
+      <a href="../../ai/browser-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1121,7 +1068,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../log-plugin/" class="md-nav__link">
+      <a href="../../logging/log-plugin/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1147,10 +1094,14 @@
                 
   
   
+    
   
   
+  
     
     
+      
+        
       
         
       
@@ -1159,13 +1110,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9" checked>
         
           
           <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
@@ -1179,7 +1128,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             Reliability
@@ -1193,7 +1142,48 @@
   
   
     <li class="md-nav__item">
-      <a href="../../retry-policies/" class="md-nav__link">
+      <a href="../delays/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Managing Delays
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Retry Policies
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1202,6 +1192,95 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#basic-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plugin-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exponential-backoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      Exponential Backoff
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linear-backoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      Linear Backoff
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skip-certain-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Skip Certain Errors
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2055,38 +2134,71 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#delay-plugin-basics" class="md-nav__link">
+  <a href="#basic-usage" class="md-nav__link">
     <span class="md-ellipsis">
-      Delay Plugin Basics
+      Basic Usage
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#where-delays-fit-in-the-request-chaining-example" class="md-nav__link">
+  <a href="#configuration-options" class="md-nav__link">
     <span class="md-ellipsis">
-      Where Delays Fit in the Request-Chaining Example
+      Configuration Options
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
+  <a href="#plugin-support" class="md-nav__link">
     <span class="md-ellipsis">
-      Best Practices
+      Plugin Support
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#related-reading" class="md-nav__link">
+  <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
-      Related Reading
+      Examples
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#exponential-backoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      Exponential Backoff
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linear-backoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      Linear Backoff
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skip-certain-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Skip Certain Errors
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2108,37 +2220,110 @@
   
 
 
-<h1 id="managing-delays-in-http-test-suites">Managing Delays in HTTP Test Suites</h1>
-<p>Most real-world APIs need a short breather between operations. Rocketship’s <code>delay</code> plugin gives you deterministic pauses so eventual consistency and background work do not break your flows.</p>
-<h2 id="delay-plugin-basics">Delay Plugin Basics</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Wait</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">system</span><span class="nv"> </span><span class="s">processing&quot;</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;delay&quot;</span>
+<h1 id="retry-policies">Retry Policies</h1>
+<p>Configure automatic retries for any step to improve test reliability when dealing with flaky services or network issues.</p>
+<h2 id="basic-usage">Basic Usage</h2>
+<p>Add a <code>retry</code> configuration to any step:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;HTTP</span><span class="nv"> </span><span class="s">request</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">retry&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.example.com/users&quot;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">backoff_coefficient</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
 </code></pre></div>
-<ul>
-<li><code>duration</code> accepts Go-style intervals (<code>500ms</code>, <code>2s</code>, <code>1m</code>).</li>
-<li>Combine multiple delays with different values to smooth out spikes or let async jobs finish.</li>
-</ul>
-<h2 id="where-delays-fit-in-the-request-chaining-example">Where Delays Fit in the Request-Chaining Example</h2>
-<p>The <a href="../request-chaining/">HTTP Request Chaining</a> suite pauses twice:</p>
-<ol>
-<li><strong>After creating the first car</strong> – a one-second delay so the remote service persists state before the next POST.</li>
-<li><strong>Before reading aggregated data</strong> – a shorter pause ensures both creations are visible when the GET call runs.</li>
-</ol>
-<p>Feel free to tweak the durations and observe how the tryme service responds. When tests run inside the Docker stack, a bit of extra buffer keeps shared infrastructure happy.</p>
-<h2 id="best-practices">Best Practices</h2>
-<ul>
-<li>Prefer the shortest delay that stabilises the external dependency.</li>
-<li>Use descriptive step names (<code>"Wait for search index"</code>) so reviewers know why the pause exists.</li>
-<li>Keep delays close to the operations they protect.</li>
-<li>Combine with assertions that notice stale state; if the API is still catching up, consider retry policies.</li>
-</ul>
-<h2 id="related-reading">Related Reading</h2>
-<ul>
-<li><a href="../request-chaining/">HTTP Request Chaining</a> – full end-to-end workflow using saved state and cleanup steps.</li>
-<li><a href="../openapi-validation/">Contract Validation</a> – ensure responses conform to the OpenAPI contract even after delayed operations.</li>
-</ul>
+<h2 id="configuration-options">Configuration Options</h2>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maximum_attempts</code></td>
+<td>integer</td>
+<td>Maximum retry attempts</td>
+<td><code>3</code></td>
+</tr>
+<tr>
+<td><code>initial_interval</code></td>
+<td>string</td>
+<td>Initial retry delay</td>
+<td><code>"1s"</code>, <code>"500ms"</code></td>
+</tr>
+<tr>
+<td><code>maximum_interval</code></td>
+<td>string</td>
+<td>Maximum retry delay</td>
+<td><code>"30s"</code>, <code>"5m"</code></td>
+</tr>
+<tr>
+<td><code>backoff_coefficient</code></td>
+<td>number</td>
+<td>Exponential backoff multiplier</td>
+<td><code>2.0</code></td>
+</tr>
+<tr>
+<td><code>non_retryable_errors</code></td>
+<td>array</td>
+<td>Error types to never retry</td>
+<td><code>["ValidationError"]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="plugin-support">Plugin Support</h2>
+<p>Retry works with <strong>all plugins</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># HTTP requests</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API</span><span class="nv"> </span><span class="s">call&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2s&quot;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Database queries  </span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Database</span><span class="nv"> </span><span class="s">check&quot;</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sql&quot;</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Even delays</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Wait</span><span class="nv"> </span><span class="s">step&quot;</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;delay&quot;</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">    </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</code></pre></div>
+<h2 id="examples">Examples</h2>
+<h3 id="exponential-backoff">Exponential Backoff</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">maximum_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;16s&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">backoff_coefficient</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2.0</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Retries: 1s → 2s → 4s → 8s</span>
+</code></pre></div>
+<h3 id="linear-backoff">Linear Backoff</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">backoff_coefficient</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Retries: 5s → 5s → 5s</span>
+</code></pre></div>
+<h3 id="skip-certain-errors">Skip Certain Errors</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">retry</span><span class="p">:</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">non_retryable_errors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;AuthenticationError&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;ValidationError&quot;</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Backward Compatibility</p>
+<p>Steps without retry configuration use the default single-attempt behavior.</p>
+</div>
 
 
 

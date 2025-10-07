@@ -14,7 +14,7 @@
         <link rel="prev" href="../../">
       
       
-        <link rel="next" href="../delays/">
+        <link rel="next" href="../openapi-validation/">
       
       
       <link rel="icon" href="../../../assets/transparent.png">
@@ -486,8 +486,6 @@
       
         
       
-        
-      
     
     
       
@@ -643,27 +641,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../delays/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Managing Delays
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -853,6 +830,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -892,11 +873,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../../variables/" class="md-nav__link">
+      <a href="../../variables/variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    All About Variables
+    Variables Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../variables/environment-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Environment Variables
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../variables/config-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config & Runtime Variables
   </span>
   
 
@@ -966,7 +989,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../custom-scripting/" class="md-nav__link">
+      <a href="../../scripting/custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -987,7 +1010,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../shell-scripting/" class="md-nav__link">
+      <a href="../../scripting/shell-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1061,7 +1084,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-testing/" class="md-nav__link">
+      <a href="../../ai/agent-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1082,7 +1105,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../browser-testing/" class="md-nav__link">
+      <a href="../../ai/browser-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1154,7 +1177,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../log-plugin/" class="md-nav__link">
+      <a href="../../logging/log-plugin/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1184,6 +1207,8 @@
   
     
     
+      
+        
       
         
       
@@ -1226,7 +1251,28 @@
   
   
     <li class="md-nav__item">
-      <a href="../../retry-policies/" class="md-nav__link">
+      <a href="../../reliability/delays/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Managing Delays
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reliability/retry-policies/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2175,7 +2221,7 @@
 
 
 <h1 id="http-request-chaining">HTTP Request Chaining</h1>
-<p>Rocketship’s HTTP plugin lets you stitch multiple calls together by passing data from one response into the next. This example extends the original request-chaining suite so you can see how state flows across steps while the delay plugin keeps the external system stable. For timing specifics, check out the <a href="../delays/">Managing Delays</a> guide.</p>
+<p>Rocketship's HTTP plugin lets you stitch multiple calls together by passing data from one response into the next. This example extends the original request-chaining suite so you can see how state flows across steps while the delay plugin keeps the external system stable. For timing specifics, check out the <a href="../../reliability/delays/">Managing Delays</a> guide.</p>
 <h2 id="full-test-specification">Full Test Specification</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Request</span><span class="nv"> </span><span class="s">Chaining</span><span class="nv"> </span><span class="s">Example&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Chaining</span><span class="nv"> </span><span class="s">POST/GET/DELETE</span><span class="nv"> </span><span class="s">calls</span><span class="nv"> </span><span class="s">against</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">tryme</span><span class="nv"> </span><span class="s">server&quot;</span>
@@ -2298,7 +2344,7 @@
 <h2 id="understanding-the-flow">Understanding the Flow</h2>
 <ol>
 <li><strong>Create first car</strong> – capture the new car ID, its model, and the upstream <code>server</code> header.</li>
-<li><strong>Delay</strong> – give the remote service a moment to settle before reusing data (details in <a href="../delays/">Managing Delays</a>).</li>
+<li><strong>Delay</strong> – give the remote service a moment to settle before reusing data (details in <a href="../../reliability/delays/">Managing Delays</a>).</li>
 <li><strong>Create second car</strong> – reuse the header value inside the body and save another ID.</li>
 <li><strong>Aggregate read</strong> – verify both cars exist and the reused header value appears in the second payload.</li>
 <li><strong>Cleanup</strong> – delete both resources to keep the shared tryme environment tidy.</li>

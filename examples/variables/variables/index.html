@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/examples/http/openapi-validation/">
+        <link rel="canonical" href="https://docs.rocketship.sh/examples/variables/variables/">
       
       
-        <link rel="prev" href="../request-chaining/">
+        <link rel="prev" href="../../supabase-testing/">
       
       
-        <link rel="next" href="../../sql-testing/">
+        <link rel="next" href="../environment-variables/">
       
       
       <link rel="icon" href="../../../assets/transparent.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Contract Validation - Rocketship CLI</title>
+        <title>Variables Overview - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contract-validation-for-http-steps" class="md-skip">
+        <a href="#variables" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Contract Validation
+              Variables Overview
             
           </span>
         </div>
@@ -475,10 +475,8 @@
                 
   
   
-    
   
   
-  
     
     
       
@@ -491,11 +489,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_2" >
         
           
           <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
@@ -509,7 +509,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             HTTP Testing
@@ -523,7 +523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../request-chaining/" class="md-nav__link">
+      <a href="../../http/request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -541,30 +541,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Contract Validation
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../http/openapi-validation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -573,80 +553,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#suite-level-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      Suite-Level Defaults
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-level-overrides" class="md-nav__link">
-    <span class="md-ellipsis">
-      Step-Level Overrides
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-combined-with-request-chaining" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Combined with Request Chaining
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cache-behaviour" class="md-nav__link">
-    <span class="md-ellipsis">
-      Cache Behaviour
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#known-issues" class="md-nav__link">
-    <span class="md-ellipsis">
-      Known Issues
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      Next Steps
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -808,8 +714,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -824,13 +732,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" checked>
         
           
           <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
@@ -844,7 +750,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_5">
             <span class="md-nav__icon md-icon"></span>
             Parameterizing Tests
@@ -855,10 +761,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../variables/variables/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Variables Overview
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -867,6 +793,188 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-decision-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quick Decision Guide
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#basic-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Config Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Variables
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Precedence
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Variable Precedence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-variables_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Config Variables
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-variable-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Combining Variable Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#handlebars-escaping" class="md-nav__link">
+    <span class="md-ellipsis">
+      Handlebars Escaping
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-variables_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Config Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-variables_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#learn-more" class="md-nav__link">
+    <span class="md-ellipsis">
+      Learn More
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -879,7 +987,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../variables/environment-variables/" class="md-nav__link">
+      <a href="../environment-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -900,7 +1008,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../variables/config-variables/" class="md-nav__link">
+      <a href="../config-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2119,54 +2227,162 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#suite-level-defaults" class="md-nav__link">
+  <a href="#quick-decision-guide" class="md-nav__link">
     <span class="md-ellipsis">
-      Suite-Level Defaults
+      Quick Decision Guide
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-level-overrides" class="md-nav__link">
+  <a href="#basic-examples" class="md-nav__link">
     <span class="md-ellipsis">
-      Step-Level Overrides
+      Basic Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Basic Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Config Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Variables
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-precedence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Variable Precedence
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Variable Precedence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-variables_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Config Variables
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-variable-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Combining Variable Types
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-combined-with-request-chaining" class="md-nav__link">
+  <a href="#handlebars-escaping" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Combined with Request Chaining
+      Handlebars Escaping
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#cache-behaviour" class="md-nav__link">
+  <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
-      Cache Behaviour
+      Best Practices
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#known-issues" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#config-variables_2" class="md-nav__link">
     <span class="md-ellipsis">
-      Known Issues
+      Config Variables
     </span>
   </a>
   
 </li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-variables_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Runtime Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#learn-more" class="md-nav__link">
     <span class="md-ellipsis">
-      Next Steps
+      Learn More
     </span>
   </a>
   
@@ -2190,68 +2406,260 @@
   
 
 
-<h1 id="contract-validation-for-http-steps">Contract Validation for HTTP Steps</h1>
-<p>Rocketship can validate every HTTP request and response against an OpenAPI v3 contract. The validator now lives at the suite level, so you configure it once and inherit the settings everywhere.</p>
-<h2 id="suite-level-defaults">Suite-Level Defaults</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">openapi</span><span class="p">:</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">spec</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./contracts/checkout.yaml&quot;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">cache_ttl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;30m&quot;</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">validate_response</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<h1 id="variables">Variables</h1>
+<p>Rocketship supports three types of variables for parameterizing your tests:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Syntax</th>
+<th>Use Case</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Environment</strong></td>
+<td><code>{{ .env.VAR }}</code></td>
+<td>Secrets, API keys, environment-specific URLs</td>
+<td><code>{{ .env.API_KEY }}</code></td>
+</tr>
+<tr>
+<td><strong>Config</strong></td>
+<td><code>{{ .vars.name }}</code></td>
+<td>Test parameters, non-sensitive config</td>
+<td><code>{{ .vars.base_url }}</code></td>
+</tr>
+<tr>
+<td><strong>Runtime</strong></td>
+<td><code>{{ variable }}</code></td>
+<td>Values saved during test execution</td>
+<td><code>{{ user_id }}</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="quick-decision-guide">Quick Decision Guide</h2>
+<p><strong>Use Environment Variables (<code>.env</code>) when:</strong>
+- ✅ The value is a secret (API key, password, token)
+- ✅ The value changes per environment (staging URL vs production URL)
+- ✅ The value should never be committed to git
+- ✅ Different team members need different values</p>
+<p><strong>Use Config Variables (<code>.vars</code>) when:</strong>
+- ✅ The value is test configuration (timeouts, limits)
+- ✅ The value is safe to commit to git
+- ✅ You want to override values via CLI (<code>--var</code>)
+- ✅ The value is test data or parameters</p>
+<p><strong>Use Runtime Variables when:</strong>
+- ✅ You need to save values from API responses
+- ✅ You're chaining test steps together
+- ✅ You need to pass data between steps
+- ✅ The value is generated during test execution</p>
+<h2 id="basic-examples">Basic Examples</h2>
+<h3 id="environment-variables">Environment Variables</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Use for secrets</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Authenticated</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">request&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="s">&quot;Authorization&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.API_TOKEN</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Load from .env file</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
+</code></pre></div>
+<h3 id="config-variables">Config Variables</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Define in YAML</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">vars</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">api_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v2&quot;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API</span><span class="nv"> </span><span class="s">test&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/{{</span><span class="nv"> </span><span class="s">.vars.api_version</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">          </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.timeout</span><span class="nv"> </span><span class="s">}}s&quot;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Override via CLI</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--var<span class="w"> </span><span class="nv">api_version</span><span class="o">=</span>v3<span class="w"> </span>--var<span class="w"> </span><span class="nv">timeout</span><span class="o">=</span><span class="m">60</span>
+</code></pre></div>
+<h3 id="runtime-variables">Runtime Variables</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Save from response</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">user&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST&quot;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">save</span><span class="p">:</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">json_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.id&quot;</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="nt">as</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user_id&quot;</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1"># Use in next step</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Get</span><span class="nv"> </span><span class="s">user&quot;</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.base_url</span><span class="nv"> </span><span class="s">}}/users/{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div>
+<h2 id="variable-precedence">Variable Precedence</h2>
+<p>When the same variable name exists in multiple places:</p>
+<h3 id="environment-variables_1">Environment Variables</h3>
+<ol>
+<li>System environment (highest)</li>
+<li><code>--env-file</code> values</li>
+<li>Default in test file</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">API_KEY</span><span class="o">=</span>system-key
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env<span class="w">  </span><span class="c1"># Uses system-key, not .env</span>
+</code></pre></div>
+<h3 id="config-variables_1">Config Variables</h3>
+<ol>
+<li><code>--var</code> CLI flags (highest)</li>
+<li><code>--var-file</code> values</li>
+<li>YAML <code>vars</code> section</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--var-file<span class="w"> </span>overrides.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--var<span class="w"> </span><span class="nv">timeout</span><span class="o">=</span><span class="m">120</span><span class="w">  </span><span class="c1"># CLI wins</span>
+</code></pre></div>
+<h2 id="combining-variable-types">Combining Variable Types</h2>
+<p>Use all three types together for maximum flexibility:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">vars</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">api_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;v1&quot;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Mixed</span><span class="nv"> </span><span class="s">variable</span><span class="nv"> </span><span class="s">usage&quot;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">      </span><span class="c1"># Step 1: Use env + config</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">resource&quot;</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/{{</span><span class="nv"> </span><span class="s">.vars.api_version</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">            </span><span class="s">&quot;Authorization&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.API_TOKEN</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">        </span><span class="nt">save</span><span class="p">:</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">json_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.id&quot;</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">            </span><span class="nt">as</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;user_id&quot;</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">      </span><span class="c1"># Step 2: Use all three types</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Update</span><span class="nv"> </span><span class="s">resource&quot;</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;http&quot;</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/{{</span><span class="nv"> </span><span class="s">.vars.api_version</span><span class="nv"> </span><span class="s">}}/users/{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a><span class="w">            </span><span class="s">&quot;Authorization&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.API_TOKEN</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div>
+<h2 id="handlebars-escaping">Handlebars Escaping</h2>
+<p>When your API uses handlebars syntax <code>{{ }}</code>, escape them with backslashes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Processed variable</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="s">&quot;api_url&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_BASE_URL</span><span class="nv"> </span><span class="s">}}/users&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Literal handlebars (not processed)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="s">&quot;template&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Use</span><span class="nv"> </span><span class="s">\\{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">API&quot;</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="c1"># Result: &quot;Use {{ user_id }} in the API&quot;</span>
+</code></pre></div>
+<p><strong>Escape levels:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Output</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>\\{{ var }}</code></td>
+<td><code>{{ var }}</code></td>
+<td>Literal handlebars</td>
+</tr>
+<tr>
+<td><code>\\\\{{ .vars.x }}</code></td>
+<td><code>\value</code></td>
+<td>Backslash + processed variable</td>
+</tr>
+<tr>
+<td><code>\\\\\\{{ var }}</code></td>
+<td><code>\{{ var }}</code></td>
+<td>Backslash + literal handlebars</td>
+</tr>
+</tbody>
+</table>
+<p><strong>In JSON bodies:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|-</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="no">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="no">&quot;api_url&quot;: &quot;{{ .env.API_BASE_URL }}&quot;,</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="no">&quot;template&quot;: &quot;Use \\{{ user_id }} for IDs&quot;,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="no">&quot;docs&quot;: &quot;Escape with \\{{ variable }} syntax&quot;</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="no">}</span>
+</code></pre></div></p>
+<p><strong>Common use case - Supabase/PostgreSQL JSON:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># PostgreSQL JSONB query with literal handlebars</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Query</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">JSON</span><span class="nv"> </span><span class="s">template&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sql&quot;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;postgres&quot;</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.DATABASE_URL</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">      </span><span class="no">SELECT metadata-&gt;&gt;&#39;template&#39; as template</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">      </span><span class="no">FROM notifications</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">      </span><span class="no">WHERE metadata @&gt; &#39;{&quot;type&quot;: &quot;email&quot;}&#39;</span>
+</code></pre></div></p>
+<p>If the <code>metadata</code> column contains <code>{"template": "Hello {{ name }}"}</code>, you need to escape it:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Insert with escaped handlebars</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Insert</span><span class="nv"> </span><span class="s">notification</span><span class="nv"> </span><span class="s">template&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sql&quot;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;postgres&quot;</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nt">dsn</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.DATABASE_URL</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="nt">query</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">      </span><span class="no">INSERT INTO notifications (metadata)</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">      </span><span class="no">VALUES (&#39;{&quot;template&quot;: &quot;Hello \\{{ name }}&quot;}&#39;::jsonb)</span>
+</code></pre></div></p>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="environment-variables_2">Environment Variables</h3>
 <ul>
-<li><code>spec</code> accepts relative or absolute filesystem paths <strong>and</strong> HTTP(S) URLs.</li>
-<li>YAML and JSON OpenAPI documents are both supported; <code>github.com/pb33f/libopenapi-validator</code> auto-detects the format.</li>
-<li><code>cache_ttl</code> controls how long a contract stays cached (default 30 minutes). Raise or lower it depending on how often specs change.</li>
-<li>Bump the optional <code>version</code> string (<code>version: "2024-03-15"</code>) whenever you publish a new contract to force an immediate refresh.</li>
-<li>Form-encoded payloads (<code>application/x-www-form-urlencoded</code>) and other common content types are validated automatically—just use the HTTP plugin’s <code>form</code> config block.</li>
+<li>✅ Always use <code>.gitignore</code> for <code>.env</code> files</li>
+<li>✅ Commit <code>.env.example</code> with dummy values</li>
+<li>✅ Use different env files per environment (<code>.env.staging</code>, <code>.env.production</code>)</li>
+<li>✅ Set secrets in CI/CD platform, not env files</li>
 </ul>
-<h2 id="step-level-overrides">Step-Level Overrides</h2>
-<p>Sometimes you need to skip a check for a particular scenario (for example, sending intentionally malformed data). Add an <code>openapi</code> block on the step to toggle behaviour:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Submit</span><span class="nv"> </span><span class="s">malformed</span><span class="nv"> </span><span class="s">payload&quot;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://api.example.com/orders</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;{&quot;sku&quot;:</span><span class="nv"> </span><span class="s">&quot;broken&quot;}&#39;</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">openapi</span><span class="p">:</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</code></pre></div>
-<p>You can also point a specific step at a different <code>spec</code>, require an <code>operation_id</code>, or disable response validation.</p>
-<h2 id="example-combined-with-request-chaining">Example Combined with Request Chaining</h2>
-<p>The request-chaining suite uses a single contract:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">openapi</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">spec</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./contracts/tryme.yaml&quot;</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">cache_ttl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;30m&quot;</span>
-</code></pre></div>
-<p>Every HTTP step inherits that contract. One step turns off <code>validate_request</code> to test how the server handles malformed input:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Create</span><span class="nv"> </span><span class="s">second</span><span class="nv"> </span><span class="s">car&quot;</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST&quot;</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://tryme.rocketship.sh/cars&quot;</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;{&quot;make&quot;:&quot;Honda&quot;,&quot;model&quot;:&quot;Civic&quot;}&#39;</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">openapi</span><span class="p">:</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">validate_request</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</code></pre></div>
-<p>With the contract in place, Rocketship fails the run if the server returns extra fields, the wrong status code, or a payload that violates the schema. All failures include the underlying <code>libopenapi-validator</code> error details.</p>
-<h2 id="cache-behaviour">Cache Behaviour</h2>
+<h3 id="config-variables_2">Config Variables</h3>
 <ul>
-<li>Entries expire automatically after the configured <code>cache_ttl</code>.</li>
-<li>Local specs refresh as soon as their modification time changes.</li>
-<li>Remote specs refresh when the TTL expires or when you bump the <code>version</code> field.</li>
+<li>✅ Use descriptive names (<code>request_timeout</code> not <code>t</code>)</li>
+<li>✅ Group related variables with nesting</li>
+<li>✅ Put sensible defaults in YAML</li>
+<li>✅ Override via <code>--var</code> for different test scenarios</li>
 </ul>
-<h2 id="known-issues">Known Issues</h2>
+<h3 id="runtime-variables_1">Runtime Variables</h3>
 <ul>
-<li>Literal paths can still lose precedence to templated paths in <code>libopenapi-validator</code> (see <code>/Messages/Operations</code> vs <code>/Messages/{message_id}</code>) until the upstream matcher is fixed.</li>
-<li>The validator currently skips <code>multipart/form-data</code> and other complex encodings because the upstream library lacks decoders for those media types.</li>
-<li>Server <code>host</code>/<code>scheme</code> variables, callbacks, webhooks, and links defined in the OpenAPI document are not yet validated.</li>
-<li>Validation errors come directly from <code>github.com/pb33f/libopenapi-validator</code>; behaviour may change as the library evolves.</li>
+<li>✅ Use <code>required: false</code> for optional saves</li>
+<li>✅ Validate saved values in next step if critical</li>
+<li>✅ Use descriptive names that indicate what was saved</li>
+<li>✅ Clean up test data at the end of tests</li>
 </ul>
-<h2 id="next-steps">Next Steps</h2>
+<h3 id="security">Security</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># .gitignore</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>.env
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>.env.*
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>!.env.example
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Validate required env vars</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Check</span><span class="nv"> </span><span class="s">environment&quot;</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;script&quot;</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;javascript&quot;</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">    </span><span class="nt">script</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">      </span><span class="no">const required = [&#39;API_KEY&#39;, &#39;DATABASE_URL&#39;];</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">      </span><span class="no">const missing = required.filter(k =&gt; !process.env[k]);</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">      </span><span class="no">if (missing.length) {</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">        </span><span class="no">throw new Error(`Missing: ${missing.join(&#39;, &#39;)}`);</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">      </span><span class="no">}</span>
+</code></pre></div>
+<h2 id="learn-more">Learn More</h2>
 <ul>
-<li>Build the full <a href="../request-chaining/">HTTP Request Chaining</a> flow.</li>
-<li>Combine delays and contract validation for resilient suites by pairing this guide with <a href="../../reliability/delays/">Managing Delays</a>.</li>
+<li><strong><a href="../environment-variables/">Environment Variables</a></strong> - Detailed guide on <code>.env</code> usage, multi-environment setup, and CI/CD integration</li>
+<li><strong><a href="../config-variables/">Config &amp; Runtime Variables</a></strong> - Detailed guide on <code>.vars</code>, <code>--var</code> overrides, and runtime variable chaining</li>
 </ul>
 
 

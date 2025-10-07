@@ -8,28 +8,28 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/examples/log-plugin/">
+        <link rel="canonical" href="https://docs.rocketship.sh/examples/reliability/delays/">
       
       
-        <link rel="prev" href="../browser-testing/">
+        <link rel="prev" href="../../logging/log-plugin/">
       
       
         <link rel="next" href="../retry-policies/">
       
       
-      <link rel="icon" href="../../assets/transparent.png">
+      <link rel="icon" href="../../../assets/transparent.png">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.12">
     
     
       
-        <title>Log Plugin - Rocketship CLI</title>
+        <title>Managing Delays - Rocketship CLI</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.7e359304.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.7e359304.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +48,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#log-plugin" class="md-skip">
+        <a href="#managing-delays-in-http-test-suites" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +92,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../../assets/transparent-reverse.png" alt="logo">
+  <img src="../../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Log Plugin
+              Managing Delays
             
           </span>
         </div>
@@ -226,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../../assets/transparent-reverse.png" alt="logo">
+  <img src="../../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     Rocketship CLI
@@ -255,7 +255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -325,7 +325,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
+      <a href="../../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -346,7 +346,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../../quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -367,7 +367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../test-run-management/" class="md-nav__link">
+      <a href="../../../test-run-management/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -457,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../../" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -479,8 +479,6 @@
   
     
     
-      
-        
       
         
       
@@ -525,7 +523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../http/request-chaining/" class="md-nav__link">
+      <a href="../../http/request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -546,28 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../http/delays/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Managing Delays
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../http/openapi-validation/" class="md-nav__link">
+      <a href="../../http/openapi-validation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -639,7 +616,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sql-testing/" class="md-nav__link">
+      <a href="../../sql-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -711,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../supabase-testing/" class="md-nav__link">
+      <a href="../../supabase-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -741,6 +718,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -783,11 +764,53 @@
   
   
     <li class="md-nav__item">
-      <a href="../variables/" class="md-nav__link">
+      <a href="../../variables/variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    All About Variables
+    Variables Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../variables/environment-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Environment Variables
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../variables/config-variables/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Config & Runtime Variables
   </span>
   
 
@@ -857,7 +880,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-scripting/" class="md-nav__link">
+      <a href="../../scripting/custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -878,7 +901,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../shell-scripting/" class="md-nav__link">
+      <a href="../../scripting/shell-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -952,7 +975,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-testing/" class="md-nav__link">
+      <a href="../../ai/agent-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -973,7 +996,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../browser-testing/" class="md-nav__link">
+      <a href="../../ai/browser-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -982,163 +1005,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-      
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_8" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
-            
-  
-  <span class="md-ellipsis">
-    Logging
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_3_8">
-            <span class="md-nav__icon md-icon"></span>
-            Logging
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Log Plugin
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  <span class="md-ellipsis">
-    Log Plugin
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      Configuration
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic Usage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#variable-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Variable Support
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      Example Output
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Use Cases
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1174,7 +1040,81 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Logging
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            Logging
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../logging/log-plugin/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Log Plugin
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9" checked>
         
           
           <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
@@ -1188,12 +1128,109 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_9">
             <span class="md-nav__icon md-icon"></span>
             Reliability
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Managing Delays
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Managing Delays
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#delay-plugin-basics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Delay Plugin Basics
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-delays-fit-in-the-request-chaining-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where Delays Fit in the Request-Chaining Example
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best Practices
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related Reading
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
             
               
                 
@@ -1284,7 +1321,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../yaml-reference/plugin-reference/" class="md-nav__link">
+      <a href="../../../yaml-reference/plugin-reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1312,7 +1349,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../mcp-server/" class="md-nav__link">
+      <a href="../../../mcp-server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1382,7 +1419,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy-on-your-cloud/" class="md-nav__link">
+      <a href="../../../deploy-on-your-cloud/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1403,7 +1440,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy/minikube/" class="md-nav__link">
+      <a href="../../../deploy/minikube/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1424,7 +1461,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy/digitalocean/" class="md-nav__link">
+      <a href="../../../deploy/digitalocean/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1514,7 +1551,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship/" class="md-nav__link">
+      <a href="../../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1588,7 +1625,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_profile/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1609,7 +1646,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_profile_create/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_create/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1630,7 +1667,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_profile_delete/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_delete/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1651,7 +1688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_profile_list/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1672,7 +1709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_profile_show/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_show/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1693,7 +1730,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_profile_use/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_use/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1722,7 +1759,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_run/" class="md-nav__link">
+      <a href="../../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1743,7 +1780,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_list/" class="md-nav__link">
+      <a href="../../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1764,7 +1801,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_get/" class="md-nav__link">
+      <a href="../../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1830,7 +1867,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_start/" class="md-nav__link">
+      <a href="../../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1851,7 +1888,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
+      <a href="../../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1925,7 +1962,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_stop/" class="md-nav__link">
+      <a href="../../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1946,7 +1983,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
+      <a href="../../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1975,7 +2012,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_validate/" class="md-nav__link">
+      <a href="../../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1996,7 +2033,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/rocketship_version/" class="md-nav__link">
+      <a href="../../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2024,7 +2061,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2064,45 +2101,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
+  <a href="#delay-plugin-basics" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration
+      Delay Plugin Basics
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
+  <a href="#where-delays-fit-in-the-request-chaining-example" class="md-nav__link">
     <span class="md-ellipsis">
-      Basic Usage
+      Where Delays Fit in the Request-Chaining Example
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#variable-support" class="md-nav__link">
+  <a href="#best-practices" class="md-nav__link">
     <span class="md-ellipsis">
-      Variable Support
+      Best Practices
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-output" class="md-nav__link">
+  <a href="#related-reading" class="md-nav__link">
     <span class="md-ellipsis">
-      Example Output
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Use Cases
+      Related Reading
     </span>
   </a>
   
@@ -2126,78 +2154,37 @@
   
 
 
-<h1 id="log-plugin">Log Plugin</h1>
-<p>The log plugin allows you to add custom logging messages to your test suites for debugging, monitoring, and progress tracking. Log messages appear in the CLI output during test execution.</p>
-<h2 id="configuration">Configuration</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Your</span><span class="nv"> </span><span class="s">log</span><span class="nv"> </span><span class="s">message</span><span class="nv"> </span><span class="s">here&quot;</span>
+<h1 id="managing-delays-in-http-test-suites">Managing Delays in HTTP Test Suites</h1>
+<p>Most real-world APIs need a short breather between operations. Rocketship’s <code>delay</code> plugin gives you deterministic pauses so eventual consistency and background work do not break your flows.</p>
+<h2 id="delay-plugin-basics">Delay Plugin Basics</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Wait</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">system</span><span class="nv"> </span><span class="s">processing&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;delay&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">duration</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>
 </code></pre></div>
-<h2 id="basic-usage">Basic Usage</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Basic Logging Example</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">tests</span><span class="p">:</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test with logging</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Starting</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">execution&quot;</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://httpbin.org/get&quot;</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;HTTP</span><span class="nv"> </span><span class="s">request</span><span class="nv"> </span><span class="s">completed&quot;</span>
-</code></pre></div>
-<h2 id="variable-support">Variable Support</h2>
-<p>The log plugin supports all variable types including configuration variables, environment variables, and runtime variables:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Logging with Variables</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">session</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;test-session-123&quot;</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">tests</span><span class="p">:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Variable logging example</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Starting</span><span class="nv"> </span><span class="s">test</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">session:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.vars.session</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://httpbin.org/get&quot;</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">          </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GET&quot;</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="nt">save</span><span class="p">:</span>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;response_data&quot;</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">            </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.response.json</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;User</span><span class="nv"> </span><span class="s">agent:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.runtime.response_data.headers.User-Agent</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
-<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
-<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
-<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">          </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Test</span><span class="nv"> </span><span class="s">running</span><span class="nv"> </span><span class="s">on:</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.HOSTNAME</span><span class="nv"> </span><span class="s">}}&quot;</span>
-</code></pre></div>
-<h2 id="example-output">Example Output</h2>
-<p>When running tests:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-log/rocketship.yaml
-</code></pre></div>
-<p>You'll see log messages in the output:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>🚀 Starting user-service tests in staging environment
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Running on user&#39;s machine at /home/user
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Created test data with ID: test_1234567890, Status: active
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>⚠️  Warning: This is a simulated warning during testing
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>✅ Test completed successfully for user-service
-</code></pre></div></p>
-<h2 id="use-cases">Use Cases</h2>
 <ul>
-<li><strong>Progress Tracking</strong>: Log milestones in long-running tests</li>
-<li><strong>Debug Information</strong>: Output variable values and intermediate results</li>
-<li><strong>Test Documentation</strong>: Add context about what each step is doing</li>
-<li><strong>Monitoring</strong>: Track important events during test execution</li>
+<li><code>duration</code> accepts Go-style intervals (<code>500ms</code>, <code>2s</code>, <code>1m</code>).</li>
+<li>Combine multiple delays with different values to smooth out spikes or let async jobs finish.</li>
 </ul>
-<p>Log messages always appear in the CLI output regardless of the logging level, making them perfect for providing real-time feedback during test execution.</p>
+<h2 id="where-delays-fit-in-the-request-chaining-example">Where Delays Fit in the Request-Chaining Example</h2>
+<p>The <a href="../../http/request-chaining/">HTTP Request Chaining</a> suite pauses twice:</p>
+<ol>
+<li><strong>After creating the first car</strong> – a one-second delay so the remote service persists state before the next POST.</li>
+<li><strong>Before reading aggregated data</strong> – a shorter pause ensures both creations are visible when the GET call runs.</li>
+</ol>
+<p>Feel free to tweak the durations and observe how the tryme service responds. When tests run inside the Docker stack, a bit of extra buffer keeps shared infrastructure happy.</p>
+<h2 id="best-practices">Best Practices</h2>
+<ul>
+<li>Prefer the shortest delay that stabilises the external dependency.</li>
+<li>Use descriptive step names (<code>"Wait for search index"</code>) so reviewers know why the pause exists.</li>
+<li>Keep delays close to the operations they protect.</li>
+<li>Combine with assertions that notice stale state; if the API is still catching up, consider retry policies.</li>
+</ul>
+<h2 id="related-reading">Related Reading</h2>
+<ul>
+<li><a href="../../http/request-chaining/">HTTP Request Chaining</a> – full end-to-end workflow using saved state and cleanup steps.</li>
+<li><a href="../../http/openapi-validation/">Contract Validation</a> – ensure responses conform to the OpenAPI contract even after delayed operations.</li>
+</ul>
 
 
 
@@ -2244,10 +2231,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
       
     
   </body>
