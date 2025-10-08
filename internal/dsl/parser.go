@@ -17,7 +17,9 @@ type RocketshipConfig struct {
 	Description string                 `json:"description" yaml:"description"`
 	Vars        map[string]interface{} `json:"vars" yaml:"vars,omitempty"`
 	OpenAPI     *OpenAPISuiteConfig    `json:"openapi" yaml:"openapi,omitempty"`
+	Init        []Step                 `json:"init" yaml:"init,omitempty"`
 	Tests       []Test                 `json:"tests" yaml:"tests"`
+	Cleanup     *CleanupSpec           `json:"cleanup" yaml:"cleanup,omitempty"`
 }
 
 // OpenAPISuiteConfig represents OpenAPI settings applied to all HTTP steps unless overridden per step
@@ -30,8 +32,10 @@ type OpenAPISuiteConfig struct {
 }
 
 type Test struct {
-	Name  string `json:"name" yaml:"name"`
-	Steps []Step `json:"steps" yaml:"steps"`
+	Name    string       `json:"name" yaml:"name"`
+	Init    []Step       `json:"init" yaml:"init,omitempty"`
+	Steps   []Step       `json:"steps" yaml:"steps"`
+	Cleanup *CleanupSpec `json:"cleanup" yaml:"cleanup,omitempty"`
 }
 
 type Step struct {
@@ -41,6 +45,11 @@ type Step struct {
 	Assertions []map[string]interface{} `json:"assertions" yaml:"assertions"`
 	Save       []map[string]interface{} `json:"save" yaml:"save,omitempty"`
 	Retry      *RetryPolicy             `json:"retry" yaml:"retry,omitempty"`
+}
+
+type CleanupSpec struct {
+	Always    []Step `json:"always" yaml:"always,omitempty"`
+	OnFailure []Step `json:"on_failure" yaml:"on_failure,omitempty"`
 }
 
 type RetryPolicy struct {

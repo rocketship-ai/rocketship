@@ -11,6 +11,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/embedded"
+	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"go.temporal.io/sdk/client"
 )
 
@@ -50,12 +51,15 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		"branch", runContext.Branch)
 
 	runInfo := &RunInfo{
-		ID:        runID,
-		Name:      run.Name,
-		Status:    "PENDING",
-		StartedAt: time.Now(),
-		Tests:     make(map[string]*TestInfo),
-		Context:   runContext,
+		ID:           runID,
+		Name:         run.Name,
+		Status:       "PENDING",
+		StartedAt:    time.Now(),
+		Tests:        make(map[string]*TestInfo),
+		Context:      runContext,
+		SuiteCleanup: run.Cleanup,
+		Vars:         cloneInterfaceMap(run.Vars),
+		SuiteOpenAPI: run.OpenAPI,
 		Logs: []LogLine{
 			{
 				Msg:   fmt.Sprintf("Starting test run \"%s\"... 🚀 [%s/%s]", run.Name, runContext.ProjectID, runContext.Source),
@@ -63,6 +67,38 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 				Bold:  true,
 			},
 		},
+	}
+
+	e.mu.Lock()
+	e.runs[runID] = runInfo
+	e.mu.Unlock()
+
+	var suiteGlobals map[string]string
+	if len(run.Init) > 0 {
+		e.addLog(runID, "Running suite init...", "n/a", false)
+		initGlobals, initErr := e.runSuiteInitWorkflow(ctx, runID, run.Name, run.Init, runInfo.Vars, run.OpenAPI)
+		if initErr != nil {
+			e.handleSuiteInitFailure(runID, runInfo, initErr)
+			return &generated.CreateRunResponse{RunId: runID}, nil
+		}
+
+		suiteGlobals = initGlobals
+
+		e.mu.Lock()
+		runInfo.SuiteGlobals = cloneStringMap(suiteGlobals)
+		runInfo.SuiteInitCompleted = true
+		e.mu.Unlock()
+
+		e.addLog(runID, "Suite init completed", "green", true)
+	} else {
+		e.mu.Lock()
+		runInfo.SuiteInitCompleted = true
+		e.mu.Unlock()
+	}
+
+	// Ensure suiteSaved is non-nil when passing to workflows
+	if suiteGlobals == nil {
+		suiteGlobals = make(map[string]string)
 	}
 
 	for _, test := range run.Tests {
@@ -90,9 +126,12 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			"suite_name", run.Name,
 			"source", runContext.Source)
 
-		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, run.Vars, runID, run.OpenAPI)
+		suiteGlobalsCopy := cloneStringMap(suiteGlobals)
+		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, runInfo.Vars, runID, run.OpenAPI, suiteGlobalsCopy)
 		if err != nil {
 			log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
+			e.addLog(runID, fmt.Sprintf("Failed to start test \"%s\": %v", test.Name, err), "red", true)
+			e.triggerSuiteCleanup(runID, true)
 			return nil, fmt.Errorf("failed to start workflow: %w", err)
 		}
 
@@ -108,11 +147,108 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		go e.monitorWorkflow(runID, execution.GetID(), execution.GetRunID())
 	}
 
+	return &generated.CreateRunResponse{RunId: runID}, nil
+}
+
+func (e *Engine) runSuiteInitWorkflow(ctx context.Context, runID, runName string, initSteps []dsl.Step, vars map[string]interface{}, suiteOpenAPI *dsl.OpenAPISuiteConfig) (map[string]string, error) {
+	if len(initSteps) == 0 {
+		return make(map[string]string), nil
+	}
+
+	suiteTest := dsl.Test{
+		Name:  fmt.Sprintf("%s::suite-init", runName),
+		Init:  initSteps,
+		Steps: []dsl.Step{},
+	}
+
+	workflowOptions := client.StartWorkflowOptions{
+		ID:        fmt.Sprintf("%s_suite_init", runID),
+		TaskQueue: "test-workflows",
+	}
+
+	execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", suiteTest, vars, runID, suiteOpenAPI, map[string]string(nil))
+	if err != nil {
+		return nil, err
+	}
+
+	var state map[string]string
+	if err := execution.Get(ctx, &state); err != nil {
+		return nil, err
+	}
+
+	return extractSavedValues(state), nil
+}
+
+func (e *Engine) handleSuiteInitFailure(runID string, runInfo *RunInfo, initErr error) {
+	log.Printf("[ERROR] Suite init failed for run %s: %v", runID, initErr)
+
 	e.mu.Lock()
-	e.runs[runID] = runInfo
+	runInfo.Status = "FAILED"
+	runInfo.SuiteInitFailed = true
+	runInfo.EndedAt = time.Now()
 	e.mu.Unlock()
 
-	return &generated.CreateRunResponse{RunId: runID}, nil
+	e.addLog(runID, fmt.Sprintf("Suite init failed: %v", initErr), "red", true)
+	e.addLog(runID, "Skipping all tests because suite init failed.", "red", true)
+	e.addLog(runID, fmt.Sprintf("Test run: \"%s\" ended without executing any tests.", runInfo.Name), "n/a", true)
+
+	e.triggerSuiteCleanup(runID, true)
+}
+
+func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
+	e.mu.Lock()
+	runInfo, exists := e.runs[runID]
+	if !exists {
+		e.mu.Unlock()
+		return
+	}
+
+	if runInfo.SuiteCleanup == nil || runInfo.SuiteCleanupRan {
+		e.mu.Unlock()
+		return
+	}
+
+	runInfo.SuiteCleanupRan = true
+	cleanupSpec := runInfo.SuiteCleanup
+	varsCopy := cloneInterfaceMap(runInfo.Vars)
+	suiteGlobalsCopy := cloneStringMap(runInfo.SuiteGlobals)
+	suiteOpenAPI := runInfo.SuiteOpenAPI
+	e.mu.Unlock()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
+		defer cancel()
+
+		options := client.StartWorkflowOptions{
+			ID:        fmt.Sprintf("%s_suite_cleanup", runID),
+			TaskQueue: "test-workflows",
+		}
+
+		params := interpreter.SuiteCleanupParams{
+			RunID:          runID,
+			TestName:       "suite-cleanup",
+			Cleanup:        cleanupSpec,
+			Vars:           varsCopy,
+			SuiteOpenAPI:   suiteOpenAPI,
+			SuiteGlobals:   suiteGlobalsCopy,
+			TreatAsFailure: hasFailure,
+		}
+
+		execution, err := e.temporal.ExecuteWorkflow(ctx, options, "SuiteCleanupWorkflow", params)
+		if err != nil {
+			log.Printf("[ERROR] Failed to start suite cleanup workflow for run %s: %v", runID, err)
+			e.addLog(runID, fmt.Sprintf("Failed to start suite cleanup: %v", err), "red", true)
+			return
+		}
+
+		if err := execution.Get(ctx, nil); err != nil {
+			log.Printf("[ERROR] Suite cleanup workflow failed for run %s: %v", runID, err)
+			e.addLog(runID, fmt.Sprintf("Suite cleanup workflow failed: %v", err), "red", true)
+			return
+		}
+
+		e.addLog(runID, "Suite cleanup completed", "green", true)
+	}()
 }
 
 func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.Engine_StreamLogsServer) error {

@@ -10,11 +10,16 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface{}, runID string, suiteOpenAPI *dsl.OpenAPISuiteConfig) error {
+func TestWorkflow(
+	ctx workflow.Context,
+	test dsl.Test,
+	vars map[string]interface{},
+	runID string,
+	suiteOpenAPI *dsl.OpenAPISuiteConfig,
+	suiteGlobals map[string]string,
+) (map[string]string, error) {
 	logger := workflow.GetLogger(ctx)
 
-	// Set base timeout for non-plugin activities (LogForwarderActivity, etc.)
-	// Plugin activities will override this with step-specific options in executePlugin
 	baseAO := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30,
 		RetryPolicy: &temporal.RetryPolicy{
@@ -23,40 +28,245 @@ func TestWorkflow(ctx workflow.Context, test dsl.Test, vars map[string]interface
 	}
 	ctx = workflow.WithActivityOptions(ctx, baseAO)
 
-	// Initialize workflow state
 	state := make(map[string]string)
 	logger.Info("Initialized workflow state", "state", state)
 
-	for i, step := range test.Steps {
-		logger.Info(fmt.Sprintf("Starting step %d: %q", i, step.Name))
-		logger.Info(fmt.Sprintf("State before step %d: %v", i, state))
+	// Clone vars to avoid mutating shared maps and inject suite-wide saved values
+	runtimeVars := cloneVars(vars)
+	injectSuiteGlobals(state, suiteGlobals)
 
-		// Send step start log to engine
-		sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Starting step: %s", step.Name), "n/a", false)
+	var primaryErr error
 
-		// Handle delay plugin with workflow sleep (special case)
-		if step.Plugin == "delay" {
-			if err := handleDelayStep(ctx, step, test.Name, runID); err != nil {
-				// Send error log to engine
-				sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Step failed: %v", err), "red", true)
-				return fmt.Errorf("step %q: %w", step.Name, err)
-			}
-		} else {
-			// Execute plugin through registry
-			if err := executePlugin(ctx, step, state, vars, runID, test.Name, suiteOpenAPI); err != nil {
-				// Send error log to engine
-				sendStepLog(ctx, runID, test.Name, step.Name, fmt.Sprintf("Step failed: %v", err), "red", true)
-				return fmt.Errorf("step %d: %w", i, err)
-			}
-		}
-
-		// Send step success log to engine
-		sendStepLog(ctx, runID, test.Name, step.Name, "Step completed successfully", "green", false)
-		logger.Info(fmt.Sprintf("Step %q PASSED", step.Name))
-		logger.Info(fmt.Sprintf("State after step %d: %v", i, state))
+	if err := runStepSequence(ctx, runID, test.Name, phaseInit, test.Init, state, runtimeVars, suiteOpenAPI, nil, true); err != nil {
+		primaryErr = err
 	}
 
+	if primaryErr == nil {
+		if err := runStepSequence(ctx, runID, test.Name, phaseMain, test.Steps, state, runtimeVars, suiteOpenAPI, nil, true); err != nil {
+			primaryErr = err
+		}
+	}
+
+	testFailed := primaryErr != nil
+
+	if err := runCleanupSequences(ctx, baseAO, runID, test.Name, test.Cleanup, state, runtimeVars, suiteOpenAPI, testFailed); err != nil {
+		logger.Warn("Cleanup sequence reported errors", "error", err)
+	}
+
+	if primaryErr != nil {
+		return state, primaryErr
+	}
+
+	return state, nil
+}
+
+type stepPhase string
+
+const (
+	phaseMain           stepPhase = "main"
+	phaseInit           stepPhase = "init"
+	phaseCleanupAlways  stepPhase = "cleanup_always"
+	phaseCleanupFailure stepPhase = "cleanup_on_failure"
+)
+
+func (p stepPhase) displayName() string {
+	switch p {
+	case phaseInit:
+		return "init step"
+	case phaseCleanupAlways:
+		return "cleanup step"
+	case phaseCleanupFailure:
+		return "cleanup (on_failure) step"
+	default:
+		return "step"
+	}
+}
+
+func (p stepPhase) startMessage(stepName string) string {
+	if p == phaseMain {
+		return fmt.Sprintf("Starting step: %s", stepName)
+	}
+	return fmt.Sprintf("Starting %s: %s", p.displayName(), stepName)
+}
+
+func (p stepPhase) successMessage() string {
+	switch p {
+	case phaseInit:
+		return "Init step completed successfully"
+	case phaseCleanupAlways:
+		return "Cleanup step completed successfully"
+	case phaseCleanupFailure:
+		return "Cleanup (on_failure) step completed successfully"
+	default:
+		return "Step completed successfully"
+	}
+}
+
+func (p stepPhase) failureMessage(err error) string {
+	switch p {
+	case phaseInit:
+		return fmt.Sprintf("Init step failed: %v", err)
+	case phaseCleanupAlways:
+		return fmt.Sprintf("Cleanup step failed: %v", err)
+	case phaseCleanupFailure:
+		return fmt.Sprintf("Cleanup (on_failure) step failed: %v", err)
+	default:
+		return fmt.Sprintf("Step failed: %v", err)
+	}
+}
+
+func (p stepPhase) wrapError(idx int, name string, err error) error {
+	switch p {
+	case phaseInit:
+		return fmt.Errorf("init step %q: %w", name, err)
+	case phaseCleanupAlways, phaseCleanupFailure:
+		return fmt.Errorf("cleanup step %q: %w", name, err)
+	default:
+		return fmt.Errorf("step %d: %w", idx, err)
+	}
+}
+
+type executionOptions struct {
+	ActivityTimeout time.Duration
+	RetryPolicy     *temporal.RetryPolicy
+}
+
+func cloneVars(source map[string]interface{}) map[string]interface{} {
+	if len(source) == 0 {
+		return make(map[string]interface{})
+	}
+
+	cloned := make(map[string]interface{}, len(source))
+	keys := workflow.DeterministicKeys(source)
+	for _, k := range keys {
+		cloned[k] = source[k]
+	}
+	return cloned
+}
+
+func injectSuiteGlobals(state map[string]string, suiteGlobals map[string]string) {
+	if len(suiteGlobals) == 0 {
+		return
+	}
+
+	keys := workflow.DeterministicKeys(suiteGlobals)
+	for _, key := range keys {
+		state[key] = suiteGlobals[key]
+	}
+}
+
+func runStepSequence(
+	ctx workflow.Context,
+	runID string,
+	testName string,
+	phase stepPhase,
+	steps []dsl.Step,
+	state map[string]string,
+	vars map[string]interface{},
+	suiteOpenAPI *dsl.OpenAPISuiteConfig,
+	opts *executionOptions,
+	stopOnError bool,
+) error {
+	if len(steps) == 0 {
+		return nil
+	}
+
+	var firstErr error
+	for idx, step := range steps {
+		if err := executeStep(ctx, runID, testName, phase, idx, step, state, vars, suiteOpenAPI, opts); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			if stopOnError {
+				return firstErr
+			}
+		}
+	}
+
+	return firstErr
+}
+
+func executeStep(
+	ctx workflow.Context,
+	runID string,
+	testName string,
+	phase stepPhase,
+	index int,
+	step dsl.Step,
+	state map[string]string,
+	vars map[string]interface{},
+	suiteOpenAPI *dsl.OpenAPISuiteConfig,
+	opts *executionOptions,
+) error {
+	logger := workflow.GetLogger(ctx)
+
+	sendStepLog(ctx, runID, testName, step.Name, phase.startMessage(step.Name), "n/a", false)
+
+	var err error
+	if step.Plugin == "delay" {
+		err = handleDelayStep(ctx, step, testName, runID)
+	} else {
+		err = executePlugin(ctx, step, state, vars, runID, testName, suiteOpenAPI, opts)
+	}
+
+	if err != nil {
+		sendStepLog(ctx, runID, testName, step.Name, phase.failureMessage(err), "red", true)
+		logger.Error("Step execution failed", "phase", string(phase), "step", step.Name, "error", err)
+		return phase.wrapError(index, step.Name, err)
+	}
+
+	sendStepLog(ctx, runID, testName, step.Name, phase.successMessage(), "green", false)
+	logger.Info("Step completed successfully", "phase", string(phase), "step", step.Name)
 	return nil
+}
+
+func runCleanupSequences(
+	ctx workflow.Context,
+	baseAO workflow.ActivityOptions,
+	runID string,
+	testName string,
+	cleanup *dsl.CleanupSpec,
+	state map[string]string,
+	vars map[string]interface{},
+	suiteOpenAPI *dsl.OpenAPISuiteConfig,
+	testFailed bool,
+) error {
+	if cleanup == nil {
+		return nil
+	}
+
+	logger := workflow.GetLogger(ctx)
+	disconnectedCtx, _ := workflow.NewDisconnectedContext(ctx)
+	disconnected := workflow.WithActivityOptions(disconnectedCtx, baseAO)
+
+	opts := &executionOptions{
+		ActivityTimeout: 10 * time.Minute,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
+	}
+
+	var firstErr error
+
+	if testFailed && len(cleanup.OnFailure) > 0 {
+		if err := runStepSequence(disconnected, runID, testName, phaseCleanupFailure, cleanup.OnFailure, state, vars, suiteOpenAPI, opts, false); err != nil {
+			logger.Warn("Cleanup on_failure sequence encountered errors", "error", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+
+	if len(cleanup.Always) > 0 {
+		if err := runStepSequence(disconnected, runID, testName, phaseCleanupAlways, cleanup.Always, state, vars, suiteOpenAPI, opts, false); err != nil {
+			logger.Warn("Cleanup always sequence encountered errors", "error", err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+
+	return firstErr
 }
 
 func handleDelayStep(ctx workflow.Context, step dsl.Step, testName, runID string) error {
@@ -77,8 +287,50 @@ func handleDelayStep(ctx workflow.Context, step dsl.Step, testName, runID string
 	return workflow.Sleep(ctx, duration)
 }
 
+type SuiteCleanupParams struct {
+	RunID          string                  `json:"run_id"`
+	TestName       string                  `json:"test_name"`
+	Cleanup        *dsl.CleanupSpec        `json:"cleanup"`
+	Vars           map[string]interface{}  `json:"vars"`
+	SuiteOpenAPI   *dsl.OpenAPISuiteConfig `json:"suite_openapi"`
+	SuiteGlobals   map[string]string       `json:"suite_globals"`
+	TreatAsFailure bool                    `json:"treat_as_failure"`
+}
+
+func SuiteCleanupWorkflow(ctx workflow.Context, params SuiteCleanupParams) error {
+	logger := workflow.GetLogger(ctx)
+
+	baseAO := workflow.ActivityOptions{
+		StartToCloseTimeout: time.Minute * 30,
+		RetryPolicy: &temporal.RetryPolicy{
+			MaximumAttempts: 1,
+		},
+	}
+	ctx = workflow.WithActivityOptions(ctx, baseAO)
+
+	state := make(map[string]string)
+	runtimeVars := cloneVars(params.Vars)
+	injectSuiteGlobals(state, params.SuiteGlobals)
+
+	if params.Cleanup == nil {
+		logger.Info("No suite cleanup configured, skipping")
+		return nil
+	}
+
+	testName := params.TestName
+	if testName == "" {
+		testName = "suite-cleanup"
+	}
+
+	if err := runCleanupSequences(ctx, baseAO, params.RunID, testName, params.Cleanup, state, runtimeVars, params.SuiteOpenAPI, params.TreatAsFailure); err != nil {
+		logger.Warn("Suite cleanup encountered errors", "error", err)
+	}
+
+	return nil
+}
+
 // executePlugin executes any registered plugin through the plugin registry
-func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string, suiteOpenAPI *dsl.OpenAPISuiteConfig) error {
+func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string, suiteOpenAPI *dsl.OpenAPISuiteConfig, opts *executionOptions) error {
 	logger := workflow.GetLogger(ctx)
 
 	// Check if plugin is registered
@@ -132,9 +384,17 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 	}
 
 	// Create step-specific activity options with retry policy
+	retryPolicy := buildRetryPolicy(step.Retry)
+	if opts != nil && opts.RetryPolicy != nil {
+		retryPolicy = opts.RetryPolicy
+	}
+
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 30,
-		RetryPolicy:         buildRetryPolicy(step.Retry),
+		RetryPolicy:         retryPolicy,
+	}
+	if opts != nil && opts.ActivityTimeout > 0 {
+		ao.StartToCloseTimeout = opts.ActivityTimeout
 	}
 	stepCtx := workflow.WithActivityOptions(ctx, ao)
 
@@ -153,7 +413,8 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 			logger.Info(fmt.Sprintf("Saved values from %s plugin: %v", step.Plugin, savedValues))
 			keys := workflow.DeterministicKeys(savedValues)
 			for _, key := range keys {
-				state[key] = savedValues[key]
+				value := savedValues[key]
+				state[key] = value
 				logger.Info(fmt.Sprintf("Updated state[%s] = %s", key, state[key]))
 			}
 		}

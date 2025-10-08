@@ -52,6 +52,7 @@ func main() {
 
 	logger.Debug("registering workflow and plugins")
 	w.RegisterWorkflow(interpreter.TestWorkflow)
+	w.RegisterWorkflow(interpreter.SuiteCleanupWorkflow)
 	w.RegisterActivity(interpreter.LogForwarderActivity)
 
 	plugins.RegisterAllWithTemporal(w)

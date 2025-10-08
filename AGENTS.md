@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents (including this Codex CLI assist
 
 > **Versioning note:** Rocketship is still pre-1.0. There is **no backwards-compatibility requirement** for any interface, schema, or behaviour. Optimise for the current epic even if it means breaking past behaviour; do not preserve legacy code paths for compatibility unless the user explicitly asks.
 
-## Rocketship Cloud v1 Snapshot (for agents)
+## Rocketship Cloud v1 Snapshot
 
 - Product focus: hosted cloud with GitHub SSO (device flow for CLI, OAuth for web) backed by our auth-broker that mints Rocketship JWTs. Engine + worker still run tests via Temporal.
 - Tenancy: **Org → Project**. Projects reference repo URL, default branch, and `path_scope` globs for mono-repo isolation. No “workspace” layer.
@@ -20,7 +20,7 @@ Rocketship is an open-source testing framework for browser and API testing that 
 
 There are 3 "server" components that make up the Rocketship system: Temporal, Engine, and Worker. The CLI is meant to communicate with the engine. There are three ways to run Rocketship:
 
-1. **Minikube stack** (RECOMMENDED FOR AGENTS): `scripts/install-minikube.sh` provisions Temporal + Rocketship inside an isolated cluster per branch.
+1. **Minikube stack**: `scripts/install-minikube.sh` provisions Temporal + Rocketship inside an isolated cluster per branch.
 2. **Self-hosted cluster**: Deploy the Helm charts to your own Kubernetes environment and connect the CLI remotely.
 3. **Local processes**: Use `rocketship start server` / `rocketship run -af` for quick experiments without Kubernetes.
 
@@ -272,8 +272,6 @@ minikube delete -p rocketship
 Always include a unique `X-Test-Session` header when calling shared services like `https://tryme.rocketship.sh` to avoid cross-test contamination.
 
 ## Running Tests (Legacy Local Mode)
-
-**⚠️ CODING AGENTS: Use the Docker environment above instead of these local commands.**
 
 ```bash
 rocketship run -af test.yaml    # Auto-start local engine, run tests, auto-stop engine

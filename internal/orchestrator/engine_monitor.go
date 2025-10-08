@@ -112,6 +112,15 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		return
 	}
 
+	hasFailure := counts.Failed > 0 || counts.TimedOut > 0
+	e.mu.RLock()
+	if runInfo, exists := e.runs[runID]; exists && runInfo.SuiteInitFailed {
+		hasFailure = true
+	}
+	e.mu.RUnlock()
+
+	e.triggerSuiteCleanup(runID, hasFailure)
+
 	e.mu.Lock()
 	runInfo, exists := e.runs[runID]
 	if !exists {

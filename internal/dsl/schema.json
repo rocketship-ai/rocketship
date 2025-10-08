@@ -3,7 +3,10 @@
   "title": "Rocketship Test Suite Schema",
   "description": "Schema for Rocketship test suite definition files",
   "type": "object",
-  "required": ["name", "tests"],
+  "required": [
+    "name",
+    "tests"
+  ],
   "properties": {
     "name": {
       "type": "string",
@@ -43,7 +46,16 @@
           "description": "Duration (e.g. 30m, 1h) before a cached spec is automatically reloaded"
         }
       },
-      "required": ["spec"]
+      "required": [
+        "spec"
+      ]
+    },
+    "init": {
+      "type": "array",
+      "description": "Suite-level initialization steps executed before any tests run",
+      "items": {
+        "$ref": "#/definitions/step"
+      }
     },
     "tests": {
       "type": "array",
@@ -51,788 +63,1148 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["name", "steps"],
+        "required": [
+          "name",
+          "steps"
+        ],
         "properties": {
           "name": {
             "type": "string",
             "description": "Name of the test case"
+          },
+          "init": {
+            "type": "array",
+            "description": "Test-level initialization steps executed before the test steps",
+            "items": {
+              "$ref": "#/definitions/step"
+            }
           },
           "steps": {
             "type": "array",
             "description": "Array of test steps to execute",
             "minItems": 1,
             "items": {
-              "type": "object",
-              "required": ["name", "plugin", "config"],
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "description": "Name of the test step"
-                },
-                "plugin": {
-                  "type": "string",
-                  "description": "Plugin to use for this step",
-                  "enum": ["http", "delay", "script", "sql", "log", "agent", "browser", "supabase"]
-                },
-                "config": {
-                  "type": "object",
-                  "description": "Configuration for the plugin"
-                },
-                "assertions": {
-                  "type": "array",
-                  "description": "Assertions to validate the response",
-                  "items": {
-                    "type": "object",
-                    "required": ["type", "expected"],
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "description": "Type of assertion",
-                        "enum": ["status_code", "json_path", "header", "row_count", "query_count", "success_count", "column_value", "supabase_count", "supabase_error"]
-                      },
-                      "expected": {
-                        "description": "Expected value for the assertion"
-                      },
-                      "path": {
-                        "type": "string",
-                        "description": "JSON path for json_path assertion type"
-                      },
-                      "name": {
-                        "type": "string",
-                        "description": "Header name for header assertion type"
-                      },
-                      "query_index": {
-                        "type": "integer",
-                        "description": "Index of query to check (for SQL assertions)",
-                        "minimum": 0
-                      },
-                      "row_index": {
-                        "type": "integer", 
-                        "description": "Index of row to check (for column_value assertion)",
-                        "minimum": 0
-                      },
-                      "column": {
-                        "type": "string",
-                        "description": "Column name to check (for column_value assertion)"
-                      }
-                    },
-                    "allOf": [
-                      {
-                        "if": {
-                          "properties": { "type": { "enum": ["json_path"] } }
-                        },
-                        "then": {
-                          "required": ["path"]
-                        }
-                      },
-                      {
-                        "if": {
-                          "properties": { "type": { "enum": ["header"] } }
-                        },
-                        "then": {
-                          "required": ["name"]
-                        }
-                      },
-                      {
-                        "if": {
-                          "properties": { "type": { "enum": ["row_count"] } }
-                        },
-                        "then": {
-                          "required": ["query_index"]
-                        }
-                      },
-                      {
-                        "if": {
-                          "properties": { "type": { "enum": ["column_value"] } }
-                        },
-                        "then": {
-                          "required": ["query_index", "row_index", "column"]
-                        }
-                      }
-                    ]
-                  }
-                },
-                "save": {
-                  "type": "array",
-                  "description": "Response values to save for use in later steps",
-                  "items": {
-                    "type": "object",
-                    "required": ["as"],
-                    "properties": {
-                      "json_path": {
-                        "type": "string",
-                        "description": "JSON path to extract from response"
-                      },
-                      "header": {
-                        "type": "string",
-                        "description": "Header name to extract from response"
-                      },
-                      "sql_result": {
-                        "type": "string",
-                        "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
-                      },
-                      "as": {
-                        "type": "string",
-                        "description": "Variable name to save the extracted value as"
-                      },
-                      "required": {
-                        "type": "boolean",
-                        "description": "Whether the value is required (defaults to true)"
-                      }
-                    },
-                    "oneOf": [
-                      {
-                        "required": ["json_path"]
-                      },
-                      {
-                        "required": ["header"]
-                      },
-                      {
-                        "required": ["sql_result"]
-                      }
-                    ]
-                  }
-                },
-                "retry": {
-                  "type": "object",
-                  "description": "Retry policy for the step activity",
+              "$ref": "#/definitions/step"
+            }
+          },
+          "cleanup": {
+            "type": "object",
+            "description": "Test-level cleanup hooks executed after the test completes",
+            "properties": {
+              "always": {
+                "type": "array",
+                "description": "Steps that always run during cleanup",
+                "items": {
+                  "$ref": "#/definitions/step"
+                }
+              },
+              "on_failure": {
+                "type": "array",
+                "description": "Steps that run when the suite or test fails",
+                "items": {
+                  "$ref": "#/definitions/step"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "description": "Suite-level cleanup hooks executed after all tests complete or when initialization fails",
+      "properties": {
+        "always": {
+          "type": "array",
+          "description": "Steps that always run during cleanup",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
+        "on_failure": {
+          "type": "array",
+          "description": "Steps that run when the suite or test fails",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "definitions": {
+    "step": {
+      "type": "object",
+      "required": [
+        "name",
+        "plugin",
+        "config"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the test step"
+        },
+        "plugin": {
+          "type": "string",
+          "description": "Plugin to use for this step",
+          "enum": [
+            "http",
+            "delay",
+            "script",
+            "sql",
+            "log",
+            "agent",
+            "browser",
+            "supabase"
+          ]
+        },
+        "config": {
+          "type": "object",
+          "description": "Configuration for the plugin"
+        },
+        "assertions": {
+          "type": "array",
+          "description": "Assertions to validate the response",
+          "items": {
+            "type": "object",
+            "required": [
+              "type",
+              "expected"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Type of assertion",
+                "enum": [
+                  "status_code",
+                  "json_path",
+                  "header",
+                  "row_count",
+                  "query_count",
+                  "success_count",
+                  "column_value",
+                  "supabase_count",
+                  "supabase_error"
+                ]
+              },
+              "expected": {
+                "description": "Expected value for the assertion"
+              },
+              "path": {
+                "type": "string",
+                "description": "JSON path for json_path assertion type"
+              },
+              "name": {
+                "type": "string",
+                "description": "Header name for header assertion type"
+              },
+              "query_index": {
+                "type": "integer",
+                "description": "Index of query to check (for SQL assertions)",
+                "minimum": 0
+              },
+              "row_index": {
+                "type": "integer",
+                "description": "Index of row to check (for column_value assertion)",
+                "minimum": 0
+              },
+              "column": {
+                "type": "string",
+                "description": "Column name to check (for column_value assertion)"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
                   "properties": {
-                    "initial_interval": {
-                      "type": "string",
-                      "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-                      "description": "Initial retry interval (e.g., '1s', '500ms')"
-                    },
-                    "maximum_interval": {
-                      "type": "string",
-                      "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-                      "description": "Maximum retry interval (e.g., '10s', '1m')"
-                    },
-                    "maximum_attempts": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "description": "Maximum number of retry attempts"
-                    },
-                    "backoff_coefficient": {
-                      "type": "number",
-                      "minimum": 1.0,
-                      "description": "Backoff coefficient for exponential backoff"
-                    },
-                    "non_retryable_errors": {
-                      "type": "array",
-                      "description": "List of error types that should not be retried",
-                      "items": {
-                        "type": "string"
+                    "type": {
+                      "enum": [
+                        "json_path"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "path"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "header"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "name"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "row_count"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "query_index"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "column_value"
+                      ]
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "query_index",
+                    "row_index",
+                    "column"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "save": {
+          "type": "array",
+          "description": "Response values to save for use in later steps",
+          "items": {
+            "type": "object",
+            "required": [
+              "as"
+            ],
+            "properties": {
+              "json_path": {
+                "type": "string",
+                "description": "JSON path to extract from response"
+              },
+              "header": {
+                "type": "string",
+                "description": "Header name to extract from response"
+              },
+              "sql_result": {
+                "type": "string",
+                "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
+              },
+              "as": {
+                "type": "string",
+                "description": "Variable name to save the extracted value as"
+              },
+              "required": {
+                "type": "boolean",
+                "description": "Whether the value is required (defaults to true)"
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "json_path"
+                ]
+              },
+              {
+                "required": [
+                  "header"
+                ]
+              },
+              {
+                "required": [
+                  "sql_result"
+                ]
+              }
+            ]
+          }
+        },
+        "retry": {
+          "type": "object",
+          "description": "Retry policy for the step activity",
+          "properties": {
+            "initial_interval": {
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "description": "Initial retry interval (e.g., '1s', '500ms')"
+            },
+            "maximum_interval": {
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "description": "Maximum retry interval (e.g., '10s', '1m')"
+            },
+            "maximum_attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum number of retry attempts"
+            },
+            "backoff_coefficient": {
+              "type": "number",
+              "minimum": 1.0,
+              "description": "Backoff coefficient for exponential backoff"
+            },
+            "non_retryable_errors": {
+              "type": "array",
+              "description": "List of error types that should not be retried",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "http"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "method",
+                  "url"
+                ],
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "description": "HTTP method to use"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "Request URL"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "description": "HTTP headers to include",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Raw request body (string). If 'form' is also provided, 'form' takes precedence."
+                  },
+                  "form": {
+                    "type": "object",
+                    "description": "Form fields to be url-encoded as application/x-www-form-urlencoded",
+                    "additionalProperties": true
+                  },
+                  "openapi": {
+                    "type": "object",
+                    "description": "Override OpenAPI validation behavior for this HTTP step",
+                    "properties": {
+                      "spec": {
+                        "type": "string",
+                        "description": "Path or URL to an OpenAPI v3 document"
+                      },
+                      "operation_id": {
+                        "type": "string",
+                        "description": "Require the request to match a specific operationId"
+                      },
+                      "version": {
+                        "type": "string",
+                        "description": "Optional spec version identifier used to invalidate cached contracts"
+                      },
+                      "validate_request": {
+                        "type": "boolean",
+                        "description": "Enable request validation for this step"
+                      },
+                      "validate_response": {
+                        "type": "boolean",
+                        "description": "Enable response validation for this step"
                       }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "script"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "language"
+                ],
+                "properties": {
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "javascript",
+                      "shell"
+                    ],
+                    "description": "Script language to use"
+                  },
+                  "script": {
+                    "type": "string",
+                    "description": "Inline script content"
+                  },
+                  "file": {
+                    "type": "string",
+                    "description": "Path to external script file"
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(s|m|h)$",
+                    "description": "Script execution timeout"
+                  }
+                },
+                "oneOf": [
+                  {
+                    "required": [
+                      "script"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "file"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "sql"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "driver",
+                  "dsn"
+                ],
+                "properties": {
+                  "driver": {
+                    "type": "string",
+                    "enum": [
+                      "postgres",
+                      "mysql",
+                      "sqlite",
+                      "sqlserver"
+                    ],
+                    "description": "Database driver to use"
+                  },
+                  "dsn": {
+                    "type": "string",
+                    "description": "Database connection string (Data Source Name)"
+                  },
+                  "commands": {
+                    "type": "array",
+                    "description": "Array of SQL commands to execute",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1
+                  },
+                  "file": {
+                    "type": "string",
+                    "description": "Path to external SQL file"
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(s|m|h)$",
+                    "description": "Query execution timeout"
+                  }
+                },
+                "oneOf": [
+                  {
+                    "required": [
+                      "commands"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "file"
+                    ]
+                  }
+                ]
+              },
+              "save": {
+                "type": "array",
+                "description": "SQL result values to save for use in later steps",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "sql_result"
+                  ],
+                  "properties": {
+                    "sql_result": {
+                      "type": "string",
+                      "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
+                    },
+                    "as": {
+                      "type": "string",
+                      "description": "Variable name to save the extracted value as"
+                    },
+                    "required": {
+                      "type": "boolean",
+                      "description": "Whether the value is required (defaults to true)"
                     }
                   }
                 }
               },
-              "allOf": [
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "http" } }
+              "assertions": {
+                "type": "array",
+                "description": "Assertions to validate SQL execution results",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "expected"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "Type of SQL assertion",
+                      "enum": [
+                        "row_count",
+                        "query_count",
+                        "success_count",
+                        "column_value"
+                      ]
+                    },
+                    "expected": {
+                      "description": "Expected value for the assertion"
+                    },
+                    "query_index": {
+                      "type": "integer",
+                      "description": "Index of query to check (for row_count and column_value assertions)",
+                      "minimum": 0
+                    },
+                    "row_index": {
+                      "type": "integer",
+                      "description": "Index of row to check (for column_value assertion)",
+                      "minimum": 0
+                    },
+                    "column": {
+                      "type": "string",
+                      "description": "Column name to check (for column_value assertion)"
+                    }
                   },
-                  "then": {
-                    "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["method", "url"],
+                  "allOf": [
+                    {
+                      "if": {
                         "properties": {
-                          "method": {
-                            "type": "string",
-                            "description": "HTTP method to use"
-                          },
-                          "url": {
-                            "type": "string",
-                            "description": "Request URL"
-                          },
-                          "headers": {
-                            "type": "object",
-                            "description": "HTTP headers to include",
-                            "additionalProperties": {
-                              "type": "string"
-                            }
-                          },
-                          "body": {
-                            "type": "string",
-                            "description": "Raw request body (string). If 'form' is also provided, 'form' takes precedence."
-                          },
-                          "form": {
-                            "type": "object",
-                            "description": "Form fields to be url-encoded as application/x-www-form-urlencoded",
-                            "additionalProperties": true
-                          },
-                          "openapi": {
-                            "type": "object",
-                            "description": "Override OpenAPI validation behavior for this HTTP step",
-                            "properties": {
-                              "spec": {
-                                "type": "string",
-                                "description": "Path or URL to an OpenAPI v3 document"
-                              },
-                              "operation_id": {
-                                "type": "string",
-                                "description": "Require the request to match a specific operationId"
-                              },
-                              "version": {
-                                "type": "string",
-                                "description": "Optional spec version identifier used to invalidate cached contracts"
-                              },
-                              "validate_request": {
-                                "type": "boolean",
-                                "description": "Enable request validation for this step"
-                              },
-                              "validate_response": {
-                                "type": "boolean",
-                                "description": "Enable response validation for this step"
-                              }
-                            },
-                            "additionalProperties": false
+                          "type": {
+                            "enum": [
+                              "row_count"
+                            ]
                           }
                         }
+                      },
+                      "then": {
+                        "required": [
+                          "query_index"
+                        ]
                       }
-                    }
-                  }
-                },
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "script" } }
-                  },
-                  "then": {
-                    "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["language"],
+                    },
+                    {
+                      "if": {
                         "properties": {
-                          "language": {
-                            "type": "string",
-                            "enum": ["javascript", "shell"],
-                            "description": "Script language to use"
-                          },
-                          "script": {
-                            "type": "string",
-                            "description": "Inline script content"
-                          },
-                          "file": {
-                            "type": "string",
-                            "description": "Path to external script file"
-                          },
-                          "timeout": {
-                            "type": "string",
-                            "pattern": "^[0-9]+(s|m|h)$",
-                            "description": "Script execution timeout"
+                          "type": {
+                            "enum": [
+                              "column_value"
+                            ]
                           }
-                        },
-                        "oneOf": [
-                          { "required": ["script"] },
-                          { "required": ["file"] }
+                        }
+                      },
+                      "then": {
+                        "required": [
+                          "query_index",
+                          "row_index",
+                          "column"
                         ]
                       }
                     }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "log"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "message"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "description": "Message to log (supports template variables)"
                   }
-                },
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "sql" } }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "agent"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "agent",
+                  "prompt"
+                ],
+                "properties": {
+                  "agent": {
+                    "type": "string",
+                    "enum": [
+                      "claude-code"
+                    ],
+                    "description": "Type of coding agent to use"
                   },
-                  "then": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "Prompt to send to the agent (supports template variables)"
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "single",
+                      "continue",
+                      "resume"
+                    ],
+                    "description": "Agent execution mode",
+                    "default": "single"
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "description": "Session ID for resume mode (supports template variables)"
+                  },
+                  "max_turns": {
+                    "type": "integer",
+                    "description": "Maximum number of conversation turns",
+                    "minimum": 1,
+                    "default": 1
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(s|m|h)$",
+                    "description": "Agent execution timeout",
+                    "default": "30s"
+                  },
+                  "system_prompt": {
+                    "type": "string",
+                    "description": "System prompt for the agent"
+                  },
+                  "output_format": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "json",
+                      "streaming-json"
+                    ],
+                    "description": "Output format from the agent",
+                    "default": "json"
+                  },
+                  "continue_recent": {
+                    "type": "boolean",
+                    "description": "Continue the most recent conversation",
+                    "default": false
+                  },
+                  "save_full_response": {
+                    "type": "boolean",
+                    "description": "Save the complete response to context",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "browser"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "task",
+                  "llm"
+                ],
+                "properties": {
+                  "task": {
+                    "type": "string",
+                    "description": "Task description for the browser agent to perform (supports template variables)"
+                  },
+                  "llm": {
+                    "type": "object",
+                    "required": [
+                      "provider",
+                      "model"
+                    ],
                     "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["driver", "dsn"],
-                        "properties": {
-                          "driver": {
-                            "type": "string",
-                            "enum": ["postgres", "mysql", "sqlite", "sqlserver"],
-                            "description": "Database driver to use"
-                          },
-                          "dsn": {
-                            "type": "string",
-                            "description": "Database connection string (Data Source Name)"
-                          },
-                          "commands": {
-                            "type": "array",
-                            "description": "Array of SQL commands to execute",
-                            "items": {
-                              "type": "string"
-                            },
-                            "minItems": 1
-                          },
-                          "file": {
-                            "type": "string",
-                            "description": "Path to external SQL file"
-                          },
-                          "timeout": {
-                            "type": "string",
-                            "pattern": "^[0-9]+(s|m|h)$",
-                            "description": "Query execution timeout"
-                          }
-                        },
-                        "oneOf": [
-                          { "required": ["commands"] },
-                          { "required": ["file"] }
-                        ]
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "openai",
+                          "anthropic"
+                        ],
+                        "description": "LLM provider to use"
                       },
-                      "save": {
-                        "type": "array",
-                        "description": "SQL result values to save for use in later steps",
-                        "items": {
-                          "type": "object",
-                          "required": ["as"],
-                          "properties": {
-                            "sql_result": {
-                              "type": "string",
-                              "description": "Path to extract from SQL result (e.g., '.queries[0].rows[0].id')"
-                            },
-                            "as": {
-                              "type": "string",
-                              "description": "Variable name to save the extracted value as"
-                            },
-                            "required": {
-                              "type": "boolean",
-                              "description": "Whether the value is required (defaults to true)"
-                            }
-                          },
-                          "required": ["sql_result"]
-                        }
+                      "model": {
+                        "type": "string",
+                        "description": "LLM model to use (e.g., gpt-4, claude-3-sonnet)"
                       },
-                      "assertions": {
-                        "type": "array",
-                        "description": "Assertions to validate SQL execution results",
-                        "items": {
-                          "type": "object",
-                          "required": ["type", "expected"],
-                          "properties": {
-                            "type": {
-                              "type": "string",
-                              "description": "Type of SQL assertion",
-                              "enum": ["row_count", "query_count", "success_count", "column_value"]
-                            },
-                            "expected": {
-                              "description": "Expected value for the assertion"
-                            },
-                            "query_index": {
-                              "type": "integer",
-                              "description": "Index of query to check (for row_count and column_value assertions)",
-                              "minimum": 0
-                            },
-                            "row_index": {
-                              "type": "integer", 
-                              "description": "Index of row to check (for column_value assertion)",
-                              "minimum": 0
-                            },
-                            "column": {
-                              "type": "string",
-                              "description": "Column name to check (for column_value assertion)"
-                            }
-                          },
-                          "allOf": [
-                            {
-                              "if": {
-                                "properties": { "type": { "enum": ["row_count"] } }
-                              },
-                              "then": {
-                                "required": ["query_index"]
-                              }
-                            },
-                            {
-                              "if": {
-                                "properties": { "type": { "enum": ["column_value"] } }
-                              },
-                              "then": {
-                                "required": ["query_index", "row_index", "column"]
-                              }
-                            }
-                          ]
+                      "config": {
+                        "type": "object",
+                        "description": "LLM configuration (API keys, etc.)",
+                        "additionalProperties": {
+                          "type": "string"
                         }
                       }
                     }
-                  }
-                },
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "log" } }
                   },
-                  "then": {
-                    "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["message"],
-                        "properties": {
-                          "message": {
-                            "type": "string",
-                            "description": "Message to log (supports template variables)"
-                          }
-                        }
-                      }
+                  "executor_type": {
+                    "type": "string",
+                    "enum": [
+                      "python"
+                    ],
+                    "description": "Browser executor type",
+                    "default": "python"
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(s|m|h)$",
+                    "description": "Browser automation timeout",
+                    "default": "5m"
+                  },
+                  "max_steps": {
+                    "type": "integer",
+                    "description": "Maximum number of browser automation steps",
+                    "minimum": 1,
+                    "default": 50
+                  },
+                  "browser_type": {
+                    "type": "string",
+                    "enum": [
+                      "chromium",
+                      "chrome",
+                      "edge"
+                    ],
+                    "description": "Browser type to use",
+                    "default": "chromium"
+                  },
+                  "headless": {
+                    "type": "boolean",
+                    "description": "Run browser in headless mode",
+                    "default": true
+                  },
+                  "use_vision": {
+                    "type": "boolean",
+                    "description": "Enable visual processing",
+                    "default": true
+                  },
+                  "session_id": {
+                    "type": "string",
+                    "description": "Browser session ID for session persistence (supports template variables)"
+                  },
+                  "save_screenshots": {
+                    "type": "boolean",
+                    "description": "Save screenshots during execution",
+                    "default": false
+                  },
+                  "allowed_domains": {
+                    "type": "array",
+                    "description": "List of allowed domains for browser navigation",
+                    "items": {
+                      "type": "string"
                     }
-                  }
-                },
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "agent" } }
                   },
-                  "then": {
+                  "viewport": {
+                    "type": "object",
+                    "description": "Browser viewport configuration",
                     "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["agent", "prompt"],
-                        "properties": {
-                          "agent": {
-                            "type": "string",
-                            "enum": ["claude-code"],
-                            "description": "Type of coding agent to use"
-                          },
-                          "prompt": {
-                            "type": "string",
-                            "description": "Prompt to send to the agent (supports template variables)"
-                          },
-                          "mode": {
-                            "type": "string",
-                            "enum": ["single", "continue", "resume"],
-                            "description": "Agent execution mode",
-                            "default": "single"
-                          },
-                          "session_id": {
-                            "type": "string",
-                            "description": "Session ID for resume mode (supports template variables)"
-                          },
-                          "max_turns": {
-                            "type": "integer",
-                            "description": "Maximum number of conversation turns",
-                            "minimum": 1,
-                            "default": 1
-                          },
-                          "timeout": {
-                            "type": "string",
-                            "pattern": "^[0-9]+(s|m|h)$",
-                            "description": "Agent execution timeout",
-                            "default": "30s"
-                          },
-                          "system_prompt": {
-                            "type": "string",
-                            "description": "System prompt for the agent"
-                          },
-                          "output_format": {
-                            "type": "string",
-                            "enum": ["text", "json", "streaming-json"],
-                            "description": "Output format from the agent",
-                            "default": "json"
-                          },
-                          "continue_recent": {
-                            "type": "boolean",
-                            "description": "Continue the most recent conversation",
-                            "default": false
-                          },
-                          "save_full_response": {
-                            "type": "boolean",
-                            "description": "Save the complete response to context",
-                            "default": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "browser" } }
-                  },
-                  "then": {
-                    "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["task", "llm"],
-                        "properties": {
-                          "task": {
-                            "type": "string",
-                            "description": "Task description for the browser agent to perform (supports template variables)"
-                          },
-                          "llm": {
-                            "type": "object",
-                            "required": ["provider", "model"],
-                            "properties": {
-                              "provider": {
-                                "type": "string",
-                                "enum": ["openai", "anthropic"],
-                                "description": "LLM provider to use"
-                              },
-                              "model": {
-                                "type": "string",
-                                "description": "LLM model to use (e.g., gpt-4, claude-3-sonnet)"
-                              },
-                              "config": {
-                                "type": "object",
-                                "description": "LLM configuration (API keys, etc.)",
-                                "additionalProperties": {
-                                  "type": "string"
-                                }
-                              }
-                            }
-                          },
-                          "executor_type": {
-                            "type": "string",
-                            "enum": ["python"],
-                            "description": "Browser executor type",
-                            "default": "python"
-                          },
-                          "timeout": {
-                            "type": "string",
-                            "pattern": "^[0-9]+(s|m|h)$",
-                            "description": "Browser automation timeout",
-                            "default": "5m"
-                          },
-                          "max_steps": {
-                            "type": "integer",
-                            "description": "Maximum number of browser automation steps",
-                            "minimum": 1,
-                            "default": 50
-                          },
-                          "browser_type": {
-                            "type": "string",
-                            "enum": ["chromium", "chrome", "edge"],
-                            "description": "Browser type to use",
-                            "default": "chromium"
-                          },
-                          "headless": {
-                            "type": "boolean",
-                            "description": "Run browser in headless mode",
-                            "default": true
-                          },
-                          "use_vision": {
-                            "type": "boolean",
-                            "description": "Enable visual processing",
-                            "default": true
-                          },
-                          "session_id": {
-                            "type": "string",
-                            "description": "Browser session ID for session persistence (supports template variables)"
-                          },
-                          "save_screenshots": {
-                            "type": "boolean",
-                            "description": "Save screenshots during execution",
-                            "default": false
-                          },
-                          "allowed_domains": {
-                            "type": "array",
-                            "description": "List of allowed domains for browser navigation",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "viewport": {
-                            "type": "object",
-                            "description": "Browser viewport configuration",
-                            "properties": {
-                              "width": {
-                                "type": "integer",
-                                "description": "Viewport width in pixels",
-                                "default": 1920
-                              },
-                              "height": {
-                                "type": "integer",
-                                "description": "Viewport height in pixels",
-                                "default": 1080
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  "if": {
-                    "properties": { "plugin": { "const": "supabase" } }
-                  },
-                  "then": {
-                    "properties": {
-                      "config": {
-                        "type": "object",
-                        "required": ["url", "key", "operation"],
-                        "properties": {
-                          "url": {
-                            "type": "string",
-                            "description": "Supabase project URL"
-                          },
-                          "key": {
-                            "type": "string",
-                            "description": "Supabase API key (anon or service key)"
-                          },
-                          "operation": {
-                            "type": "string",
-                            "enum": ["select", "insert", "update", "delete", "rpc", "auth_create_user", "auth_delete_user", "auth_sign_up", "auth_sign_in", "storage_create_bucket", "storage_delete_bucket", "storage_upload", "storage_download", "storage_delete"],
-                            "description": "Supabase operation to perform"
-                          },
-                          "table": {
-                            "type": "string",
-                            "description": "Table name for database operations"
-                          },
-                          "select": {
-                            "type": "object",
-                            "description": "Configuration for select operation",
-                            "properties": {
-                              "columns": {
-                                "type": "array",
-                                "description": "Columns to select",
-                                "items": {"type": "string"},
-                                "default": ["*"]
-                              },
-                              "filters": {
-                                "type": "array",
-                                "description": "Filters to apply",
-                                "items": {
-                                  "type": "object",
-                                  "required": ["column", "operator", "value"],
-                                  "properties": {
-                                    "column": {"type": "string"},
-                                    "operator": {
-                                      "type": "string",
-                                      "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike", "is", "in", "contains", "contained_by", "range_gt", "range_gte", "range_lt", "range_lte"]
-                                    },
-                                    "value": {"description": "Filter value"}
-                                  }
-                                }
-                              },
-                              "order": {
-                                "type": "array",
-                                "description": "Ordering configuration",
-                                "items": {
-                                  "type": "object",
-                                  "required": ["column"],
-                                  "properties": {
-                                    "column": {"type": "string"},
-                                    "ascending": {"type": "boolean", "default": true}
-                                  }
-                                }
-                              },
-                              "limit": {"type": "integer", "minimum": 1},
-                              "offset": {"type": "integer", "minimum": 0},
-                              "count": {
-                                "type": "string",
-                                "enum": ["exact", "planned", "estimated"],
-                                "description": "Count type for query"
-                              }
-                            }
-                          },
-                          "insert": {
-                            "type": "object",
-                            "description": "Configuration for insert operation",
-                            "properties": {
-                              "data": {
-                                "description": "Data to insert (object or array of objects)"
-                              },
-                              "upsert": {
-                                "type": "boolean",
-                                "description": "Use upsert (insert or update)",
-                                "default": false
-                              },
-                              "on_conflict": {
-                                "type": "string",
-                                "description": "Column(s) for conflict resolution"
-                              }
-                            },
-                            "required": ["data"]
-                          },
-                          "update": {
-                            "type": "object",
-                            "description": "Configuration for update operation",
-                            "properties": {
-                              "data": {
-                                "type": "object",
-                                "description": "Data to update"
-                              },
-                              "filters": {
-                                "type": "array",
-                                "description": "Filters to apply for update",
-                                "items": {
-                                  "type": "object",
-                                  "required": ["column", "operator", "value"],
-                                  "properties": {
-                                    "column": {"type": "string"},
-                                    "operator": {"type": "string"},
-                                    "value": {"description": "Filter value"}
-                                  }
-                                }
-                              }
-                            },
-                            "required": ["data"]
-                          },
-                          "delete": {
-                            "type": "object",
-                            "description": "Configuration for delete operation",
-                            "properties": {
-                              "filters": {
-                                "type": "array",
-                                "description": "Filters to apply for delete",
-                                "items": {
-                                  "type": "object",
-                                  "required": ["column", "operator", "value"],
-                                  "properties": {
-                                    "column": {"type": "string"},
-                                    "operator": {"type": "string"},
-                                    "value": {"description": "Filter value"}
-                                  }
-                                }
-                              }
-                            },
-                            "required": ["filters"]
-                          },
-                          "rpc": {
-                            "type": "object",
-                            "description": "Configuration for RPC function call",
-                            "properties": {
-                              "function": {
-                                "type": "string",
-                                "description": "Function name to call"
-                              },
-                              "params": {
-                                "type": "object",
-                                "description": "Function parameters"
-                              }
-                            },
-                            "required": ["function"]
-                          },
-                          "auth": {
-                            "type": "object",
-                            "description": "Configuration for auth operations",
-                            "properties": {
-                              "email": {"type": "string"},
-                              "password": {"type": "string"},
-                              "user_id": {"type": "string"},
-                              "user_metadata": {"type": "object"},
-                              "app_metadata": {"type": "object"}
-                            }
-                          },
-                          "storage": {
-                            "type": "object",
-                            "description": "Configuration for storage operations",
-                            "properties": {
-                              "bucket": {"type": "string"},
-                              "path": {"type": "string"},
-                              "file_content": {"type": "string"},
-                              "file_path": {"type": "string"},
-                              "public": {"type": "boolean", "default": false},
-                              "cache_control": {"type": "string"},
-                              "content_type": {"type": "string"}
-                            }
-                          },
-                          "timeout": {
-                            "type": "string",
-                            "pattern": "^[0-9]+(s|m|h)$",
-                            "description": "Operation timeout",
-                            "default": "30s"
-                          }
-                        }
+                      "width": {
+                        "type": "integer",
+                        "description": "Viewport width in pixels",
+                        "default": 1920
+                      },
+                      "height": {
+                        "type": "integer",
+                        "description": "Viewport height in pixels",
+                        "default": 1080
                       }
                     }
                   }
                 }
-              ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "supabase"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "key",
+                  "operation"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Supabase project URL"
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "Supabase API key (anon or service key)"
+                  },
+                  "operation": {
+                    "type": "string",
+                    "enum": [
+                      "select",
+                      "insert",
+                      "update",
+                      "delete",
+                      "rpc",
+                      "auth_create_user",
+                      "auth_delete_user",
+                      "auth_sign_up",
+                      "auth_sign_in",
+                      "storage_create_bucket",
+                      "storage_delete_bucket",
+                      "storage_upload",
+                      "storage_download",
+                      "storage_delete"
+                    ],
+                    "description": "Supabase operation to perform"
+                  },
+                  "table": {
+                    "type": "string",
+                    "description": "Table name for database operations"
+                  },
+                  "select": {
+                    "type": "object",
+                    "description": "Configuration for select operation",
+                    "properties": {
+                      "columns": {
+                        "type": "array",
+                        "description": "Columns to select",
+                        "items": {
+                          "type": "string"
+                        },
+                        "default": [
+                          "*"
+                        ]
+                      },
+                      "filters": {
+                        "type": "array",
+                        "description": "Filters to apply",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "column",
+                            "operator",
+                            "value"
+                          ],
+                          "properties": {
+                            "column": {
+                              "type": "string"
+                            },
+                            "operator": {
+                              "type": "string",
+                              "enum": [
+                                "eq",
+                                "neq",
+                                "gt",
+                                "gte",
+                                "lt",
+                                "lte",
+                                "like",
+                                "ilike",
+                                "is",
+                                "in",
+                                "contains",
+                                "contained_by",
+                                "range_gt",
+                                "range_gte",
+                                "range_lt",
+                                "range_lte"
+                              ]
+                            },
+                            "value": {
+                              "description": "Filter value"
+                            }
+                          }
+                        }
+                      },
+                      "order": {
+                        "type": "array",
+                        "description": "Ordering configuration",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "column"
+                          ],
+                          "properties": {
+                            "column": {
+                              "type": "string"
+                            },
+                            "ascending": {
+                              "type": "boolean",
+                              "default": true
+                            }
+                          }
+                        }
+                      },
+                      "limit": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "offset": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "string",
+                        "enum": [
+                          "exact",
+                          "planned",
+                          "estimated"
+                        ],
+                        "description": "Count type for query"
+                      }
+                    }
+                  },
+                  "insert": {
+                    "type": "object",
+                    "description": "Configuration for insert operation",
+                    "properties": {
+                      "data": {
+                        "description": "Data to insert (object or array of objects)"
+                      },
+                      "upsert": {
+                        "type": "boolean",
+                        "description": "Use upsert (insert or update)",
+                        "default": false
+                      },
+                      "on_conflict": {
+                        "type": "string",
+                        "description": "Column(s) for conflict resolution"
+                      }
+                    },
+                    "required": [
+                      "data"
+                    ]
+                  },
+                  "update": {
+                    "type": "object",
+                    "description": "Configuration for update operation",
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "description": "Data to update"
+                      },
+                      "filters": {
+                        "type": "array",
+                        "description": "Filters to apply for update",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "column",
+                            "operator",
+                            "value"
+                          ],
+                          "properties": {
+                            "column": {
+                              "type": "string"
+                            },
+                            "operator": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "description": "Filter value"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "required": [
+                      "data"
+                    ]
+                  },
+                  "delete": {
+                    "type": "object",
+                    "description": "Configuration for delete operation",
+                    "properties": {
+                      "filters": {
+                        "type": "array",
+                        "description": "Filters to apply for delete",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "column",
+                            "operator",
+                            "value"
+                          ],
+                          "properties": {
+                            "column": {
+                              "type": "string"
+                            },
+                            "operator": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "description": "Filter value"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "required": [
+                      "filters"
+                    ]
+                  },
+                  "rpc": {
+                    "type": "object",
+                    "description": "Configuration for RPC function call",
+                    "properties": {
+                      "function": {
+                        "type": "string",
+                        "description": "Function name to call"
+                      },
+                      "params": {
+                        "type": "object",
+                        "description": "Function parameters"
+                      }
+                    },
+                    "required": [
+                      "function"
+                    ]
+                  },
+                  "auth": {
+                    "type": "object",
+                    "description": "Configuration for auth operations",
+                    "properties": {
+                      "email": {
+                        "type": "string"
+                      },
+                      "password": {
+                        "type": "string"
+                      },
+                      "user_id": {
+                        "type": "string"
+                      },
+                      "user_metadata": {
+                        "type": "object"
+                      },
+                      "app_metadata": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "storage": {
+                    "type": "object",
+                    "description": "Configuration for storage operations",
+                    "properties": {
+                      "bucket": {
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "file_content": {
+                        "type": "string"
+                      },
+                      "file_path": {
+                        "type": "string"
+                      },
+                      "public": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "cache_control": {
+                        "type": "string"
+                      },
+                      "content_type": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "pattern": "^[0-9]+(s|m|h)$",
+                    "description": "Operation timeout",
+                    "default": "30s"
+                  }
+                }
+              }
             }
           }
         }
-      }
+      ]
     }
   }
 }
