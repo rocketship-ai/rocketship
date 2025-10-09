@@ -39,6 +39,35 @@ Saved values from suite init steps are injected as runtime variables on every te
 
 These values are read-only snapshots; cleanup can rely on them but should not expect later steps to consume data emitted in cleanup.
 
+### Suite Cleanup Timeout
+
+**Important**: Suite cleanup workflows have a **45-minute timeout**. If your cleanup takes longer than 45 minutes, it will be canceled and may leave resources in a partially cleaned-up state.
+
+Best practices for long-running cleanup:
+
+- **Break up long teardowns**: If you have a 30-minute environment teardown script, consider breaking it into smaller, independent steps that can fail gracefully
+- **Use idempotent operations**: Design cleanup steps to be safely re-runnable in case of timeout
+- **Log progress**: Add log steps between long-running operations so you can see how far cleanup progressed
+- **Prioritize critical cleanup**: Put the most important cleanup steps first (e.g., delete databases before deleting logs)
+
+Example with delay steps:
+
+```yaml
+cleanup:
+  always:
+    - name: "Delete database"
+      plugin: supabase
+      config: { action: execute_sql, query: "DROP DATABASE test_db" }
+    - name: "Wait for DB deletion"
+      plugin: delay
+      config: { duration: "5m" }  # This counts toward the 45-minute limit
+    - name: "Delete storage buckets"
+      plugin: script
+      config: { cmd: "./cleanup-storage.sh" }
+```
+
+**What happens on timeout**: The cleanup workflow is canceled, Rocketship logs a warning, and the server continues shutting down. The suite outcome (passed/failed) is not changed by cleanup timeouts.
+
 ## Test Lifecycle
 
 ```yaml
