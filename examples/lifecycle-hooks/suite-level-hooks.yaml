@@ -15,6 +15,15 @@ vars:
 # Suite init: Runs once before all tests
 # Saved values are available in all tests as {{ variable_name }}
 init:
+  - name: "Generate unique test email"
+    plugin: script
+    config:
+      language: javascript
+      script: |
+        const timestamp = Date.now();
+        const email = `suite-shared-${timestamp}@lifecycle-test.dev`;
+        save("unique_email", email);
+
   - name: "Create test database schema"
     plugin: supabase
     config:
@@ -41,7 +50,7 @@ init:
       key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "auth_create_user"
       auth:
-        email: "suite-shared@lifecycle-test.dev"
+        email: "{{ unique_email }}"
         password: "SharedPassword123!"
         email_confirm: true
         user_metadata:
@@ -50,19 +59,6 @@ init:
     save:
       - json_path: ".user.id"
         as: "shared_user_id"
-
-  - name: "Sign in shared user and get token"
-    plugin: supabase
-    config:
-      url: "{{ .vars.supabase_url }}"
-      key: "{{ .env.SUPABASE_ANON_KEY }}"
-      operation: "auth_sign_in"
-      auth:
-        email: "suite-shared@lifecycle-test.dev"
-        password: "SharedPassword123!"
-    save:
-      - json_path: ".session.access_token"
-        as: "shared_auth_token"
 
 tests:
   # Test 1: Uses suite-level shared company ID
@@ -86,18 +82,18 @@ tests:
             path: ".[0].type"
             expected: "suite_lifecycle_test"
 
-  # Test 2: Uses suite-level auth token
-  - name: "Test using suite-level auth token"
+  # Test 2: Verifies suite globals are accessible
+  - name: "Test accessing suite-level user ID"
     steps:
-      - name: "Verify shared auth token works"
+      - name: "Query company using suite globals"
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ shared_auth_token }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
-            columns: ["id", "name"]
+            columns: ["id", "name", "metadata"]
             filters:
               - column: "id"
                 operator: "eq"

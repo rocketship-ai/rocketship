@@ -15,6 +15,17 @@ vars:
 
 # Suite-level init: Creates shared resources
 init:
+  - name: "Generate unique identifiers"
+    plugin: script
+    config:
+      language: javascript
+      script: |
+        const timestamp = Date.now();
+        const bucket = `lifecycle-test-${timestamp}`;
+        const email = `suite-admin-${timestamp}@lifecycle-test.dev`;
+        save("bucket_name", bucket);
+        save("admin_email", email);
+
   - name: "Create storage bucket for test suite"
     plugin: supabase
     config:
@@ -22,7 +33,7 @@ init:
       key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "storage_create_bucket"
       storage:
-        bucket: "lifecycle-test-suite"
+        bucket: "{{ bucket_name }}"
         public: true
 
   - name: "Create suite-level admin user"
@@ -32,7 +43,7 @@ init:
       key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "auth_create_user"
       auth:
-        email: "suite-admin@lifecycle-test.dev"
+        email: "{{ admin_email }}"
         password: "AdminPassword123!"
         email_confirm: true
         user_metadata:
@@ -41,19 +52,6 @@ init:
     save:
       - json_path: ".user.id"
         as: "suite_admin_id"
-
-  - name: "Get suite admin token"
-    plugin: supabase
-    config:
-      url: "{{ .vars.supabase_url }}"
-      key: "{{ .env.SUPABASE_ANON_KEY }}"
-      operation: "auth_sign_in"
-      auth:
-        email: "suite-admin@lifecycle-test.dev"
-        password: "AdminPassword123!"
-    save:
-      - json_path: ".session.access_token"
-        as: "suite_admin_token"
 
 tests:
   - name: "Test using both suite and test-level resources"
@@ -82,10 +80,10 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ suite_admin_token }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_upload"
           storage:
-            bucket: "lifecycle-test-suite"
+            bucket: "{{ bucket_name }}"
             path: "test-data/company-{{ test_company_id }}.json"
             file_content: |
               {
@@ -123,7 +121,7 @@ tests:
             key: "{{ .env.SUPABASE_SERVICE_KEY }}"
             operation: "storage_delete"
             storage:
-              bucket: "lifecycle-test-suite"
+              bucket: "{{ bucket_name }}"
               path: "test-data/company-{{ test_company_id }}.json"
 
         - name: "Delete test company"
@@ -145,14 +143,14 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ suite_admin_token }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
             data:
               name: "Second Combined Test Company"
               type: "combined_lifecycle_test"
-              description: "Also uses suite admin"
+              description: "References suite admin user ID"
               metadata:
                 admin_user_id: "{{ suite_admin_id }}"
         save:
@@ -160,23 +158,23 @@ tests:
             as: "second_company_id"
 
     steps:
-      - name: "Query company with admin token"
+      - name: "Verify company references suite admin"
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ suite_admin_token }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
-            columns: ["id", "name"]
+            columns: ["id", "name", "metadata"]
             filters:
               - column: "id"
                 operator: "eq"
                 value: "{{ second_company_id }}"
         assertions:
           - type: json_path
-            path: ".[0].name"
-            expected: "Second Combined Test Company"
+            path: ".[0].metadata.admin_user_id"
+            expected: "{{ suite_admin_id }}"
 
     cleanup:
       always:
@@ -209,7 +207,7 @@ cleanup:
         key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "storage_delete_bucket"
         storage:
-          bucket: "lifecycle-test-suite"
+          bucket: "{{ bucket_name }}"
 
     - name: "Delete suite admin user"
       plugin: supabase

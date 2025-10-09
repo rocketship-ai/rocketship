@@ -16,6 +16,15 @@ tests:
   - name: "Test with init and cleanup"
     # Test init: Runs before test steps
     init:
+      - name: "Generate unique test email"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            const timestamp = Date.now();
+            const email = `test-user-${timestamp}@lifecycle-test.dev`;
+            save("test_email", email);
+
       - name: "Setup test-specific company"
         plugin: supabase
         config:
@@ -41,7 +50,7 @@ tests:
           key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_create_user"
           auth:
-            email: "test-user@lifecycle-test.dev"
+            email: "{{ test_email }}"
             password: "TestPassword123!"
             email_confirm: true
             user_metadata:
