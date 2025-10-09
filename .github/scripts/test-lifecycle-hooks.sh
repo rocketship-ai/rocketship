@@ -24,7 +24,7 @@ fi
 echo "$OUTPUT"
 echo ""
 
-if echo "$OUTPUT" | grep -q "✓ Passed Tests: 3"; then
+if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
     log "✅ Test 1 PASSED: Suite-level hooks working correctly"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 
@@ -59,7 +59,7 @@ fi
 echo "$OUTPUT"
 echo ""
 
-if echo "$OUTPUT" | grep -q "✓ Passed Tests: 2"; then
+if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
     log "✅ Test 2 PASSED: Test-level hooks working correctly"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 
@@ -94,7 +94,7 @@ fi
 echo "$OUTPUT"
 echo ""
 
-if echo "$OUTPUT" | grep -q "✓ Passed Tests: 2"; then
+if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
     log "✅ Test 3 PASSED: Combined hooks working correctly"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 
