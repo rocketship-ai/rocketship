@@ -19,14 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Engine_CreateRun_FullMethodName     = "/rocketship.v1.Engine/CreateRun"
-	Engine_StreamLogs_FullMethodName    = "/rocketship.v1.Engine/StreamLogs"
-	Engine_AddLog_FullMethodName        = "/rocketship.v1.Engine/AddLog"
-	Engine_ListRuns_FullMethodName      = "/rocketship.v1.Engine/ListRuns"
-	Engine_GetRun_FullMethodName        = "/rocketship.v1.Engine/GetRun"
-	Engine_CancelRun_FullMethodName     = "/rocketship.v1.Engine/CancelRun"
-	Engine_Health_FullMethodName        = "/rocketship.v1.Engine/Health"
-	Engine_GetServerInfo_FullMethodName = "/rocketship.v1.Engine/GetServerInfo"
+	Engine_CreateRun_FullMethodName      = "/rocketship.v1.Engine/CreateRun"
+	Engine_StreamLogs_FullMethodName     = "/rocketship.v1.Engine/StreamLogs"
+	Engine_AddLog_FullMethodName         = "/rocketship.v1.Engine/AddLog"
+	Engine_ListRuns_FullMethodName       = "/rocketship.v1.Engine/ListRuns"
+	Engine_GetRun_FullMethodName         = "/rocketship.v1.Engine/GetRun"
+	Engine_CancelRun_FullMethodName      = "/rocketship.v1.Engine/CancelRun"
+	Engine_Health_FullMethodName         = "/rocketship.v1.Engine/Health"
+	Engine_WaitForCleanup_FullMethodName = "/rocketship.v1.Engine/WaitForCleanup"
+	Engine_GetServerInfo_FullMethodName  = "/rocketship.v1.Engine/GetServerInfo"
 )
 
 // EngineClient is the client API for Engine service.
@@ -40,6 +41,7 @@ type EngineClient interface {
 	GetRun(ctx context.Context, in *GetRunRequest, opts ...grpc.CallOption) (*GetRunResponse, error)
 	CancelRun(ctx context.Context, in *CancelRunRequest, opts ...grpc.CallOption) (*CancelRunResponse, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
+	WaitForCleanup(ctx context.Context, in *WaitForCleanupRequest, opts ...grpc.CallOption) (*WaitForCleanupResponse, error)
 	// Server Discovery
 	GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error)
 }
@@ -131,6 +133,16 @@ func (c *engineClient) Health(ctx context.Context, in *HealthRequest, opts ...gr
 	return out, nil
 }
 
+func (c *engineClient) WaitForCleanup(ctx context.Context, in *WaitForCleanupRequest, opts ...grpc.CallOption) (*WaitForCleanupResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WaitForCleanupResponse)
+	err := c.cc.Invoke(ctx, Engine_WaitForCleanup_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *engineClient) GetServerInfo(ctx context.Context, in *GetServerInfoRequest, opts ...grpc.CallOption) (*GetServerInfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetServerInfoResponse)
@@ -152,6 +164,7 @@ type EngineServer interface {
 	GetRun(context.Context, *GetRunRequest) (*GetRunResponse, error)
 	CancelRun(context.Context, *CancelRunRequest) (*CancelRunResponse, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
+	WaitForCleanup(context.Context, *WaitForCleanupRequest) (*WaitForCleanupResponse, error)
 	// Server Discovery
 	GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error)
 	mustEmbedUnimplementedEngineServer()
@@ -184,6 +197,9 @@ func (UnimplementedEngineServer) CancelRun(context.Context, *CancelRunRequest) (
 }
 func (UnimplementedEngineServer) Health(context.Context, *HealthRequest) (*HealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
+}
+func (UnimplementedEngineServer) WaitForCleanup(context.Context, *WaitForCleanupRequest) (*WaitForCleanupResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WaitForCleanup not implemented")
 }
 func (UnimplementedEngineServer) GetServerInfo(context.Context, *GetServerInfoRequest) (*GetServerInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetServerInfo not implemented")
@@ -328,6 +344,24 @@ func _Engine_Health_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Engine_WaitForCleanup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WaitForCleanupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EngineServer).WaitForCleanup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Engine_WaitForCleanup_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EngineServer).WaitForCleanup(ctx, req.(*WaitForCleanupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Engine_GetServerInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetServerInfoRequest)
 	if err := dec(in); err != nil {
@@ -376,6 +410,10 @@ var Engine_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Health",
 			Handler:    _Engine_Health_Handler,
+		},
+		{
+			MethodName: "WaitForCleanup",
+			Handler:    _Engine_WaitForCleanup_Handler,
 		},
 		{
 			MethodName: "GetServerInfo",

@@ -393,24 +393,8 @@ func extractSavedValues(ctx workflow.Context, response interface{}) map[string]s
 
 	// Handle response - it comes back as map[string]interface{} due to JSON serialization
 	if respMap, ok := response.(map[string]interface{}); ok {
-		// Check for saved values in response
+		// Check for saved values in response (all plugins use "saved" via json tags)
 		if savedInterface, exists := respMap["saved"]; exists {
-			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
-				// Use deterministic keys for Temporal workflow compliance
-				keys := workflow.DeterministicKeys(savedMap)
-				for _, k := range keys {
-					v := savedMap[k]
-					if strVal, ok := v.(string); ok {
-						savedValues[k] = strVal
-					} else {
-						savedValues[k] = fmt.Sprintf("%v", v)
-					}
-				}
-			}
-		}
-
-		// For HTTP plugin compatibility - check for "Saved" field
-		if savedInterface, exists := respMap["Saved"]; exists {
 			if savedMap, ok := savedInterface.(map[string]interface{}); ok {
 				// Use deterministic keys for Temporal workflow compliance
 				keys := workflow.DeterministicKeys(savedMap)
