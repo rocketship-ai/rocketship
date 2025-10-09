@@ -1,0 +1,281 @@
+# Combined Suite and Test Level Hooks
+#
+# This example demonstrates:
+# - Suite init creating shared infrastructure
+# - Test init creating test-specific resources
+# - Both suite and test values available in test steps
+# - Test cleanup removing test resources
+# - Suite cleanup removing shared infrastructure
+
+name: "Combined Suite and Test Hooks Demo"
+description: "Full lifecycle hooks example with both suite and test-level hooks"
+
+vars:
+  supabase_url: "https://aqfxxknampmkpvhzrnad.supabase.co"
+
+# Suite-level init: Creates shared resources
+init:
+  - name: "Generate unique identifiers"
+    plugin: script
+    config:
+      language: javascript
+      script: |
+        const timestamp = Date.now();
+        const bucket = `lifecycle-test-${timestamp}`;
+        const email = `suite-admin-${timestamp}@lifecycle-test.dev`;
+        save("bucket_name", bucket);
+        save("admin_email", email);
+
+  - name: "Create storage bucket for test suite"
+    plugin: supabase
+    config:
+      url: "{{ .vars.supabase_url }}"
+      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+      operation: "storage_create_bucket"
+      storage:
+        bucket: "{{ bucket_name }}"
+        public: true
+
+  - name: "Create suite-level admin user"
+    plugin: supabase
+    config:
+      url: "{{ .vars.supabase_url }}"
+      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+      operation: "auth_create_user"
+      auth:
+        email: "{{ admin_email }}"
+        password: "AdminPassword123!"
+        email_confirm: true
+        user_metadata:
+          role: "admin"
+          suite_level: true
+    save:
+      - json_path: ".user.id"
+        as: "suite_admin_id"
+
+tests:
+  - name: "Test using both suite and test-level resources"
+    # Test init: Creates test-specific resources
+    init:
+      - name: "Create test-specific company"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              name: "Combined Hooks Test Company"
+              type: "combined_lifecycle_test"
+              description: "Uses both suite and test variables"
+              metadata:
+                admin_user_id: "{{ suite_admin_id }}"
+        save:
+          - json_path: ".[0].id"
+            as: "test_company_id"
+
+    steps:
+      - name: "Upload file using suite bucket"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "storage_upload"
+          storage:
+            bucket: "{{ bucket_name }}"
+            path: "test-data/company-{{ test_company_id }}.json"
+            file_content: |
+              {
+                "company_id": "{{ test_company_id }}",
+                "admin_id": "{{ suite_admin_id }}",
+                "test": "combined_hooks"
+              }
+            content_type: "application/json"
+
+      - name: "Verify company with admin reference"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "metadata"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].metadata.admin_user_id"
+            expected: "{{ suite_admin_id }}"
+
+      - name: "HTTP plugin using BOTH suite and test variables"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/reports"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "combined-lifecycle-{{ bucket_name }}"
+            X-Suite-Admin-ID: "{{ suite_admin_id }}"
+            X-Suite-Bucket: "{{ bucket_name }}"
+            X-Test-Company-ID: "{{ test_company_id }}"
+          body: |
+            {
+              "title": "Combined Test Report",
+              "suite_data": {
+                "admin_id": "{{ suite_admin_id }}",
+                "bucket_name": "{{ bucket_name }}"
+              },
+              "test_data": {
+                "company_id": "{{ test_company_id }}"
+              }
+            }
+        save:
+          - json_path: ".id"
+            as: "report_id"
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "GET report verifying both suite and test variables"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/reports/{{ report_id }}"
+          headers:
+            X-Test-Session: "combined-lifecycle-{{ bucket_name }}"
+        assertions:
+          - type: json_path
+            path: ".suite_data.admin_id"
+            expected: "{{ suite_admin_id }}"
+          - type: json_path
+            path: ".test_data.company_id"
+            expected: "{{ test_company_id }}"
+
+    # Test cleanup: Removes test-specific resources
+    cleanup:
+      always:
+        - name: "Delete uploaded file"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+            operation: "storage_delete"
+            storage:
+              bucket: "{{ bucket_name }}"
+              path: "test-data/company-{{ test_company_id }}.json"
+
+        - name: "Delete test company"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_ANON_KEY }}"
+            operation: "delete"
+            table: "companies"
+            delete:
+              filters:
+                - column: "id"
+                  operator: "eq"
+                  value: "{{ test_company_id }}"
+
+  - name: "Second test also using suite resources"
+    init:
+      - name: "Create another test company"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              name: "Second Combined Test Company"
+              type: "combined_lifecycle_test"
+              description: "References suite admin user ID"
+              metadata:
+                admin_user_id: "{{ suite_admin_id }}"
+        save:
+          - json_path: ".[0].id"
+            as: "second_company_id"
+
+    steps:
+      - name: "Verify company references suite admin"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "metadata"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ second_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].metadata.admin_user_id"
+            expected: "{{ suite_admin_id }}"
+
+    cleanup:
+      always:
+        - name: "Delete second company"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_ANON_KEY }}"
+            operation: "delete"
+            table: "companies"
+            delete:
+              filters:
+                - column: "id"
+                  operator: "eq"
+                  value: "{{ second_company_id }}"
+
+# Suite cleanup: Removes shared resources
+cleanup:
+  on_failure:
+    - name: "Log suite failure details"
+      plugin: log
+      config:
+        message: "Suite failed - admin user {{ suite_admin_id }}"
+
+  always:
+    - name: "Delete storage bucket"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "storage_delete_bucket"
+        storage:
+          bucket: "{{ bucket_name }}"
+
+    - name: "Delete suite admin user"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "auth_delete_user"
+        auth:
+          user_id: "{{ suite_admin_id }}"
+
+    - name: "Verify all companies deleted"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "select"
+        table: "companies"
+        select:
+          columns: ["id"]
+          filters:
+            - column: "type"
+              operator: "eq"
+              value: "combined_lifecycle_test"
+      assertions:
+        - type: json_path
+          path: "length"
+          expected: 0

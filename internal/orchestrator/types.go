@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"go.temporal.io/sdk/client"
 )
 
@@ -16,14 +17,21 @@ type Engine struct {
 	authConfig authConfig
 }
 type RunInfo struct {
-	ID        string
-	Name      string
-	Status    string
-	StartedAt time.Time
-	EndedAt   time.Time
-	Tests     map[string]*TestInfo // Test's WorkflowID : TestInfo
-	Logs      []LogLine
-	Context   *RunContext
+	ID                 string
+	Name               string
+	Status             string
+	StartedAt          time.Time
+	EndedAt            time.Time
+	Tests              map[string]*TestInfo // Test's WorkflowID : TestInfo
+	Logs               []LogLine
+	Context            *RunContext
+	SuiteCleanup       *dsl.CleanupSpec
+	SuiteGlobals       map[string]string
+	SuiteInitCompleted bool
+	SuiteInitFailed    bool
+	SuiteCleanupRan    bool
+	Vars               map[string]interface{}
+	SuiteOpenAPI       *dsl.OpenAPISuiteConfig
 }
 
 type LogLine struct {

@@ -7,7 +7,9 @@
 | `description` |  | Description of the test suite |
 | `vars` |  | Configuration variables that can be referenced in test steps using {{ vars.key }} syntax |
 | `openapi` |  | Suite-level OpenAPI contract validation defaults applied to HTTP steps |
+| `init` |  | Suite-level initialization steps executed before any tests run |
 | `tests` | ✅ | Array of test cases |
+| `cleanup` |  | Suite-level cleanup hooks executed after all tests complete or when initialization fails |
 
 
 ---

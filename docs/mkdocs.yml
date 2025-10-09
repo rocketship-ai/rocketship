@@ -83,6 +83,7 @@ nav:
           - Retry Policies: examples/reliability/retry-policies.md
   - YAML Reference:
       - Overview: yaml-reference/plugin-reference.md
+      - Lifecycle Hooks: yaml-reference/lifecycle-hooks.md
   - MCP Server: mcp-server.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md

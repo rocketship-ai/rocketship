@@ -11,10 +11,10 @@ import (
 
 // Pre-compiled regex patterns for better performance
 var (
-	escapedHandlebarsRegex    = regexp.MustCompile(`(\\+)(\{\{[^}]*\}\})`)
-	placeholderRegex          = regexp.MustCompile(`__ROCKETSHIP_ESCAPED_HANDLEBARS_\d+__`)
-	runtimeVariableRegex      = regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
-	templateVariableRegex     = regexp.MustCompile(`\{\{\s*([^.\s}][^}]*)\s*\}\}`)
+	escapedHandlebarsRegex = regexp.MustCompile(`(\\+)(\{\{[^}]*\}\})`)
+	placeholderRegex       = regexp.MustCompile(`__ROCKETSHIP_ESCAPED_HANDLEBARS_\d+__`)
+	runtimeVariableRegex   = regexp.MustCompile(`\{_\{([^}]*?)\}_\}`)
+	templateVariableRegex  = regexp.MustCompile(`\{\{\s*([^.\s}][^}]*)\s*\}\}`)
 )
 
 // TemplateContext holds runtime variables for template processing
@@ -61,9 +61,9 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 		"env": getEnvironmentVariables(),
 	}
 
-	// Add runtime variables to the root level
+	// Add runtime variables to the root level (supporting nested paths)
 	for key, value := range context.Runtime {
-		templateData[key] = value
+		insertRuntimeValue(templateData, key, value)
 	}
 
 	// Execute template
@@ -75,6 +75,38 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 	// Convert safe escaped format back to literal handlebars
 	result := restoreSafeEscapedHandlebars(buf.String())
 	return result, nil
+}
+
+func insertRuntimeValue(target map[string]interface{}, key string, value interface{}) {
+	if key == "" {
+		return
+	}
+
+	if !strings.Contains(key, ".") {
+		target[key] = value
+		return
+	}
+
+	parts := strings.Split(key, ".")
+	current := target
+
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+
+		if i == len(parts)-1 {
+			current[part] = value
+			return
+		}
+
+		next, ok := current[part].(map[string]interface{})
+		if !ok {
+			next = make(map[string]interface{})
+			current[part] = next
+		}
+		current = next
+	}
 }
 
 // ProcessConfigVariablesOnly processes only config variables ({{ .vars.* }}) and environment variables ({{ .env.* }}) patterns
@@ -123,7 +155,7 @@ func processConfigAndEnvVarsWithRegex(input string, vars map[string]interface{})
 	// This is a fallback when Go templates fail due to mixed variable types
 	// We'll manually replace {{ .vars.* }} and {{ .env.* }} patterns
 	result := input
-	
+
 	// Process config vars
 	for key, value := range vars {
 		pattern := fmt.Sprintf("{{ .vars.%s }}", key)
@@ -133,7 +165,7 @@ func processConfigAndEnvVarsWithRegex(input string, vars map[string]interface{})
 			result = strings.ReplaceAll(result, pattern, fmt.Sprintf("%v", value))
 		}
 	}
-	
+
 	// Process environment vars
 	envVars := getEnvironmentVariables()
 	for key, value := range envVars {
@@ -144,24 +176,23 @@ func processConfigAndEnvVarsWithRegex(input string, vars map[string]interface{})
 			result = strings.ReplaceAll(result, pattern, fmt.Sprintf("%v", value))
 		}
 	}
-	
+
 	// Handle nested vars like {{ .vars.auth.token }}
 	result = processNestedVars(result, vars, "vars")
-	
+
 	// Handle nested env vars like {{ .env.auth.token }} (though env vars are typically flat)
 	result = processNestedVars(result, envVars, "env")
-	
+
 	return result
 }
-
 
 // processNestedVars handles nested variable replacement
 func processNestedVars(input string, vars map[string]interface{}, prefix string) string {
 	result := input
-	
+
 	for key, value := range vars {
 		currentPrefix := prefix + "." + key
-		
+
 		if nestedMap, ok := value.(map[string]interface{}); ok {
 			// Recursively process nested maps
 			result = processNestedVars(result, nestedMap, currentPrefix)
@@ -175,7 +206,7 @@ func processNestedVars(input string, vars map[string]interface{}, prefix string)
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -231,7 +262,6 @@ func ProcessConfigVariablesRecursive(data interface{}, vars map[string]interface
 	}
 }
 
-
 // IsTemplateString checks if a string contains template variables
 func IsTemplateString(s string) bool {
 	return strings.Contains(s, "{{") && strings.Contains(s, "}}")
@@ -279,35 +309,34 @@ func setNestedValue(m map[string]interface{}, key string, value interface{}) {
 	current[keys[len(keys)-1]] = value
 }
 
-
 // handleAllEscapedHandlebars processes escaped handlebars with support for unlimited escape levels:
 // Algorithm: Count consecutive backslashes before {{ }}
 // - Even number of \: template variable (half backslashes remain)
 // - Odd number of \: literal handlebars (half backslashes remain, rounded down)
 // Examples:
 //   \{{ }} (1) -> {{ }} (0, literal handlebars)
-//   \\{{ }} (2) -> \{{ }} (1, literal text)  
+//   \\{{ }} (2) -> \{{ }} (1, literal text)
 //   \\\{{ }} (3) -> \{{ }} (1, literal handlebars)
 //   \\\\{{ }} (4) -> \\{{ }} (2, literal text)
 func handleAllEscapedHandlebars(input string) string {
 	result := input
-	
+
 	// Match any number of consecutive backslashes followed by handlebars
 	re := escapedHandlebarsRegex
-	
+
 	result = re.ReplaceAllStringFunc(result, func(match string) string {
 		submatch := re.FindStringSubmatch(match)
 		if len(submatch) >= 3 {
-			backslashes := submatch[1]  // The backslashes
-			handlebars := submatch[2]   // The {{ content }}
-			
+			backslashes := submatch[1] // The backslashes
+			handlebars := submatch[2]  // The {{ content }}
+
 			backslashCount := len(backslashes)
 			remainingBackslashes := backslashCount / 2
 			isOddEscapes := backslashCount%2 == 1
-			
+
 			// Build the result with remaining backslashes
 			result := strings.Repeat("\\", remainingBackslashes)
-			
+
 			if isOddEscapes {
 				// Odd number of backslashes: treat handlebars as literal
 				// Use safe placeholder format that will be restored later
@@ -317,16 +346,16 @@ func handleAllEscapedHandlebars(input string) string {
 				// Even number of backslashes: treat as template variable
 				result += handlebars
 			}
-			
+
 			return result
 		}
 		return match
 	})
-	
+
 	// Handle existing placeholders from previous config processing
 	re2 := placeholderRegex
 	result = re2.ReplaceAllString(result, "{_{ESCAPED}_}")
-	
+
 	return result
 }
 
@@ -346,14 +375,22 @@ func convertRuntimeVariables(input string, runtime map[string]interface{}) strin
 		if len(submatch) < 2 {
 			return match
 		}
-		
+
 		varName := strings.TrimSpace(submatch[1])
-		
+
 		// Check if this variable exists in runtime context
 		if _, exists := runtime[varName]; exists {
 			return fmt.Sprintf("{{ .%s }}", varName)
 		}
-		
+		if strings.Contains(varName, ".") {
+			parts := strings.Split(varName, ".")
+			if len(parts) > 0 {
+				if _, exists := runtime[parts[0]]; exists {
+					return fmt.Sprintf("{{ .%s }}", varName)
+				}
+			}
+		}
+
 		// If not in runtime context, leave as-is (could be a .vars or .env variable)
 		return match
 	})

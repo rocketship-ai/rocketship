@@ -97,3 +97,36 @@ func mapRunInfoToRunDetails(runInfo *RunInfo) *generated.GetRunResponse {
 		},
 	}
 }
+
+func cloneStringMap(source map[string]string) map[string]string {
+	if len(source) == 0 {
+		return make(map[string]string)
+	}
+	result := make(map[string]string, len(source))
+	for k, v := range source {
+		result[k] = v
+	}
+	return result
+}
+
+func cloneInterfaceMap(source map[string]interface{}) map[string]interface{} {
+	if len(source) == 0 {
+		return make(map[string]interface{})
+	}
+	result := make(map[string]interface{}, len(source))
+	for k, v := range source {
+		result[k] = v
+	}
+	return result
+}
+
+func extractSavedValues(state map[string]string) map[string]string {
+	if len(state) == 0 {
+		return make(map[string]string)
+	}
+	result := make(map[string]string)
+	for key, value := range state {
+		result[key] = value
+	}
+	return result
+}

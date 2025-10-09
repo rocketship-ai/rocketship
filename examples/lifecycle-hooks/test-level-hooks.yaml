@@ -1,0 +1,233 @@
+# Test-Level Lifecycle Hooks Example
+#
+# This example demonstrates:
+# - Test init creating test-specific resources
+# - Test steps using test-level saved values
+# - Test cleanup removing test-specific resources
+# - Test cleanup on_failure for debugging failed tests
+
+name: "Test-Level Lifecycle Hooks Demo"
+description: "Demonstrates test init/cleanup with Supabase integration"
+
+vars:
+  supabase_url: "https://aqfxxknampmkpvhzrnad.supabase.co"
+
+tests:
+  - name: "Test with init and cleanup"
+    # Test init: Runs before test steps
+    init:
+      - name: "Generate unique test email"
+        plugin: script
+        config:
+          language: javascript
+          script: |
+            const timestamp = Date.now();
+            const email = `test-user-${timestamp}@lifecycle-test.dev`;
+            save("test_email", email);
+
+      - name: "Setup test-specific company"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              name: "Test-Level Company"
+              type: "test_lifecycle"
+              description: "Created by test init"
+              metadata:
+                test_name: "test_with_init_cleanup"
+        save:
+          - json_path: ".[0].id"
+            as: "test_company_id"
+
+      - name: "Create test-specific auth user"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+          operation: "auth_create_user"
+          auth:
+            email: "{{ test_email }}"
+            password: "TestPassword123!"
+            email_confirm: true
+            user_metadata:
+              test_specific: true
+        save:
+          - json_path: ".user.id"
+            as: "test_user_id"
+
+    # Main test steps: Use values from init
+    steps:
+      - name: "Query company created in init"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "description"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].name"
+            expected: "Test-Level Company"
+
+      - name: "HTTP plugin using test variables (cross-plugin verification)"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/orders"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "test-lifecycle-{{ test_company_id }}"
+            X-Company-ID: "{{ test_company_id }}"
+            X-User-ID: "{{ test_user_id }}"
+          body: |
+            {
+              "product": "Test Product",
+              "quantity": 1,
+              "metadata": {
+                "test_company_id": "{{ test_company_id }}",
+                "test_user_id": "{{ test_user_id }}"
+              }
+            }
+        save:
+          - json_path: ".id"
+            as: "order_id"
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "GET request with test variable in URL"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/orders/{{ order_id }}"
+          headers:
+            X-Test-Session: "test-lifecycle-{{ test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".metadata.test_company_id"
+            expected: "{{ test_company_id }}"
+          - type: json_path
+            path: ".metadata.test_user_id"
+            expected: "{{ test_user_id }}"
+
+      - name: "Update company in test"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "update"
+          table: "companies"
+          update:
+            data:
+              description: "Modified during test execution"
+              is_active: true
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ test_company_id }}"
+        save:
+          - json_path: ".[0].is_active"
+            as: "company_active_status"
+
+    # Test cleanup: Runs after test steps
+    cleanup:
+      on_failure:
+        - name: "Capture failed test state"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+            operation: "select"
+            table: "companies"
+            select:
+              columns: ["id", "name", "description", "is_active", "metadata"]
+              filters:
+                - column: "id"
+                  operator: "eq"
+                  value: "{{ test_company_id }}"
+
+      always:
+        - name: "Delete test company"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_ANON_KEY }}"
+            operation: "delete"
+            table: "companies"
+            delete:
+              filters:
+                - column: "id"
+                  operator: "eq"
+                  value: "{{ test_company_id }}"
+
+        - name: "Delete test auth user"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+            operation: "auth_delete_user"
+            auth:
+              user_id: "{{ test_user_id }}"
+
+  # Second test: Demonstrates test isolation
+  - name: "Independent test with own resources"
+    init:
+      - name: "Create second test company"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "insert"
+          table: "companies"
+          insert:
+            data:
+              name: "Second Test Company"
+              type: "test_lifecycle"
+              description: "Independent test resource"
+        save:
+          - json_path: ".[0].id"
+            as: "second_test_company_id"
+
+    steps:
+      - name: "Verify test isolation"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ second_test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].name"
+            expected: "Second Test Company"
+
+    cleanup:
+      always:
+        - name: "Cleanup second test company"
+          plugin: supabase
+          config:
+            url: "{{ .vars.supabase_url }}"
+            key: "{{ .env.SUPABASE_ANON_KEY }}"
+            operation: "delete"
+            table: "companies"
+            delete:
+              filters:
+                - column: "id"
+                  operator: "eq"
+                  value: "{{ second_test_company_id }}"

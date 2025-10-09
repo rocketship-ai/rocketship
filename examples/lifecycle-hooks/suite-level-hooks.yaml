@@ -1,0 +1,238 @@
+# Suite-Level Lifecycle Hooks Example
+#
+# This example demonstrates:
+# - Suite init creating shared resources (database, auth token)
+# - Tests using suite-level saved values via {{ variable_name }}
+# - Suite cleanup removing shared resources (always runs)
+# - Suite cleanup on_failure for debugging (only on failure)
+
+name: "Suite-Level Lifecycle Hooks Demo"
+description: "Demonstrates suite init/cleanup with Supabase integration"
+
+vars:
+  supabase_url: "https://aqfxxknampmkpvhzrnad.supabase.co"
+
+# Suite init: Runs once before all tests
+# Saved values are available in all tests as {{ variable_name }}
+init:
+  - name: "Generate unique test email"
+    plugin: script
+    config:
+      language: javascript
+      script: |
+        const timestamp = Date.now();
+        const email = `suite-shared-${timestamp}@lifecycle-test.dev`;
+        save("unique_email", email);
+
+  - name: "Create test database schema"
+    plugin: supabase
+    config:
+      url: "{{ .vars.supabase_url }}"
+      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+      operation: "insert"
+      table: "companies"
+      insert:
+        data:
+          name: "Suite Init Test Company"
+          type: "suite_lifecycle_test"
+          description: "Created by suite init for shared test data"
+          metadata:
+            purpose: "suite_level_resource"
+            created_by: "lifecycle_hooks_example"
+    save:
+      - json_path: ".[0].id"
+        as: "shared_company_id"
+
+  - name: "Create shared auth user"
+    plugin: supabase
+    config:
+      url: "{{ .vars.supabase_url }}"
+      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+      operation: "auth_create_user"
+      auth:
+        email: "{{ unique_email }}"
+        password: "SharedPassword123!"
+        email_confirm: true
+        user_metadata:
+          role: "suite_level_user"
+          test_suite: "lifecycle_hooks"
+    save:
+      - json_path: ".user.id"
+        as: "shared_user_id"
+
+tests:
+  # Test 1: Uses suite-level shared company ID
+  - name: "Test using suite-level company"
+    steps:
+      - name: "Query shared company using suite variable"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "type"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ shared_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].type"
+            expected: "suite_lifecycle_test"
+
+  # Test 2: Verifies suite globals are accessible
+  - name: "Test accessing suite-level user ID"
+    steps:
+      - name: "Query company using suite globals"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "select"
+          table: "companies"
+          select:
+            columns: ["id", "name", "metadata"]
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ shared_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].name"
+            expected: "Suite Init Test Company"
+
+  # Test 3: HTTP plugin using suite globals (cross-plugin verification)
+  - name: "HTTP plugin with suite globals"
+    steps:
+      - name: "POST request using suite globals in headers and body"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/users"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "suite-lifecycle-{{ shared_company_id }}"
+            X-Suite-User-ID: "{{ shared_user_id }}"
+            X-Company-ID: "{{ shared_company_id }}"
+          body: |
+            {
+              "name": "HTTP Test User",
+              "email": "http-test@example.com",
+              "metadata": {
+                "suite_company_id": "{{ shared_company_id }}",
+                "suite_user_id": "{{ shared_user_id }}"
+              }
+            }
+        save:
+          - json_path: ".id"
+            as: "http_user_id"
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "GET request with suite global in URL path"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/users/{{ http_user_id }}"
+          headers:
+            X-Test-Session: "suite-lifecycle-{{ shared_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".metadata.suite_company_id"
+            expected: "{{ shared_company_id }}"
+          - type: json_path
+            path: ".metadata.suite_user_id"
+            expected: "{{ shared_user_id }}"
+
+      - name: "Cleanup HTTP test user"
+        plugin: http
+        config:
+          method: DELETE
+          url: "https://tryme.rocketship.sh/users/{{ http_user_id }}"
+          headers:
+            X-Test-Session: "suite-lifecycle-{{ shared_company_id }}"
+
+  # Test 4: Multiple tests sharing suite resources
+  - name: "Another test sharing suite resources"
+    steps:
+      - name: "Update shared company using suite variables"
+        plugin: supabase
+        config:
+          url: "{{ .vars.supabase_url }}"
+          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          operation: "update"
+          table: "companies"
+          update:
+            data:
+              description: "Updated by test using suite resources"
+            filters:
+              - column: "id"
+                operator: "eq"
+                value: "{{ shared_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".[0].description"
+            expected: "Updated by test using suite resources"
+
+# Suite cleanup: Runs once after all tests complete
+cleanup:
+  # on_failure runs first if any test or suite init failed
+  on_failure:
+    - name: "Capture company state for debugging"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "select"
+        table: "companies"
+        select:
+          columns: ["id", "name", "type", "metadata"]
+          filters:
+            - column: "id"
+              operator: "eq"
+              value: "{{ shared_company_id }}"
+
+  # always runs regardless of test outcome
+  always:
+    - name: "Delete shared company"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "delete"
+        table: "companies"
+        delete:
+          filters:
+            - column: "id"
+              operator: "eq"
+              value: "{{ shared_company_id }}"
+
+    - name: "Delete shared auth user"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "auth_delete_user"
+        auth:
+          user_id: "{{ shared_user_id }}"
+
+    - name: "Verify cleanup completed"
+      plugin: supabase
+      config:
+        url: "{{ .vars.supabase_url }}"
+        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+        operation: "select"
+        table: "companies"
+        select:
+          columns: ["id"]
+          filters:
+            - column: "type"
+              operator: "eq"
+              value: "suite_lifecycle_test"
+      assertions:
+        - type: json_path
+          path: "length"
+          expected: 0

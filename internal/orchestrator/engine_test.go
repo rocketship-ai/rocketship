@@ -740,3 +740,213 @@ func TestUpdateTestStatusEdgeCases(t *testing.T) {
 		}
 	})
 }
+
+func TestRunInfoSuiteGlobalsStorage(t *testing.T) {
+	t.Run("suite globals initialized empty", func(t *testing.T) {
+		mockClient := &MockTemporalClient{}
+		engine := NewEngine(mockClient)
+
+		runInfo := &RunInfo{
+			ID:           "test-run",
+			SuiteGlobals: make(map[string]string),
+		}
+		engine.runs["test-run"] = runInfo
+
+		if runInfo.SuiteGlobals == nil {
+			t.Error("Expected SuiteGlobals to be initialized")
+		}
+		if len(runInfo.SuiteGlobals) != 0 {
+			t.Errorf("Expected empty SuiteGlobals, got %d items", len(runInfo.SuiteGlobals))
+		}
+	})
+
+	t.Run("suite globals can be set and retrieved", func(t *testing.T) {
+		mockClient := &MockTemporalClient{}
+		engine := NewEngine(mockClient)
+
+		runInfo := &RunInfo{
+			ID:           "test-run",
+			SuiteGlobals: map[string]string{"api_token": "abc123", "database_id": "db456"},
+		}
+		engine.runs["test-run"] = runInfo
+
+		engine.mu.RLock()
+		defer engine.mu.RUnlock()
+
+		if runInfo.SuiteGlobals["api_token"] != "abc123" {
+			t.Errorf("Expected api_token 'abc123', got '%s'", runInfo.SuiteGlobals["api_token"])
+		}
+		if runInfo.SuiteGlobals["database_id"] != "db456" {
+			t.Errorf("Expected database_id 'db456', got '%s'", runInfo.SuiteGlobals["database_id"])
+		}
+	})
+
+	t.Run("suite globals persist across test executions", func(t *testing.T) {
+		mockClient := &MockTemporalClient{}
+		engine := NewEngine(mockClient)
+
+		runInfo := &RunInfo{
+			ID:           "test-run",
+			SuiteGlobals: map[string]string{"shared_token": "xyz789"},
+			Tests: map[string]*TestInfo{
+				"test1": {Status: "PENDING"},
+				"test2": {Status: "PENDING"},
+			},
+		}
+		engine.runs["test-run"] = runInfo
+
+		// Simulate test1 completion
+		engine.updateTestStatus("test-run", "test1", nil)
+
+		// Verify suite globals still exist
+		engine.mu.RLock()
+		if runInfo.SuiteGlobals["shared_token"] != "xyz789" {
+			t.Errorf("Expected suite globals to persist, got '%s'", runInfo.SuiteGlobals["shared_token"])
+		}
+		engine.mu.RUnlock()
+
+		// Simulate test2 completion
+		engine.updateTestStatus("test-run", "test2", nil)
+
+		// Verify suite globals still exist
+		engine.mu.RLock()
+		if runInfo.SuiteGlobals["shared_token"] != "xyz789" {
+			t.Errorf("Expected suite globals to persist after all tests, got '%s'", runInfo.SuiteGlobals["shared_token"])
+		}
+		engine.mu.RUnlock()
+	})
+}
+
+func TestSuiteInitFlagsAndCleanup(t *testing.T) {
+	t.Run("suite init completed flag", func(t *testing.T) {
+		mockClient := &MockTemporalClient{}
+		engine := NewEngine(mockClient)
+
+		runInfo := &RunInfo{
+			ID:                 "test-run",
+			SuiteInitCompleted: false,
+		}
+		engine.runs["test-run"] = runInfo
+
+		if runInfo.SuiteInitCompleted {
+			t.Error("Expected SuiteInitCompleted to be false initially")
+		}
+
+		engine.mu.Lock()
+		runInfo.SuiteInitCompleted = true
+		engine.mu.Unlock()
+
+		if !runInfo.SuiteInitCompleted {
+			t.Error("Expected SuiteInitCompleted to be true after setting")
+		}
+	})
+
+	t.Run("suite init failed flag", func(t *testing.T) {
+		mockClient := &MockTemporalClient{}
+		engine := NewEngine(mockClient)
+
+		runInfo := &RunInfo{
+			ID:              "test-run",
+			SuiteInitFailed: false,
+		}
+		engine.runs["test-run"] = runInfo
+
+		if runInfo.SuiteInitFailed {
+			t.Error("Expected SuiteInitFailed to be false initially")
+		}
+
+		engine.mu.Lock()
+		runInfo.SuiteInitFailed = true
+		runInfo.Status = "FAILED"
+		engine.mu.Unlock()
+
+		if !runInfo.SuiteInitFailed {
+			t.Error("Expected SuiteInitFailed to be true after failure")
+		}
+		if runInfo.Status != "FAILED" {
+			t.Errorf("Expected run status to be FAILED, got %s", runInfo.Status)
+		}
+	})
+
+	t.Run("suite cleanup ran flag", func(t *testing.T) {
+		mockClient := &MockTemporalClient{}
+		engine := NewEngine(mockClient)
+
+		runInfo := &RunInfo{
+			ID:              "test-run",
+			SuiteCleanupRan: false,
+		}
+		engine.runs["test-run"] = runInfo
+
+		if runInfo.SuiteCleanupRan {
+			t.Error("Expected SuiteCleanupRan to be false initially")
+		}
+
+		engine.mu.Lock()
+		runInfo.SuiteCleanupRan = true
+		engine.mu.Unlock()
+
+		if !runInfo.SuiteCleanupRan {
+			t.Error("Expected SuiteCleanupRan to be true after cleanup")
+		}
+	})
+}
+
+func TestHelperFunctions(t *testing.T) {
+	t.Run("cloneStringMap preserves values", func(t *testing.T) {
+		original := map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		}
+
+		cloned := cloneStringMap(original)
+
+		if len(cloned) != len(original) {
+			t.Errorf("Expected cloned map to have %d items, got %d", len(original), len(cloned))
+		}
+
+		for k, v := range original {
+			if cloned[k] != v {
+				t.Errorf("Expected cloned[%s] = %s, got %s", k, v, cloned[k])
+			}
+		}
+
+		// Modify clone, ensure original is unchanged
+		cloned["key3"] = "value3"
+		if _, exists := original["key3"]; exists {
+			t.Error("Expected original map to be unaffected by clone modification")
+		}
+	})
+
+	t.Run("cloneStringMap handles nil", func(t *testing.T) {
+		var nilMap map[string]string
+		cloned := cloneStringMap(nilMap)
+
+		if cloned == nil {
+			t.Error("Expected cloned map to be initialized, not nil")
+		}
+		if len(cloned) != 0 {
+			t.Errorf("Expected empty map, got %d items", len(cloned))
+		}
+	})
+
+	t.Run("extractSavedValues extracts all values", func(t *testing.T) {
+		state := map[string]string{
+			"user_id":    "123",
+			"auth_token": "abc",
+			"session_id": "xyz",
+		}
+
+		extracted := extractSavedValues(state)
+
+		if len(extracted) != len(state) {
+			t.Errorf("Expected %d extracted values, got %d", len(state), len(extracted))
+		}
+
+		for k, v := range state {
+			if extracted[k] != v {
+				t.Errorf("Expected extracted[%s] = %s, got %s", k, v, extracted[k])
+			}
+		}
+	})
+}

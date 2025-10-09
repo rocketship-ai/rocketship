@@ -6,7 +6,9 @@ Rocketship supports three types of variables for parameterizing your tests:
 |------|--------|----------|---------|
 | **Environment** | `{{ .env.VAR }}` | Secrets, API keys, environment-specific URLs | `{{ .env.API_KEY }}` |
 | **Config** | `{{ .vars.name }}` | Test parameters, non-sensitive config | `{{ .vars.base_url }}` |
-| **Runtime** | `{{ variable }}` | Values saved during test execution | `{{ user_id }}` |
+| **Runtime** | `{{ variable }}` | Values saved during test execution (including suite hooks) | `{{ user_id }}` |
+
+> Suite-level and test-level hook saves both follow the runtime pattern: reference them as `{{ name }}` inside the relevant steps.
 
 ## Quick Decision Guide
 

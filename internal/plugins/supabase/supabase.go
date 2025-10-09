@@ -108,6 +108,15 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 		}
 	}
 
+	// Process runtime variables in Storage config
+	if config.Storage != nil {
+		config.Storage.Bucket = replaceVariables(config.Storage.Bucket, state)
+		config.Storage.Path = replaceVariables(config.Storage.Path, state)
+		config.Storage.FileContent = replaceVariables(config.Storage.FileContent, state)
+		config.Storage.ContentType = replaceVariables(config.Storage.ContentType, state)
+		config.Storage.CacheControl = replaceVariables(config.Storage.CacheControl, state)
+	}
+
 	// Log parsed config for debugging
 	logger.Info("Parsed Supabase config",
 		"operation", config.Operation,

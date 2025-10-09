@@ -282,6 +282,9 @@ jobs:
       - name: Test CLI error handling
         run: ./.github/scripts/test-cli-error-handling.sh
 
+      - name: Test lifecycle hooks
+        run: ./.github/scripts/test-lifecycle-hooks.sh
+
   mcp-integration:
     name: MCP Server Integration Tests
     runs-on: ubuntu-latest
