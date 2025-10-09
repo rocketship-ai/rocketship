@@ -215,7 +215,11 @@ func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
 	suiteOpenAPI := runInfo.SuiteOpenAPI
 	e.mu.Unlock()
 
+	// Track suite cleanup workflow so server waits for completion before shutdown
+	e.cleanupWg.Add(1)
 	go func() {
+		defer e.cleanupWg.Done()
+
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
 		defer cancel()
 
@@ -477,4 +481,22 @@ func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*gen
 
 	slog.Debug("Run not found in memory", "run_id", req.RunId)
 	return nil, fmt.Errorf("run not found: %s", req.RunId)
+}
+
+// WaitForCleanup waits for all suite cleanup workflows to complete
+// This should be called before server shutdown to ensure cleanup completes
+func (e *Engine) WaitForCleanup(ctx context.Context, req *generated.WaitForCleanupRequest) (*generated.WaitForCleanupResponse, error) {
+	// Wait for all cleanup workflows with a timeout
+	done := make(chan struct{})
+	go func() {
+		e.cleanupWg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return &generated.WaitForCleanupResponse{Completed: true}, nil
+	case <-ctx.Done():
+		return &generated.WaitForCleanupResponse{Completed: false}, ctx.Err()
+	}
 }

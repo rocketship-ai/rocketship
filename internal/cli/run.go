@@ -381,6 +381,22 @@ func NewRunCmd() *cobra.Command {
 				}
 				clientAddress = "localhost:7700" // Force localhost for auto mode
 				cleanup = func() {
+					// Wait for suite cleanup workflows to complete before shutting down
+					waitCtx, waitCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					defer waitCancel()
+
+					tempClient, err := NewEngineClient("localhost:7700")
+					if err == nil {
+						Logger.Debug("Waiting for suite cleanup workflows to complete...")
+						_, err := tempClient.client.WaitForCleanup(waitCtx, &generated.WaitForCleanupRequest{TimeoutSeconds: 120})
+						if err != nil {
+							Logger.Warn("Failed to wait for cleanup", "error", err)
+						} else {
+							Logger.Debug("Suite cleanup workflows completed")
+						}
+						_ = tempClient.Close()
+					}
+
 					pm := GetProcessManager()
 					pm.Cleanup()
 				}

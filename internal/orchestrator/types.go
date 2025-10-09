@@ -11,10 +11,11 @@ import (
 
 type Engine struct {
 	generated.UnimplementedEngineServer
-	temporal   client.Client
-	runs       map[string]*RunInfo
-	mu         sync.RWMutex
-	authConfig authConfig
+	temporal       client.Client
+	runs           map[string]*RunInfo
+	mu             sync.RWMutex
+	authConfig     authConfig
+	cleanupWg      sync.WaitGroup // Tracks active suite cleanup workflows
 }
 type RunInfo struct {
 	ID                 string

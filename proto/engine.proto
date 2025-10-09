@@ -11,7 +11,8 @@ service Engine {
   rpc GetRun(GetRunRequest) returns (GetRunResponse);
   rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
   rpc Health(HealthRequest) returns (HealthResponse);
-  
+  rpc WaitForCleanup(WaitForCleanupRequest) returns (WaitForCleanupResponse);
+
   // Server Discovery
   rpc GetServerInfo(GetServerInfoRequest) returns (GetServerInfoResponse);
 }
@@ -152,4 +153,12 @@ message GetServerInfoResponse {
   string audience = 10;
   repeated string scopes = 11;
   string client_id = 12;
+}
+
+message WaitForCleanupRequest {
+  int32 timeout_seconds = 1;  // Optional timeout, defaults to 60s
+}
+
+message WaitForCleanupResponse {
+  bool completed = 1;  // true if all cleanup workflows completed, false if timed out
 }
