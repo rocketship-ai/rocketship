@@ -36,6 +36,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://docs.rocketship.sh/system-limits/</loc>
+         <lastmod>2025-10-09</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://docs.rocketship.sh/test-run-management/</loc>
          <lastmod>2025-10-09</lastmod>
          <changefreq>daily</changefreq>
