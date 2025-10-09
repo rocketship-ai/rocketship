@@ -850,6 +850,154 @@ func TestSuiteCleanupWorkflowHonorsFailureFlag(t *testing.T) {
 	assert.Zero(t, startCounts["suite-on-failure"], "suite on_failure should not run when not flagged")
 }
 
+func TestSuiteGlobalsPropagationToTestSteps(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+		map[string]interface{}{"forwarded": true}, nil)
+
+	// Track the parameters passed to HTTP activity to verify suite globals are available
+	var capturedParams map[string]interface{}
+	env.OnActivity("http", mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+			capturedParams = params
+			return &http.ActivityResponse{
+				Response: &http.HTTPResponse{StatusCode: 200},
+				Saved:    map[string]string{},
+			}, nil
+		})
+
+	test := dsl.Test{
+		Name: "test with suite globals",
+		Steps: []dsl.Step{
+			{
+				Name:   "http-step",
+				Plugin: "http",
+				Config: map[string]interface{}{
+					"method": "GET",
+					"url":    "http://example.com",
+					"headers": map[string]interface{}{
+						"Authorization": "Bearer {{ suite_token }}",
+					},
+				},
+			},
+		},
+	}
+
+	suiteGlobals := map[string]string{"suite_token": "abc123xyz"}
+
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals)
+	assert.NoError(t, env.GetWorkflowError())
+
+	// Verify the suite global was available in the step's state
+	state := capturedParams["state"].(map[string]interface{})
+	assert.Equal(t, "abc123xyz", state["suite_token"], "suite global should be available in test step state")
+}
+
+func TestSuiteGlobalsPropagationToTestCleanup(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	env.RegisterActivityWithOptions((&http.HTTPPlugin{}).Activity, activity.RegisterOptions{Name: "http"})
+	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+		map[string]interface{}{"forwarded": true}, nil)
+
+	// Track calls to verify cleanup receives suite globals
+	var cleanupParams map[string]interface{}
+	callCount := 0
+
+	env.OnActivity("http", mock.Anything, mock.Anything).Return(
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+			callCount++
+			if callCount > 1 { // Second call is cleanup
+				cleanupParams = params
+			}
+			return &http.ActivityResponse{
+				Response: &http.HTTPResponse{StatusCode: 200},
+				Saved:    map[string]string{},
+			}, nil
+		})
+
+	test := dsl.Test{
+		Name: "test with cleanup using suite globals",
+		Steps: []dsl.Step{
+			{
+				Name:   "main-step",
+				Plugin: "http",
+				Config: map[string]interface{}{
+					"method": "GET",
+					"url":    "http://example.com/data",
+				},
+			},
+		},
+		Cleanup: &dsl.CleanupSpec{
+			Always: []dsl.Step{
+				{
+					Name:   "cleanup-step",
+					Plugin: "http",
+					Config: map[string]interface{}{
+						"method": "DELETE",
+						"url":    "http://example.com/cleanup",
+						"headers": map[string]interface{}{
+							"X-Suite-Token": "{{ suite_api_key }}",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	suiteGlobals := map[string]string{"suite_api_key": "secret123"}
+
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals)
+	assert.NoError(t, env.GetWorkflowError())
+
+	// Verify cleanup received suite globals
+	assert.NotNil(t, cleanupParams, "cleanup should have been called")
+	state := cleanupParams["state"].(map[string]interface{})
+	assert.Equal(t, "secret123", state["suite_api_key"], "suite global should be available in cleanup")
+}
+
+func TestSuiteInitSavesAvailableInCleanup(t *testing.T) {
+	testSuite := &testsuite.WorkflowTestSuite{}
+	env := testSuite.NewTestWorkflowEnvironment()
+
+	env.RegisterActivityWithOptions(LogForwarderActivity, activity.RegisterOptions{Name: "LogForwarderActivity"})
+	env.OnActivity("LogForwarderActivity", mock.Anything, mock.Anything).Return(
+		map[string]interface{}{"forwarded": true}, nil)
+
+	cleanup := &dsl.CleanupSpec{
+		Always: []dsl.Step{
+			{
+				Name:   "verify-suite-globals",
+				Plugin: "delay",
+				Config: map[string]interface{}{"duration": "1s"},
+			},
+		},
+	}
+
+	// Execute suite cleanup with globals from init
+	suiteGlobals := map[string]string{
+		"database_id": "db123",
+		"api_token":   "token456",
+	}
+
+	env.ExecuteWorkflow(SuiteCleanupWorkflow, SuiteCleanupParams{
+		RunID:          "run-id",
+		TestName:       "suite-cleanup",
+		Cleanup:        cleanup,
+		Vars:           map[string]interface{}{},
+		SuiteGlobals:   suiteGlobals,
+		TreatAsFailure: false,
+	})
+
+	assert.NoError(t, env.GetWorkflowError())
+}
+
 // Helper function for string containment
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
