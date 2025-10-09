@@ -14,7 +14,7 @@
         <link rel="prev" href="../../examples/reliability/retry-policies/">
       
       
-        <link rel="next" href="../../mcp-server/">
+        <link rel="next" href="../lifecycle-hooks/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -1205,6 +1205,8 @@
       
         
       
+        
+      
     
     
       
@@ -1437,6 +1439,27 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle-hooks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lifecycle Hooks
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -2403,9 +2426,19 @@
 <td>Suite-level OpenAPI contract validation defaults applied to HTTP steps</td>
 </tr>
 <tr>
+<td><code>init</code></td>
+<td></td>
+<td>Suite-level initialization steps executed before any tests run</td>
+</tr>
+<tr>
 <td><code>tests</code></td>
 <td>✅</td>
 <td>Array of test cases</td>
+</tr>
+<tr>
+<td><code>cleanup</code></td>
+<td></td>
+<td>Suite-level cleanup hooks executed after all tests complete or when initialization fails</td>
 </tr>
 </tbody>
 </table>

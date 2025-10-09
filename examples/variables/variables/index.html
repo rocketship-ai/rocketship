@@ -1405,6 +1405,8 @@
       
         
       
+        
+      
     
     
       
@@ -1452,6 +1454,27 @@
   
   <span class="md-ellipsis">
     Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../yaml-reference/lifecycle-hooks/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Lifecycle Hooks
   </span>
   
 
@@ -2433,11 +2456,14 @@
 <tr>
 <td><strong>Runtime</strong></td>
 <td><code>{{ variable }}</code></td>
-<td>Values saved during test execution</td>
+<td>Values saved during test execution (including suite hooks)</td>
 <td><code>{{ user_id }}</code></td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p>Suite-level and test-level hook saves both follow the runtime pattern: reference them as <code>{{ name }}</code> inside the relevant steps.</p>
+</blockquote>
 <h2 id="quick-decision-guide">Quick Decision Guide</h2>
 <p><strong>Use Environment Variables (<code>.env</code>) when:</strong>
 - ✅ The value is a secret (API key, password, token)

@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/reference/rocketship_version/">
+        <link rel="canonical" href="https://docs.rocketship.sh/yaml-reference/lifecycle-hooks/">
       
       
-        <link rel="prev" href="../rocketship_validate/">
+        <link rel="prev" href="../plugin-reference/">
       
       
-        <link rel="next" href="../../contributing/">
+        <link rel="next" href="../../mcp-server/">
       
       
       <link rel="icon" href="../../assets/transparent.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>version - Rocketship CLI</title>
+        <title>Lifecycle Hooks - Rocketship CLI</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#rocketship-version" class="md-skip">
+        <a href="#lifecycle-hooks" class="md-skip">
           Skip to content
         </a>
       
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              version
+              Lifecycle Hooks
             
           </span>
         </div>
@@ -1196,8 +1196,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -1213,13 +1215,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -1233,7 +1233,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             YAML Reference
@@ -1247,7 +1247,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../yaml-reference/plugin-reference/" class="md-nav__link">
+      <a href="../plugin-reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1265,10 +1265,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../yaml-reference/lifecycle-hooks/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Lifecycle Hooks
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1277,6 +1297,53 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#suite-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Suite Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Test Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#referencing-saved-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      Referencing Saved Values
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1433,10 +1500,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1466,11 +1531,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1484,7 +1551,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Command Reference
@@ -1498,7 +1565,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship/" class="md-nav__link">
+      <a href="../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1572,7 +1639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1593,7 +1660,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_create/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_create/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1614,7 +1681,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_delete/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_delete/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1635,7 +1702,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1656,7 +1723,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_show/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_show/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1677,7 +1744,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_use/" class="md-nav__link">
+      <a href="../../reference/rocketship_profile_use/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1706,7 +1773,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_run/" class="md-nav__link">
+      <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1727,7 +1794,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_list/" class="md-nav__link">
+      <a href="../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1748,7 +1815,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_get/" class="md-nav__link">
+      <a href="../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1814,7 +1881,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start/" class="md-nav__link">
+      <a href="../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1835,7 +1902,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1909,7 +1976,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1930,7 +1997,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop_server/" class="md-nav__link">
+      <a href="../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1959,7 +2026,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_validate/" class="md-nav__link">
+      <a href="../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1977,28 +2044,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    version
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2007,90 +2056,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#rocketship-version" class="md-nav__link">
-    <span class="md-ellipsis">
-      rocketship version
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship version">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options inherited from parent commands
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-9-oct-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 9-Oct-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2140,6 +2105,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -2148,68 +2115,29 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rocketship-version" class="md-nav__link">
+  <a href="#suite-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
-      rocketship version
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship version">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
+      Suite Lifecycle
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#test-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      Test Lifecycle
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#referencing-saved-values" class="md-nav__link">
     <span class="md-ellipsis">
-      Options inherited from parent commands
+      Referencing Saved Values
     </span>
   </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-9-oct-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 9-Oct-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2231,25 +2159,110 @@
   
 
 
-  <h1>version</h1>
-
-<h2 id="rocketship-version">rocketship version</h2>
-<p>Print the version number of Rocketship</p>
-<h3 id="synopsis">Synopsis</h3>
-<p>Print the version number of Rocketship CLI.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rocketship version [flags]
+<h1 id="lifecycle-hooks">Lifecycle Hooks</h1>
+<p>Rocketship test suites can run deterministic setup and teardown hooks at both the suite and test levels. Hooks reuse the same step schema you already know (<code>name</code>, <code>plugin</code>, <code>config</code>, <code>assertions</code>, <code>save</code>, <code>retry</code>) and execute linearly in the order they are declared.</p>
+<h2 id="suite-lifecycle">Suite Lifecycle</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Checkout</span><span class="nv"> </span><span class="s">Suite&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">init</span><span class="p">:</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Boot</span><span class="nv"> </span><span class="s">ephemeral</span><span class="nv"> </span><span class="s">stack&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">script</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> cmd</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./env/up.sh&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Happy</span><span class="nv"> </span><span class="s">path</span><span class="nv"> </span><span class="s">checkout&quot;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">...</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="nt">cleanup</span><span class="p">:</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">always</span><span class="p">:</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Shutdown</span><span class="nv"> </span><span class="s">stack&quot;</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">      </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">script</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">      </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> cmd</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./env/down.sh&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">on_failure</span><span class="p">:</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Collect</span><span class="nv"> </span><span class="s">logs&quot;</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">      </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">      </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">        </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GET</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">        </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://ops.example.com/logs?run={{</span><span class="nv"> </span><span class="s">run_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<h3 id="options">Options</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  -h, --help   help for version
-</code></pre></div>
-<h3 id="options-inherited-from-parent-commands">Options inherited from parent commands</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>      --debug   Enable debug logging
-</code></pre></div>
-<h3 id="see-also">SEE ALSO</h3>
+<p>Execution order:</p>
+<ol>
+<li><code>init</code> runs once before any tests. If a step fails, the suite is marked failed, tests are skipped, and cleanup runs.</li>
+<li>Tests run (in parallel or sequentially, matching existing run behaviour).</li>
+<li><code>cleanup.always</code> runs once after every test completes. If any test or the suite init failed, <code>cleanup.on_failure</code> runs first.</li>
+</ol>
+<p>Saved values from suite init steps are injected as runtime variables on every test. Reference them directly:</p>
 <ul>
-<li><a href="../rocketship/">rocketship</a>    - Rocketship CLI</li>
+<li><code>{{ api_token }}</code> – anywhere inside tests or cleanup steps.</li>
+<li><code>{{ api_token }}</code> inside suite cleanup.</li>
 </ul>
-<h6 id="auto-generated-by-spf13cobra-on-9-oct-2025">Auto generated by spf13/cobra on 9-Oct-2025</h6>
+<p>These values are read-only snapshots; cleanup can rely on them but should not expect later steps to consume data emitted in cleanup.</p>
+<h2 id="test-lifecycle">Test Lifecycle</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">tests</span><span class="p">:</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Creates</span><span class="nv"> </span><span class="s">an</span><span class="nv"> </span><span class="s">order&quot;</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">init</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Seed</span><span class="nv"> </span><span class="s">user&quot;</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sql</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> file</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;./sql/seed_user.sql&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;POST</span><span class="nv"> </span><span class="s">/orders&quot;</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">api_url</span><span class="nv"> </span><span class="s">}}/orders&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="nt">save</span><span class="p">:</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">json_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.id&quot;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">            </span><span class="nt">as</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;order_id&quot;</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">cleanup</span><span class="p">:</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">      </span><span class="nt">always</span><span class="p">:</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Delete</span><span class="nv"> </span><span class="s">order&quot;</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">          </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">          </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">            </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DELETE</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">            </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">api_url</span><span class="nv"> </span><span class="s">}}/orders/{{</span><span class="nv"> </span><span class="s">order_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">      </span><span class="nt">on_failure</span><span class="p">:</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Snapshot</span><span class="nv"> </span><span class="s">order</span><span class="nv"> </span><span class="s">payload&quot;</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">          </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">          </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">            </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GET</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">            </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">api_url</span><span class="nv"> </span><span class="s">}}/orders/{{</span><span class="nv"> </span><span class="s">order_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div>
+<p>For each test:</p>
+<ol>
+<li><code>init</code> runs first. Failure marks the test failed, skips the main <code>steps</code>, then moves straight into cleanup.</li>
+<li><code>steps</code> run with the same linear semantics as before.</li>
+<li><code>cleanup.always</code> runs every time. If the test failed (including its init phase), <code>cleanup.on_failure</code> runs beforehand.</li>
+</ol>
+<p>Test-level hook saves behave exactly like other runtime values: reference them as <code>{{ name }}</code> within the same test (init, steps, cleanup).</p>
+<h2 id="referencing-saved-values">Referencing Saved Values</h2>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>How to reference inside tests</th>
+<th>Where available</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Suite <code>init</code> saved values</td>
+<td><code>{{ &lt;name&gt; }}</code></td>
+<td>All test init/steps/cleanup, suite cleanup</td>
+</tr>
+<tr>
+<td>Test <code>init</code> or <code>steps</code> saved values</td>
+<td><code>{{ &lt;name&gt; }}</code></td>
+<td>Remaining steps and cleanups for that test</td>
+</tr>
+<tr>
+<td>Cleanup saved values</td>
+<td><code>{{ &lt;name&gt; }}</code></td>
+<td>Later cleanup steps in the same cleanup block</td>
+</tr>
+</tbody>
+</table>
+<p>Additional notes:</p>
+<ul>
+<li>Saved values are injected as runtime variables, so you can use them in any templated string (URLs, headers, bodies, script vars, etc.).</li>
+<li>Test-level values never leak across tests. Each test gets its own state map.</li>
+<li>Suite cleanup runs with a disconnected Temporal context. Failures are logged but do not overwrite the original test/suite outcome.</li>
+</ul>
+<p>Use lifecycle hooks to create deterministic, self-cleaning suites that still respect Rocketship’s linear execution model.</p>
 
 
 

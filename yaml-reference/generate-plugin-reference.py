@@ -10,6 +10,34 @@ BASE_DIR = Path(__file__).resolve().parent
 SCHEMA_PATH = BASE_DIR.parent.parent.parent / "internal" / "dsl" / "schema.json"
 OUTPUT_MD_PATH = BASE_DIR / "plugin-reference.md"
 
+def resolve_ref(schema: dict, ref: str) -> dict:
+    """
+    Resolve a JSON Schema $ref reference.
+    Example: "#/definitions/step" -> schema["definitions"]["step"]
+    """
+    if not ref.startswith("#/"):
+        raise ValueError(f"Only internal references supported, got: {ref}")
+
+    # Remove the "#/" prefix and split by "/"
+    path_parts = ref[2:].split("/")
+
+    # Traverse the schema following the path
+    current = schema
+    for part in path_parts:
+        current = current[part]
+
+    return current
+
+
+def get_schema_or_resolve_ref(schema: dict, node: dict) -> dict:
+    """
+    Get the actual schema from a node, resolving $ref if present.
+    """
+    if "$ref" in node:
+        return resolve_ref(schema, node["$ref"])
+    return node
+
+
 def heading(title: str, level: int = 2) -> str:
     return f"\n{'#' * level} {title}\n\n"
 
@@ -162,8 +190,10 @@ def generate_full_markdown(schema: dict) -> str:
     try:
         test_schema_heading = "Test Structure"
         test_schema = generate_step_base_template(schema["properties"], schema["required"], test_schema_heading)
-        
-        test_steps_schema = schema["properties"]["tests"]["items"]["properties"]["steps"]["items"]
+
+        # Resolve $ref if the steps schema uses a reference
+        test_steps_schema_node = schema["properties"]["tests"]["items"]["properties"]["steps"]["items"]
+        test_steps_schema = get_schema_or_resolve_ref(schema, test_steps_schema_node)
         test_steps_schema_heading = "Test Step Structure"
         base_md = generate_step_base_template(test_steps_schema["properties"], test_steps_schema["required"], test_steps_schema_heading)
         
