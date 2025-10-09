@@ -79,6 +79,47 @@ tests:
             path: ".[0].name"
             expected: "Test-Level Company"
 
+      - name: "HTTP plugin using test variables (cross-plugin verification)"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/orders"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "test-lifecycle-{{ test_company_id }}"
+            X-Company-ID: "{{ test_company_id }}"
+            X-User-ID: "{{ test_user_id }}"
+          body: |
+            {
+              "product": "Test Product",
+              "quantity": 1,
+              "metadata": {
+                "test_company_id": "{{ test_company_id }}",
+                "test_user_id": "{{ test_user_id }}"
+              }
+            }
+        save:
+          - json_path: ".id"
+            as: "order_id"
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "GET request with test variable in URL"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/orders/{{ order_id }}"
+          headers:
+            X-Test-Session: "test-lifecycle-{{ test_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".metadata.test_company_id"
+            expected: "{{ test_company_id }}"
+          - type: json_path
+            path: ".metadata.test_user_id"
+            expected: "{{ test_user_id }}"
+
       - name: "Update company in test"
         plugin: supabase
         config:

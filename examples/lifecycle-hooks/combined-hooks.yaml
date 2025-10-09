@@ -111,6 +111,50 @@ tests:
             path: ".[0].metadata.admin_user_id"
             expected: "{{ suite_admin_id }}"
 
+      - name: "HTTP plugin using BOTH suite and test variables"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/reports"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "combined-lifecycle-{{ bucket_name }}"
+            X-Suite-Admin-ID: "{{ suite_admin_id }}"
+            X-Suite-Bucket: "{{ bucket_name }}"
+            X-Test-Company-ID: "{{ test_company_id }}"
+          body: |
+            {
+              "title": "Combined Test Report",
+              "suite_data": {
+                "admin_id": "{{ suite_admin_id }}",
+                "bucket_name": "{{ bucket_name }}"
+              },
+              "test_data": {
+                "company_id": "{{ test_company_id }}"
+              }
+            }
+        save:
+          - json_path: ".id"
+            as: "report_id"
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "GET report verifying both suite and test variables"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/reports/{{ report_id }}"
+          headers:
+            X-Test-Session: "combined-lifecycle-{{ bucket_name }}"
+        assertions:
+          - type: json_path
+            path: ".suite_data.admin_id"
+            expected: "{{ suite_admin_id }}"
+          - type: json_path
+            path: ".test_data.company_id"
+            expected: "{{ test_company_id }}"
+
     # Test cleanup: Removes test-specific resources
     cleanup:
       always:

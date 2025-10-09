@@ -103,7 +103,59 @@ tests:
             path: ".[0].name"
             expected: "Suite Init Test Company"
 
-  # Test 3: Multiple tests sharing suite resources
+  # Test 3: HTTP plugin using suite globals (cross-plugin verification)
+  - name: "HTTP plugin with suite globals"
+    steps:
+      - name: "POST request using suite globals in headers and body"
+        plugin: http
+        config:
+          method: POST
+          url: "https://tryme.rocketship.sh/users"
+          headers:
+            Content-Type: "application/json"
+            X-Test-Session: "suite-lifecycle-{{ shared_company_id }}"
+            X-Suite-User-ID: "{{ shared_user_id }}"
+            X-Company-ID: "{{ shared_company_id }}"
+          body: |
+            {
+              "name": "HTTP Test User",
+              "email": "http-test@example.com",
+              "metadata": {
+                "suite_company_id": "{{ shared_company_id }}",
+                "suite_user_id": "{{ shared_user_id }}"
+              }
+            }
+        save:
+          - json_path: ".id"
+            as: "http_user_id"
+        assertions:
+          - type: status_code
+            expected: 200
+
+      - name: "GET request with suite global in URL path"
+        plugin: http
+        config:
+          method: GET
+          url: "https://tryme.rocketship.sh/users/{{ http_user_id }}"
+          headers:
+            X-Test-Session: "suite-lifecycle-{{ shared_company_id }}"
+        assertions:
+          - type: json_path
+            path: ".metadata.suite_company_id"
+            expected: "{{ shared_company_id }}"
+          - type: json_path
+            path: ".metadata.suite_user_id"
+            expected: "{{ shared_user_id }}"
+
+      - name: "Cleanup HTTP test user"
+        plugin: http
+        config:
+          method: DELETE
+          url: "https://tryme.rocketship.sh/users/{{ http_user_id }}"
+          headers:
+            X-Test-Session: "suite-lifecycle-{{ shared_company_id }}"
+
+  # Test 4: Multiple tests sharing suite resources
   - name: "Another test sharing suite resources"
     steps:
       - name: "Update shared company using suite variables"
