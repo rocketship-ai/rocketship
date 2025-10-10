@@ -138,7 +138,7 @@ main() {
 
   local tmp
   tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
+  trap "rm -rf '$tmp'" EXIT
 
   log "Downloading ${asset}"
   curl -fL "$url" -o "$tmp/${asset}"
@@ -175,7 +175,7 @@ main() {
   fi
 
   log "Installed to $BIN_DIR/${BINARY_NAME}"
-  "$BIN_DIR/${BINARY_NAME}" --version || true
+  "$BIN_DIR/${BINARY_NAME}" version || true
 }
 
 main "$@"
