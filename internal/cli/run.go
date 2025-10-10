@@ -29,6 +29,41 @@ type TestSuiteResult struct {
 	FailedTests int
 }
 
+type testSummary struct {
+	totalSuites  int
+	passedSuites int
+	failedSuites int
+	totalTests   int
+	passedTests  int
+	failedTests  int
+}
+
+func summarizeResults(results []TestSuiteResult) testSummary {
+	totalSuites := len(results)
+	passedSuites := 0
+	totalTests := 0
+	passedTests := 0
+	failedTests := 0
+
+	for _, r := range results {
+		if r.FailedTests == 0 && r.TotalTests > 0 {
+			passedSuites++
+		}
+		totalTests += r.TotalTests
+		passedTests += r.PassedTests
+		failedTests += r.FailedTests
+	}
+
+	return testSummary{
+		totalSuites:  totalSuites,
+		passedSuites: passedSuites,
+		failedSuites: totalSuites - passedSuites,
+		totalTests:   totalTests,
+		passedTests:  passedTests,
+		failedTests:  failedTests,
+	}
+}
+
 // processConfigTemplates processes only config variable templates ({{ .vars.* }}) in the YAML
 // Leaves runtime variables ({{ variable }}) untouched for later processing
 func processConfigTemplates(yamlData []byte, vars map[string]interface{}) ([]byte, error) {
@@ -271,29 +306,14 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 }
 
 // printFinalSummary prints the aggregated results of all test suites
-func printFinalSummary(results []TestSuiteResult) {
-	totalSuites := len(results)
-	passedSuites := 0
-	totalTests := 0
-	passedTests := 0
-	failedTests := 0
-
-	for _, r := range results {
-		if r.FailedTests == 0 && r.TotalTests > 0 {
-			passedSuites++
-		}
-		totalTests += r.TotalTests
-		passedTests += r.PassedTests
-		failedTests += r.FailedTests
-	}
-
+func printFinalSummary(summary testSummary) {
 	fmt.Println("\n=== Final Summary ===")
-	fmt.Printf("Total Test Suites: %d\n", totalSuites)
-	fmt.Printf("%s Passed Suites: %d\n", color.GreenString("✓"), passedSuites)
-	fmt.Printf("%s Failed Suites: %d\n", color.RedString("✗"), totalSuites-passedSuites)
-	fmt.Printf("\nTotal Tests: %d\n", totalTests)
-	fmt.Printf("%s Passed Tests: %d\n", color.GreenString("✓"), passedTests)
-	fmt.Printf("%s Failed Tests: %d\n", color.RedString("✗"), failedTests)
+	fmt.Printf("Total Test Suites: %d\n", summary.totalSuites)
+	fmt.Printf("%s Passed Suites: %d\n", color.GreenString("✓"), summary.passedSuites)
+	fmt.Printf("%s Failed Suites: %d\n", color.RedString("✗"), summary.failedSuites)
+	fmt.Printf("\nTotal Tests: %d\n", summary.totalTests)
+	fmt.Printf("%s Passed Tests: %d\n", color.GreenString("✓"), summary.passedTests)
+	fmt.Printf("%s Failed Tests: %d\n", color.RedString("✗"), summary.failedTests)
 }
 
 // displayRecentRuns shows recent test runs after an auto run completes
@@ -550,13 +570,21 @@ func NewRunCmd() *cobra.Command {
 		collectComplete:
 
 			// Print final summary
-			printFinalSummary(results)
+			summary := summarizeResults(results)
+			printFinalSummary(summary)
 
 			// If this was an auto run, also display recent test runs
 			if isAuto {
 				if err := displayRecentRuns(client); err != nil {
 					Logger.Debug("failed to display recent runs", "error", err)
 				}
+			}
+
+			if summary.totalSuites == 0 {
+				return fmt.Errorf("no test suites executed")
+			}
+			if summary.failedSuites > 0 {
+				return fmt.Errorf("%d test suite(s) failed", summary.failedSuites)
 			}
 
 			return nil
