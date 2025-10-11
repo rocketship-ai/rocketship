@@ -288,8 +288,16 @@ func (s *Store) SaveRefreshToken(ctx context.Context, token string, rec RefreshT
             updated_at = NOW()
     `
 
+	// Convert uuid.Nil to NULL for database storage
+	var orgID interface{}
+	if rec.OrganizationID == uuid.Nil {
+		orgID = nil
+	} else {
+		orgID = rec.OrganizationID
+	}
+
 	scopes := pq.StringArray(rec.Scopes)
-	if _, err := s.db.ExecContext(ctx, query, rec.TokenID, hash, rec.User.ID, rec.OrganizationID, scopes, rec.IssuedAt, rec.ExpiresAt); err != nil {
+	if _, err := s.db.ExecContext(ctx, query, rec.TokenID, hash, rec.User.ID, orgID, scopes, rec.IssuedAt, rec.ExpiresAt); err != nil {
 		return fmt.Errorf("failed to persist refresh token: %w", err)
 	}
 	return nil
@@ -323,7 +331,7 @@ func (s *Store) GetRefreshToken(ctx context.Context, token string) (RefreshToken
 	dest := struct {
 		TokenID        uuid.UUID      `db:"token_id"`
 		UserID         uuid.UUID      `db:"user_id"`
-		OrganizationID uuid.UUID      `db:"organization_id"`
+		OrganizationID uuid.NullUUID  `db:"organization_id"`
 		Scopes         pq.StringArray `db:"scopes"`
 		IssuedAt       time.Time      `db:"issued_at"`
 		ExpiresAt      time.Time      `db:"expires_at"`
@@ -342,9 +350,15 @@ func (s *Store) GetRefreshToken(ctx context.Context, token string) (RefreshToken
 		return RefreshTokenRecord{}, fmt.Errorf("failed to load refresh token: %w", err)
 	}
 
+	// Convert NULL back to uuid.Nil
+	orgID := uuid.Nil
+	if dest.OrganizationID.Valid {
+		orgID = dest.OrganizationID.UUID
+	}
+
 	record := RefreshTokenRecord{
 		TokenID:        dest.TokenID,
-		OrganizationID: dest.OrganizationID,
+		OrganizationID: orgID,
 		Scopes:         []string(dest.Scopes),
 		IssuedAt:       dest.IssuedAt,
 		ExpiresAt:      dest.ExpiresAt,
