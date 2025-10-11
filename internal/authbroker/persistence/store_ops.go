@@ -16,13 +16,13 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID  `db:"id"`
-	GitHubUserID int64      `db:"github_user_id"`
-	Email        string     `db:"email"`
-	Name         string     `db:"name"`
-	Username     string     `db:"username"`
-	CreatedAt    time.Time  `db:"created_at"`
-	UpdatedAt    time.Time  `db:"updated_at"`
+	ID           uuid.UUID `db:"id"`
+	GitHubUserID int64     `db:"github_user_id"`
+	Email        string    `db:"email"`
+	Name         string    `db:"name"`
+	Username     string    `db:"username"`
+	CreatedAt    time.Time `db:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"`
 }
 
 type GitHubUserInput struct {
@@ -66,34 +66,34 @@ type ProjectMembership struct {
 }
 
 type OrganizationRegistration struct {
-	ID                uuid.UUID  `db:"id"`
-	UserID            uuid.UUID  `db:"user_id"`
-	Email             string     `db:"email"`
-	OrgName           string     `db:"org_name"`
-	CodeHash          []byte     `db:"code_hash"`
-	CodeSalt          []byte     `db:"code_salt"`
-	Attempts          int        `db:"attempts"`
-	MaxAttempts       int        `db:"max_attempts"`
-	ExpiresAt         time.Time  `db:"expires_at"`
-	ResendAvailableAt time.Time  `db:"resend_available_at"`
-	CreatedAt         time.Time  `db:"created_at"`
-	UpdatedAt         time.Time  `db:"updated_at"`
+	ID                uuid.UUID `db:"id"`
+	UserID            uuid.UUID `db:"user_id"`
+	Email             string    `db:"email"`
+	OrgName           string    `db:"org_name"`
+	CodeHash          []byte    `db:"code_hash"`
+	CodeSalt          []byte    `db:"code_salt"`
+	Attempts          int       `db:"attempts"`
+	MaxAttempts       int       `db:"max_attempts"`
+	ExpiresAt         time.Time `db:"expires_at"`
+	ResendAvailableAt time.Time `db:"resend_available_at"`
+	CreatedAt         time.Time `db:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at"`
 }
 
 type OrganizationInvite struct {
-	ID               uuid.UUID      `db:"id"`
-	OrganizationID   uuid.UUID      `db:"organization_id"`
-	Email            string         `db:"email"`
-	Role             string         `db:"role"`
-	CodeHash         []byte         `db:"code_hash"`
-	CodeSalt         []byte         `db:"code_salt"`
-	InvitedBy        uuid.UUID      `db:"invited_by"`
-	ExpiresAt        time.Time      `db:"expires_at"`
-	AcceptedAt       sql.NullTime   `db:"accepted_at"`
-	AcceptedBy       uuid.NullUUID  `db:"accepted_by"`
-	OrganizationName string         `db:"organization_name"`
-	CreatedAt        time.Time      `db:"created_at"`
-	UpdatedAt        time.Time      `db:"updated_at"`
+	ID               uuid.UUID     `db:"id"`
+	OrganizationID   uuid.UUID     `db:"organization_id"`
+	Email            string        `db:"email"`
+	Role             string        `db:"role"`
+	CodeHash         []byte        `db:"code_hash"`
+	CodeSalt         []byte        `db:"code_salt"`
+	InvitedBy        uuid.UUID     `db:"invited_by"`
+	ExpiresAt        time.Time     `db:"expires_at"`
+	AcceptedAt       sql.NullTime  `db:"accepted_at"`
+	AcceptedBy       uuid.NullUUID `db:"accepted_by"`
+	OrganizationName string        `db:"organization_name"`
+	CreatedAt        time.Time     `db:"created_at"`
+	UpdatedAt        time.Time     `db:"updated_at"`
 }
 
 type RoleSummary struct {
@@ -571,6 +571,13 @@ func (s *Store) RemoveProjectMember(ctx context.Context, projectID, userID uuid.
 func (s *Store) DeleteOrgRegistrationsForUser(ctx context.Context, userID uuid.UUID) error {
 	const query = `DELETE FROM organization_registrations WHERE user_id = $1`
 	if _, err := s.db.ExecContext(ctx, query, userID); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			switch pqErr.Code {
+			case "42P01":
+				return nil
+			}
+		}
 		return fmt.Errorf("failed to delete existing registrations: %w", err)
 	}
 	return nil
@@ -688,6 +695,14 @@ func (s *Store) LatestOrgRegistrationForUser(ctx context.Context, userID uuid.UU
 	if err := s.db.GetContext(ctx, &rec, query, userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return OrganizationRegistration{}, sql.ErrNoRows
+		}
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			switch pqErr.Code {
+			case "42P01", // undefined_table
+				"42703": // undefined_column
+				return OrganizationRegistration{}, sql.ErrNoRows
+			}
 		}
 		return OrganizationRegistration{}, fmt.Errorf("failed to load registration: %w", err)
 	}
@@ -809,6 +824,13 @@ func (s *Store) FindPendingOrgInvites(ctx context.Context, email string) ([]Orga
 
 	rows := []OrganizationInvite{}
 	if err := s.db.SelectContext(ctx, &rows, query, normalizeEmail(email)); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			switch pqErr.Code {
+			case "42P01", "42703":
+				return nil, nil
+			}
+		}
 		return nil, fmt.Errorf("failed to list organization invites: %w", err)
 	}
 	return rows, nil

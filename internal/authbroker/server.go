@@ -869,6 +869,7 @@ func (s *Server) handleCurrentUser(w http.ResponseWriter, r *http.Request, princ
 			resp["pending_registration"] = map[string]interface{}{
 				"registration_id":     reg.ID.String(),
 				"org_name":            reg.OrgName,
+				"email":               reg.Email,
 				"expires_at":          reg.ExpiresAt.Format(time.RFC3339),
 				"resend_available_at": reg.ResendAvailableAt.Format(time.RFC3339),
 				"attempts":            reg.Attempts,
@@ -929,7 +930,8 @@ func (s *Server) handleOrgRegistrationStart(w http.ResponseWriter, r *http.Reque
 	}
 
 	var req struct {
-		Name string `json:"name"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json payload")
@@ -942,6 +944,16 @@ func (s *Server) handleOrgRegistrationStart(w http.ResponseWriter, r *http.Reque
 	}
 	if len(name) > maxOrgNameLength {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("organization name must be <= %d characters", maxOrgNameLength))
+		return
+	}
+
+	// Use provided email or fall back to principal's GitHub email
+	email := strings.TrimSpace(req.Email)
+	if email == "" {
+		email = principal.Email
+	}
+	if email == "" || !strings.Contains(email, "@") {
+		writeError(w, http.StatusBadRequest, "valid email address is required")
 		return
 	}
 
@@ -963,7 +975,7 @@ func (s *Server) handleOrgRegistrationStart(w http.ResponseWriter, r *http.Reque
 	reg := persistence.OrganizationRegistration{
 		ID:                uuid.New(),
 		UserID:            principal.UserID,
-		Email:             principal.Email,
+		Email:             email,
 		OrgName:           name,
 		CodeHash:          hash,
 		CodeSalt:          salt,
@@ -980,7 +992,7 @@ func (s *Server) handleOrgRegistrationStart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := s.mailer.SendOrgVerification(ctx, principal.Email, name, code, rec.ExpiresAt); err != nil {
+	if err := s.mailer.SendOrgVerification(ctx, email, name, code, rec.ExpiresAt); err != nil {
 		_ = s.store.DeleteOrgRegistration(ctx, rec.ID)
 		log.Printf("failed to send verification email: %v", err)
 		writeError(w, http.StatusBadGateway, "failed to send verification email")
@@ -990,6 +1002,7 @@ func (s *Server) handleOrgRegistrationStart(w http.ResponseWriter, r *http.Reque
 	response := map[string]interface{}{
 		"registration_id":     rec.ID.String(),
 		"org_name":            rec.OrgName,
+		"email":               rec.Email,
 		"expires_at":          rec.ExpiresAt.Format(time.RFC3339),
 		"resend_available_at": rec.ResendAvailableAt.Format(time.RFC3339),
 	}
@@ -1069,6 +1082,7 @@ func (s *Server) handleOrgRegistrationResend(w http.ResponseWriter, r *http.Requ
 	response := map[string]interface{}{
 		"registration_id":     updated.ID.String(),
 		"org_name":            updated.OrgName,
+		"email":               updated.Email,
 		"expires_at":          updated.ExpiresAt.Format(time.RFC3339),
 		"resend_available_at": updated.ResendAvailableAt.Format(time.RFC3339),
 	}

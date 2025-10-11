@@ -36,6 +36,7 @@ func (e *apiError) Error() string {
 type registrationInfo struct {
 	ID                string
 	OrgName           string
+	Email             string
 	ExpiresAt         time.Time
 	ResendAvailableAt time.Time
 	Attempts          int
@@ -116,6 +117,7 @@ func (c *brokerClient) currentUser(ctx context.Context) (onboardingState, error)
 		PendingRegistration *struct {
 			RegistrationID    string `json:"registration_id"`
 			OrgName           string `json:"org_name"`
+			Email             string `json:"email"`
 			ExpiresAt         string `json:"expires_at"`
 			ResendAvailableAt string `json:"resend_available_at"`
 			Attempts          int    `json:"attempts"`
@@ -145,6 +147,7 @@ func (c *brokerClient) currentUser(ctx context.Context) (onboardingState, error)
 		state.PendingRegistration = &registrationInfo{
 			ID:                payload.PendingRegistration.RegistrationID,
 			OrgName:           payload.PendingRegistration.OrgName,
+			Email:             payload.PendingRegistration.Email,
 			ExpiresAt:         expiry,
 			ResendAvailableAt: resend,
 			Attempts:          payload.PendingRegistration.Attempts,
@@ -166,8 +169,8 @@ func (c *brokerClient) currentUser(ctx context.Context) (onboardingState, error)
 	return state, nil
 }
 
-func (c *brokerClient) startRegistration(ctx context.Context, orgName string) (registrationInfo, error) {
-	body := map[string]string{"name": orgName}
+func (c *brokerClient) startRegistration(ctx context.Context, orgName, email string) (registrationInfo, error) {
+	body := map[string]string{"name": orgName, "email": email}
 	resp, err := c.doRequest(ctx, http.MethodPost, "/api/orgs/registration/start", body)
 	if err != nil {
 		return registrationInfo{}, err
@@ -181,6 +184,7 @@ func (c *brokerClient) startRegistration(ctx context.Context, orgName string) (r
 	var payload struct {
 		RegistrationID    string `json:"registration_id"`
 		OrgName           string `json:"org_name"`
+		Email             string `json:"email"`
 		ExpiresAt         string `json:"expires_at"`
 		ResendAvailableAt string `json:"resend_available_at"`
 	}
@@ -194,6 +198,7 @@ func (c *brokerClient) startRegistration(ctx context.Context, orgName string) (r
 	return registrationInfo{
 		ID:                payload.RegistrationID,
 		OrgName:           payload.OrgName,
+		Email:             payload.Email,
 		ExpiresAt:         expiry,
 		ResendAvailableAt: resend,
 		Attempts:          0,
@@ -216,6 +221,7 @@ func (c *brokerClient) resendRegistration(ctx context.Context, registrationID st
 	var payload struct {
 		RegistrationID    string `json:"registration_id"`
 		OrgName           string `json:"org_name"`
+		Email             string `json:"email"`
 		ExpiresAt         string `json:"expires_at"`
 		ResendAvailableAt string `json:"resend_available_at"`
 	}
@@ -229,6 +235,7 @@ func (c *brokerClient) resendRegistration(ctx context.Context, registrationID st
 	return registrationInfo{
 		ID:                payload.RegistrationID,
 		OrgName:           payload.OrgName,
+		Email:             payload.Email,
 		ExpiresAt:         expiry,
 		ResendAvailableAt: resend,
 	}, nil
@@ -435,7 +442,8 @@ func (f *onboardingFlow) run(ctx context.Context) error {
 
 func (f *onboardingFlow) resumeRegistration(ctx context.Context, reg *registrationInfo) error {
 	_, _ = fmt.Fprintf(f.stdout, "\nA pending organization registration exists for %q.\n", reg.OrgName)
-	_, _ = fmt.Fprintln(f.stdout, "Enter the verification code from the email (or type 'resend' to request a new one).")
+	_, _ = fmt.Fprintf(f.stdout, "Check %s for the verification code.\n", reg.Email)
+	_, _ = fmt.Fprintln(f.stdout, "Enter the code below (or type 'resend' to request a new one).")
 
 	for {
 		input, err := f.prompt("Verification code: ")
@@ -489,13 +497,23 @@ func (f *onboardingFlow) createOrganizationFlow(ctx context.Context) error {
 		return nil
 	}
 
-	reg, err := f.client.startRegistration(ctx, name)
+	email, err := f.prompt("Email address for verification: ")
+	if err != nil {
+		return err
+	}
+	email = strings.TrimSpace(email)
+	if email == "" || !strings.Contains(email, "@") {
+		_, _ = fmt.Fprintln(f.stdout, "Valid email address required.")
+		return nil
+	}
+
+	reg, err := f.client.startRegistration(ctx, name, email)
 	if err != nil {
 		f.reportError(err)
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(f.stdout, "We emailed a verification code to confirm %q. It expires at %s.\n", reg.OrgName, reg.ExpiresAt.Format(time.RFC1123))
+	_, _ = fmt.Fprintf(f.stdout, "We emailed a verification code to %s. It expires at %s.\n", reg.Email, reg.ExpiresAt.Format(time.RFC1123))
 	return f.resumeRegistration(ctx, &reg)
 }
 
