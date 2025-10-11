@@ -16,13 +16,13 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID
-	GitHubUserID int64
-	Email        string
-	Name         string
-	Username     string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID  `db:"id"`
+	GitHubUserID int64      `db:"github_user_id"`
+	Email        string     `db:"email"`
+	Name         string     `db:"name"`
+	Username     string     `db:"username"`
+	CreatedAt    time.Time  `db:"created_at"`
+	UpdatedAt    time.Time  `db:"updated_at"`
 }
 
 type GitHubUserInput struct {
