@@ -3,6 +3,8 @@ package authbroker
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -25,9 +27,11 @@ type Server struct {
 	signer  *Signer
 	github  githubProvider
 	store   dataStore
+	mailer  mailer
 	mux     *http.ServeMux
 	pending map[string]deviceSession
 	mu      sync.Mutex
+	now     func() time.Time
 }
 
 func (s *Server) Close() error {
@@ -43,12 +47,132 @@ type dataStore interface {
 	SaveRefreshToken(ctx context.Context, token string, rec persistence.RefreshTokenRecord) error
 	GetRefreshToken(ctx context.Context, token string) (persistence.RefreshTokenRecord, error)
 	DeleteRefreshToken(ctx context.Context, token string) error
-	CreateOrganizationWithProject(ctx context.Context, userID uuid.UUID, input persistence.CreateOrgInput) (persistence.Organization, persistence.Project, error)
 	ListProjectMembers(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectMember, error)
 	SetProjectMemberRole(ctx context.Context, projectID, userID uuid.UUID, role string) error
 	RemoveProjectMember(ctx context.Context, projectID, userID uuid.UUID) error
 	ProjectOrganizationID(ctx context.Context, projectID uuid.UUID) (uuid.UUID, error)
 	IsOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) (bool, error)
+	DeleteOrgRegistrationsForUser(ctx context.Context, userID uuid.UUID) error
+	CreateOrgRegistration(ctx context.Context, rec persistence.OrganizationRegistration) (persistence.OrganizationRegistration, error)
+	GetOrgRegistration(ctx context.Context, id uuid.UUID) (persistence.OrganizationRegistration, error)
+	LatestOrgRegistrationForUser(ctx context.Context, userID uuid.UUID) (persistence.OrganizationRegistration, error)
+	UpdateOrgRegistrationForResend(ctx context.Context, id uuid.UUID, hash, salt []byte, expiresAt, resendAt time.Time) (persistence.OrganizationRegistration, error)
+	IncrementOrgRegistrationAttempts(ctx context.Context, id uuid.UUID) error
+	DeleteOrgRegistration(ctx context.Context, id uuid.UUID) error
+	CreateOrganization(ctx context.Context, userID uuid.UUID, name, slug string) (persistence.Organization, error)
+	OrganizationSlugExists(ctx context.Context, slug string) (bool, error)
+	AddOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) error
+	CreateOrgInvite(ctx context.Context, invite persistence.OrganizationInvite) (persistence.OrganizationInvite, error)
+	FindPendingOrgInvites(ctx context.Context, email string) ([]persistence.OrganizationInvite, error)
+	MarkOrgInviteAccepted(ctx context.Context, inviteID, userID uuid.UUID) error
+}
+
+const (
+	orgRegistrationTTL         = time.Hour
+	orgRegistrationResendDelay = time.Minute
+	verificationCodeLength     = 6
+	maxOrgNameLength           = 120
+	maxInviteEmailLength       = 320
+	defaultSlugSuffixLength    = 4
+	maxRegistrationAttempts    = 5
+)
+
+func (s *Server) nowUTC() time.Time {
+	if s.now == nil {
+		return time.Now().UTC()
+	}
+	return s.now().UTC()
+}
+
+func newVerificationSecret(length int) (code string, salt, hash []byte, err error) {
+	if length <= 0 {
+		length = verificationCodeLength
+	}
+	const digits = "0123456789"
+	buf := make([]byte, length)
+	if _, err = rand.Read(buf); err != nil {
+		return "", nil, nil, err
+	}
+	b := make([]byte, length)
+	for i := range buf {
+		b[i] = digits[int(buf[i])%len(digits)]
+	}
+	code = string(b)
+
+	salt = make([]byte, 16)
+	if _, err = rand.Read(salt); err != nil {
+		return "", nil, nil, err
+	}
+	sum := sha256.Sum256(append(salt, []byte(code)...))
+	hash = sum[:]
+	return code, salt, hash, nil
+}
+
+func verifyCode(code string, salt, hash []byte) bool {
+	sum := sha256.Sum256(append(salt, []byte(strings.TrimSpace(code))...))
+	return subtle.ConstantTimeCompare(hash, sum[:]) == 1
+}
+
+func slugifyName(input string) string {
+	input = strings.ToLower(strings.TrimSpace(input))
+	var builder strings.Builder
+	lastDash := false
+	for _, r := range input {
+		switch {
+		case r >= 'a' && r <= 'z':
+			builder.WriteRune(r)
+			lastDash = false
+		case r >= '0' && r <= '9':
+			builder.WriteRune(r)
+			lastDash = false
+		case r == '-' || r == '_' || r == ' ':
+			if !lastDash && builder.Len() > 0 {
+				builder.WriteByte('-')
+				lastDash = true
+			}
+		}
+	}
+	slug := strings.Trim(builder.String(), "-")
+	if slug == "" {
+		slug = "org"
+	}
+	return slug
+}
+
+func randomSuffix(length int) (string, error) {
+	const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+	if length <= 0 {
+		length = defaultSlugSuffixLength
+	}
+	buf := make([]byte, length)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	for i := range buf {
+		buf[i] = alphabet[int(buf[i])%len(alphabet)]
+	}
+	return string(buf), nil
+}
+
+func (s *Server) ensureUniqueSlug(ctx context.Context, name string) (string, error) {
+	base := slugifyName(name)
+	try := base
+
+	for attempt := 0; attempt < 10; attempt++ {
+		exists, err := s.store.OrganizationSlugExists(ctx, try)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return try, nil
+		}
+		suffix, err := randomSuffix(defaultSlugSuffixLength)
+		if err != nil {
+			return "", err
+		}
+		try = fmt.Sprintf("%s-%s", base, suffix)
+	}
+	return "", fmt.Errorf("could not reserve unique slug")
 }
 
 type brokerPrincipal struct {
@@ -97,10 +221,15 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, err
 	}
 
-	return newServerWithComponents(cfg, signer, NewGitHubClient(cfg.GitHub, nil), store)
+	mailer, err := newPostmarkMailer(cfg.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	return newServerWithComponents(cfg, signer, NewGitHubClient(cfg.GitHub, nil), store, mailer)
 }
 
-func newServerWithComponents(cfg Config, signer *Signer, github githubProvider, dataStore dataStore) (*Server, error) {
+func newServerWithComponents(cfg Config, signer *Signer, github githubProvider, dataStore dataStore, mail mailer) (*Server, error) {
 	if signer == nil {
 		return nil, fmt.Errorf("signer is required")
 	}
@@ -110,14 +239,19 @@ func newServerWithComponents(cfg Config, signer *Signer, github githubProvider, 
 	if dataStore == nil {
 		return nil, fmt.Errorf("data store is required")
 	}
+	if mail == nil {
+		return nil, fmt.Errorf("mailer is required")
+	}
 
 	srv := &Server{
 		cfg:     cfg,
 		signer:  signer,
 		github:  github,
 		store:   dataStore,
+		mailer:  mail,
 		mux:     http.NewServeMux(),
 		pending: make(map[string]deviceSession),
+		now:     time.Now,
 	}
 	srv.routes()
 	return srv, nil
@@ -131,7 +265,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	s.mux.HandleFunc("/api/orgs", s.requireAuth(s.handleCreateOrganization))
+	s.mux.HandleFunc("/api/users/me", s.requireAuth(s.handleCurrentUser))
+	s.mux.HandleFunc("/api/orgs/registration/start", s.requireAuth(s.handleOrgRegistrationStart))
+	s.mux.HandleFunc("/api/orgs/registration/resend", s.requireAuth(s.handleOrgRegistrationResend))
+	s.mux.HandleFunc("/api/orgs/registration/complete", s.requireAuth(s.handleOrgRegistrationComplete))
+	s.mux.HandleFunc("/api/orgs/invites/accept", s.requireAuth(s.handleOrgInviteAccept))
+	s.mux.HandleFunc("/api/orgs/", s.requireAuth(s.handleOrgRoutes))
 	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleProjectRoutes))
 }
 
@@ -694,7 +833,88 @@ func generateRandomToken() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
-func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+func (s *Server) handleCurrentUser(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	ctx := r.Context()
+	summary, err := s.store.RoleSummary(ctx, principal.UserID)
+	if err != nil {
+		log.Printf("failed to load role summary: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to load user state")
+		return
+	}
+
+	roles := summary.AggregatedRoles()
+	status := "ready"
+	if len(roles) == 0 || (len(roles) == 1 && strings.EqualFold(roles[0], "pending")) {
+		status = "pending"
+	}
+
+	resp := map[string]interface{}{
+		"user": map[string]string{
+			"id":       principal.UserID.String(),
+			"email":    principal.Email,
+			"name":     principal.Name,
+			"username": principal.Username,
+		},
+		"roles":  roles,
+		"status": status,
+	}
+
+	if reg, err := s.store.LatestOrgRegistrationForUser(ctx, principal.UserID); err == nil {
+		if reg.ExpiresAt.After(s.nowUTC()) {
+			resp["pending_registration"] = map[string]interface{}{
+				"registration_id":     reg.ID.String(),
+				"org_name":            reg.OrgName,
+				"expires_at":          reg.ExpiresAt.Format(time.RFC3339),
+				"resend_available_at": reg.ResendAvailableAt.Format(time.RFC3339),
+				"attempts":            reg.Attempts,
+				"max_attempts":        reg.MaxAttempts,
+			}
+		} else {
+			_ = s.store.DeleteOrgRegistration(ctx, reg.ID)
+		}
+	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("failed to inspect pending registration: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to load registration state")
+		return
+	}
+
+	if principal.Email != "" {
+		invites, err := s.store.FindPendingOrgInvites(ctx, principal.Email)
+		if err != nil {
+			log.Printf("failed to list invites: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to load invites")
+			return
+		}
+		if len(invites) > 0 {
+			list := make([]map[string]interface{}, 0, len(invites))
+			now := s.nowUTC()
+			for _, inv := range invites {
+				if inv.ExpiresAt.Before(now) {
+					continue
+				}
+				list = append(list, map[string]interface{}{
+					"invite_id":         inv.ID.String(),
+					"organization_id":   inv.OrganizationID.String(),
+					"organization_name": inv.OrganizationName,
+					"role":              inv.Role,
+					"expires_at":        inv.ExpiresAt.Format(time.RFC3339),
+				})
+			}
+			if len(list) > 0 {
+				resp["pending_invites"] = list
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+func (s *Server) handleOrgRegistrationStart(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -703,46 +923,244 @@ func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusForbidden, "owner or pending role required")
 		return
 	}
-
-	type request struct {
-		Name    string `json:"name"`
-		Slug    string `json:"slug"`
-		Project struct {
-			Name          string   `json:"name"`
-			RepoURL       string   `json:"repo_url"`
-			DefaultBranch string   `json:"default_branch"`
-			PathScope     []string `json:"path_scope"`
-		} `json:"project"`
+	if strings.TrimSpace(principal.Email) == "" {
+		writeError(w, http.StatusBadRequest, "email address is required to start registration")
+		return
 	}
 
-	var req request
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json payload")
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeError(w, http.StatusBadRequest, "organization name is required")
+		return
+	}
+	if len(name) > maxOrgNameLength {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("organization name must be <= %d characters", maxOrgNameLength))
+		return
+	}
+
+	ctx := r.Context()
+	if err := s.store.DeleteOrgRegistrationsForUser(ctx, principal.UserID); err != nil {
+		log.Printf("failed to clear previous registrations: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to reset registration state")
+		return
+	}
+
+	code, salt, hash, err := newVerificationSecret(verificationCodeLength)
+	if err != nil {
+		log.Printf("failed to generate verification code: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to prepare verification code")
+		return
+	}
+
+	now := s.nowUTC()
+	reg := persistence.OrganizationRegistration{
+		ID:                uuid.New(),
+		UserID:            principal.UserID,
+		Email:             principal.Email,
+		OrgName:           name,
+		CodeHash:          hash,
+		CodeSalt:          salt,
+		Attempts:          0,
+		MaxAttempts:       maxRegistrationAttempts,
+		ExpiresAt:         now.Add(orgRegistrationTTL),
+		ResendAvailableAt: now.Add(orgRegistrationResendDelay),
+	}
+
+	rec, err := s.store.CreateOrgRegistration(ctx, reg)
+	if err != nil {
+		log.Printf("failed to persist registration: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to start registration")
+		return
+	}
+
+	if err := s.mailer.SendOrgVerification(ctx, principal.Email, name, code, rec.ExpiresAt); err != nil {
+		_ = s.store.DeleteOrgRegistration(ctx, rec.ID)
+		log.Printf("failed to send verification email: %v", err)
+		writeError(w, http.StatusBadGateway, "failed to send verification email")
+		return
+	}
+
+	response := map[string]interface{}{
+		"registration_id":     rec.ID.String(),
+		"org_name":            rec.OrgName,
+		"expires_at":          rec.ExpiresAt.Format(time.RFC3339),
+		"resend_available_at": rec.ResendAvailableAt.Format(time.RFC3339),
+	}
+	writeJSON(w, http.StatusCreated, response)
+}
+
+func (s *Server) handleOrgRegistrationResend(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req struct {
+		RegistrationID string `json:"registration_id"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json payload")
 		return
 	}
 
-	input := persistence.CreateOrgInput{
-		Name: strings.TrimSpace(req.Name),
-		Slug: strings.TrimSpace(req.Slug),
-		Project: persistence.ProjectInput{
-			Name:          strings.TrimSpace(req.Project.Name),
-			RepoURL:       strings.TrimSpace(req.Project.RepoURL),
-			DefaultBranch: strings.TrimSpace(req.Project.DefaultBranch),
-			PathScope:     append([]string(nil), req.Project.PathScope...),
-		},
+	regID, err := uuid.Parse(strings.TrimSpace(req.RegistrationID))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid registration id")
+		return
 	}
 
-	org, project, err := s.store.CreateOrganizationWithProject(r.Context(), principal.UserID, input)
+	ctx := r.Context()
+	reg, err := s.store.GetOrgRegistration(ctx, regID)
 	if err != nil {
-		switch {
-		case errors.Is(err, persistence.ErrOrganizationSlugUsed):
-			writeError(w, http.StatusConflict, "organization slug already in use")
-			return
-		default:
-			log.Printf("failed to create organization: %v", err)
-			writeError(w, http.StatusInternalServerError, "failed to create organization")
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "registration not found")
 			return
 		}
+		log.Printf("failed to load registration: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to load registration")
+		return
+	}
+	if reg.UserID != principal.UserID {
+		writeError(w, http.StatusForbidden, "registration does not belong to caller")
+		return
+	}
+
+	now := s.nowUTC()
+	if reg.ExpiresAt.Before(now) {
+		_ = s.store.DeleteOrgRegistration(ctx, reg.ID)
+		writeError(w, http.StatusGone, "registration expired")
+		return
+	}
+	if reg.ResendAvailableAt.After(now) {
+		writeError(w, http.StatusTooManyRequests, fmt.Sprintf("resend available after %s", reg.ResendAvailableAt.Format(time.RFC3339)))
+		return
+	}
+
+	code, salt, hash, err := newVerificationSecret(verificationCodeLength)
+	if err != nil {
+		log.Printf("failed to generate resend code: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to generate new code")
+		return
+	}
+
+	updated, err := s.store.UpdateOrgRegistrationForResend(ctx, reg.ID, hash, salt, now.Add(orgRegistrationTTL), now.Add(orgRegistrationResendDelay))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "registration not found")
+			return
+		}
+		log.Printf("failed to update registration: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to update registration")
+		return
+	}
+
+	if err := s.mailer.SendOrgVerification(ctx, updated.Email, updated.OrgName, code, updated.ExpiresAt); err != nil {
+		log.Printf("failed to send verification email: %v", err)
+		writeError(w, http.StatusBadGateway, "failed to send verification email")
+		return
+	}
+
+	response := map[string]interface{}{
+		"registration_id":     updated.ID.String(),
+		"org_name":            updated.OrgName,
+		"expires_at":          updated.ExpiresAt.Format(time.RFC3339),
+		"resend_available_at": updated.ResendAvailableAt.Format(time.RFC3339),
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleOrgRegistrationComplete(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	var req struct {
+		RegistrationID string `json:"registration_id"`
+		Code           string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json payload")
+		return
+	}
+	if strings.TrimSpace(req.Code) == "" {
+		writeError(w, http.StatusBadRequest, "verification code is required")
+		return
+	}
+
+	regID, err := uuid.Parse(strings.TrimSpace(req.RegistrationID))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid registration id")
+		return
+	}
+
+	ctx := r.Context()
+	reg, err := s.store.GetOrgRegistration(ctx, regID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "registration not found")
+			return
+		}
+		log.Printf("failed to load registration: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to load registration")
+		return
+	}
+	if reg.UserID != principal.UserID {
+		writeError(w, http.StatusForbidden, "registration does not belong to caller")
+		return
+	}
+
+	now := s.nowUTC()
+	if reg.ExpiresAt.Before(now) {
+		_ = s.store.DeleteOrgRegistration(ctx, reg.ID)
+		writeError(w, http.StatusGone, "registration expired")
+		return
+	}
+
+	if !verifyCode(req.Code, reg.CodeSalt, reg.CodeHash) {
+		_ = s.store.IncrementOrgRegistrationAttempts(ctx, reg.ID)
+		if reg.Attempts+1 >= reg.MaxAttempts {
+			_ = s.store.DeleteOrgRegistration(ctx, reg.ID)
+			writeError(w, http.StatusTooManyRequests, "verification failed too many times; restart registration")
+			return
+		}
+		writeError(w, http.StatusUnauthorized, "verification code invalid")
+		return
+	}
+
+	var org persistence.Organization
+	for attempt := 0; attempt < 5; attempt++ {
+		slug, err := s.ensureUniqueSlug(ctx, reg.OrgName)
+		if err != nil {
+			log.Printf("failed to ensure slug: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to prepare organization")
+			return
+		}
+		org, err = s.store.CreateOrganization(ctx, principal.UserID, reg.OrgName, slug)
+		if err == nil {
+			break
+		}
+		if errors.Is(err, persistence.ErrOrganizationSlugUsed) {
+			continue
+		}
+		log.Printf("failed to create organization: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to create organization")
+		return
+	}
+	if org.ID == uuid.Nil {
+		log.Printf("failed to allocate unique slug for %s", reg.OrgName)
+		writeError(w, http.StatusConflict, "failed to reserve organization slug")
+		return
+	}
+
+	if err := s.store.DeleteOrgRegistration(ctx, reg.ID); err != nil {
+		log.Printf("failed to clear registration: %v", err)
 	}
 
 	response := map[string]interface{}{
@@ -752,17 +1170,210 @@ func (s *Server) handleCreateOrganization(w http.ResponseWriter, r *http.Request
 			"slug":       org.Slug,
 			"created_at": org.CreatedAt.Format(time.RFC3339),
 		},
-		"project": map[string]interface{}{
-			"id":             project.ID.String(),
-			"name":           project.Name,
-			"repo_url":       project.RepoURL,
-			"default_branch": project.DefaultBranch,
-			"path_scope":     project.PathScope,
-			"created_at":     project.CreatedAt.Format(time.RFC3339),
-		},
-		"message": "organization created; run `rocketship login` to refresh credentials",
+		"needs_claim_refresh": true,
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleOrgInviteAccept(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if strings.TrimSpace(principal.Email) == "" {
+		writeError(w, http.StatusBadRequest, "email address required to accept invite")
+		return
 	}
 
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json payload")
+		return
+	}
+	code := strings.TrimSpace(req.Code)
+	if code == "" {
+		writeError(w, http.StatusBadRequest, "invite code is required")
+		return
+	}
+
+	ctx := r.Context()
+	invites, err := s.store.FindPendingOrgInvites(ctx, principal.Email)
+	if err != nil {
+		log.Printf("failed to list invites: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to look up invites")
+		return
+	}
+	if len(invites) == 0 {
+		writeError(w, http.StatusNotFound, "no invites found for this account")
+		return
+	}
+
+	now := s.nowUTC()
+	var matched *persistence.OrganizationInvite
+	for _, inv := range invites {
+		if inv.ExpiresAt.Before(now) {
+			continue
+		}
+		if verifyCode(code, inv.CodeSalt, inv.CodeHash) {
+			matched = &inv
+			break
+		}
+	}
+	if matched == nil {
+		writeError(w, http.StatusUnauthorized, "invite code invalid")
+		return
+	}
+
+	if err := s.store.AddOrganizationAdmin(ctx, matched.OrganizationID, principal.UserID); err != nil {
+		log.Printf("failed to add organization admin: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to apply invite")
+		return
+	}
+	if err := s.store.MarkOrgInviteAccepted(ctx, matched.ID, principal.UserID); err != nil {
+		log.Printf("failed to mark invite accepted: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to update invite")
+		return
+	}
+
+	response := map[string]interface{}{
+		"organization": map[string]interface{}{
+			"id":   matched.OrganizationID.String(),
+			"name": matched.OrganizationName,
+		},
+		"needs_claim_refresh": true,
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleOrgRoutes(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if !strings.HasPrefix(r.URL.Path, "/api/orgs/") {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+
+	trimmed := strings.TrimPrefix(r.URL.Path, "/api/orgs/")
+	segments := strings.Split(strings.Trim(trimmed, "/"), "/")
+	if len(segments) == 0 || segments[0] == "" {
+		writeError(w, http.StatusNotFound, "organization id required")
+		return
+	}
+
+	orgID, err := uuid.Parse(segments[0])
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid organization id")
+		return
+	}
+
+	if len(segments) < 2 {
+		writeError(w, http.StatusNotFound, "resource not found")
+		return
+	}
+
+	switch segments[1] {
+	case "invites":
+		s.handleOrgInvites(w, r, principal, orgID, segments[2:])
+	default:
+		writeError(w, http.StatusNotFound, "resource not found")
+	}
+}
+
+func (s *Server) handleOrgInvites(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, orgID uuid.UUID, tail []string) {
+	if len(tail) > 0 {
+		writeError(w, http.StatusNotFound, "resource not found")
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if !principal.HasRole("owner") {
+		writeError(w, http.StatusForbidden, "owner role required")
+		return
+	}
+
+	ctx := r.Context()
+	isAdmin, err := s.store.IsOrganizationAdmin(ctx, orgID, principal.UserID)
+	if err != nil {
+		log.Printf("failed to check org admin: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to authorize request")
+		return
+	}
+	if !isAdmin {
+		writeError(w, http.StatusForbidden, "owner role required for target organization")
+		return
+	}
+
+	var req struct {
+		Email string `json:"email"`
+		Role  string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json payload")
+		return
+	}
+	email := strings.TrimSpace(req.Email)
+	if email == "" {
+		writeError(w, http.StatusBadRequest, "invite email is required")
+		return
+	}
+	if len(email) > maxInviteEmailLength || !strings.Contains(email, "@") {
+		writeError(w, http.StatusBadRequest, "invite email appears invalid")
+		return
+	}
+	role := strings.ToLower(strings.TrimSpace(req.Role))
+	if role == "" {
+		role = "admin"
+	}
+	if role != "admin" {
+		writeError(w, http.StatusBadRequest, "only admin role is supported for invites")
+		return
+	}
+
+	code, salt, hash, err := newVerificationSecret(verificationCodeLength)
+	if err != nil {
+		log.Printf("failed to generate invite code: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to generate invite code")
+		return
+	}
+
+	invite := persistence.OrganizationInvite{
+		ID:             uuid.New(),
+		OrganizationID: orgID,
+		Email:          email,
+		Role:           role,
+		CodeHash:       hash,
+		CodeSalt:       salt,
+		InvitedBy:      principal.UserID,
+		ExpiresAt:      s.nowUTC().Add(orgRegistrationTTL),
+	}
+	record, err := s.store.CreateOrgInvite(ctx, invite)
+	if err != nil {
+		log.Printf("failed to create invite: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to create invite")
+		return
+	}
+
+	displayName := principal.Name
+	if displayName == "" {
+		displayName = principal.Email
+	}
+
+	if err := s.mailer.SendOrgInvite(ctx, email, record.OrganizationName, code, record.ExpiresAt, displayName); err != nil {
+		log.Printf("failed to send invite email: %v", err)
+		writeError(w, http.StatusBadGateway, "failed to send invite email")
+		return
+	}
+
+	response := map[string]interface{}{
+		"invite_id":         record.ID.String(),
+		"organization_id":   record.OrganizationID.String(),
+		"organization_name": record.OrganizationName,
+		"role":              record.Role,
+		"expires_at":        record.ExpiresAt.Format(time.RFC3339),
+		"invite_code":       code,
+	}
 	writeJSON(w, http.StatusCreated, response)
 }
 

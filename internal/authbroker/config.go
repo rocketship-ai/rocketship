@@ -21,6 +21,7 @@ type Config struct {
 	GitHub          GitHubConfig
 	DatabaseURL     string
 	RefreshTokenKey []byte
+	Email           EmailConfig
 }
 
 type GitHubConfig struct {
@@ -31,6 +32,11 @@ type GitHubConfig struct {
 	UserURL      string
 	EmailsURL    string
 	Scopes       []string
+}
+
+type EmailConfig struct {
+	FromAddress   string
+	PostmarkToken string
 }
 
 const (
@@ -128,6 +134,17 @@ func LoadConfigFromEnv() (Config, error) {
 	}
 	if len(cfg.RefreshTokenKey) == 0 {
 		return Config{}, fmt.Errorf("ROCKETSHIP_BROKER_REFRESH_KEY is required")
+	}
+
+	cfg.Email = EmailConfig{
+		FromAddress:   strings.TrimSpace(os.Getenv("ROCKETSHIP_EMAIL_FROM")),
+		PostmarkToken: strings.TrimSpace(os.Getenv("ROCKETSHIP_POSTMARK_SERVER_TOKEN")),
+	}
+	if cfg.Email.FromAddress == "" {
+		return Config{}, fmt.Errorf("ROCKETSHIP_EMAIL_FROM is required")
+	}
+	if cfg.Email.PostmarkToken == "" {
+		return Config{}, fmt.Errorf("ROCKETSHIP_POSTMARK_SERVER_TOKEN is required")
 	}
 
 	return cfg, nil
