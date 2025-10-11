@@ -66,34 +66,34 @@ type ProjectMembership struct {
 }
 
 type OrganizationRegistration struct {
-	ID                uuid.UUID
-	UserID            uuid.UUID
-	Email             string
-	OrgName           string
-	CodeHash          []byte
-	CodeSalt          []byte
-	Attempts          int
-	MaxAttempts       int
-	ExpiresAt         time.Time
-	ResendAvailableAt time.Time
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	ID                uuid.UUID  `db:"id"`
+	UserID            uuid.UUID  `db:"user_id"`
+	Email             string     `db:"email"`
+	OrgName           string     `db:"org_name"`
+	CodeHash          []byte     `db:"code_hash"`
+	CodeSalt          []byte     `db:"code_salt"`
+	Attempts          int        `db:"attempts"`
+	MaxAttempts       int        `db:"max_attempts"`
+	ExpiresAt         time.Time  `db:"expires_at"`
+	ResendAvailableAt time.Time  `db:"resend_available_at"`
+	CreatedAt         time.Time  `db:"created_at"`
+	UpdatedAt         time.Time  `db:"updated_at"`
 }
 
 type OrganizationInvite struct {
-	ID               uuid.UUID
-	OrganizationID   uuid.UUID
-	Email            string
-	Role             string
-	CodeHash         []byte
-	CodeSalt         []byte
-	InvitedBy        uuid.UUID
-	ExpiresAt        time.Time
-	AcceptedAt       sql.NullTime
-	AcceptedBy       uuid.NullUUID
-	OrganizationName string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID               uuid.UUID      `db:"id"`
+	OrganizationID   uuid.UUID      `db:"organization_id"`
+	Email            string         `db:"email"`
+	Role             string         `db:"role"`
+	CodeHash         []byte         `db:"code_hash"`
+	CodeSalt         []byte         `db:"code_salt"`
+	InvitedBy        uuid.UUID      `db:"invited_by"`
+	ExpiresAt        time.Time      `db:"expires_at"`
+	AcceptedAt       sql.NullTime   `db:"accepted_at"`
+	AcceptedBy       uuid.NullUUID  `db:"accepted_by"`
+	OrganizationName string         `db:"organization_name"`
+	CreatedAt        time.Time      `db:"created_at"`
+	UpdatedAt        time.Time      `db:"updated_at"`
 }
 
 type RoleSummary struct {
