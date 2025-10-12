@@ -206,41 +206,6 @@ func (c *brokerClient) startRegistration(ctx context.Context, orgName, email str
 	}, nil
 }
 
-func (c *brokerClient) resendRegistration(ctx context.Context, registrationID string) (registrationInfo, error) {
-	body := map[string]string{"registration_id": registrationID}
-	resp, err := c.doRequest(ctx, http.MethodPost, "/api/orgs/registration/resend", body)
-	if err != nil {
-		return registrationInfo{}, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return registrationInfo{}, c.decodeError(resp)
-	}
-
-	var payload struct {
-		RegistrationID    string `json:"registration_id"`
-		OrgName           string `json:"org_name"`
-		Email             string `json:"email"`
-		ExpiresAt         string `json:"expires_at"`
-		ResendAvailableAt string `json:"resend_available_at"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return registrationInfo{}, fmt.Errorf("failed to decode resend response: %w", err)
-	}
-
-	expiry, _ := time.Parse(time.RFC3339, payload.ExpiresAt)
-	resend, _ := time.Parse(time.RFC3339, payload.ResendAvailableAt)
-
-	return registrationInfo{
-		ID:                payload.RegistrationID,
-		OrgName:           payload.OrgName,
-		Email:             payload.Email,
-		ExpiresAt:         expiry,
-		ResendAvailableAt: resend,
-	}, nil
-}
-
 func (c *brokerClient) completeRegistration(ctx context.Context, registrationID, code string) (completionResult, error) {
 	body := map[string]string{
 		"registration_id": registrationID,
@@ -443,7 +408,6 @@ func (f *onboardingFlow) run(ctx context.Context) error {
 func (f *onboardingFlow) resumeRegistration(ctx context.Context, reg *registrationInfo) error {
 	_, _ = fmt.Fprintf(f.stdout, "\nA pending organization registration exists for %q.\n", reg.OrgName)
 	_, _ = fmt.Fprintf(f.stdout, "Check %s for the verification code.\n", reg.Email)
-	_, _ = fmt.Fprintln(f.stdout, "Enter the code below (or type 'resend' to request a new one).")
 
 	for {
 		input, err := f.prompt("Verification code: ")
@@ -452,16 +416,6 @@ func (f *onboardingFlow) resumeRegistration(ctx context.Context, reg *registrati
 		}
 		input = strings.TrimSpace(input)
 		if input == "" {
-			continue
-		}
-		if strings.EqualFold(input, "resend") {
-			updated, err := f.client.resendRegistration(ctx, reg.ID)
-			if err != nil {
-				f.reportError(err)
-				continue
-			}
-			*reg = updated
-			_, _ = fmt.Fprintf(f.stdout, "Sent a new code. It expires at %s.\n", updated.ExpiresAt.Format(time.RFC1123))
 			continue
 		}
 
