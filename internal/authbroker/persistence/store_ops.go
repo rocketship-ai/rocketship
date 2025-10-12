@@ -16,13 +16,13 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID
-	GitHubUserID int64
-	Email        string
-	Name         string
-	Username     string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           uuid.UUID `db:"id"`
+	GitHubUserID int64     `db:"github_user_id"`
+	Email        string    `db:"email"`
+	Name         string    `db:"name"`
+	Username     string    `db:"username"`
+	CreatedAt    time.Time `db:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"`
 }
 
 type GitHubUserInput struct {
@@ -63,6 +63,37 @@ type ProjectMembership struct {
 	ProjectID      uuid.UUID
 	OrganizationID uuid.UUID
 	Role           string
+}
+
+type OrganizationRegistration struct {
+	ID                uuid.UUID `db:"id"`
+	UserID            uuid.UUID `db:"user_id"`
+	Email             string    `db:"email"`
+	OrgName           string    `db:"org_name"`
+	CodeHash          []byte    `db:"code_hash"`
+	CodeSalt          []byte    `db:"code_salt"`
+	Attempts          int       `db:"attempts"`
+	MaxAttempts       int       `db:"max_attempts"`
+	ExpiresAt         time.Time `db:"expires_at"`
+	ResendAvailableAt time.Time `db:"resend_available_at"`
+	CreatedAt         time.Time `db:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at"`
+}
+
+type OrganizationInvite struct {
+	ID               uuid.UUID     `db:"id"`
+	OrganizationID   uuid.UUID     `db:"organization_id"`
+	Email            string        `db:"email"`
+	Role             string        `db:"role"`
+	CodeHash         []byte        `db:"code_hash"`
+	CodeSalt         []byte        `db:"code_salt"`
+	InvitedBy        uuid.UUID     `db:"invited_by"`
+	ExpiresAt        time.Time     `db:"expires_at"`
+	AcceptedAt       sql.NullTime  `db:"accepted_at"`
+	AcceptedBy       uuid.NullUUID `db:"accepted_by"`
+	OrganizationName string        `db:"organization_name"`
+	CreatedAt        time.Time     `db:"created_at"`
+	UpdatedAt        time.Time     `db:"updated_at"`
 }
 
 type RoleSummary struct {
@@ -257,8 +288,16 @@ func (s *Store) SaveRefreshToken(ctx context.Context, token string, rec RefreshT
             updated_at = NOW()
     `
 
+	// Convert uuid.Nil to NULL for database storage
+	var orgID interface{}
+	if rec.OrganizationID == uuid.Nil {
+		orgID = nil
+	} else {
+		orgID = rec.OrganizationID
+	}
+
 	scopes := pq.StringArray(rec.Scopes)
-	if _, err := s.db.ExecContext(ctx, query, rec.TokenID, hash, rec.User.ID, rec.OrganizationID, scopes, rec.IssuedAt, rec.ExpiresAt); err != nil {
+	if _, err := s.db.ExecContext(ctx, query, rec.TokenID, hash, rec.User.ID, orgID, scopes, rec.IssuedAt, rec.ExpiresAt); err != nil {
 		return fmt.Errorf("failed to persist refresh token: %w", err)
 	}
 	return nil
@@ -292,7 +331,7 @@ func (s *Store) GetRefreshToken(ctx context.Context, token string) (RefreshToken
 	dest := struct {
 		TokenID        uuid.UUID      `db:"token_id"`
 		UserID         uuid.UUID      `db:"user_id"`
-		OrganizationID uuid.UUID      `db:"organization_id"`
+		OrganizationID uuid.NullUUID  `db:"organization_id"`
 		Scopes         pq.StringArray `db:"scopes"`
 		IssuedAt       time.Time      `db:"issued_at"`
 		ExpiresAt      time.Time      `db:"expires_at"`
@@ -311,9 +350,15 @@ func (s *Store) GetRefreshToken(ctx context.Context, token string) (RefreshToken
 		return RefreshTokenRecord{}, fmt.Errorf("failed to load refresh token: %w", err)
 	}
 
+	// Convert NULL back to uuid.Nil
+	orgID := uuid.Nil
+	if dest.OrganizationID.Valid {
+		orgID = dest.OrganizationID.UUID
+	}
+
 	record := RefreshTokenRecord{
 		TokenID:        dest.TokenID,
-		OrganizationID: dest.OrganizationID,
+		OrganizationID: orgID,
 		Scopes:         []string(dest.Scopes),
 		IssuedAt:       dest.IssuedAt,
 		ExpiresAt:      dest.ExpiresAt,
@@ -516,6 +561,297 @@ func (s *Store) RemoveProjectMember(ctx context.Context, projectID, userID uuid.
 	res, err := s.db.ExecContext(ctx, query, projectID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete project member: %w", err)
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (s *Store) DeleteOrgRegistrationsForUser(ctx context.Context, userID uuid.UUID) error {
+	const query = `DELETE FROM organization_registrations WHERE user_id = $1`
+	if _, err := s.db.ExecContext(ctx, query, userID); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			switch pqErr.Code {
+			case "42P01":
+				return nil
+			}
+		}
+		return fmt.Errorf("failed to delete existing registrations: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) CreateOrgRegistration(ctx context.Context, rec OrganizationRegistration) (OrganizationRegistration, error) {
+	const query = `
+        INSERT INTO organization_registrations (
+            id, user_id, email, org_name, code_hash, code_salt, attempts, max_attempts,
+            expires_at, resend_available_at, created_at, updated_at
+        )
+        VALUES ($1, $2, LOWER($3), $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING created_at, updated_at
+    `
+
+	dest := OrganizationRegistration{
+		ID:                rec.ID,
+		UserID:            rec.UserID,
+		Email:             normalizeEmail(rec.Email),
+		OrgName:           rec.OrgName,
+		CodeHash:          append([]byte(nil), rec.CodeHash...),
+		CodeSalt:          append([]byte(nil), rec.CodeSalt...),
+		Attempts:          rec.Attempts,
+		MaxAttempts:       rec.MaxAttempts,
+		ExpiresAt:         rec.ExpiresAt,
+		ResendAvailableAt: rec.ResendAvailableAt,
+	}
+
+	if dest.MaxAttempts == 0 {
+		dest.MaxAttempts = 10
+	}
+
+	if err := s.db.QueryRowxContext(ctx, query,
+		dest.ID, dest.UserID, dest.Email, dest.OrgName, dest.CodeHash, dest.CodeSalt,
+		dest.Attempts, dest.MaxAttempts, dest.ExpiresAt, dest.ResendAvailableAt,
+	).Scan(&dest.CreatedAt, &dest.UpdatedAt); err != nil {
+		return OrganizationRegistration{}, fmt.Errorf("failed to insert organization registration: %w", err)
+	}
+
+	return dest, nil
+}
+
+func (s *Store) GetOrgRegistration(ctx context.Context, id uuid.UUID) (OrganizationRegistration, error) {
+	const query = `
+        SELECT id, user_id, email, org_name, code_hash, code_salt, attempts, max_attempts,
+               expires_at, resend_available_at, created_at, updated_at
+        FROM organization_registrations
+        WHERE id = $1
+        LIMIT 1
+    `
+
+	var rec OrganizationRegistration
+	if err := s.db.GetContext(ctx, &rec, query, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return OrganizationRegistration{}, sql.ErrNoRows
+		}
+		return OrganizationRegistration{}, fmt.Errorf("failed to load organization registration: %w", err)
+	}
+	return rec, nil
+}
+
+func (s *Store) UpdateOrgRegistrationForResend(ctx context.Context, id uuid.UUID, hash, salt []byte, expiresAt, resend time.Time) (OrganizationRegistration, error) {
+	const query = `
+        UPDATE organization_registrations
+        SET code_hash = $2,
+            code_salt = $3,
+            expires_at = $4,
+            resend_available_at = $5,
+            updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, user_id, email, org_name, code_hash, code_salt, attempts, max_attempts,
+                  expires_at, resend_available_at, created_at, updated_at
+    `
+
+	var rec OrganizationRegistration
+	if err := s.db.GetContext(ctx, &rec, query, id, hash, salt, expiresAt, resend); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return OrganizationRegistration{}, sql.ErrNoRows
+		}
+		return OrganizationRegistration{}, fmt.Errorf("failed to update registration: %w", err)
+	}
+	return rec, nil
+}
+
+func (s *Store) IncrementOrgRegistrationAttempts(ctx context.Context, id uuid.UUID) error {
+	const query = `
+        UPDATE organization_registrations
+        SET attempts = attempts + 1, updated_at = NOW()
+        WHERE id = $1
+    `
+	if _, err := s.db.ExecContext(ctx, query, id); err != nil {
+		return fmt.Errorf("failed to increment attempt counter: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) DeleteOrgRegistration(ctx context.Context, id uuid.UUID) error {
+	const query = `DELETE FROM organization_registrations WHERE id = $1`
+	if _, err := s.db.ExecContext(ctx, query, id); err != nil {
+		return fmt.Errorf("failed to delete registration: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) LatestOrgRegistrationForUser(ctx context.Context, userID uuid.UUID) (OrganizationRegistration, error) {
+	const query = `
+        SELECT id, user_id, email, org_name, code_hash, code_salt, attempts, max_attempts,
+               expires_at, resend_available_at, created_at, updated_at
+        FROM organization_registrations
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+    `
+	var rec OrganizationRegistration
+	if err := s.db.GetContext(ctx, &rec, query, userID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return OrganizationRegistration{}, sql.ErrNoRows
+		}
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			switch pqErr.Code {
+			case "42P01", // undefined_table
+				"42703": // undefined_column
+				return OrganizationRegistration{}, sql.ErrNoRows
+			}
+		}
+		return OrganizationRegistration{}, fmt.Errorf("failed to load registration: %w", err)
+	}
+	return rec, nil
+}
+
+func (s *Store) CreateOrganization(ctx context.Context, userID uuid.UUID, name, slug string) (Organization, error) {
+	if strings.TrimSpace(name) == "" {
+		return Organization{}, errors.New("organization name required")
+	}
+	if strings.TrimSpace(slug) == "" {
+		return Organization{}, errors.New("organization slug required")
+	}
+
+	orgID := uuid.New()
+
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return Organization{}, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	const insertOrg = `
+        INSERT INTO organizations (id, name, slug, created_at)
+        VALUES ($1, $2, $3, NOW())
+        RETURNING created_at
+    `
+	var createdAt time.Time
+	if err = tx.GetContext(ctx, &createdAt, insertOrg, orgID, name, slug); err != nil {
+		if strings.Contains(err.Error(), "organizations_slug_key") {
+			return Organization{}, ErrOrganizationSlugUsed
+		}
+		return Organization{}, fmt.Errorf("failed to create organization: %w", err)
+	}
+
+	const insertAdmin = `
+        INSERT INTO organization_admins (organization_id, user_id, created_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT DO NOTHING
+    `
+	if _, err = tx.ExecContext(ctx, insertAdmin, orgID, userID); err != nil {
+		return Organization{}, fmt.Errorf("failed to add organization admin: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return Organization{}, fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return Organization{
+		ID:        orgID,
+		Name:      name,
+		Slug:      slug,
+		CreatedAt: createdAt,
+	}, nil
+}
+
+func (s *Store) OrganizationSlugExists(ctx context.Context, slug string) (bool, error) {
+	const query = `SELECT COUNT(1) FROM organizations WHERE slug = $1`
+	var count int
+	if err := s.db.GetContext(ctx, &count, query, strings.TrimSpace(slug)); err != nil {
+		return false, fmt.Errorf("failed to check slug availability: %w", err)
+	}
+	return count > 0, nil
+}
+
+func (s *Store) AddOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) error {
+	const query = `
+        INSERT INTO organization_admins (organization_id, user_id, created_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT DO NOTHING
+    `
+	if _, err := s.db.ExecContext(ctx, query, orgID, userID); err != nil {
+		return fmt.Errorf("failed to add organization admin: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) CreateOrgInvite(ctx context.Context, invite OrganizationInvite) (OrganizationInvite, error) {
+	const query = `
+        INSERT INTO organization_invites (
+            id, organization_id, email, role, code_hash, code_salt, invited_by,
+            expires_at, created_at, updated_at
+        )
+        VALUES ($1, $2, LOWER($3), $4, $5, $6, $7, $8, NOW(), NOW())
+        RETURNING id, organization_id, email, role, code_hash, code_salt, invited_by,
+                  expires_at, created_at, updated_at
+    `
+
+	var rec OrganizationInvite
+	if err := s.db.GetContext(ctx, &rec, query,
+		invite.ID, invite.OrganizationID, normalizeEmail(invite.Email), strings.ToLower(strings.TrimSpace(invite.Role)),
+		invite.CodeHash, invite.CodeSalt, invite.InvitedBy, invite.ExpiresAt,
+	); err != nil {
+		return OrganizationInvite{}, fmt.Errorf("failed to create organization invite: %w", err)
+	}
+
+	const nameQuery = `SELECT name FROM organizations WHERE id = $1`
+	if err := s.db.GetContext(ctx, &rec.OrganizationName, nameQuery, rec.OrganizationID); err != nil {
+		return OrganizationInvite{}, fmt.Errorf("failed to fetch organization name: %w", err)
+	}
+
+	return rec, nil
+}
+
+func (s *Store) FindPendingOrgInvites(ctx context.Context, email string) ([]OrganizationInvite, error) {
+	const query = `
+        SELECT oi.id, oi.organization_id, oi.email, oi.role, oi.code_hash, oi.code_salt, oi.invited_by,
+               oi.expires_at, oi.accepted_at, oi.accepted_by, oi.created_at, oi.updated_at,
+               org.name AS organization_name
+        FROM organization_invites oi
+        JOIN organizations org ON org.id = oi.organization_id
+        WHERE LOWER(oi.email) = LOWER($1) AND oi.accepted_at IS NULL AND oi.expires_at > NOW()
+        ORDER BY oi.created_at DESC
+    `
+
+	rows := []OrganizationInvite{}
+	if err := s.db.SelectContext(ctx, &rows, query, normalizeEmail(email)); err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			switch pqErr.Code {
+			case "42P01", "42703":
+				return nil, nil
+			}
+		}
+		return nil, fmt.Errorf("failed to list organization invites: %w", err)
+	}
+	return rows, nil
+}
+
+func normalizeEmail(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func (s *Store) MarkOrgInviteAccepted(ctx context.Context, inviteID, userID uuid.UUID) error {
+	const query = `
+        UPDATE organization_invites
+        SET accepted_at = NOW(),
+            accepted_by = $2,
+            updated_at = NOW()
+        WHERE id = $1 AND accepted_at IS NULL
+    `
+
+	res, err := s.db.ExecContext(ctx, query, inviteID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to mark invite accepted: %w", err)
 	}
 	if rows, _ := res.RowsAffected(); rows == 0 {
 		return sql.ErrNoRows

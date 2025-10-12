@@ -129,6 +129,9 @@ func runLogin(ctx context.Context, profileFlag string) error {
 		}
 	}
 	fmt.Println("✅ Login complete")
+	if err := maybeRunOnboarding(ctx, name, tokenData, manager); err != nil {
+		return err
+	}
 	return nil
 }
 

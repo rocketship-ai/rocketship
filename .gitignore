@@ -30,4 +30,5 @@ cli-introspection.json
 .rocketship/
 
 # rocketship-internal code
+rocketship-internal
 charts/rocketship-internal/

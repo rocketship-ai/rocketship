@@ -21,6 +21,21 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
 )
 
+type stubMailer struct {
+	verifications []struct{ email, org, code string }
+	invites       []struct{ email, org, code string }
+}
+
+func (m *stubMailer) SendOrgVerification(_ context.Context, email, org, code string, _ time.Time) error {
+	m.verifications = append(m.verifications, struct{ email, org, code string }{email: email, org: org, code: code})
+	return nil
+}
+
+func (m *stubMailer) SendOrgInvite(_ context.Context, email, org, code string, _ time.Time, _ string) error {
+	m.invites = append(m.invites, struct{ email, org, code string }{email: email, org: org, code: code})
+	return nil
+}
+
 type fakeGitHub struct {
 	deviceResp DeviceCodeResponse
 	tokenResp  TokenResponse
@@ -59,6 +74,9 @@ type fakeStore struct {
 	members        map[uuid.UUID][]persistence.ProjectMember
 	primaryOrg     uuid.UUID
 	primaryProject uuid.UUID
+	registrations  map[uuid.UUID]persistence.OrganizationRegistration
+	invites        map[uuid.UUID]persistence.OrganizationInvite
+	slugMap        map[string]uuid.UUID
 }
 
 func newFakeStore() *fakeStore {
@@ -99,6 +117,9 @@ func newFakeStore() *fakeStore {
 		members:        map[uuid.UUID][]persistence.ProjectMember{projectID: members},
 		primaryOrg:     orgID,
 		primaryProject: projectID,
+		registrations:  make(map[uuid.UUID]persistence.OrganizationRegistration),
+		invites:        make(map[uuid.UUID]persistence.OrganizationInvite),
+		slugMap:        map[string]uuid.UUID{"default": orgID},
 	}
 }
 
@@ -160,6 +181,195 @@ func (f *fakeStore) DeleteRefreshToken(_ context.Context, token string) error {
 		return persistence.ErrRefreshTokenNotFound
 	}
 	delete(f.refresh, token)
+	return nil
+}
+
+func (f *fakeStore) DeleteOrgRegistrationsForUser(_ context.Context, userID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for id, reg := range f.registrations {
+		if reg.UserID == userID {
+			delete(f.registrations, id)
+		}
+	}
+	return nil
+}
+
+func (f *fakeStore) CreateOrgRegistration(_ context.Context, rec persistence.OrganizationRegistration) (persistence.OrganizationRegistration, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if rec.ID == uuid.Nil {
+		rec.ID = uuid.New()
+	}
+	rec.CreatedAt = time.Now()
+	rec.UpdatedAt = rec.CreatedAt
+	f.registrations[rec.ID] = rec
+	return rec, nil
+}
+
+func (f *fakeStore) GetOrgRegistration(_ context.Context, id uuid.UUID) (persistence.OrganizationRegistration, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	rec, ok := f.registrations[id]
+	if !ok {
+		return persistence.OrganizationRegistration{}, sql.ErrNoRows
+	}
+	return rec, nil
+}
+
+func (f *fakeStore) LatestOrgRegistrationForUser(_ context.Context, userID uuid.UUID) (persistence.OrganizationRegistration, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var latest persistence.OrganizationRegistration
+	found := false
+	for _, rec := range f.registrations {
+		if rec.UserID != userID {
+			continue
+		}
+		if !found || rec.CreatedAt.After(latest.CreatedAt) {
+			latest = rec
+			found = true
+		}
+	}
+	if !found {
+		return persistence.OrganizationRegistration{}, sql.ErrNoRows
+	}
+	return latest, nil
+}
+
+func (f *fakeStore) UpdateOrgRegistrationForResend(_ context.Context, id uuid.UUID, hash, salt []byte, expiresAt, resendAt time.Time) (persistence.OrganizationRegistration, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	rec, ok := f.registrations[id]
+	if !ok {
+		return persistence.OrganizationRegistration{}, sql.ErrNoRows
+	}
+	rec.CodeHash = append([]byte(nil), hash...)
+	rec.CodeSalt = append([]byte(nil), salt...)
+	rec.ExpiresAt = expiresAt
+	rec.ResendAvailableAt = resendAt
+	rec.UpdatedAt = time.Now()
+	f.registrations[id] = rec
+	return rec, nil
+}
+
+func (f *fakeStore) IncrementOrgRegistrationAttempts(_ context.Context, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	rec, ok := f.registrations[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	rec.Attempts++
+	rec.UpdatedAt = time.Now()
+	f.registrations[id] = rec
+	return nil
+}
+
+func (f *fakeStore) DeleteOrgRegistration(_ context.Context, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.registrations, id)
+	return nil
+}
+
+func (f *fakeStore) CreateOrganization(_ context.Context, userID uuid.UUID, name, slug string) (persistence.Organization, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	norm := strings.ToLower(strings.TrimSpace(slug))
+	if norm == "" {
+		norm = "org"
+	}
+	if _, exists := f.slugMap[norm]; exists {
+		return persistence.Organization{}, persistence.ErrOrganizationSlugUsed
+	}
+
+	id := uuid.New()
+	org := persistence.Organization{
+		ID:        id,
+		Name:      name,
+		Slug:      norm,
+		CreatedAt: time.Now(),
+	}
+	f.slugMap[norm] = id
+	f.summary.Organizations = append(f.summary.Organizations, persistence.OrganizationMembership{
+		OrganizationID: id,
+		IsAdmin:        true,
+	})
+	f.primaryOrg = id
+	return org, nil
+}
+
+func (f *fakeStore) OrganizationSlugExists(_ context.Context, slug string) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	_, exists := f.slugMap[strings.ToLower(strings.TrimSpace(slug))]
+	return exists, nil
+}
+
+func (f *fakeStore) AddOrganizationAdmin(_ context.Context, orgID, userID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, org := range f.summary.Organizations {
+		if org.OrganizationID == orgID {
+			return nil
+		}
+	}
+	f.summary.Organizations = append(f.summary.Organizations, persistence.OrganizationMembership{
+		OrganizationID: orgID,
+		IsAdmin:        true,
+	})
+	f.primaryOrg = orgID
+	return nil
+}
+
+func (f *fakeStore) CreateOrgInvite(_ context.Context, invite persistence.OrganizationInvite) (persistence.OrganizationInvite, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if invite.ID == uuid.Nil {
+		invite.ID = uuid.New()
+	}
+	if invite.OrganizationName == "" {
+		invite.OrganizationName = "invite-org"
+	}
+	invite.CreatedAt = time.Now()
+	invite.UpdatedAt = invite.CreatedAt
+	f.invites[invite.ID] = invite
+	return invite, nil
+}
+
+func (f *fakeStore) FindPendingOrgInvites(_ context.Context, email string) ([]persistence.OrganizationInvite, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	email = strings.ToLower(strings.TrimSpace(email))
+	var out []persistence.OrganizationInvite
+	now := time.Now()
+	for _, inv := range f.invites {
+		if strings.ToLower(inv.Email) != email {
+			continue
+		}
+		if inv.AcceptedAt.Valid {
+			continue
+		}
+		if inv.ExpiresAt.Before(now) {
+			continue
+		}
+		out = append(out, inv)
+	}
+	return out, nil
+}
+
+func (f *fakeStore) MarkOrgInviteAccepted(_ context.Context, inviteID, userID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	inv, ok := f.invites[inviteID]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	inv.AcceptedAt = sql.NullTime{Valid: true, Time: time.Now()}
+	inv.AcceptedBy = uuid.NullUUID{Valid: true, UUID: userID}
+	inv.UpdatedAt = time.Now()
+	f.invites[inviteID] = inv
 	return nil
 }
 
@@ -285,7 +495,9 @@ func TestServerDeviceFlowAndRefresh(t *testing.T) {
 
 	fs := newFakeStore()
 
-	srv, err := newServerWithComponents(cfg, signer, fake, fs)
+	mailer := &stubMailer{}
+
+	srv, err := newServerWithComponents(cfg, signer, fake, fs, mailer)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -427,7 +639,7 @@ func TestServerRejectsUnknownClient(t *testing.T) {
 	}
 
 	fake := &fakeGitHub{deviceResp: DeviceCodeResponse{}}
-	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore())
+	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore(), &stubMailer{})
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -456,7 +668,7 @@ func TestServerJWKS(t *testing.T) {
 
 	cfg := Config{}
 	fake := &fakeGitHub{}
-	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore())
+	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore(), &stubMailer{})
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -470,6 +682,87 @@ func TestServerJWKS(t *testing.T) {
 	body := rec.Body.Bytes()
 	if !bytes.Contains(body, []byte("\"keys\"")) {
 		t.Fatalf("jwks response missing keys: %s", string(body))
+	}
+}
+
+func TestOrgRegistrationLifecycle(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	signer, err := buildSigner(key, "test-key")
+	if err != nil {
+		t.Fatalf("failed to build signer: %v", err)
+	}
+
+	cfg := Config{
+		Issuer:          "https://cli.test",
+		Audience:        "rocketship-cli",
+		ClientID:        "rocketship-cli",
+		AccessTokenTTL:  time.Minute,
+		RefreshTokenTTL: time.Hour,
+		GitHub:          GitHubConfig{ClientID: "gh", ClientSecret: "secret"},
+	}
+
+	store := newFakeStore()
+	store.summary = persistence.RoleSummary{Organizations: nil} // start pending
+	store.user.Email = "pending@example.com"
+	mail := &stubMailer{}
+
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, store, mail)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	principal := brokerPrincipal{
+		UserID: store.user.ID,
+		Email:  store.user.Email,
+		Roles:  []string{"pending"},
+	}
+
+	body := strings.NewReader(`{"name":"Test Org"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/orgs/registration/start", body)
+	rec := httptest.NewRecorder()
+	srv.handleOrgRegistrationStart(rec, req, principal)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected created, got %d", rec.Code)
+	}
+	if len(mail.verifications) != 1 {
+		t.Fatalf("expected verification email to be sent")
+	}
+
+	var startResp struct {
+		RegistrationID string `json:"registration_id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &startResp); err != nil {
+		t.Fatalf("failed to decode start response: %v", err)
+	}
+
+	// wrong code should fail
+	completeReq := httptest.NewRequest(http.MethodPost, "/api/orgs/registration/complete", strings.NewReader(fmt.Sprintf(`{"registration_id":"%s","code":"000000"}`, startResp.RegistrationID)))
+	completeRec := httptest.NewRecorder()
+	srv.handleOrgRegistrationComplete(completeRec, completeReq, principal)
+	if completeRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthorized for wrong code, got %d", completeRec.Code)
+	}
+
+	// correct code
+	correct := mail.verifications[0].code
+	completeReq = httptest.NewRequest(http.MethodPost, "/api/orgs/registration/complete", strings.NewReader(fmt.Sprintf(`{"registration_id":"%s","code":"%s"}`, startResp.RegistrationID, correct)))
+	completeRec = httptest.NewRecorder()
+	srv.handleOrgRegistrationComplete(completeRec, completeReq, principal)
+	if completeRec.Code != http.StatusOK {
+		t.Fatalf("expected success completing registration, got %d", completeRec.Code)
+	}
+
+	var completeResp struct {
+		NeedsRefresh bool `json:"needs_claim_refresh"`
+	}
+	if err := json.Unmarshal(completeRec.Body.Bytes(), &completeResp); err != nil {
+		t.Fatalf("failed to decode complete response: %v", err)
+	}
+	if !completeResp.NeedsRefresh {
+		t.Fatalf("expected refresh flag")
 	}
 }
 
@@ -494,7 +787,7 @@ func TestProjectMembersScopedToOrganization(t *testing.T) {
 
 	store := newFakeStore()
 
-	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, store)
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, store, &stubMailer{})
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
