@@ -30,15 +30,14 @@ Known gaps: the branch was not tested with a real Playwright/browser-use runtime
 
 Please prepare the following before running tests:
 
-1. **Go 1.24.7+** installed and active (`go version`).
-2. **Python 3.11+** with `pip`.
-3. Python packages:
+1. **Python 3.11+** with `pip`.
+2. Python packages:
    ```bash
    pip install --upgrade playwright browser-use langchain-openai langchain-anthropic
    playwright install --with-deps chromium
    ```
-4. Any LLM API keys required by `browser-use` (OpenAI/Anthropic) if you plan to execute agentic tasks against real sites.
-5. Optional: set `ROCKETSHIP_LOG=DEBUG` when running CLI commands to capture verbose output.
+3. An LLM API key required by `browser-use` (OpenAI/Anthropic). You can use: OPENAI_API_KEY=<REDACTED>
+4. Optional: set `ROCKETSHIP_LOG=DEBUG` when running CLI commands to capture verbose output.
 
 ---
 
