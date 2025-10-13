@@ -68,10 +68,34 @@ async def _run(args: argparse.Namespace) -> None:
 
     try:
         result = await agent.run(max_steps=args.max_steps if args.max_steps > 0 else None)
+
+        # Check if task actually completed
+        task_completed = result.is_done() if hasattr(result, 'is_done') else False
+
+        # Extract final URL from browser context
+        final_url = ""
+        try:
+            if hasattr(session, "context") and session.context:
+                pages = session.context.pages
+                if pages and len(pages) > 0:
+                    final_url = pages[0].url
+            elif hasattr(session, "browser") and hasattr(session.browser, "contexts"):
+                contexts = session.browser.contexts
+                if contexts and len(contexts) > 0:
+                    pages = contexts[0].pages
+                    if pages and len(pages) > 0:
+                        final_url = pages[0].url
+        except Exception:
+            # If we can't get URL, just leave it empty
+            pass
+
         payload = {
-            "ok": True,
+            "ok": task_completed,
             "result": _serialize(result),
+            "finalUrl": final_url,
         }
+        if not task_completed:
+            payload["error"] = "Task did not complete within max_steps limit"
         _write(payload)
     except Exception:
         error_text = traceback.format_exc()

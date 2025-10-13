@@ -9,7 +9,7 @@ tests:
         config:
           role: start
           session_id: "integration-{{ .run.id }}"
-          headless: false  # Visible for testing
+          headless: false # Visible for testing
 
       - name: "deterministic navigation to example.com"
         plugin: playwright
@@ -35,14 +35,9 @@ tests:
         plugin: browser_use
         config:
           session_id: "integration-{{ .run.id }}"
-          task: "Navigate to the IANA website by clicking the 'More information...' link"
-          max_steps: 5
-          use_vision: false
-        save:
-          - json_path: ".final_url"
-            as: "final_url"
-          - json_path: ".success"
-            as: "browser_use_success"
+          task: "Navigate to the IANA website by clicking the 'More information' link"
+          max_steps: 10
+          use_vision: true
 
       - name: "verify navigation with playwright"
         plugin: playwright
@@ -70,14 +65,3 @@ tests:
         config:
           role: stop
           session_id: "integration-{{ .run.id }}"
-
-      - name: "log integration test results"
-        plugin: log
-        config:
-          message: |
-            🎉 Integration Test Results:
-            - browser_use succeeded: {{ browser_use_success }}
-            - Final URL: {{ final_url }}
-
-            ✅ Successfully interweaved playwright (deterministic) and browser_use (agentic) automation
-            ✅ Persistent session maintained across plugin transitions
