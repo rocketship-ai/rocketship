@@ -1,0 +1,554 @@
+package playwright
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/rocketship-ai/rocketship/internal/browser/sessionfile"
+	"github.com/rocketship-ai/rocketship/internal/dsl"
+	"github.com/rocketship-ai/rocketship/internal/plugins"
+)
+
+func init() {
+	plugins.RegisterPlugin(&Plugin{})
+}
+
+type Plugin struct{}
+
+func (p *Plugin) GetType() string {
+	return "playwright"
+}
+
+type startConfig struct {
+	SessionID     string
+	Headless      bool
+	SlowMoMS      int
+	LaunchArgs    []string
+	LaunchTimeout int
+}
+
+type scriptConfig struct {
+	SessionID string
+	Language  string
+	Script    string
+	Env       map[string]string
+}
+
+type stopConfig struct {
+	SessionID string
+}
+
+type pythonResult struct {
+	Success bool                   `json:"ok"`
+	Error   string                 `json:"error,omitempty"`
+	Result  map[string]interface{} `json:"result,omitempty"`
+}
+
+type startResponse struct {
+	Success    bool   `json:"ok"`
+	WSEndpoint string `json:"wsEndpoint"`
+	Error      string `json:"error,omitempty"`
+}
+
+func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	logger := getLogger(ctx)
+
+	configData, ok := params["config"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid config format")
+	}
+
+	state := extractState(params)
+	templateContext := dsl.TemplateContext{
+		Runtime: state,
+	}
+
+	role, err := getRole(configData)
+	if err != nil {
+		return nil, err
+	}
+
+	var result map[string]interface{}
+
+	switch role {
+	case "start":
+		cfg, err := parseStartConfig(configData, templateContext)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("Launching Playwright browser server", "session_id", cfg.SessionID)
+		result, err = p.handleStart(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+	case "script":
+		cfg, err := parseScriptConfig(configData, templateContext)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("Executing Playwright script", "session_id", cfg.SessionID)
+		result, err = p.handleScript(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+	case "stop":
+		cfg, err := parseStopConfig(configData, templateContext)
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("Stopping Playwright session", "session_id", cfg.SessionID)
+		result, err = p.handleStop(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported role: %s", role)
+	}
+
+	success := true
+	if v, ok := result["success"].(bool); ok {
+		success = v
+	}
+
+	if success {
+		saved := make(map[string]string)
+		if err := processSaves(params, result, saved); err != nil {
+			return nil, err
+		}
+		if len(saved) > 0 {
+			result["saved"] = saved
+		}
+
+		if err := processAssertions(params, result, state); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]interface{}, error) {
+	if err := sessionfile.EnsureDir(); err != nil {
+		return nil, err
+	}
+
+	if _, _, err := sessionfile.Read(ctx, cfg.SessionID); err == nil {
+		return nil, fmt.Errorf("session %q already exists; stop it before starting a new browser", cfg.SessionID)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("failed to check session state: %w", err)
+	}
+
+	runnerPath, cleanup, err := prepareRunnerScript()
+	if err != nil {
+		return nil, err
+	}
+	// Keep runner file for the lifetime of the process; cleanup only removes temp dir stub.
+	defer cleanup()
+
+	args := []string{
+		runnerPath,
+		"start",
+		"--headless", fmt.Sprintf("%t", cfg.Headless),
+	}
+
+	if cfg.SlowMoMS > 0 {
+		args = append(args, "--slow-mo-ms", fmt.Sprintf("%d", cfg.SlowMoMS))
+	}
+	if cfg.LaunchTimeout > 0 {
+		args = append(args, "--launch-timeout", fmt.Sprintf("%d", cfg.LaunchTimeout))
+	}
+	for _, arg := range cfg.LaunchArgs {
+		args = append(args, "--launch-arg", arg)
+	}
+
+	cmd := exec.Command("python3", args...)
+	cmd.Env = append(os.Environ(), "PYTHONUNBUFFERED=1")
+	setupProcessGroup(cmd)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start Playwright runner: %w", err)
+	}
+
+	streamLogs(ctx, stderr, cfg.SessionID)
+
+	response, err := readStartResponse(ctx, stdout)
+	if err != nil {
+		killProcessGroup(cmd)
+		return nil, err
+	}
+
+	if !response.Success {
+		killProcessGroup(cmd)
+		return nil, fmt.Errorf("failed to start browser: %s", response.Error)
+	}
+
+	pid := cmd.Process.Pid
+	if err := sessionfile.Write(ctx, cfg.SessionID, response.WSEndpoint, pid); err != nil {
+		killProcessGroup(cmd)
+		return nil, err
+	}
+
+	if err := cmd.Process.Release(); err != nil {
+		log.Printf("[WARN] failed to release Playwright process %d: %v", pid, err)
+	}
+
+	result := map[string]interface{}{
+		"success":    true,
+		"session_id": cfg.SessionID,
+		"wsEndpoint": response.WSEndpoint,
+		"pid":        pid,
+	}
+
+	return result, nil
+}
+
+func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[string]interface{}, error) {
+	wsEndpoint, _, err := sessionfile.Read(ctx, cfg.SessionID)
+	if err != nil {
+		return nil, fmt.Errorf("session %q is not active: %w", cfg.SessionID, err)
+	}
+
+	if strings.ToLower(cfg.Language) != "python" {
+		return nil, fmt.Errorf("unsupported language %q: only python is supported", cfg.Language)
+	}
+
+	runnerPath, cleanup, err := prepareRunnerScript()
+	if err != nil {
+		return nil, err
+	}
+	defer cleanup()
+
+	tempDir, err := os.MkdirTemp("", "rocketship-playwright-script-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp dir: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			log.Printf("[WARN] failed to remove temp dir %s: %v", tempDir, err)
+		}
+	}()
+
+	scriptPath := filepath.Join(tempDir, "user_script.py")
+	if err := os.WriteFile(scriptPath, []byte(cfg.Script), 0o600); err != nil {
+		return nil, fmt.Errorf("failed to write script: %w", err)
+	}
+
+	envJSON := ""
+	if len(cfg.Env) > 0 {
+		bytes, err := json.Marshal(cfg.Env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode env: %w", err)
+		}
+		envJSON = string(bytes)
+	}
+
+	args := []string{
+		runnerPath,
+		"script",
+		"--ws-endpoint", wsEndpoint,
+		"--script-file", scriptPath,
+	}
+	if envJSON != "" {
+		args = append(args, "--env-json", envJSON)
+	}
+
+	cmd := exec.CommandContext(ctx, "python3", args...)
+	cmd.Env = append(os.Environ(), "PYTHONUNBUFFERED=1")
+	setupProcessGroup(cmd)
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start python runner: %w", err)
+	}
+
+	outputBytes, readErr := io.ReadAll(stdoutPipe)
+	waitErr := cmd.Wait()
+
+	if readErr != nil {
+		return nil, fmt.Errorf("failed to read python output: %w", readErr)
+	}
+	out := strings.TrimSpace(string(outputBytes))
+
+	if waitErr != nil {
+		return nil, fmt.Errorf("python execution failed: %w\nstdout: %s", waitErr, out)
+	}
+
+	if out == "" {
+		return nil, errors.New("python runner returned no output")
+	}
+
+	startIdx := strings.Index(out, "{")
+	endIdx := strings.LastIndex(out, "}")
+	if startIdx == -1 || endIdx == -1 || endIdx < startIdx {
+		return nil, fmt.Errorf("no JSON found in python output: %s", out)
+	}
+
+	jsonPart := out[startIdx : endIdx+1]
+
+	response := pythonResult{}
+	if err := json.Unmarshal([]byte(jsonPart), &response); err != nil {
+		return nil, fmt.Errorf("failed to parse python output: %w\nstdout: %s", err, out)
+	}
+
+	if !response.Success {
+		return map[string]interface{}{
+			"success": false,
+			"error":   response.Error,
+		}, nil
+	}
+
+	result := map[string]interface{}{
+		"success": true,
+	}
+	for k, v := range response.Result {
+		result[k] = v
+	}
+
+	return result, nil
+}
+
+func (p *Plugin) handleStop(ctx context.Context, cfg *stopConfig) (map[string]interface{}, error) {
+	wsEndpoint, pid, err := sessionfile.Read(ctx, cfg.SessionID)
+	if err != nil {
+		return nil, fmt.Errorf("session %q is not active: %w", cfg.SessionID, err)
+	}
+
+	if err := terminateProcessTree(pid); err != nil {
+		return nil, fmt.Errorf("failed to terminate process %d: %w", pid, err)
+	}
+
+	// Best effort wait
+	time.Sleep(500 * time.Millisecond)
+
+	if err := sessionfile.Remove(ctx, cfg.SessionID); err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"success":        true,
+		"session_id":     cfg.SessionID,
+		"wsEndpoint":     wsEndpoint,
+		"terminated":     true,
+		"terminated_pid": pid,
+	}, nil
+}
+
+func getRole(config map[string]interface{}) (string, error) {
+	roleVal, ok := config["role"]
+	if !ok {
+		return "", errors.New("role is required")
+	}
+	role, ok := roleVal.(string)
+	if !ok || role == "" {
+		return "", fmt.Errorf("invalid role: %v", roleVal)
+	}
+	return strings.ToLower(role), nil
+}
+
+func parseStartConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*startConfig, error) {
+	sessionID, err := templateStringField(config, "session_id", ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	headless := true
+	if v, ok := config["headless"]; ok {
+		switch val := v.(type) {
+		case bool:
+			headless = val
+		case string:
+			headless = strings.ToLower(val) != "false"
+		default:
+			return nil, fmt.Errorf("invalid headless value: %v", v)
+		}
+	}
+
+	slowMo := 0
+	if v, ok := config["slow_mo_ms"]; ok {
+		switch val := v.(type) {
+		case float64:
+			slowMo = int(val)
+		case int:
+			slowMo = val
+		case string:
+			parsed, err := strconv.Atoi(val)
+			if err != nil {
+				return nil, fmt.Errorf("invalid slow_mo_ms %q: %w", val, err)
+			}
+			slowMo = parsed
+		default:
+			return nil, fmt.Errorf("invalid slow_mo_ms: %v", v)
+		}
+	}
+
+	launchArgs := []string{}
+	if v, ok := config["launch_args"]; ok {
+		switch val := v.(type) {
+		case []interface{}:
+			for _, arg := range val {
+				launchArgs = append(launchArgs, fmt.Sprint(arg))
+			}
+		case []string:
+			launchArgs = append(launchArgs, val...)
+		default:
+			return nil, fmt.Errorf("launch_args must be an array, got %T", v)
+		}
+	}
+
+	timeout := 0
+	if v, ok := config["launch_timeout_ms"]; ok {
+		switch val := v.(type) {
+		case float64:
+			timeout = int(val)
+		case int:
+			timeout = val
+		case string:
+			parsed, err := strconv.Atoi(val)
+			if err != nil {
+				return nil, fmt.Errorf("invalid launch_timeout_ms %q: %w", val, err)
+			}
+			timeout = parsed
+		default:
+			return nil, fmt.Errorf("invalid launch_timeout_ms: %v", v)
+		}
+	}
+
+	return &startConfig{
+		SessionID:     sessionID,
+		Headless:      headless,
+		SlowMoMS:      slowMo,
+		LaunchArgs:    launchArgs,
+		LaunchTimeout: timeout,
+	}, nil
+}
+
+func parseScriptConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*scriptConfig, error) {
+	sessionID, err := templateStringField(config, "session_id", ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	language := "python"
+	if v, ok := config["language"].(string); ok && v != "" {
+		language = strings.ToLower(v)
+	}
+
+	script, err := templateStringField(config, "script", ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	env := map[string]string{}
+	if raw, ok := config["env"]; ok {
+		envMap, ok := raw.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("env must be an object, got %T", raw)
+		}
+		for k, v := range envMap {
+			env[k] = fmt.Sprint(v)
+		}
+		// Template values
+		for k, v := range env {
+			rendered, err := dsl.ProcessTemplate(v, ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process env %s: %w", k, err)
+			}
+			env[k] = rendered
+		}
+	}
+
+	return &scriptConfig{
+		SessionID: sessionID,
+		Language:  language,
+		Script:    script,
+		Env:       env,
+	}, nil
+}
+
+func parseStopConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*stopConfig, error) {
+	sessionID, err := templateStringField(config, "session_id", ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &stopConfig{SessionID: sessionID}, nil
+}
+
+func readStartResponse(ctx context.Context, reader io.Reader) (*startResponse, error) {
+	scanner := bufio.NewScanner(reader)
+	scanner.Buffer(make([]byte, 0, 1024), 1024*1024)
+
+	type result struct {
+		resp *startResponse
+		err  error
+	}
+
+	ch := make(chan result, 1)
+
+	go func() {
+		if scanner.Scan() {
+			line := scanner.Text()
+			resp := &startResponse{}
+			if err := json.Unmarshal([]byte(line), resp); err != nil {
+				ch <- result{nil, fmt.Errorf("failed to parse start response: %w. raw: %s", err, line)}
+				return
+			}
+			ch <- result{resp, nil}
+			return
+		}
+		if err := scanner.Err(); err != nil {
+			ch <- result{nil, fmt.Errorf("failed to read start response: %w", err)}
+		} else {
+			ch <- result{nil, errors.New("start runner exited without output")}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case res := <-ch:
+		return res.resp, res.err
+	case <-time.After(30 * time.Second):
+		return nil, errors.New("timed out waiting for Playwright start response")
+	}
+}
+
+func streamLogs(ctx context.Context, reader io.Reader, sessionID string) {
+	logger := getLogger(ctx)
+
+	go func() {
+		scanner := bufio.NewScanner(reader)
+		for scanner.Scan() {
+			logger.Info("playwright runner", "session_id", sessionID, "log", scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			logger.Info("playwright runner stderr error", "session_id", sessionID, "error", err.Error())
+		}
+	}()
+}

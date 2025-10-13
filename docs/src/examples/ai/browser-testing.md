@@ -2,6 +2,9 @@
 
 Test web applications using AI-driven browser automation. The browser plugin uses natural language instructions to navigate websites, extract data, and validate interfaces.
 
+!!! info "Looking for persistent sessions?"
+    The legacy `browser` plugin spins up a fresh browser for every step. To keep Chromium alive across deterministic and agentic actions, use the new [`playwright` + `browser_use` flow](../../plugins/browser/persistent-sessions.md).
+
 ## Prerequisites
 
 ```bash

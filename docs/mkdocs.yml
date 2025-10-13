@@ -77,6 +77,7 @@ nav:
       - AI Testing:
           - Agent Plugin: examples/ai/agent-testing.md
           - Browser Plugin: examples/ai/browser-testing.md
+          - Persistent Browser Sessions: plugins/browser/persistent-sessions.md
       - Logging:
           - Log Plugin: examples/logging/log-plugin.md
       - Reliability:
