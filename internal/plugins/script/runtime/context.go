@@ -9,10 +9,10 @@ type Context struct {
 	// Input data (read-only)
 	State map[string]string      // Current workflow state from previous steps
 	Vars  map[string]interface{} // Configuration variables
-	
+
 	// Output data
 	Saved map[string]string // Values to save back to workflow state
-	
+
 	// Runtime functions
 	saveFunc   func(key, value string)
 	assertFunc func(condition bool, message string) error
@@ -25,11 +25,11 @@ func NewContext(state map[string]string, vars map[string]interface{}) *Context {
 		Vars:  vars,
 		Saved: make(map[string]string),
 	}
-	
+
 	// Set up built-in functions
 	ctx.saveFunc = ctx.save
 	ctx.assertFunc = ctx.assert
-	
+
 	return ctx
 }
 

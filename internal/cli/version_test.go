@@ -52,13 +52,13 @@ func TestVersionCmd_DefaultVersion(t *testing.T) {
 	_ = os.Unsetenv("ROCKETSHIP_VERSION")
 
 	cmd := NewVersionCmd()
-	
+
 	// Execute command - just check it doesn't error
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatalf("Command execution failed: %v", err)
 	}
-	
+
 	// Output goes directly to os.Stdout, so we can't easily capture it
 	// Just verify the command runs successfully
 }
@@ -81,13 +81,13 @@ func TestVersionCmd_EnvironmentVersion(t *testing.T) {
 	_ = os.Setenv("ROCKETSHIP_VERSION", customVersion)
 
 	cmd := NewVersionCmd()
-	
+
 	// Execute command - just check it doesn't error
 	err := cmd.Execute()
 	if err != nil {
 		t.Fatalf("Command execution failed: %v", err)
 	}
-	
+
 	// Output goes directly to os.Stdout, so we can't easily capture it
 	// Just verify the command runs successfully
 }
@@ -109,7 +109,7 @@ func TestVersionCmd_EmptyEnvironmentVersion(t *testing.T) {
 	_ = os.Setenv("ROCKETSHIP_VERSION", "")
 
 	cmd := NewVersionCmd()
-	
+
 	// Execute command - just check it doesn't error
 	err := cmd.Execute()
 	if err != nil {
@@ -178,12 +178,12 @@ func TestVersionCmd_ArgumentHandling(t *testing.T) {
 
 			cmd := NewVersionCmd()
 			cmd.SetArgs(tt.args)
-			
+
 			err := cmd.Execute()
 			if err != nil {
 				t.Fatalf("Command execution failed: %v", err)
 			}
-			
+
 			// Output goes to stdout, just verify command runs successfully
 		})
 	}
@@ -193,7 +193,7 @@ func TestVersionCmd_Help(t *testing.T) {
 	t.Parallel()
 
 	cmd := NewVersionCmd()
-	
+
 	help := cmd.UsageString()
 	if help == "" {
 		t.Error("Expected non-empty help string")
@@ -253,4 +253,3 @@ func TestVersionCmd_DefaultVersionValidation(t *testing.T) {
 		t.Errorf("embedded.DefaultVersion should start with 'v', got: %s", embedded.DefaultVersion)
 	}
 }
-

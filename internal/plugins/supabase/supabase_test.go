@@ -44,9 +44,9 @@ func TestBuildFilterParam(t *testing.T) {
 
 func TestParseContentRange(t *testing.T) {
 	tests := []struct {
-		name          string
-		contentRange  string
-		expected      int
+		name         string
+		contentRange string
+		expected     int
 	}{
 		{
 			name:         "normal range",

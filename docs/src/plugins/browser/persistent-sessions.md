@@ -1,38 +1,36 @@
 # Persistent Browser Sessions with Playwright + browser-use
 
-Rocketship now splits browser testing across two plugins that share a single Chromium session via Playwright's CDP endpoint:
+Rocketship splits browser testing across two plugins that share a single Chromium session via Chrome DevTools Protocol (CDP):
 
-- **`playwright`** owns the browser lifecycle and deterministic scripting.
-- **`browser_use`** executes short, agentic follow-up tasks inside the same session.
-
-The first `playwright.start` step launches a Playwright `BrowserServer`, records its websocket endpoint in a session file, and keeps the process running. Subsequent `playwright.script` and `browser_use` steps attach to the saved endpoint. When the workflow finishes, `playwright.stop` terminates the browser server and removes the session file.
+- **`playwright`** launches Chromium, records its CDP websocket, and runs deterministic Python scripts.
+- **`browser_use`** attaches to the same websocket and executes one concise, agentic task.
 
 ## Session Files
 
-Session metadata lives under `${ROCKETSHIP_RUN_DIR:-.rocketship}/tmp/browser_sessions/<session_id>.json` with the following schema:
+`playwright.start` spawns Chromium with `--remote-debugging-port=0`, then writes `${ROCKETSHIP_RUN_DIR:-.rocketship}/tmp/browser_sessions/<session_id>.json`:
 
 ```json
 {
   "wsEndpoint": "ws://127.0.0.1:45373/devtools/browser/6ce7...",
   "pid": 53210,
-  "createdAt": "2024-04-04T16:39:12Z"
+  "createdAt": "2025-01-15T16:39:12Z"
 }
 ```
 
-The PID is the long-running Python process that hosts the Playwright `BrowserServer`. `playwright.stop` sends it a graceful SIGTERM (or equivalent on Windows) and removes the JSON file.
+The PID is the Chromium process. `playwright.stop` terminates it (SIGTERM on Unix, Kill on Windows) and removes the JSON file. A per-session profile directory is kept under `tmp/browser_sessions/<session_id>/profile` so cookies and storage survive across steps.
 
-## Lifecycle at a Glance
+## Lifecycle
 
-1. **Start** – `playwright.start` launches Chromium via `launch_server()`, writes the session file, and returns immediately.
-2. **Deterministic steps** – `playwright.script` (Python only in v1) reconnects with `connect_over_cdp()` and runs your scripted logic.
-3. **Agentic task** – `browser_use` attaches to the same CDP URL, executes one natural-language task, and returns a concise result.
-4. **Stop** – `playwright.stop` kills the BrowserServer process and cleans up the session file.
+1. **Start** – `playwright.start` launches Chromium (headless by default), records `wsEndpoint`, and returns immediately.
+2. **Deterministic scripting** – `playwright.script` (Python only) reconnects with `connect_over_cdp()` and runs the provided script. You can inject secrets via `config.env`.
+3. **Agentic follow-up** – `browser_use` opens the same CDP endpoint, runs one short task, and reports extracted context or artifacts.
+4. **Stop** – `playwright.stop` kills the stored PID and clears the session file to free the port/profile.
 
-All steps support Rocketship saves and assertions via `json_path`, making it easy to persist state or validate agent output.
+Saves and assertions (`json_path`) remain available on every step for variable passing and validation.
 
-## Example
+## Example Flow
 
-`examples/browser/persistent-session/checkout.yaml` demonstrates an interleaved flow:
+`examples/browser/persistent-session/checkout.yaml` demonstrates an interleaved run:
 
 ```yaml
 - name: start browser
@@ -42,27 +40,24 @@ All steps support Rocketship saves and assertions via `json_path`, making it eas
     session_id: "checkout-{{ .run.id }}"
     headless: true
 
-- name: login (deterministic)
+- name: visit landing page
   plugin: playwright
   config:
     role: script
     session_id: "checkout-{{ .run.id }}"
     language: python
     script: |
-      page.goto("https://shop.example.com/login")
-      page.get_by_label("Email").fill("qa@example.com")
-      page.get_by_label("Password").fill("correct-horse-battery-staple")
-      page.get_by_role("button", name="Sign in").click()
-      page.wait_for_url("**/products")
+      page.goto("https://example.com")
+      result = {"title": page.title()}
 
-- name: browse & add via agent
+- name: summarize via agent
   plugin: browser_use
   config:
     session_id: "checkout-{{ .run.id }}"
-    task: "Navigate to the first product and click 'Add to cart'"
+    task: "Read the page currently open and summarize it in one sentence."
     allowed_domains:
-      - shop.example.com
-    max_steps: 10
+      - example.com
+    max_steps: 4
 
 - name: stop browser
   plugin: playwright
@@ -73,9 +68,7 @@ All steps support Rocketship saves and assertions via `json_path`, making it eas
 
 ## Tips
 
-- Use short prompts and split multi-stage browsing into multiple `browser_use` steps. Each step reuses the same cookies, storage, and tabs left by Playwright.
-- `playwright.script` currently supports Python only. You can pass `config.env` to inject secrets for deterministic scripts.
-- When running locally, ensure `python3`, `playwright`, and `browser-use` are installed (`pip install playwright browser-use` and `playwright install chromium`).
-- If you see `session ... is not active`, confirm that a matching `playwright.start` step ran earlier in the test and that the session IDs match exactly.
-
-With these plugins you can handle precise login flows with Playwright and delegate exploratory actions to `browser-use`, all while keeping a single persistent browser alive for the entire test.
+- Keep `browser_use` prompts short; chain multiple steps for long flows so state persists cleanly.
+- Ensure `python3`, `playwright`, and `browser-use` are installed (`pip install playwright browser-use` and `playwright install chromium`).
+- If you encounter “session ... is not active”, confirm the session ID matches exactly and that `playwright.start` ran earlier in the same test.
+- When debugging locally, set `ROCKETSHIP_LOG=DEBUG` to watch session creation, script execution, and teardown events.

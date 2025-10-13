@@ -11,10 +11,10 @@ import (
 type Executor interface {
 	// Execute runs the script in the given runtime context
 	Execute(ctx context.Context, script string, runtime *runtime.Context) error
-	
+
 	// Language returns the language identifier for this executor
 	Language() string
-	
+
 	// ValidateScript performs static validation of the script
 	ValidateScript(script string) error
 }

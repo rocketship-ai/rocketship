@@ -406,7 +406,7 @@ func (bp *BrowserPlugin) processAssertions(p map[string]interface{}, result map[
 			if err != nil {
 				return fmt.Errorf("failed to process template in expected value: %w", err)
 			}
-			
+
 			// Try to parse as boolean, number, or keep as string
 			switch processedExpected {
 			case "true":
@@ -430,7 +430,7 @@ func (bp *BrowserPlugin) processAssertions(p map[string]interface{}, result map[
 			templateContext := dsl.TemplateContext{
 				Runtime: state,
 			}
-			
+
 			processedPath, err := dsl.ProcessTemplate(path, templateContext)
 			if err != nil {
 				return fmt.Errorf("failed to process template in path field: %w", err)

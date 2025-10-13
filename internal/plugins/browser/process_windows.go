@@ -17,7 +17,7 @@ func killProcessGroup(cmd *exec.Cmd) {
 	if cmd.Process == nil {
 		return
 	}
-	
+
 	// On Windows, just kill the main process
 	// TODO: Could use taskkill /F /T /PID to kill process tree, but for now keep it simple
 	_ = cmd.Process.Kill()

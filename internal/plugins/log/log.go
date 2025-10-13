@@ -22,7 +22,7 @@ func (lp *LogPlugin) GetType() string {
 // Activity executes the log operation
 func (lp *LogPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	logger := activity.GetLogger(ctx)
-	
+
 	// Parse configuration from parameters
 	configData, ok := p["config"].(map[string]interface{})
 	if !ok {
@@ -56,7 +56,7 @@ func (lp *LogPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 	context := dsl.TemplateContext{
 		Runtime: stateInterface,
 	}
-	
+
 	processedMessage, err := dsl.ProcessTemplate(config.Message, context)
 	if err != nil {
 		return nil, fmt.Errorf("failed to process message template: %w", err)
@@ -82,6 +82,6 @@ func parseConfig(configData map[string]interface{}, config *LogConfig) error {
 	if message, ok := configData["message"].(string); ok {
 		config.Message = message
 	}
-	
+
 	return nil
 }

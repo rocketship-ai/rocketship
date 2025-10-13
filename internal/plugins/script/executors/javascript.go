@@ -60,7 +60,7 @@ func (e *JavaScriptExecutor) Execute(ctx context.Context, script string, rtCtx *
 				done <- fmt.Errorf("javascript panic: %v", r)
 			}
 		}()
-		
+
 		_, err := vm.RunString(script)
 		done <- err
 	}()

@@ -88,18 +88,18 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 	cmd := exec.CommandContext(ctx, "python3", scriptPath)
 	cmd.Dir = workDir
 	cmd.Env = append(os.Environ(), pe.buildEnvironment(config)...)
-	
+
 	// Set up process group (platform-specific)
 	setupProcessGroup(cmd)
 
 	// Check if debug logging is enabled
 	isDebugEnabled := strings.ToUpper(os.Getenv("ROCKETSHIP_LOG")) == "DEBUG"
-	
+
 	// Capture stdout and stderr
 	var stdout, stderr bytes.Buffer
 	var stdoutReader, stderrReader io.Reader
 	var wg sync.WaitGroup
-	
+
 	if isDebugEnabled {
 		// For debug mode, create pipes to stream output in real-time
 		stdoutPipe, err := cmd.StdoutPipe()
@@ -110,11 +110,11 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 		if err != nil {
 			return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
 		}
-		
+
 		// Create tee readers to both capture and stream
 		stdoutReader = io.TeeReader(stdoutPipe, &stdout)
 		stderrReader = io.TeeReader(stderrPipe, &stderr)
-		
+
 		// Stream stderr (browser-use logs) to our logger in real-time
 		wg.Add(2)
 		go func() {
@@ -125,7 +125,7 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 				log.Printf("[BROWSER-USE] %s", line)
 			}
 		}()
-		
+
 		// Stream stdout (but don't log it since it contains the final JSON)
 		go func() {
 			defer wg.Done()
@@ -143,21 +143,21 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 	}
-	
+
 	// Ensure the process and its children are killed if context is cancelled
 	go func() {
 		<-ctx.Done()
 		killProcessGroup(cmd)
 	}()
-	
+
 	err = cmd.Start()
 	if err != nil {
 		return nil, fmt.Errorf("failed to start Python process: %w", err)
 	}
-	
+
 	err = cmd.Wait()
 	duration := time.Since(startTime)
-	
+
 	// Wait for all streaming goroutines to complete
 	if isDebugEnabled {
 		wg.Wait()
@@ -176,11 +176,10 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 		}, nil
 	}
 
-
 	// Parse response from Python script (stdout contains JSON)
 	// Extract the JSON from stdout - it should be the last valid JSON object
 	stdoutStr := stdout.String()
-	
+
 	// Find the last occurrence of a JSON object starting with {
 	lastBraceIndex := strings.LastIndex(stdoutStr, "{")
 	if lastBraceIndex == -1 {
@@ -190,9 +189,9 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 			Duration: duration,
 		}, nil
 	}
-	
+
 	jsonStr := stdoutStr[lastBraceIndex:]
-	
+
 	var response BrowserResponse
 	if err := json.Unmarshal([]byte(jsonStr), &response); err != nil {
 		return &BrowserResponse{
@@ -201,7 +200,7 @@ func (pe *PythonExecutor) Execute(ctx context.Context, config *Config) (*Browser
 			Duration: duration,
 		}, nil
 	}
-	
+
 	response.Duration = duration
 
 	return &response, nil
@@ -230,7 +229,7 @@ func (pe *PythonExecutor) buildEnvironment(config *Config) []string {
 	env = append(env, fmt.Sprintf("ROCKETSHIP_BROWSER_TYPE=%s", config.BrowserType))
 	env = append(env, fmt.Sprintf("ROCKETSHIP_USE_VISION=%s", strconv.FormatBool(config.UseVision)))
 	env = append(env, fmt.Sprintf("ROCKETSHIP_MAX_STEPS=%d", config.MaxSteps))
-	
+
 	// Add allowed domains as comma-separated string
 	if len(config.AllowedDomains) > 0 {
 		env = append(env, fmt.Sprintf("ROCKETSHIP_ALLOWED_DOMAINS=%s", strings.Join(config.AllowedDomains, ",")))

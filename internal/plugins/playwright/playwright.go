@@ -50,15 +50,18 @@ type stopConfig struct {
 }
 
 type pythonResult struct {
-	Success bool                   `json:"ok"`
-	Error   string                 `json:"error,omitempty"`
-	Result  map[string]interface{} `json:"result,omitempty"`
+	Success bool        `json:"ok"`
+	Error   string      `json:"error,omitempty"`
+	Result  interface{} `json:"result,omitempty"`
 }
 
 type startResponse struct {
 	Success    bool   `json:"ok"`
 	WSEndpoint string `json:"wsEndpoint"`
+	PID        int    `json:"pid"`
 	Error      string `json:"error,omitempty"`
+	UserData   string `json:"userDataDir,omitempty"`
+	Port       int    `json:"port,omitempty"`
 }
 
 func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (interface{}, error) {
@@ -70,6 +73,12 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 	}
 
 	state := extractState(params)
+
+	// Add run metadata to state for template processing
+	if runData, ok := params["run"].(map[string]interface{}); ok {
+		state["run"] = runData
+	}
+
 	templateContext := dsl.TemplateContext{
 		Runtime: state,
 	}
@@ -156,15 +165,27 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 	// Keep runner file for the lifetime of the process; cleanup only removes temp dir stub.
 	defer cleanup()
 
+	baseDir, err := sessionfile.BaseDir()
+	if err != nil {
+		return nil, err
+	}
+
+	sessionDir := filepath.Join(baseDir, "tmp", "browser_sessions", cfg.SessionID)
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create session directory: %w", err)
+	}
+	userDataDir := filepath.Join(sessionDir, "profile")
+	if err := os.MkdirAll(userDataDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create user data directory: %w", err)
+	}
+
 	args := []string{
 		runnerPath,
 		"start",
 		"--headless", fmt.Sprintf("%t", cfg.Headless),
+		"--user-data-dir", userDataDir,
 	}
 
-	if cfg.SlowMoMS > 0 {
-		args = append(args, "--slow-mo-ms", fmt.Sprintf("%d", cfg.SlowMoMS))
-	}
 	if cfg.LaunchTimeout > 0 {
 		args = append(args, "--launch-timeout", fmt.Sprintf("%d", cfg.LaunchTimeout))
 	}
@@ -198,19 +219,33 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 		return nil, err
 	}
 
+	// Ensure python process exits cleanly
+	waitErr := cmd.Wait()
+
 	if !response.Success {
-		killProcessGroup(cmd)
+		if waitErr != nil {
+			log.Printf("[WARN] playwright start runner exited with error: %v", waitErr)
+		}
 		return nil, fmt.Errorf("failed to start browser: %s", response.Error)
 	}
 
-	pid := cmd.Process.Pid
-	if err := sessionfile.Write(ctx, cfg.SessionID, response.WSEndpoint, pid); err != nil {
-		killProcessGroup(cmd)
-		return nil, err
+	if response.PID <= 0 {
+		return nil, fmt.Errorf("playwright start runner returned invalid pid: %d", response.PID)
+	}
+	if response.WSEndpoint == "" {
+		return nil, errors.New("playwright start runner did not provide wsEndpoint")
+	}
+	if waitErr != nil {
+		log.Printf("[WARN] playwright start runner exited with warning: %v", waitErr)
 	}
 
-	if err := cmd.Process.Release(); err != nil {
-		log.Printf("[WARN] failed to release Playwright process %d: %v", pid, err)
+	pid := response.PID
+	if err := sessionfile.Write(ctx, cfg.SessionID, response.WSEndpoint, pid); err != nil {
+		// Best effort terminate launched browser if we fail to persist session metadata
+		if killErr := terminateProcessTree(pid); killErr != nil {
+			log.Printf("[WARN] failed to terminate browser after session write error: %v", killErr)
+		}
+		return nil, err
 	}
 
 	result := map[string]interface{}{
@@ -224,12 +259,15 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 }
 
 func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[string]interface{}, error) {
+	log.Printf("[DEBUG] handleScript: Reading session file for session_id=%s", cfg.SessionID)
 	wsEndpoint, _, err := sessionfile.Read(ctx, cfg.SessionID)
 	if err != nil {
+		log.Printf("[DEBUG] handleScript: Failed to read session file: %v", err)
 		return nil, fmt.Errorf("session %q is not active: %w", cfg.SessionID, err)
 	}
+	log.Printf("[DEBUG] handleScript: Got wsEndpoint=%s from session file", wsEndpoint)
 
-	if strings.ToLower(cfg.Language) != "python" {
+	if cfg.Language != "" && strings.ToLower(cfg.Language) != "python" {
 		return nil, fmt.Errorf("unsupported language %q: only python is supported", cfg.Language)
 	}
 
@@ -273,6 +311,8 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 		args = append(args, "--env-json", envJSON)
 	}
 
+	log.Printf("[DEBUG] handleScript: Executing python runner with args: %v", args)
+
 	cmd := exec.CommandContext(ctx, "python3", args...)
 	cmd.Env = append(os.Environ(), "PYTHONUNBUFFERED=1")
 	setupProcessGroup(cmd)
@@ -288,11 +328,16 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 		return nil, fmt.Errorf("failed to start python runner: %w", err)
 	}
 
+	go func() {
+		<-ctx.Done()
+		killProcessGroup(cmd)
+	}()
+
 	outputBytes, readErr := io.ReadAll(stdoutPipe)
 	waitErr := cmd.Wait()
 
 	if readErr != nil {
-		return nil, fmt.Errorf("failed to read python output: %w", readErr)
+		return nil, fmt.Errorf("failed to read runner output: %w", readErr)
 	}
 	out := strings.TrimSpace(string(outputBytes))
 
@@ -301,20 +346,20 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 	}
 
 	if out == "" {
-		return nil, errors.New("python runner returned no output")
+		return nil, errors.New("playwright runner returned no output")
 	}
 
 	startIdx := strings.Index(out, "{")
 	endIdx := strings.LastIndex(out, "}")
 	if startIdx == -1 || endIdx == -1 || endIdx < startIdx {
-		return nil, fmt.Errorf("no JSON found in python output: %s", out)
+		return nil, fmt.Errorf("no JSON found in runner output: %s", out)
 	}
 
 	jsonPart := out[startIdx : endIdx+1]
 
 	response := pythonResult{}
 	if err := json.Unmarshal([]byte(jsonPart), &response); err != nil {
-		return nil, fmt.Errorf("failed to parse python output: %w\nstdout: %s", err, out)
+		return nil, fmt.Errorf("failed to parse runner output: %w\nstdout: %s", err, out)
 	}
 
 	if !response.Success {
@@ -327,8 +372,15 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 	result := map[string]interface{}{
 		"success": true,
 	}
-	for k, v := range response.Result {
-		result[k] = v
+	switch val := response.Result.(type) {
+	case map[string]interface{}:
+		for k, v := range val {
+			result[k] = v
+		}
+	case nil:
+		// no-op
+	default:
+		result["result"] = val
 	}
 
 	return result, nil

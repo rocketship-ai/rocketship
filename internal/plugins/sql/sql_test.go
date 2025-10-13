@@ -47,7 +47,7 @@ func TestParseSQLFile(t *testing.T) {
 			expected: []string{"SELECT \"column;name\" FROM table", "SELECT 2"},
 		},
 		{
-			name:     "Complex mixed case",
+			name: "Complex mixed case",
 			content: `-- Comment with ; semicolon
 SELECT 'string; with semicolon' as test, 
        "identifier; with semicolon" as col

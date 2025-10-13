@@ -256,6 +256,9 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		"plugin": step.Plugin,
 		"config": step.Config,
 		"state":  state,
+		"run": map[string]interface{}{
+			"id": runID,
+		},
 	}
 
 	// Add additional parameters based on plugin type

@@ -1,6 +1,6 @@
-name: "Checkout persistent-session demo"
+name: "Persistent browser session demo"
 tests:
-  - name: "happy path"
+  - name: "interleaved flow"
     steps:
       - name: "start browser"
         plugin: playwright
@@ -8,39 +8,25 @@ tests:
           role: start
           session_id: "checkout-{{ .run.id }}"
           headless: true
-          slow_mo_ms: 0
 
-      - name: "login (deterministic)"
+      - name: "visit landing page"
         plugin: playwright
         config:
           role: script
           session_id: "checkout-{{ .run.id }}"
           language: python
           script: |
-            page.goto("https://shop.example.com/login")
-            page.get_by_label("Email").fill("qa@example.com")
-            page.get_by_label("Password").fill("correct-horse-battery-staple")
-            page.get_by_role("button", name="Sign in").click()
-            page.wait_for_url("**/products")
+            page.goto("https://example.com")
+            result = {"title": page.title()}
 
-      - name: "browse & add via agent"
+      - name: "summarize via agent"
         plugin: browser_use
         config:
           session_id: "checkout-{{ .run.id }}"
-          task: "Navigate to the first product and click 'Add to cart'"
+          task: "Read the page currently open and summarize it in one sentence."
           allowed_domains:
-            - "shop.example.com"
-          max_steps: 10
-
-      - name: "assert cart (deterministic)"
-        plugin: playwright
-        config:
-          role: script
-          session_id: "checkout-{{ .run.id }}"
-          language: python
-          script: |
-            page.goto("https://shop.example.com/cart")
-            assert page.get_by_text("1 item").is_visible()
+            - "example.com"
+          max_steps: 4
 
       - name: "stop browser"
         plugin: playwright

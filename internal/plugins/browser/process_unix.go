@@ -20,7 +20,7 @@ func killProcessGroup(cmd *exec.Cmd) {
 	if cmd.Process == nil {
 		return
 	}
-	
+
 	// Kill the entire process group to ensure child processes (browsers) are also killed
 	pgid, err := syscall.Getpgid(cmd.Process.Pid)
 	if err != nil {
@@ -28,10 +28,10 @@ func killProcessGroup(cmd *exec.Cmd) {
 		_ = cmd.Process.Kill()
 		return
 	}
-	
+
 	// Send SIGTERM to the process group first (graceful)
 	_ = syscall.Kill(-pgid, syscall.SIGTERM)
-	
+
 	// Wait a bit, then send SIGKILL if needed
 	go func() {
 		time.Sleep(2 * time.Second)

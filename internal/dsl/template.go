@@ -314,10 +314,11 @@ func setNestedValue(m map[string]interface{}, key string, value interface{}) {
 // - Even number of \: template variable (half backslashes remain)
 // - Odd number of \: literal handlebars (half backslashes remain, rounded down)
 // Examples:
-//   \{{ }} (1) -> {{ }} (0, literal handlebars)
-//   \\{{ }} (2) -> \{{ }} (1, literal text)
-//   \\\{{ }} (3) -> \{{ }} (1, literal handlebars)
-//   \\\\{{ }} (4) -> \\{{ }} (2, literal text)
+//
+//	\{{ }} (1) -> {{ }} (0, literal handlebars)
+//	\\{{ }} (2) -> \{{ }} (1, literal text)
+//	\\\{{ }} (3) -> \{{ }} (1, literal handlebars)
+//	\\\\{{ }} (4) -> \\{{ }} (2, literal text)
 func handleAllEscapedHandlebars(input string) string {
 	result := input
 

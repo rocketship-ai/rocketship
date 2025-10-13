@@ -16,8 +16,8 @@ type Plugin interface {
 
 // Global plugin registry
 var (
-	registry     = make(map[string]Plugin)
-	registryMu   sync.RWMutex
+	registry          = make(map[string]Plugin)
+	registryMu        sync.RWMutex
 	registeredPlugins []Plugin
 )
 
@@ -25,12 +25,12 @@ var (
 func RegisterPlugin(plugin Plugin) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	
+
 	pluginType := plugin.GetType()
 	if _, exists := registry[pluginType]; exists {
 		panic(fmt.Sprintf("plugin %s is already registered", pluginType))
 	}
-	
+
 	registry[pluginType] = plugin
 	registeredPlugins = append(registeredPlugins, plugin)
 }
@@ -39,7 +39,7 @@ func RegisterPlugin(plugin Plugin) {
 func GetPlugin(pluginType string) (Plugin, bool) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
-	
+
 	plugin, exists := registry[pluginType]
 	return plugin, exists
 }
@@ -48,7 +48,7 @@ func GetPlugin(pluginType string) (Plugin, bool) {
 func GetRegisteredPlugins() []Plugin {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
-	
+
 	// Return a copy to prevent external modification
 	plugins := make([]Plugin, len(registeredPlugins))
 	copy(plugins, registeredPlugins)

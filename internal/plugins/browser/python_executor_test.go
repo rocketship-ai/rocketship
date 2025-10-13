@@ -15,7 +15,7 @@ func TestEmbeddedPythonScript(t *testing.T) {
 	// Test that we can write the embedded script to a file
 	tempDir := t.TempDir()
 	scriptPath := filepath.Join(tempDir, "test_browser_automation.py")
-	
+
 	pe := &PythonExecutor{}
 	err := pe.copyPythonScript(scriptPath)
 	if err != nil {

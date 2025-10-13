@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/browser/sessionfile"
 	browseruse "github.com/rocketship-ai/rocketship/internal/plugins/browser_use"
@@ -29,12 +28,9 @@ func TestPersistentSessionFlowWithStubs(t *testing.T) {
 		"    mode=\"$1\"\n" +
 		"    shift\n" +
 		"    if [ \"$mode\" = \"start\" ]; then\n" +
-		"      echo '{\"ok\": true, \"wsEndpoint\": \"ws://fake\"}'\n" +
-		"      while true; do sleep 1; done\n" +
+		"      echo '{\"ok\": true, \"wsEndpoint\": \"ws://fake\", \"pid\": 4242}'\n" +
 		"    elif [ \"$mode\" = \"script\" ]; then\n" +
 		"      echo '{\"ok\": true, \"result\": {\"script\": \"ran\"}}'\n" +
-		"    elif [ \"$mode\" = \"stop\" ]; then\n" +
-		"      echo '{\"ok\": true}'\n" +
 		"    else\n" +
 		"      echo '{\"ok\": false, \"error\": \"unknown mode\"}'\n" +
 		"      exit 1\n" +
@@ -49,7 +45,7 @@ func TestPersistentSessionFlowWithStubs(t *testing.T) {
 		"    ;;\n" +
 		"esac\n"
 
-	// Guard against Python embedding printing bytecode headers; ensure we always
+	// Guard against Node.js printing extra output; ensure we always
 	// produce exactly one JSON line followed by EOF.
 	if err := os.WriteFile(stubPath, []byte(stubScript), 0o755); err != nil {
 		t.Fatalf("failed to write stub python: %v", err)
@@ -74,15 +70,12 @@ func TestPersistentSessionFlowWithStubs(t *testing.T) {
 		t.Fatalf("start failed: %v", err)
 	}
 
-	// Give stub time to enter sleep loop
-	time.Sleep(50 * time.Millisecond)
-
 	scriptParams := map[string]interface{}{
 		"config": map[string]interface{}{
 			"role":       "script",
 			"session_id": "test-session",
 			"language":   "python",
-			"script":     "page.goto('https://example.com')",
+			"script":     "page.goto('https://example.com')\nresult = {'script': 'ran'}\n",
 		},
 	}
 

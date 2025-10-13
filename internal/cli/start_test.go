@@ -134,7 +134,7 @@ func TestSetupLocalServer_MockComponents(t *testing.T) {
 
 	// This test is limited because setupLocalServer has many dependencies
 	// In a real implementation, we'd need to mock the process manager and server config
-	
+
 	// Test that the function exists (can't actually test it without mocking dependencies)
 	// setupLocalServer exists and is callable
 	_ = setupLocalServer
@@ -145,7 +145,7 @@ func TestSetupLocalServerBackground_MockComponents(t *testing.T) {
 
 	// This test is limited because setupLocalServerBackground has many dependencies
 	// In a real implementation, we'd need to mock the process manager and server config
-	
+
 	// Test that the function exists (can't actually test it without mocking dependencies)
 	// setupLocalServerBackground exists and is callable
 	_ = setupLocalServerBackground
@@ -226,7 +226,7 @@ func TestStartServerCmd_Help(t *testing.T) {
 	t.Parallel()
 
 	cmd := newStartServerCmd()
-	
+
 	help := cmd.UsageString()
 	if help == "" {
 		t.Error("Expected non-empty help string")
@@ -247,7 +247,7 @@ func TestStartCmd_Structure(t *testing.T) {
 	t.Parallel()
 
 	startCmd := NewStartCmd()
-	
+
 	// Test command hierarchy
 	if !startCmd.HasSubCommands() {
 		t.Error("Start command should have subcommands")
@@ -282,5 +282,3 @@ func TestStartCmd_Structure(t *testing.T) {
 }
 
 // Benchmark tests
-
-

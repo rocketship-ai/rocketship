@@ -221,11 +221,11 @@ func fetchOIDCDiscovery(ctx context.Context, client *http.Client, issuer string)
 	if err != nil {
 		return nil, fmt.Errorf("oidc discovery request failed: %w", err)
 	}
-    defer func() {
-        if cerr := resp.Body.Close(); cerr != nil {
-            cli.Logger.Debug("failed to close discovery response", "error", cerr)
-        }
-    }()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			cli.Logger.Debug("failed to close discovery response", "error", cerr)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("oidc discovery request failed: %s", resp.Status)
 	}
