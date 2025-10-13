@@ -52,6 +52,12 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 	}
 
 	state := extractState(params)
+
+	// Add run metadata to state for template processing
+	if runData, ok := params["run"].(map[string]interface{}); ok {
+		state["run"] = runData
+	}
+
 	templateContext := dsl.TemplateContext{Runtime: state}
 
 	cfg, err := parseConfig(configData, templateContext)

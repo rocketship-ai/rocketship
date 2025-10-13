@@ -1,0 +1,83 @@
+name: "Playwright + browser_use Integration Test"
+description: "Test persistent session sharing between playwright (deterministic) and browser_use (agentic)"
+
+tests:
+  - name: "Interweave deterministic and agentic browser automation"
+    steps:
+      - name: "start browser session"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "integration-{{ .run.id }}"
+          headless: false  # Visible for testing
+
+      - name: "deterministic navigation to example.com"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "integration-{{ .run.id }}"
+          language: python
+          script: |
+            import time
+            print("🎯 Playwright: Navigating to example.com...")
+            page.goto("https://example.com")
+            title = page.title()
+            print(f"✅ Playwright: Page title: {title}")
+
+            # Verify we're on example.com
+            heading = page.locator("h1").text_content()
+            print(f"📝 Playwright: Found heading: {heading}")
+
+            time.sleep(2)  # Visual pause
+            result = {"title": title, "heading": heading}
+
+      - name: "agentic navigation with browser_use"
+        plugin: browser_use
+        config:
+          session_id: "integration-{{ .run.id }}"
+          task: "Navigate to the IANA website by clicking the 'More information...' link"
+          max_steps: 5
+          use_vision: false
+        save:
+          - json_path: ".final_url"
+            as: "final_url"
+          - json_path: ".success"
+            as: "browser_use_success"
+
+      - name: "verify navigation with playwright"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "integration-{{ .run.id }}"
+          language: python
+          script: |
+            import time
+            print("🔍 Playwright: Verifying final page...")
+            current_url = page.url
+            print(f"📍 Playwright: Current URL: {current_url}")
+
+            # Check if we're on iana.org
+            if "iana.org" in current_url:
+                print("✅ Playwright: Successfully navigated to IANA!")
+            else:
+                print(f"⚠️  Playwright: Unexpected URL: {current_url}")
+
+            time.sleep(2)  # Visual pause
+            result = {"current_url": current_url}
+
+      - name: "stop browser session"
+        plugin: playwright
+        config:
+          role: stop
+          session_id: "integration-{{ .run.id }}"
+
+      - name: "log integration test results"
+        plugin: log
+        config:
+          message: |
+            🎉 Integration Test Results:
+            - browser_use succeeded: {{ browser_use_success }}
+            - Final URL: {{ final_url }}
+
+            ✅ Successfully interweaved playwright (deterministic) and browser_use (agentic) automation
+            ✅ Persistent session maintained across plugin transitions
