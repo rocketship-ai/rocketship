@@ -190,10 +190,10 @@ tests:
             function main() {
               const pgUsers = parseInt(state.pg_users);
               const mysqlUsers = parseInt(state.mysql_users);
-              
+
               console.log(`PostgreSQL users: ${pgUsers}`);
               console.log(`MySQL users: ${mysqlUsers}`);
-              
+
               // Test that both databases are accessible and return reasonable counts
               // PostgreSQL may have 4 or 5 users due to concurrent test execution
               // MySQL should have exactly 4 users from the initial data
@@ -320,7 +320,7 @@ tests:
           dsn: "{{ .vars.postgres_dsn }}"
           commands:
             - |-
-              SELECT 
+              SELECT
                 name,
                 email,
                 age,

@@ -6,6 +6,8 @@ import (
 	"log"
 	"log/slog"
 	"time"
+
+	"github.com/rocketship-ai/rocketship/internal/interpreter"
 )
 
 func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
@@ -65,8 +67,9 @@ func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
 		} else {
 			testInfo.Status = "FAILED"
 			e.mu.Unlock()
-			log.Printf("[ERROR] Test failed: %s - %v", testInfo.Name, workflowErr)
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %v", testInfo.Name, workflowErr), "red", true)
+			cleanErr := interpreter.ExtractCleanError(workflowErr)
+			log.Printf("[ERROR] Test failed: %s - %s", testInfo.Name, cleanErr)
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %s", testInfo.Name, cleanErr), "red", true)
 		}
 	} else {
 		testInfo.Status = "PASSED"

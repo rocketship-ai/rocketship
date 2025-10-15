@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -9,6 +10,51 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
+
+// ExtractCleanError removes Temporal and workflow wrapping noise from errors
+func ExtractCleanError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	errMsg := err.Error()
+
+	// For Python tracebacks, extract just the exception line
+	// Pattern: "... Traceback (most recent call last): ... ExceptionType: message"
+	if strings.Contains(errMsg, "Traceback (most recent call last):") {
+		// Split by newlines and find the last non-empty, non-indented line
+		// Python exception lines are NOT indented, while code lines ARE indented
+		lines := strings.Split(errMsg, "\n")
+		for i := len(lines) - 1; i >= 0; i-- {
+			originalLine := lines[i]
+			line := strings.TrimSpace(originalLine)
+
+			if line == "" {
+				continue
+			}
+
+			// Skip indented lines (code, error pointers)
+			if len(originalLine) > 0 && (originalLine[0] == ' ' || originalLine[0] == '\t') {
+				continue
+			}
+
+			// Skip "File ..." traceback frames
+			if strings.HasPrefix(line, "File ") {
+				continue
+			}
+
+			// Skip "Traceback (most recent call last):" header
+			if strings.HasPrefix(line, "Traceback ") {
+				continue
+			}
+
+			// This is the exception line!
+			return line
+		}
+	}
+
+	return errMsg
+}
 
 type stepPhase string
 
@@ -53,15 +99,16 @@ func (p stepPhase) successMessage() string {
 }
 
 func (p stepPhase) failureMessage(err error) string {
+	cleanErr := ExtractCleanError(err)
 	switch p {
 	case phaseInit:
-		return fmt.Sprintf("Init step failed: %v", err)
+		return fmt.Sprintf("Init step failed: %s", cleanErr)
 	case phaseCleanupAlways:
-		return fmt.Sprintf("Cleanup step failed: %v", err)
+		return fmt.Sprintf("Cleanup step failed: %s", cleanErr)
 	case phaseCleanupFailure:
-		return fmt.Sprintf("Cleanup (on_failure) step failed: %v", err)
+		return fmt.Sprintf("Cleanup (on_failure) step failed: %s", cleanErr)
 	default:
-		return fmt.Sprintf("Step failed: %v", err)
+		return fmt.Sprintf("Step failed: %s", cleanErr)
 	}
 }
 

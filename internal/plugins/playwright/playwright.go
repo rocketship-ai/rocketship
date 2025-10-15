@@ -341,17 +341,18 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 	}
 	out := strings.TrimSpace(string(outputBytes))
 
-	if waitErr != nil {
-		return nil, fmt.Errorf("python execution failed: %w\nstdout: %s", waitErr, out)
-	}
-
 	if out == "" {
 		return nil, errors.New("playwright runner returned no output")
 	}
 
+	// Try to parse JSON output first (even if waitErr is not nil)
 	startIdx := strings.Index(out, "{")
 	endIdx := strings.LastIndex(out, "}")
 	if startIdx == -1 || endIdx == -1 || endIdx < startIdx {
+		// No JSON found - return raw output
+		if waitErr != nil {
+			return nil, fmt.Errorf("python execution failed: %w\nstdout: %s", waitErr, out)
+		}
 		return nil, fmt.Errorf("no JSON found in runner output: %s", out)
 	}
 
@@ -359,14 +360,24 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 
 	response := pythonResult{}
 	if err := json.Unmarshal([]byte(jsonPart), &response); err != nil {
+		// JSON parsing failed - return raw output
+		if waitErr != nil {
+			return nil, fmt.Errorf("python execution failed: %w\nstdout: %s", waitErr, out)
+		}
 		return nil, fmt.Errorf("failed to parse runner output: %w\nstdout: %s", err, out)
 	}
 
+	// JSON parsed successfully - prefer the clean error message
 	if !response.Success {
-		return map[string]interface{}{
-			"success": false,
-			"error":   response.Error,
-		}, nil
+		// If we have a clean error message in the JSON, use it (newlines already unescaped by json.Unmarshal)
+		if response.Error != "" {
+			return nil, fmt.Errorf("python execution failed: %s", response.Error)
+		}
+		// Fallback: no error field or empty
+		if waitErr != nil {
+			return nil, fmt.Errorf("python execution failed: %w\nstdout: %s", waitErr, out)
+		}
+		return nil, errors.New("python execution failed with no error message")
 	}
 
 	result := map[string]interface{}{
