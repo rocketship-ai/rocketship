@@ -409,12 +409,12 @@ func NewRunCmd() *cobra.Command {
 
 					tempClient, err := NewEngineClient("localhost:7700")
 					if err == nil {
-						Logger.Info("Waiting for suite cleanup workflows to complete (this may take up to 45 minutes)...")
+						Logger.Debug("Waiting for suite cleanup workflows to complete (this may take up to 45 minutes)...")
 						_, err := tempClient.client.WaitForCleanup(waitCtx, &generated.WaitForCleanupRequest{TimeoutSeconds: 3000})
 						if err != nil {
 							Logger.Warn("Failed to wait for cleanup", "error", err)
 						} else {
-							Logger.Info("Suite cleanup workflows completed")
+							Logger.Debug("Suite cleanup workflows completed")
 						}
 						_ = tempClient.Close()
 					}

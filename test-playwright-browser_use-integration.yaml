@@ -3,6 +3,13 @@ description: "Test persistent session sharing between playwright (deterministic)
 
 tests:
   - name: "Interweave deterministic and agentic browser automation"
+    cleanup:
+      always:
+        - name: "cleanup browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "integration-{{ .run.id }}"
     steps:
       - name: "start browser session"
         plugin: playwright
@@ -35,9 +42,14 @@ tests:
         plugin: browser_use
         config:
           session_id: "integration-{{ .run.id }}"
-          task: "Navigate to the IANA website by clicking the 'More information' link"
-          max_steps: 10
+          task: "Navigate to the iana.org and click the 'Learn more.' link"
+          max_steps: 5
           use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 
       - name: "verify navigation with playwright"
         plugin: playwright
@@ -51,17 +63,23 @@ tests:
             current_url = page.url
             print(f"📍 Playwright: Current URL: {current_url}")
 
-            # Check if we're on iana.org
-            if "iana.org" in current_url:
-                print("✅ Playwright: Successfully navigated to IANA!")
-            else:
-                print(f"⚠️  Playwright: Unexpected URL: {current_url}")
+            # ASSERT we're on the specific IANA about page
+            if "https://www.iana.org/aboutme" not in current_url:
+                raise AssertionError(f"Expected to be on https://www.iana.org/aboutme but got: {current_url}")
 
+            print("✅ Playwright: Successfully navigated to IANA About page!")
             time.sleep(2)  # Visual pause
             result = {"current_url": current_url}
 
-      - name: "stop browser session"
-        plugin: playwright
+      - name: "agentic youtube search with browser_use"
+        plugin: browser_use
         config:
-          role: stop
           session_id: "integration-{{ .run.id }}"
+          task: "Go to youtube.com and search for Mr Beast in the search bar"
+          max_steps: 10
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"

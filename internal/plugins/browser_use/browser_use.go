@@ -33,6 +33,13 @@ type Config struct {
 	MaxSteps       int
 	UseVision      bool
 	Temperature    *float64
+	LLM            LLMConfig
+}
+
+type LLMConfig struct {
+	Provider string
+	Model    string
+	Config   map[string]string
 }
 
 type runnerResponse struct {
@@ -84,6 +91,14 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		"--task", cfg.Task,
 	}
 
+	// Add LLM config
+	if cfg.LLM.Provider != "" {
+		args = append(args, "--llm-provider", cfg.LLM.Provider)
+	}
+	if cfg.LLM.Model != "" {
+		args = append(args, "--llm-model", cfg.LLM.Model)
+	}
+
 	for _, domain := range cfg.AllowedDomains {
 		args = append(args, "--allowed-domain", domain)
 	}
@@ -100,8 +115,14 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		args = append(args, "--temperature", fmt.Sprintf("%f", *cfg.Temperature))
 	}
 
+	// Build environment with LLM API keys
+	env := append(os.Environ(), "PYTHONUNBUFFERED=1")
+	for key, value := range cfg.LLM.Config {
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
+	}
+
 	cmd := exec.CommandContext(ctx, "python3", args...)
-	cmd.Env = append(os.Environ(), "PYTHONUNBUFFERED=1")
+	cmd.Env = env
 	setupProcessGroup(cmd)
 
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -269,6 +290,30 @@ func parseConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*Confi
 		}
 	}
 
+	// Parse LLM config
+	llmCfg := LLMConfig{}
+	if llmRaw, ok := config["llm"].(map[string]interface{}); ok {
+		if provider, ok := llmRaw["provider"].(string); ok {
+			llmCfg.Provider = provider
+		}
+		if model, ok := llmRaw["model"].(string); ok {
+			llmCfg.Model = model
+		}
+		if cfgMap, ok := llmRaw["config"].(map[string]interface{}); ok {
+			llmCfg.Config = make(map[string]string)
+			for k, v := range cfgMap {
+				if strVal, ok := v.(string); ok {
+					// Process template variables in config values
+					processed, err := dsl.ProcessTemplate(strVal, ctx)
+					if err != nil {
+						return nil, fmt.Errorf("failed to process template in LLM config %q: %w", k, err)
+					}
+					llmCfg.Config[k] = processed
+				}
+			}
+		}
+	}
+
 	return &Config{
 		SessionID:      sessionID,
 		Task:           task,
@@ -276,5 +321,6 @@ func parseConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*Confi
 		MaxSteps:       maxSteps,
 		UseVision:      useVision,
 		Temperature:    temperature,
+		LLM:            llmCfg,
 	}, nil
 }

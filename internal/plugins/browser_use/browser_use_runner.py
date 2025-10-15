@@ -37,6 +37,40 @@ def _serialize(value):
 
 
 async def _run(args: argparse.Namespace) -> None:
+    # Initialize LLM using browser-use's Chat classes (imported from browser_use directly)
+    llm = None
+    import os
+
+    if args.llm_provider == "openai":
+        from browser_use import ChatOpenAI
+
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            _write({"ok": False, "error": "OPENAI_API_KEY environment variable required"})
+            return
+
+        llm = ChatOpenAI(
+            model=args.llm_model or "gpt-4o",
+            api_key=api_key,
+            timeout=30,
+            max_retries=2
+        )
+    elif args.llm_provider == "anthropic":
+        from browser_use import ChatAnthropic
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            _write({"ok": False, "error": "ANTHROPIC_API_KEY environment variable required"})
+            return
+
+        llm = ChatAnthropic(
+            model=args.llm_model or "claude-3-5-sonnet-20241022",
+            api_key=api_key
+        )
+    else:
+        _write({"ok": False, "error": f"Unsupported LLM provider: {args.llm_provider}"})
+        return
+
     try:
         session = BrowserSession(cdp_url=args.ws_endpoint)
     except Exception:
@@ -49,6 +83,7 @@ async def _run(args: argparse.Namespace) -> None:
 
     agent_kwargs = {
         "task": args.task,
+        "llm": llm,
         "browser_session": session,
     }
 
@@ -71,6 +106,15 @@ async def _run(args: argparse.Namespace) -> None:
 
         # Check if task actually completed
         task_completed = result.is_done() if hasattr(result, 'is_done') else False
+
+        # Debug: Print result info
+        import sys
+        print(f"DEBUG: task_completed={task_completed}", file=sys.stderr)
+        print(f"DEBUG: result type={type(result)}", file=sys.stderr)
+        if hasattr(result, 'final_result'):
+            print(f"DEBUG: final_result={result.final_result()}", file=sys.stderr)
+        if hasattr(result, 'errors'):
+            print(f"DEBUG: errors={result.errors()}", file=sys.stderr)
 
         # Extract final URL from browser context
         final_url = ""
@@ -106,6 +150,8 @@ def main() -> None:
     parser = argparse.ArgumentParser("browser_use_runner")
     parser.add_argument("--ws-endpoint", required=True)
     parser.add_argument("--task", required=True)
+    parser.add_argument("--llm-provider", required=True)
+    parser.add_argument("--llm-model")
     parser.add_argument("--allowed-domain", action="append")
     parser.add_argument("--max-steps", type=int, default=0)
     parser.add_argument("--use-vision", action="store_true")
