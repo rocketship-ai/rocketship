@@ -1,0 +1,38 @@
+name: "Playwright expect() Assertions - Failing Test"
+description: "Test that expect() assertions fail cleanly with proper error messages"
+
+tests:
+  - name: "Test failing expect() assertion for error formatting"
+    cleanup:
+      always:
+        - name: "cleanup browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "expect-fail-{{ .run.id }}"
+    steps:
+      - name: "start browser session"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "expect-fail-{{ .run.id }}"
+          headless: false
+
+      - name: "intentionally failing URL assertion"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "expect-fail-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            print("🎯 Navigating to IANA homepage...")
+            page.goto("https://www.iana.org/")
+
+            print("⚠️  Testing an assertion that SHOULD FAIL...")
+            # This will fail because we're on iana.org/, not iana.org/about
+            expect(page).to_have_url("https://www.iana.org/about")
+
+            # This line won't be reached
+            result = {"status": "should_not_reach"}
