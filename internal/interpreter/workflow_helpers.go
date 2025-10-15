@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -10,13 +11,23 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-// ExtractCleanError removes Temporal and workflow wrapping noise from errors
-// Returns the error message as-is without parsing
+// ExtractCleanError removes Temporal error wrapping duplication.
+// Temporal wraps errors multiple times with "(type: wrapError, retryable: true):" markers,
+// causing the same error to appear 2-3 times. We truncate at the first marker.
 func ExtractCleanError(err error) string {
 	if err == nil {
 		return ""
 	}
-	return err.Error()
+
+	errMsg := err.Error()
+
+	// Truncate at first Temporal wrap marker to avoid showing the same error multiple times
+	marker := " (type: wrapError, retryable: true):"
+	if idx := strings.Index(errMsg, marker); idx != -1 {
+		return strings.TrimSpace(errMsg[:idx])
+	}
+
+	return errMsg
 }
 
 type stepPhase string
