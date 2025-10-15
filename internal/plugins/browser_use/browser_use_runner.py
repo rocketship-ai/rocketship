@@ -16,6 +16,39 @@ def _write(payload: dict) -> None:
     sys.stdout.flush()
 
 
+def _check_versions() -> dict | None:
+    """Check required package versions. Returns error dict if versions insufficient, None if OK."""
+    from importlib.metadata import version, PackageNotFoundError
+
+    required = {
+        "browser-use": "0.8.0",
+        "playwright": "1.40.0",
+    }
+
+    for package, min_version in required.items():
+        try:
+            installed = version(package)
+            # Simple version comparison (works for semver)
+            installed_parts = [int(x) for x in installed.split(".")[:3]]
+            required_parts = [int(x) for x in min_version.split(".")[:3]]
+
+            if installed_parts < required_parts:
+                return {
+                    "ok": False,
+                    "error": f"{package} version {min_version}+ required, found {installed}"
+                }
+        except PackageNotFoundError:
+            return {
+                "ok": False,
+                "error": f"{package} not installed (version {min_version}+ required)"
+            }
+        except (ValueError, AttributeError):
+            # Can't parse version, allow it through
+            pass
+
+    return None
+
+
 def _serialize(value):
     if value is None:
         return None
@@ -37,6 +70,12 @@ def _serialize(value):
 
 
 async def _run(args: argparse.Namespace) -> None:
+    # Check versions first
+    version_error = _check_versions()
+    if version_error:
+        _write(version_error)
+        return
+
     # Initialize LLM using browser-use's Chat classes (imported from browser_use directly)
     llm = None
     import os
@@ -142,8 +181,11 @@ async def _run(args: argparse.Namespace) -> None:
             payload["error"] = "Task did not complete within max_steps limit"
         _write(payload)
     except Exception:
-        error_text = traceback.format_exc()
-        _write({"ok": False, "error": error_text})
+        exc_type, exc_value, exc_tb = sys.exc_info()
+        short_error = "".join(traceback.format_exception_only(exc_type, exc_value)).strip()
+        full_trace = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        _write({"ok": False, "error": short_error, "traceback": full_trace})
+        raise SystemExit(1)
 
 
 def main() -> None:

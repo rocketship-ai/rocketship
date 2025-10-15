@@ -50,9 +50,10 @@ type stopConfig struct {
 }
 
 type pythonResult struct {
-	Success bool        `json:"ok"`
-	Error   string      `json:"error,omitempty"`
-	Result  interface{} `json:"result,omitempty"`
+	Success   bool        `json:"ok"`
+	Error     string      `json:"error,omitempty"`
+	Result    interface{} `json:"result,omitempty"`
+	Traceback string      `json:"traceback,omitempty"`
 }
 
 type startResponse struct {
@@ -259,6 +260,7 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 }
 
 func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[string]interface{}, error) {
+	logger := getLogger(ctx)
 	log.Printf("[DEBUG] handleScript: Reading session file for session_id=%s", cfg.SessionID)
 	wsEndpoint, _, err := sessionfile.Read(ctx, cfg.SessionID)
 	if err != nil {
@@ -369,6 +371,9 @@ func (p *Plugin) handleScript(ctx context.Context, cfg *scriptConfig) (map[strin
 
 	// JSON parsed successfully - prefer the clean error message
 	if !response.Success {
+		if response.Traceback != "" {
+			logger.Debug("python traceback", "traceback", response.Traceback)
+		}
 		// If we have a clean error message in the JSON, use it (newlines already unescaped by json.Unmarshal)
 		if response.Error != "" {
 			return nil, fmt.Errorf("python execution failed: %s", response.Error)

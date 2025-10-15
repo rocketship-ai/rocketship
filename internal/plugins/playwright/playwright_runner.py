@@ -25,6 +25,38 @@ def _write(payload: Dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+def _check_versions() -> Optional[Dict[str, Any]]:
+    """Check required package versions. Returns error dict if versions insufficient, None if OK."""
+    from importlib.metadata import version, PackageNotFoundError
+
+    required = {
+        "playwright": "1.40.0",
+    }
+
+    for package, min_version in required.items():
+        try:
+            installed = version(package)
+            # Simple version comparison (works for semver)
+            installed_parts = [int(x) for x in installed.split(".")[:3]]
+            required_parts = [int(x) for x in min_version.split(".")[:3]]
+
+            if installed_parts < required_parts:
+                return {
+                    "ok": False,
+                    "error": f"{package} version {min_version}+ required, found {installed}"
+                }
+        except PackageNotFoundError:
+            return {
+                "ok": False,
+                "error": f"{package} not installed (version {min_version}+ required)"
+            }
+        except (ValueError, AttributeError):
+            # Can't parse version, allow it through
+            pass
+
+    return None
+
+
 def _parse_bool(value: Optional[str], default: bool = True) -> bool:
     if value is None:
         return default
@@ -144,6 +176,12 @@ def _launch_chromium(args: argparse.Namespace) -> Dict[str, Any]:
 
 
 def _run_start(args: argparse.Namespace) -> None:
+    # Check versions first
+    version_error = _check_versions()
+    if version_error:
+        _write(version_error)
+        sys.exit(1)
+
     try:
         payload = _launch_chromium(args)
         _write(payload)
@@ -158,6 +196,12 @@ def _load_script(path: str) -> str:
 
 
 def _run_script(args: argparse.Namespace) -> None:
+    # Check versions first
+    version_error = _check_versions()
+    if version_error:
+        _write(version_error)
+        sys.exit(1)
+
     env_vars: Dict[str, Any] = {}
     if args.env_json:
         try:
@@ -197,8 +241,22 @@ def _run_script(args: argparse.Namespace) -> None:
         try:
             exec(script_source, globals_dict, globals_dict)  # noqa: S102 - intentional exec for user script
         except Exception:
-            error_text = traceback.format_exc()
-            _write({"ok": False, "error": error_text})
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            short_error = "".join(traceback.format_exception_only(exc_type, exc_value)).strip()
+
+            # Best effort to locate user script line numbers
+            user_frame = None
+            current = exc_tb
+            while current is not None:
+                if current.tb_frame.f_code.co_filename == "<string>":
+                    user_frame = current
+                current = current.tb_next
+
+            if user_frame is not None:
+                short_error = f"{short_error} (script line {user_frame.tb_lineno})"
+
+            full_trace = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+            _write({"ok": False, "error": short_error, "traceback": full_trace})
             sys.exit(1)
 
         _write({"ok": True, "result": globals_dict.get("result")})

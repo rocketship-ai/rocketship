@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -12,48 +11,12 @@ import (
 )
 
 // ExtractCleanError removes Temporal and workflow wrapping noise from errors
+// Returns the error message as-is without parsing
 func ExtractCleanError(err error) string {
 	if err == nil {
 		return ""
 	}
-
-	errMsg := err.Error()
-
-	// For Python tracebacks, extract just the exception line
-	// Pattern: "... Traceback (most recent call last): ... ExceptionType: message"
-	if strings.Contains(errMsg, "Traceback (most recent call last):") {
-		// Split by newlines and find the last non-empty, non-indented line
-		// Python exception lines are NOT indented, while code lines ARE indented
-		lines := strings.Split(errMsg, "\n")
-		for i := len(lines) - 1; i >= 0; i-- {
-			originalLine := lines[i]
-			line := strings.TrimSpace(originalLine)
-
-			if line == "" {
-				continue
-			}
-
-			// Skip indented lines (code, error pointers)
-			if len(originalLine) > 0 && (originalLine[0] == ' ' || originalLine[0] == '\t') {
-				continue
-			}
-
-			// Skip "File ..." traceback frames
-			if strings.HasPrefix(line, "File ") {
-				continue
-			}
-
-			// Skip "Traceback (most recent call last):" header
-			if strings.HasPrefix(line, "Traceback ") {
-				continue
-			}
-
-			// This is the exception line!
-			return line
-		}
-	}
-
-	return errMsg
+	return err.Error()
 }
 
 type stepPhase string

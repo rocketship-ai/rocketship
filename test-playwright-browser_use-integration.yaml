@@ -68,7 +68,6 @@ tests:
                 raise AssertionError(f"Expected to be on https://www.iana.org/aboutme but got: {current_url}")
 
             print("✅ Playwright: Successfully navigated to IANA About page!")
-            time.sleep(2)  # Visual pause
             result = {"current_url": current_url}
 
       - name: "agentic youtube search with browser_use"

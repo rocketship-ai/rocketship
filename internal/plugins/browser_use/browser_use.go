@@ -48,6 +48,7 @@ type runnerResponse struct {
 	Result    interface{}            `json:"result,omitempty"`
 	FinalURL  string                 `json:"finalUrl,omitempty"`
 	Artifacts map[string]interface{} `json:"artifacts,omitempty"`
+	Traceback string                 `json:"traceback,omitempty"`
 }
 
 func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (interface{}, error) {
@@ -150,30 +151,45 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 
 	output := strings.TrimSpace(string(outputBytes))
 
-	if waitErr != nil {
-		return nil, fmt.Errorf("browser-use execution failed: %w\nstdout: %s", waitErr, output)
-	}
-
 	if output == "" {
+		if waitErr != nil {
+			return nil, fmt.Errorf("browser-use execution failed: %w", waitErr)
+		}
 		return nil, errors.New("browser-use runner returned no output")
 	}
 
 	startIdx := strings.Index(output, "{")
 	endIdx := strings.LastIndex(output, "}")
 	if startIdx == -1 || endIdx == -1 || endIdx < startIdx {
+		if waitErr != nil {
+			return nil, fmt.Errorf("browser-use execution failed: %w\nstdout: %s", waitErr, output)
+		}
 		return nil, fmt.Errorf("no JSON found in runner output: %s", output)
 	}
 
 	response := runnerResponse{}
 	if err := json.Unmarshal([]byte(output[startIdx:endIdx+1]), &response); err != nil {
+		if waitErr != nil {
+			return nil, fmt.Errorf("browser-use execution failed: %w\nstdout: %s", waitErr, output)
+		}
 		return nil, fmt.Errorf("failed to parse runner output: %w\nstdout: %s", err, output)
 	}
 
 	if !response.Success {
-		return map[string]interface{}{
-			"success": false,
-			"error":   response.Error,
-		}, nil
+		if response.Traceback != "" {
+			logger.Debug("browser_use traceback", "traceback", response.Traceback)
+		}
+		if response.Error != "" {
+			return nil, fmt.Errorf("browser-use execution failed: %s", response.Error)
+		}
+		if waitErr != nil {
+			return nil, fmt.Errorf("browser-use execution failed: %w\nstdout: %s", waitErr, output)
+		}
+		return nil, errors.New("browser-use execution failed with no error message")
+	}
+
+	if waitErr != nil {
+		logger.Warn("browser-use runner exited with warning", "error", waitErr)
 	}
 
 	result := map[string]interface{}{
