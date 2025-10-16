@@ -1,0 +1,53 @@
+name: "Browser_use YouTube Failure Test"
+description: "Test browser_use failure detection with realistic YouTube search task"
+
+tests:
+  - name: "Search for non-existent video on YouTube"
+    cleanup:
+      always:
+        - name: "cleanup browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "youtube-fail-{{ .run.id }}"
+    steps:
+      - name: "start browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "youtube-fail-{{ .run.id }}"
+          headless: false
+
+      - name: "navigate to YouTube"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "youtube-fail-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            print("🎯 Navigating to YouTube...")
+            page.goto("https://www.youtube.com")
+            expect(page).to_have_url("https://www.youtube.com/")
+            print("✅ YouTube loaded")
+
+            result = {"status": "ready"}
+
+      - name: "search for specific non-existent video"
+        plugin: browser_use
+        config:
+          session_id: "youtube-fail-{{ .run.id }}"
+          task: |
+            Search YouTube for the video with the exact title:
+            "Rocketship AI Testing Framework Official Tutorial Part 47 - Advanced CDN Configuration XYZ999"
+
+            You must find this EXACT video title in the search results and click on it.
+            If you cannot find this exact video title after searching, fail.
+          max_steps: 10
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
