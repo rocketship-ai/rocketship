@@ -349,6 +349,7 @@ func NewRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run rocketship tests",
 		Long:  `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
+		SilenceUsage: true, // Don't print usage on test failures
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create a context that we can cancel
 			ctx, cancel := context.WithCancel(context.Background())

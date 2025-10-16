@@ -39,12 +39,8 @@ tests:
         config:
           session_id: "youtube-fail-{{ .run.id }}"
           task: |
-            Search YouTube for the video with the exact title:
-            "Rocketship AI Testing Framework Official Tutorial Part 47 - Advanced CDN Configuration XYZ999"
-
-            You must find this EXACT video title in the search results and click on it.
-            If you cannot find this exact video title after searching, fail.
-          max_steps: 10
+            Find a youtube comment that says "Hi my name is Phil" and click on it.
+          max_steps: 2
           use_vision: true
           llm:
             provider: "openai"
