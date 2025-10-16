@@ -1,8 +1,17 @@
 import argparse
 import asyncio
 import json
+import logging
 import sys
 import traceback
+
+# Configure logging BEFORE importing browser-use to ensure logs go to stderr
+logging.basicConfig(
+    stream=sys.stderr,
+    level=logging.INFO,
+    format='%(levelname)-8s [%(name)s] %(message)s',
+    force=True
+)
 
 try:
     from browser_use import Agent, BrowserSession
