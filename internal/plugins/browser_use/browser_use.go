@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/browser/sessionfile"
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -33,6 +34,7 @@ type Config struct {
 	MaxSteps       int
 	UseVision      bool
 	Temperature    *float64
+	Timeout        string
 	LLM            LLMConfig
 }
 
@@ -73,12 +75,22 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		return nil, err
 	}
 
-	wsEndpoint, _, err := sessionfile.Read(ctx, cfg.SessionID)
+	// Parse and apply timeout
+	timeoutDuration, err := time.ParseDuration(cfg.Timeout)
+	if err != nil {
+		return nil, fmt.Errorf("invalid timeout format %q: %w (use duration strings like '5m', '30s')", cfg.Timeout, err)
+	}
+
+	// Create context with timeout
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	wsEndpoint, _, err := sessionfile.Read(timeoutCtx, cfg.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("session %q is not active: %w", cfg.SessionID, err)
 	}
 
-	logger.Info("Executing browser-use task", "session_id", cfg.SessionID)
+	logger.Info("Executing browser-use task", "session_id", cfg.SessionID, "timeout", cfg.Timeout)
 
 	runnerPath, cleanup, err := prepareRunnerScript()
 	if err != nil {
@@ -122,7 +134,7 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
 
-	cmd := exec.CommandContext(ctx, "python3", args...)
+	cmd := exec.CommandContext(timeoutCtx, "python3", args...)
 	cmd.Env = env
 	setupProcessGroup(cmd)
 
@@ -138,7 +150,7 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 	}
 
 	go func() {
-		<-ctx.Done()
+		<-timeoutCtx.Done()
 		killProcessGroup(cmd)
 	}()
 
@@ -330,6 +342,16 @@ func parseConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*Confi
 		}
 	}
 
+	// Parse timeout
+	timeout := "5m" // default to 5 minutes (matching legacy browser plugin)
+	if raw, ok := config["timeout"]; ok {
+		if timeoutStr, ok := raw.(string); ok {
+			timeout = timeoutStr
+		} else {
+			return nil, fmt.Errorf("invalid timeout value: %v (must be a duration string like '5m', '30s')", raw)
+		}
+	}
+
 	return &Config{
 		SessionID:      sessionID,
 		Task:           task,
@@ -337,6 +359,7 @@ func parseConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*Confi
 		MaxSteps:       maxSteps,
 		UseVision:      useVision,
 		Temperature:    temperature,
+		Timeout:        timeout,
 		LLM:            llmCfg,
 	}, nil
 }

@@ -1,0 +1,152 @@
+name: "browser_use Timeout Configuration Tests"
+description: "Test timeout configuration for browser_use plugin with default, explicit, and failure scenarios"
+
+tests:
+  # Test 1: Default timeout (5 minutes) - should succeed quickly
+  - name: "Test 1: Default timeout (5m) with simple task"
+    cleanup:
+      always:
+        - name: "cleanup test 1 browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "timeout-test-1-{{ .run.id }}"
+    steps:
+      - name: "start browser for test 1"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "timeout-test-1-{{ .run.id }}"
+          headless: false
+          window_width: 1280
+          window_height: 720
+
+      - name: "playwright: navigate to example.com"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "timeout-test-1-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+            print("Navigating to example.com for timeout test 1...")
+            page.goto("https://example.com")
+            expect(page).to_have_url("https://example.com/")
+            result = {"initial_url": page.url}
+
+      - name: "browser_use: verify page (default 5m timeout)"
+        plugin: browser_use
+        config:
+          session_id: "timeout-test-1-{{ .run.id }}"
+          # NO timeout specified - should use default 5m
+          task: |
+            You are on example.com. Verify that you can see the heading "Example Domain".
+            Report success if you find it.
+          max_steps: 3
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+
+  # Test 2: Explicit short timeout (30 seconds) - should succeed
+  - name: "Test 2: Explicit 30s timeout with simple task"
+    cleanup:
+      always:
+        - name: "cleanup test 2 browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "timeout-test-2-{{ .run.id }}"
+    steps:
+      - name: "start browser for test 2"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "timeout-test-2-{{ .run.id }}"
+          headless: false
+          window_width: 1280
+          window_height: 720
+
+      - name: "playwright: navigate to example.org"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "timeout-test-2-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+            print("Navigating to example.org for timeout test 2...")
+            page.goto("https://example.org")
+            expect(page).to_have_url("https://example.org/")
+            result = {"initial_url": page.url}
+
+      - name: "browser_use: quick task with 30s timeout"
+        plugin: browser_use
+        config:
+          session_id: "timeout-test-2-{{ .run.id }}"
+          timeout: "30s"  # Explicit 30 second timeout
+          task: |
+            You are on example.org. Simply verify that the page loaded successfully.
+            Report what you see on the page.
+          max_steps: 2
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+
+  # Test 3: Very short timeout (3 seconds) - SHOULD FAIL with timeout
+  - name: "Test 3: 3s timeout should fail (timeout error expected)"
+    cleanup:
+      always:
+        - name: "cleanup test 3 browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "timeout-test-3-{{ .run.id }}"
+    steps:
+      - name: "start browser for test 3"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "timeout-test-3-{{ .run.id }}"
+          headless: false
+          window_width: 1280
+          window_height: 720
+
+      - name: "playwright: navigate to example.com"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "timeout-test-3-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+            print("Navigating to example.com for timeout test 3...")
+            page.goto("https://example.com")
+            expect(page).to_have_url("https://example.com/")
+            result = {"initial_url": page.url}
+
+      - name: "browser_use: complex task with 3s timeout (will timeout)"
+        plugin: browser_use
+        config:
+          session_id: "timeout-test-3-{{ .run.id }}"
+          timeout: "3s"  # Very short timeout - this will fail
+          task: |
+            You are on example.com. I want you to:
+            1. Find the heading on the page
+            2. Click on any links you find
+            3. Navigate to at least 3 different pages
+            4. Report back with detailed findings
+
+            Take your time to thoroughly explore.
+          max_steps: 10
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
