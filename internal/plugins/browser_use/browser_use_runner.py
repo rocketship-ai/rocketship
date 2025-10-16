@@ -124,6 +124,13 @@ async def _run(args: argparse.Namespace) -> None:
         "task": args.task,
         "llm": llm,
         "browser_session": session,
+        # Add system message to ensure agent treats incomplete tasks as failures
+        "extend_system_message": (
+            "\n\nIMPORTANT: You MUST complete the full task as specified. "
+            "If you cannot complete ANY part of the task due to missing elements, "
+            "errors, or inability to find required content, you should report this as a failure. "
+            "Do NOT report success if you only partially completed the task or could not find required elements."
+        ),
     }
 
     if args.allowed_domain:
@@ -146,14 +153,34 @@ async def _run(args: argparse.Namespace) -> None:
         # Check if task actually completed
         task_completed = result.is_done() if hasattr(result, 'is_done') else False
 
-        # Debug: Print result info
-        import sys
-        print(f"DEBUG: task_completed={task_completed}", file=sys.stderr)
-        print(f"DEBUG: result type={type(result)}", file=sys.stderr)
+        # Additionally check if the final result indicates failure
+        error_message = None
         if hasattr(result, 'final_result'):
-            print(f"DEBUG: final_result={result.final_result()}", file=sys.stderr)
+            final_text = str(result.final_result()).lower()
+            # Check for common failure indicators in the agent's response
+            failure_indicators = [
+                'unable to',
+                'could not',
+                'couldn\'t',
+                'cannot',
+                'can\'t',
+                'did not find',
+                'didn\'t find',
+                'not found',
+                'failed to',
+                'failure',
+            ]
+            if any(indicator in final_text for indicator in failure_indicators):
+                task_completed = False
+                error_message = f"Agent reported task failure: {result.final_result()}"
+
+        # Check for errors in the result
         if hasattr(result, 'errors'):
-            print(f"DEBUG: errors={result.errors()}", file=sys.stderr)
+            errors = result.errors()
+            if errors and any(e is not None for e in errors):
+                task_completed = False
+                if not error_message:
+                    error_message = f"Agent encountered errors: {errors}"
 
         # Extract final URL from browser context
         final_url = ""
@@ -178,7 +205,7 @@ async def _run(args: argparse.Namespace) -> None:
             "finalUrl": final_url,
         }
         if not task_completed:
-            payload["error"] = "Task did not complete within max_steps limit"
+            payload["error"] = error_message or "Task did not complete within max_steps limit"
         _write(payload)
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
