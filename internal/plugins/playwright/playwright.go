@@ -30,6 +30,11 @@ func (p *Plugin) GetType() string {
 	return "playwright"
 }
 
+const (
+	defaultLaunchTimeoutMS = 45000
+	waitBufferDuration     = 5 * time.Second
+)
+
 type startConfig struct {
 	SessionID     string
 	Headless      bool
@@ -182,16 +187,19 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 		return nil, fmt.Errorf("failed to create user data directory: %w", err)
 	}
 
+	launchTimeout := cfg.LaunchTimeout
+	if launchTimeout <= 0 {
+		launchTimeout = defaultLaunchTimeoutMS
+	}
+
 	args := []string{
 		runnerPath,
 		"start",
 		"--headless", fmt.Sprintf("%t", cfg.Headless),
 		"--user-data-dir", userDataDir,
+		"--launch-timeout", fmt.Sprintf("%d", launchTimeout),
 	}
 
-	if cfg.LaunchTimeout > 0 {
-		args = append(args, "--launch-timeout", fmt.Sprintf("%d", cfg.LaunchTimeout))
-	}
 	if cfg.WindowWidth > 0 {
 		args = append(args, "--window-width", fmt.Sprintf("%d", cfg.WindowWidth))
 	}
@@ -222,7 +230,8 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 
 	streamLogs(ctx, stderr, cfg.SessionID)
 
-	response, err := readStartResponse(ctx, stdout)
+	waitTimeout := time.Duration(launchTimeout)*time.Millisecond + waitBufferDuration
+	response, err := readStartResponse(ctx, stdout, waitTimeout)
 	if err != nil {
 		killProcessGroup(cmd)
 		return nil, err
@@ -614,7 +623,7 @@ func parseStopConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*s
 	return &stopConfig{SessionID: sessionID}, nil
 }
 
-func readStartResponse(ctx context.Context, reader io.Reader) (*startResponse, error) {
+func readStartResponse(ctx context.Context, reader io.Reader, timeout time.Duration) (*startResponse, error) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 0, 1024), 1024*1024)
 
@@ -648,8 +657,8 @@ func readStartResponse(ctx context.Context, reader io.Reader) (*startResponse, e
 		return nil, ctx.Err()
 	case res := <-ch:
 		return res.resp, res.err
-	case <-time.After(30 * time.Second):
-		return nil, errors.New("timed out waiting for Playwright start response")
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("timed out waiting for Playwright start response after %s", timeout)
 	}
 }
 
