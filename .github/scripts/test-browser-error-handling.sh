@@ -7,17 +7,21 @@ log() {
 
 log "Running browser plugin error handling tests (these should fail)..."
 
-# Create temporary test file for error scenarios
+# Create temporary directory for test files
 TEMP_DIR=$(mktemp -d)
-TEMP_FILE="$TEMP_DIR/browser-error-tests.yaml"
 
-cat > "$TEMP_FILE" << 'EOF'
-name: "Browser Error Scenarios"
-description: "Intentional failures to verify error handling"
+# Track which errors we found
+ERRORS_FOUND=0
 
+# ==============================================================================
+# Test 1: browser_use timeout (too short for complex task)
+# ==============================================================================
+log "Test 1: browser_use timeout error"
+
+cat > "$TEMP_DIR/test1.yaml" << 'EOF'
+name: "Test 1: Timeout Error"
 tests:
-  # Test 1: browser_use timeout (too short for complex task)
-  - name: "Test 1: browser_use timeout error"
+  - name: "browser_use timeout error"
     cleanup:
       always:
         - name: "cleanup browser"
@@ -59,9 +63,27 @@ tests:
             model: "gpt-4o"
             config:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+EOF
 
-  # Test 2: browser_use fails impossible task (max_steps too low)
-  - name: "Test 2: browser_use max_steps exceeded"
+OUTPUT1=$(rocketship run -af "$TEMP_DIR/test1.yaml" 2>&1 || true)
+
+if echo "$OUTPUT1" | grep -qE "(signal: killed|context deadline exceeded|timeout)"; then
+    log "✅ Test 1: Found timeout/killed error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 1: Missing timeout error"
+    echo "$OUTPUT1" | tail -20
+fi
+
+# ==============================================================================
+# Test 2: browser_use task failure (max steps or cannot complete)
+# ==============================================================================
+log "Test 2: browser_use max_steps exceeded"
+
+cat > "$TEMP_DIR/test2.yaml" << 'EOF'
+name: "Test 2: Max Steps Error"
+tests:
+  - name: "browser_use max_steps exceeded"
     cleanup:
       always:
         - name: "cleanup browser"
@@ -105,9 +127,27 @@ tests:
             model: "gpt-4o"
             config:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+EOF
 
-  # Test 3: playwright expect() assertion failure
-  - name: "Test 3: playwright assertion failure"
+OUTPUT2=$(rocketship run -af "$TEMP_DIR/test2.yaml" 2>&1 || true)
+
+if echo "$OUTPUT2" | grep -qE "(browser-use execution failed|Task failed|Max steps reached|AgentError|Failed to complete task)"; then
+    log "✅ Test 2: Found browser_use task failure error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 2: Missing browser_use task failure error"
+    echo "$OUTPUT2" | tail -20
+fi
+
+# ==============================================================================
+# Test 3: Playwright assertion failure (expect())
+# ==============================================================================
+log "Test 3: playwright assertion failure"
+
+cat > "$TEMP_DIR/test3.yaml" << 'EOF'
+name: "Test 3: Assertion Error"
+tests:
+  - name: "playwright assertion failure"
     cleanup:
       always:
         - name: "cleanup browser"
@@ -138,9 +178,27 @@ tests:
             expect(page).to_have_title("Wrong Title That Does Not Exist")
 
             result = {"should": "not reach here"}
+EOF
 
-  # Test 4: invalid session ID (session not started)
-  - name: "Test 4: invalid session error"
+OUTPUT3=$(rocketship run -af "$TEMP_DIR/test3.yaml" 2>&1 || true)
+
+if echo "$OUTPUT3" | grep -qE "(AssertionError|Assertion failed|expect.*to_have_title.*failed|Timeout.*waiting for)"; then
+    log "✅ Test 3: Found playwright assertion error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 3: Missing playwright assertion error"
+    echo "$OUTPUT3" | tail -20
+fi
+
+# ==============================================================================
+# Test 4: Invalid session error
+# ==============================================================================
+log "Test 4: invalid session error"
+
+cat > "$TEMP_DIR/test4.yaml" << 'EOF'
+name: "Test 4: Invalid Session"
+tests:
+  - name: "invalid session error"
     steps:
       - name: "attempt to use non-existent session"
         plugin: playwright
@@ -153,56 +211,14 @@ tests:
             result = {"should": "not reach here"}
 EOF
 
-# Run tests and capture output
-OUTPUT=$(rocketship run -af "$TEMP_FILE" 2>&1 || true)
+OUTPUT4=$(rocketship run -af "$TEMP_DIR/test4.yaml" 2>&1 || true)
 
-log "Test output:"
-echo "$OUTPUT"
-echo ""
-
-# Check that exactly 4 tests failed
-if echo "$OUTPUT" | grep -q "✗ Failed Tests: 4"; then
-    log "✅ Exactly 4 tests failed as expected"
-else
-    log "❌ Expected exactly 4 tests to fail"
-    log "Output should contain '✗ Failed Tests: 4'"
-    rm -rf "$TEMP_DIR"
-    exit 1
-fi
-
-# Track which errors we found
-ERRORS_FOUND=0
-
-# Test 1: Timeout error (signal: killed or context deadline exceeded)
-if echo "$OUTPUT" | grep -qE "(signal: killed|context deadline exceeded|timeout)"; then
-    log "✅ Test 1: Found timeout/killed error"
-    ERRORS_FOUND=$((ERRORS_FOUND + 1))
-else
-    log "❌ Test 1: Missing timeout error message"
-fi
-
-# Test 2: browser_use task failure (max steps or cannot complete)
-if echo "$OUTPUT" | grep -qE "(browser-use execution failed|Task failed|Max steps reached|AgentError)"; then
-    log "✅ Test 2: Found browser_use task failure error"
-    ERRORS_FOUND=$((ERRORS_FOUND + 1))
-else
-    log "❌ Test 2: Missing browser_use task failure error"
-fi
-
-# Test 3: Playwright assertion failure (expect())
-if echo "$OUTPUT" | grep -qE "(AssertionError|Assertion failed|expect.*to_have_title.*failed|Timeout.*waiting for)"; then
-    log "✅ Test 3: Found playwright assertion error"
-    ERRORS_FOUND=$((ERRORS_FOUND + 1))
-else
-    log "❌ Test 3: Missing playwright assertion error"
-fi
-
-# Test 4: Invalid session error
-if echo "$OUTPUT" | grep -q 'session "this-session-was-never-started-12345" is not active'; then
+if echo "$OUTPUT4" | grep -q 'session "this-session-was-never-started-12345" is not active'; then
     log "✅ Test 4: Found invalid session error"
     ERRORS_FOUND=$((ERRORS_FOUND + 1))
 else
     log "❌ Test 4: Missing invalid session error"
+    echo "$OUTPUT4" | tail -20
 fi
 
 echo ""
