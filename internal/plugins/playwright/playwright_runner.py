@@ -145,6 +145,10 @@ def _launch_chromium(args: argparse.Namespace) -> Dict[str, Any]:
     if headless:
         chrome_args.insert(1, "--headless=new")
 
+    # Add window size if specified
+    if hasattr(args, 'window_width') and hasattr(args, 'window_height'):
+        chrome_args.append(f"--window-size={args.window_width},{args.window_height}")
+
     if args.launch_arg:
         chrome_args.extend(args.launch_arg)
 
@@ -277,6 +281,8 @@ def main() -> None:
     start_parser.add_argument("--launch-arg", action="append")
     start_parser.add_argument("--launch-timeout", type=int, default=30000)
     start_parser.add_argument("--user-data-dir")
+    start_parser.add_argument("--window-width", type=int, default=1280)
+    start_parser.add_argument("--window-height", type=int, default=720)
 
     script_parser = subparsers.add_parser("script")
     script_parser.add_argument("--ws-endpoint", required=True)

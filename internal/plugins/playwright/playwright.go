@@ -36,6 +36,8 @@ type startConfig struct {
 	SlowMoMS      int
 	LaunchArgs    []string
 	LaunchTimeout int
+	WindowWidth   int
+	WindowHeight  int
 }
 
 type scriptConfig struct {
@@ -189,6 +191,12 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 
 	if cfg.LaunchTimeout > 0 {
 		args = append(args, "--launch-timeout", fmt.Sprintf("%d", cfg.LaunchTimeout))
+	}
+	if cfg.WindowWidth > 0 {
+		args = append(args, "--window-width", fmt.Sprintf("%d", cfg.WindowWidth))
+	}
+	if cfg.WindowHeight > 0 {
+		args = append(args, "--window-height", fmt.Sprintf("%d", cfg.WindowHeight))
 	}
 	for _, arg := range cfg.LaunchArgs {
 		args = append(args, "--launch-arg", arg)
@@ -508,12 +516,50 @@ func parseStartConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*
 		}
 	}
 
+	windowWidth := 1280
+	if v, ok := config["window_width"]; ok {
+		switch val := v.(type) {
+		case float64:
+			windowWidth = int(val)
+		case int:
+			windowWidth = val
+		case string:
+			parsed, err := strconv.Atoi(val)
+			if err != nil {
+				return nil, fmt.Errorf("invalid window_width %q: %w", val, err)
+			}
+			windowWidth = parsed
+		default:
+			return nil, fmt.Errorf("invalid window_width: %v", v)
+		}
+	}
+
+	windowHeight := 720
+	if v, ok := config["window_height"]; ok {
+		switch val := v.(type) {
+		case float64:
+			windowHeight = int(val)
+		case int:
+			windowHeight = val
+		case string:
+			parsed, err := strconv.Atoi(val)
+			if err != nil {
+				return nil, fmt.Errorf("invalid window_height %q: %w", val, err)
+			}
+			windowHeight = parsed
+		default:
+			return nil, fmt.Errorf("invalid window_height: %v", v)
+		}
+	}
+
 	return &startConfig{
 		SessionID:     sessionID,
 		Headless:      headless,
 		SlowMoMS:      slowMo,
 		LaunchArgs:    launchArgs,
 		LaunchTimeout: timeout,
+		WindowWidth:   windowWidth,
+		WindowHeight:  windowHeight,
 	}, nil
 }
 
