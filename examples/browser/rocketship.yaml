@@ -1,0 +1,251 @@
+name: "Browser Testing Suite"
+description: "Comprehensive browser testing with playwright (deterministic) and browser_use (agentic)"
+
+tests:
+  # Test 1: Combines basic integration + variable passing (uses browser_use 2x sequentially)
+  - name: "Integration and variable passing"
+    cleanup:
+      always:
+        - name: "cleanup browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "integration-{{ .run.id }}"
+    steps:
+      - name: "start browser session"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "integration-{{ .run.id }}"
+          headless: true
+          window_width: 1280
+          window_height: 720
+
+      - name: "playwright: navigate to example.com"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "integration-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            page.goto("https://example.com")
+            expect(page).to_have_url("https://example.com/")
+
+            title = page.title()
+            heading = page.locator("h1").first.inner_text()
+
+            result = {"title": title, "heading": heading}
+        assertions:
+          - type: "json_path"
+            path: ".title"
+            expected: "Example Domain"
+          - type: "json_path"
+            path: ".heading"
+            expected: "Example Domain"
+
+      - name: "browser_use: verify basic integration"
+        plugin: browser_use
+        config:
+          session_id: "integration-{{ .run.id }}"
+          task: |
+            You are on example.com. Verify that the main heading says "Example Domain".
+            If you see this heading, report success.
+          max_steps: 3
+          use_vision: true
+          timeout: "1m"
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+
+      - name: "playwright: navigate to IANA and save variables"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "integration-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            page.goto("https://www.iana.org/")
+            expect(page).to_have_url("https://www.iana.org/")
+
+            page_title = page.title()
+            page_url = page.url
+
+            result = {
+              "page_url": page_url,
+              "page_title": page_title
+            }
+        save:
+          - json_path: ".page_url"
+            as: "saved_url"
+          - json_path: ".page_title"
+            as: "saved_title"
+
+      - name: "browser_use: verify variable passing"
+        plugin: browser_use
+        config:
+          session_id: "integration-{{ .run.id }}"
+          task: |
+            You are on the IANA website ({{ saved_url }}). Simply verify that you see
+            the main heading "Internet Assigned Numbers Authority" on the page.
+          max_steps: 2
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+
+      - name: "playwright: verify all variables saved correctly"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "integration-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            # Verify variables were saved correctly
+            assert "{{ saved_url }}" == "https://www.iana.org/", f"URL mismatch: {{ saved_url }}"
+            assert "Internet Assigned Numbers Authority" in "{{ saved_title }}", f"Title mismatch: {{ saved_title }}"
+
+            # Verify we're still on IANA
+            expect(page).to_have_url("https://www.iana.org/")
+
+            result = {"integration_tests": "passed", "variable_passing": "success"}
+
+  # Test 2: Timeout configuration (uses browser_use 1x)
+  - name: "Timeout configuration"
+    cleanup:
+      always:
+        - name: "cleanup browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "timeout-{{ .run.id }}"
+    steps:
+      - name: "start browser session"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "timeout-{{ .run.id }}"
+          headless: true
+
+      - name: "playwright: navigate to test page"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "timeout-{{ .run.id }}"
+          language: python
+          script: |
+            page.goto("https://example.org")
+            result = {"page": "loaded"}
+
+      - name: "browser_use: task with explicit 2m timeout"
+        plugin: browser_use
+        config:
+          session_id: "timeout-{{ .run.id }}"
+          timeout: "2m"
+          task: "Verify the page loaded successfully and has content."
+          max_steps: 2
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+
+      - name: "playwright: verify timeout worked correctly"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "timeout-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            # If we got here, the timeout worked correctly
+            expect(page).to_have_url("https://example.org/")
+            result = {"timeout_test": "passed"}
+
+  # Test 3: Viewport configurations - PURE PLAYWRIGHT (uses browser_use 0x)
+  - name: "Viewport configurations"
+    steps:
+      # Mobile viewport test
+      - name: "start mobile browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "mobile-{{ .run.id }}"
+          headless: true
+          window_width: 375
+          window_height: 667
+
+      - name: "playwright: verify mobile viewport"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "mobile-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            page.goto("https://example.com")
+            expect(page).to_have_url("https://example.com/")
+
+            # Verify mobile viewport via window dimensions
+            width = page.evaluate("window.innerWidth")
+            height = page.evaluate("window.innerHeight")
+
+            assert width == 375, f"Width should be 375, got {width}"
+            assert height == 667, f"Height should be 667, got {height}"
+
+            result = {"viewport": "mobile", "width": width, "height": height}
+
+      - name: "stop mobile browser"
+        plugin: playwright
+        config:
+          role: stop
+          session_id: "mobile-{{ .run.id }}"
+
+      # Desktop viewport test
+      - name: "start desktop browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "desktop-{{ .run.id }}"
+          headless: true
+          window_width: 1920
+          window_height: 1080
+
+      - name: "playwright: verify desktop viewport"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "desktop-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            page.goto("https://example.org")
+            expect(page).to_have_url("https://example.org/")
+
+            # Verify desktop viewport via window dimensions
+            width = page.evaluate("window.innerWidth")
+            height = page.evaluate("window.innerHeight")
+
+            assert width == 1920, f"Width should be 1920, got {width}"
+            assert height == 1080, f"Height should be 1080, got {height}"
+
+            result = {"viewport": "desktop", "width": width, "height": height}
+
+      - name: "stop desktop browser"
+        plugin: playwright
+        config:
+          role: stop
+          session_id: "desktop-{{ .run.id }}"
