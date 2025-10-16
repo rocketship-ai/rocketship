@@ -123,27 +123,40 @@ def _launch_chromium(args: argparse.Namespace) -> Dict[str, Any]:
 
     executable = _chromium_executable(headless)
 
-    chrome_args = [
-        executable,
-        f"--remote-debugging-port={port}",
-        f"--user-data-dir={user_data_dir}",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--disable-background-networking",
-        "--disable-component-update",
-        "--disable-device-discovery-notifications",
-        "--disable-domain-reliability",
-        "--disable-features=Translate",
-        "--disable-renderer-backgrounding",
-        "--disable-sync",
-        "--metrics-recording-only",
-        "--enable-automation",
-        "--password-store=basic",
-        "about:blank",
-    ]
+    chrome_args = [executable]
+
+    # Ensure Chromium can launch inside containerised CI environments.
+    chrome_args.extend(
+        [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-software-rasterizer",
+        ]
+    )
 
     if headless:
-        chrome_args.insert(1, "--headless=new")
+        chrome_args.append("--headless=new")
+
+    chrome_args.extend(
+        [
+            f"--remote-debugging-port={port}",
+            f"--user-data-dir={user_data_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-background-networking",
+            "--disable-component-update",
+            "--disable-device-discovery-notifications",
+            "--disable-domain-reliability",
+            "--disable-features=Translate",
+            "--disable-renderer-backgrounding",
+            "--disable-sync",
+            "--metrics-recording-only",
+            "--enable-automation",
+            "--password-store=basic",
+        ]
+    )
 
     # Add window size if specified
     if hasattr(args, 'window_width') and hasattr(args, 'window_height'):
@@ -151,6 +164,8 @@ def _launch_chromium(args: argparse.Namespace) -> Dict[str, Any]:
 
     if args.launch_arg:
         chrome_args.extend(args.launch_arg)
+
+    chrome_args.append("about:blank")
 
     env = os.environ.copy()
     env["PLAYWRIGHT_BROWSERS_PATH"] = env.get("PLAYWRIGHT_BROWSERS_PATH", "0")
