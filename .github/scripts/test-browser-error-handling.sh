@@ -14,12 +14,218 @@ TEMP_DIR=$(mktemp -d)
 ERRORS_FOUND=0
 
 # ==============================================================================
-# Test 1: browser_use timeout (too short for complex task)
+# Test 1: Playwright Python exception (run FIRST - clean environment)
 # ==============================================================================
-log "Test 1: browser_use timeout error"
+log "Test 1: playwright Python exception"
 
 cat > "$TEMP_DIR/test1.yaml" << 'EOF'
-name: "Test 1: Timeout Error"
+name: "Test 1: Python Exception"
+tests:
+  - name: "playwright Python exception"
+    cleanup:
+      always:
+        - name: "cleanup browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "exception-test"
+    steps:
+      - name: "start browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "exception-test"
+          headless: true
+
+      - name: "navigate and throw exception"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "exception-test"
+          language: python
+          script: |
+            page.goto("https://example.com")
+
+            # This will throw a ZeroDivisionError
+            result = 1 / 0
+EOF
+
+OUTPUT1=$(rocketship run -af "$TEMP_DIR/test1.yaml" 2>&1 || true)
+
+if echo "$OUTPUT1" | grep -qE "(ZeroDivisionError|division by zero|python execution failed)"; then
+    log "✅ Test 1: Found Python exception error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 1: Missing Python exception error"
+    echo "$OUTPUT1" | tail -20
+fi
+
+# Give CI time to clean up processes before next test
+log "Waiting 5s for process cleanup..."
+sleep 5
+
+# ==============================================================================
+# Test 2: Playwright assertion failure
+# ==============================================================================
+log "Test 2: playwright assertion failure"
+
+cat > "$TEMP_DIR/test2.yaml" << 'EOF'
+name: "Test 2: Assertion Error"
+tests:
+  - name: "playwright assertion failure"
+    cleanup:
+      always:
+        - name: "cleanup browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "assertion-test"
+    steps:
+      - name: "start browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "assertion-test"
+          headless: true
+
+      - name: "navigate and fail assertion"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "assertion-test"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+
+            page.goto("https://example.com")
+
+            # This assertion will fail - page title is "Example Domain" not "Wrong Title"
+            expect(page).to_have_title("Wrong Title That Does Not Exist")
+
+            result = {"should": "not reach here"}
+EOF
+
+OUTPUT2=$(rocketship run -af "$TEMP_DIR/test2.yaml" 2>&1 || true)
+
+if echo "$OUTPUT2" | grep -qE "(AssertionError|Assertion failed|expect.*to_have_title.*failed|Timeout.*waiting for)"; then
+    log "✅ Test 2: Found playwright assertion error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 2: Missing playwright assertion error"
+    echo "$OUTPUT2" | tail -20
+fi
+
+# Give CI time to clean up processes before next test
+log "Waiting 5s for process cleanup..."
+sleep 5
+
+# ==============================================================================
+# Test 3: Invalid session error (no browser startup needed)
+# ==============================================================================
+log "Test 3: invalid session error"
+
+cat > "$TEMP_DIR/test3.yaml" << 'EOF'
+name: "Test 3: Invalid Session"
+tests:
+  - name: "invalid session error"
+    steps:
+      - name: "attempt to use non-existent session"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "this-session-was-never-started-12345"
+          language: python
+          script: |
+            page.goto("https://example.com")
+            result = {"should": "not reach here"}
+EOF
+
+OUTPUT3=$(rocketship run -af "$TEMP_DIR/test3.yaml" 2>&1 || true)
+
+if echo "$OUTPUT3" | grep -q 'session "this-session-was-never-started-12345" is not active'; then
+    log "✅ Test 3: Found invalid session error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 3: Missing invalid session error"
+    echo "$OUTPUT3" | tail -20
+fi
+
+# Give CI time to clean up before browser_use tests
+log "Waiting 5s for process cleanup..."
+sleep 5
+
+# ==============================================================================
+# Test 4: browser_use task failure (max_steps exceeded)
+# ==============================================================================
+log "Test 4: browser_use task failure"
+
+cat > "$TEMP_DIR/test4.yaml" << 'EOF'
+name: "Test 4: Task Failure"
+tests:
+  - name: "browser_use task failure"
+    cleanup:
+      always:
+        - name: "cleanup browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "task-fail-test"
+    steps:
+      - name: "start browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "task-fail-test"
+          headless: true
+
+      - name: "navigate to example.com"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "task-fail-test"
+          language: python
+          script: |
+            page.goto("https://example.com")
+            result = {"status": "ready"}
+
+      - name: "browser_use with impossible task"
+        plugin: browser_use
+        config:
+          session_id: "task-fail-test"
+          task: |
+            Navigate to https://example.com, scroll down 50 times, find a blue button
+            with text "Submit Rocketship Test Form XYZ", click it, and verify success.
+            You must complete ALL steps.
+          max_steps: 2
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+EOF
+
+OUTPUT4=$(rocketship run -af "$TEMP_DIR/test4.yaml" 2>&1 || true)
+
+if echo "$OUTPUT4" | grep -qE "(browser-use execution failed|Task failed|Max steps reached|AgentError|Failed to complete task)"; then
+    log "✅ Test 4: Found browser_use task failure error"
+    ERRORS_FOUND=$((ERRORS_FOUND + 1))
+else
+    log "❌ Test 4: Missing browser_use task failure error"
+    echo "$OUTPUT4" | tail -20
+fi
+
+# Give CI time to clean up before timeout test
+log "Waiting 5s for process cleanup..."
+sleep 5
+
+# ==============================================================================
+# Test 5: browser_use timeout (run LAST - kills processes)
+# ==============================================================================
+log "Test 5: browser_use timeout error"
+
+cat > "$TEMP_DIR/test5.yaml" << 'EOF'
+name: "Test 5: Timeout Error"
 tests:
   - name: "browser_use timeout error"
     cleanup:
@@ -65,64 +271,33 @@ tests:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 EOF
 
-OUTPUT1=$(rocketship run -af "$TEMP_DIR/test1.yaml" 2>&1 || true)
+OUTPUT5=$(rocketship run -af "$TEMP_DIR/test5.yaml" 2>&1 || true)
 
-if echo "$OUTPUT1" | grep -qE "(signal: killed|context deadline exceeded|timeout)"; then
-    log "✅ Test 1: Found timeout/killed error"
+if echo "$OUTPUT5" | grep -qE "(signal: killed|context deadline exceeded|timeout)"; then
+    log "✅ Test 5: Found timeout/killed error"
     ERRORS_FOUND=$((ERRORS_FOUND + 1))
 else
-    log "❌ Test 1: Missing timeout error"
-    echo "$OUTPUT1" | tail -20
-fi
-
-# ==============================================================================
-# Test 2: Invalid session error (no browser startup needed)
-# ==============================================================================
-log "Test 2: invalid session error"
-
-cat > "$TEMP_DIR/test2.yaml" << 'EOF'
-name: "Test 2: Invalid Session"
-tests:
-  - name: "invalid session error"
-    steps:
-      - name: "attempt to use non-existent session"
-        plugin: playwright
-        config:
-          role: script
-          session_id: "this-session-was-never-started-12345"
-          language: python
-          script: |
-            page.goto("https://example.com")
-            result = {"should": "not reach here"}
-EOF
-
-OUTPUT2=$(rocketship run -af "$TEMP_DIR/test2.yaml" 2>&1 || true)
-
-if echo "$OUTPUT2" | grep -q 'session "this-session-was-never-started-12345" is not active'; then
-    log "✅ Test 2: Found invalid session error"
-    ERRORS_FOUND=$((ERRORS_FOUND + 1))
-else
-    log "❌ Test 2: Missing invalid session error"
-    echo "$OUTPUT2" | tail -20
+    log "❌ Test 5: Missing timeout error"
+    echo "$OUTPUT5" | tail -20
 fi
 
 echo ""
 
-# Verify we found both error types
-if [ "$ERRORS_FOUND" -eq 2 ]; then
-    log "✅ Both error types properly surfaced by browser plugins"
-    log "   - Timeout (browser_use 3s timeout → signal: killed)"
+# Verify we found all 5 error types
+if [ "$ERRORS_FOUND" -eq 5 ]; then
+    log "✅ All 5 error types properly surfaced by browser plugins"
+    log "   - Python exception (ZeroDivisionError in playwright script)"
+    log "   - Assertion failure (playwright expect())"
     log "   - Invalid session (session not started)"
+    log "   - Task failure (browser_use max_steps exceeded)"
+    log "   - Timeout (browser_use 3s timeout → signal: killed)"
     echo ""
     log "✅ Browser error handling test completed successfully"
     log "   The plugins correctly fail when errors occur and provide"
     log "   clear error messages for debugging"
-    echo ""
-    log "Note: Additional error scenarios (max_steps, assertion failures) are"
-    log "validated by the passing tests in examples/browser/ which run in CI."
 else
-    log "❌ Only found $ERRORS_FOUND/2 expected error types"
-    log "Both error types must be properly surfaced"
+    log "❌ Only found $ERRORS_FOUND/5 expected error types"
+    log "All 5 error types must be properly surfaced"
     rm -rf "$TEMP_DIR"
     exit 1
 fi
