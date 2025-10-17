@@ -43,8 +43,9 @@ lint-typescript:
 		cd mcp-server && \
 		if [ -f "package.json" ]; then \
 			if command -v npm &> /dev/null; then \
-				echo "Building TypeScript project..."; \
-				npm run build || (echo "❌ TypeScript compilation failed" && exit 1); \
+                echo "Building TypeScript project..."; \
+                NODE_OPTIONS="--max-old-space-size=8192" npm run build || \
+                  (echo "❌ TypeScript compilation failed" && exit 1); \
 				echo "✅ TypeScript compilation successful"; \
 			else \
 				echo "npm not found. Please install Node.js and npm"; \

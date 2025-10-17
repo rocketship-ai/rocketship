@@ -37,13 +37,13 @@ func (s *ShellExecutor) ValidateScript(script string) error {
 // Execute runs the shell script in the current working directory
 func (s *ShellExecutor) Execute(ctx context.Context, script string, rtCtx *runtime.Context) error {
 	startTime := time.Now()
-	
+
 	// Process template variables in the script
 	processedScript, err := s.processVariables(script, rtCtx)
 	if err != nil {
 		return fmt.Errorf("failed to process variables: %w", err)
 	}
-	
+
 	// Create the command - try bash first, fallback to sh
 	var cmd *exec.Cmd
 	if s.commandExists("bash") {
@@ -60,48 +60,48 @@ func (s *ShellExecutor) Execute(ctx context.Context, script string, rtCtx *runti
 			return fmt.Errorf("neither bash nor sh is available on this system")
 		}
 	}
-	
+
 	// Set up environment with runtime state and current environment
 	cmd.Env = s.buildEnvironment(rtCtx)
-	
+
 	// Set working directory to current directory
 	wd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current working directory: %w", err)
 	}
 	cmd.Dir = wd
-	
+
 	// Capture output
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
-	
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
-	
+
 	// Start the command
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start shell command: %w", err)
 	}
-	
+
 	// Read output
 	stdoutBytes, err := io.ReadAll(stdout)
 	if err != nil {
 		return fmt.Errorf("failed to read stdout: %w", err)
 	}
-	
+
 	stderrBytes, err := io.ReadAll(stderr)
 	if err != nil {
 		return fmt.Errorf("failed to read stderr: %w", err)
 	}
-	
+
 	// Wait for completion
 	err = cmd.Wait()
 	duration := time.Since(startTime)
-	
+
 	// Determine exit code
 	exitCode := 0
 	if err != nil {
@@ -111,18 +111,18 @@ func (s *ShellExecutor) Execute(ctx context.Context, script string, rtCtx *runti
 			return fmt.Errorf("command execution failed: %w", err)
 		}
 	}
-	
+
 	// Save results to runtime context
 	rtCtx.Save("exit_code", fmt.Sprintf("%d", exitCode))
 	rtCtx.Save("stdout", string(stdoutBytes))
 	rtCtx.Save("stderr", string(stderrBytes))
 	rtCtx.Save("duration", duration.String())
-	
+
 	// If exit code is non-zero, return an error with details
 	if exitCode != 0 {
 		return fmt.Errorf("shell command failed with exit code %d. stderr: %s", exitCode, string(stderrBytes))
 	}
-	
+
 	return nil
 }
 
@@ -137,26 +137,26 @@ func (s *ShellExecutor) processVariables(script string, rtCtx *runtime.Context) 
 		}
 		script = processed
 	}
-	
+
 	// Convert runtime state to interface{} map for DSL compatibility
 	runtime := make(map[string]interface{})
 	for k, v := range rtCtx.State {
 		runtime[k] = v
 	}
-	
+
 	// Create template context with runtime variables
 	// Environment variables ({{ .env.* }}) are handled by DSL template system
 	context := dsl.TemplateContext{
 		Runtime: runtime,
 	}
-	
+
 	// Use centralized template processing for consistent variable handling
 	// This supports runtime vars, environment vars, and escaped handlebars
 	result, err := dsl.ProcessTemplate(script, context)
 	if err != nil {
 		return "", fmt.Errorf("template processing failed: %w", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -164,19 +164,19 @@ func (s *ShellExecutor) processVariables(script string, rtCtx *runtime.Context) 
 func (s *ShellExecutor) buildEnvironment(rtCtx *runtime.Context) []string {
 	// Start with current environment
 	env := os.Environ()
-	
+
 	// Add runtime state as environment variables with ROCKETSHIP_ prefix
 	for key, value := range rtCtx.State {
 		envVar := fmt.Sprintf("ROCKETSHIP_%s=%s", strings.ToUpper(key), value)
 		env = append(env, envVar)
 	}
-	
+
 	// Add config variables as environment variables with ROCKETSHIP_VAR_ prefix
 	for key, value := range rtCtx.Vars {
 		envVar := fmt.Sprintf("ROCKETSHIP_VAR_%s=%v", strings.ToUpper(key), value)
 		env = append(env, envVar)
 	}
-	
+
 	return env
 }
 
@@ -191,4 +191,3 @@ func (s *ShellExecutor) commandExistsAbsolute(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-

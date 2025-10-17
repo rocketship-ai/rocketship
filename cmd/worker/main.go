@@ -9,10 +9,11 @@ import (
 
 	// Import plugins to trigger auto-registration
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/agent"
-	_ "github.com/rocketship-ai/rocketship/internal/plugins/browser"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/browser_use"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/delay"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/http"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/log"
+	_ "github.com/rocketship-ai/rocketship/internal/plugins/playwright"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/script"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/sql"
 	_ "github.com/rocketship-ai/rocketship/internal/plugins/supabase"

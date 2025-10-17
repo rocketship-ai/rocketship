@@ -333,10 +333,10 @@ func translateAuthError(prefix string, err error) error {
 
 // resolveDialOptions determines the gRPC target and the appropriate transport credentials.
 // Priority:
-// 1) If an explicit address is provided, honor its scheme when present (https/grpcs = TLS; http/grpc = insecure).
-//    For URL schemes without ports, defaults are 443 for https/grpcs and 7700 for http/grpc.
-// 2) If no explicit address, use the active profile's engine address and TLS settings.
-// 3) Surface an error when profile configuration is unavailable so the caller can prompt the user.
+//  1. If an explicit address is provided, honor its scheme when present (https/grpcs = TLS; http/grpc = insecure).
+//     For URL schemes without ports, defaults are 443 for https/grpcs and 7700 for http/grpc.
+//  2. If no explicit address, use the active profile's engine address and TLS settings.
+//  3. Surface an error when profile configuration is unavailable so the caller can prompt the user.
 func resolveDialOptions(explicitAddress string) (string, credentials.TransportCredentials, string, bool, error) {
 	// If explicit address provided, use it
 	if explicitAddress != "" {

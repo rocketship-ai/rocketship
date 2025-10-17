@@ -167,7 +167,7 @@ func (ap *AgentPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 		return nil, fmt.Errorf("unsupported agent type: %s", config.Agent)
 	}
 
-	logger.Info(fmt.Sprintf("Agent %s executed successfully. Session: %s, Cost: $%.4f, Duration: %v", 
+	logger.Info(fmt.Sprintf("Agent %s executed successfully. Session: %s, Cost: $%.4f, Duration: %v",
 		config.Agent, response.SessionID, response.Cost, response.Duration))
 
 	// Process saves
@@ -280,7 +280,7 @@ func processSaves(p map[string]interface{}, response *Response, saved map[string
 		// Handle JSON path save from agent response
 		if jsonPath, ok := saveMap["json_path"].(string); ok && jsonPath != "" {
 			log.Printf("[DEBUG] Processing JSON path save: '%s' as %s", jsonPath, as)
-			
+
 			// Create a JSON object with the agent response structure
 			agentResult := map[string]interface{}{
 				"response":   response.Content,

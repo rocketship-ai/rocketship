@@ -68,7 +68,7 @@ func TestStopServerCmd_Structure(t *testing.T) {
 	t.Parallel()
 
 	stopCmd := NewStopCmd()
-	
+
 	// Test command hierarchy
 	if !stopCmd.HasSubCommands() {
 		t.Error("Stop command should have subcommands")
@@ -108,14 +108,14 @@ func TestStopServerCmd_Execution(t *testing.T) {
 	// Test the basic command execution flow
 	// Note: This test is limited because the actual execution depends on
 	// IsServerRunning() and GetProcessManager() which are external dependencies
-	
+
 	cmd := newStopServerCmd()
 	cmd.SetArgs([]string{})
 
 	// The command should execute without panicking
 	// The actual result depends on whether server components are running
 	err := cmd.Execute()
-	
+
 	// We don't check for specific error here because it depends on system state
 	// The important thing is that it doesn't panic
 	_ = err
@@ -125,7 +125,7 @@ func TestStopServerCmd_Help(t *testing.T) {
 	t.Parallel()
 
 	cmd := newStopServerCmd()
-	
+
 	help := cmd.UsageString()
 	if help == "" {
 		t.Error("Expected non-empty help string")
@@ -153,10 +153,10 @@ func TestStopServerCmd_ConcurrentExecution(t *testing.T) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			cmd := newStopServerCmd()
 			cmd.SetArgs([]string{})
-			
+
 			err := cmd.Execute()
 			if err != nil {
 				errors <- err
@@ -260,10 +260,10 @@ func TestStopCmd_Subcommands(t *testing.T) {
 	t.Parallel()
 
 	stopCmd := NewStopCmd()
-	
+
 	// Get all subcommands
 	subcommands := stopCmd.Commands()
-	
+
 	if len(subcommands) == 0 {
 		t.Error("Stop command should have at least one subcommand")
 	}
@@ -273,11 +273,11 @@ func TestStopCmd_Subcommands(t *testing.T) {
 		if subcmd.Use == "" {
 			t.Error("Subcommand should have a Use field")
 		}
-		
+
 		if subcmd.Short == "" {
 			t.Error("Subcommand should have a Short description")
 		}
-		
+
 		if subcmd.RunE == nil && !subcmd.HasSubCommands() {
 			t.Errorf("Subcommand %s should have either RunE or subcommands", subcmd.Use)
 		}
@@ -289,7 +289,7 @@ func TestStopServerCmd_ValidateStructure(t *testing.T) {
 
 	// Test that the command structure is valid
 	cmd := newStopServerCmd()
-	
+
 	// Command should be runnable
 	if cmd.Runnable() == false {
 		t.Error("Stop server command should be runnable")
@@ -309,5 +309,3 @@ func TestStopServerCmd_ValidateStructure(t *testing.T) {
 }
 
 // Benchmark tests
-
-

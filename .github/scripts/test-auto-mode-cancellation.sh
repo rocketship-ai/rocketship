@@ -25,7 +25,8 @@ echo "📋 Test 1: Auto mode cancellation with SIGINT (Ctrl+C simulation)..."
 echo "  → Starting test with a long-running delay (will be cancelled)..."
 
 # Create a test YAML file with a long delay that we can cancel
-cat > /tmp/test-auto-cancel.yaml << 'EOF'
+mkdir -p /tmp/test-auto-cancel
+cat > /tmp/test-auto-cancel/rocketship.yaml << 'EOF'
 name: Auto Mode Cancellation Test
 tests:
   - name: Long running test
@@ -38,7 +39,7 @@ EOF
 
 # Run rocketship in auto mode in background and capture its PID
 echo "  → Running rocketship in auto mode with long delay..."
-rocketship run -af /tmp/test-auto-cancel.yaml &
+rocketship run -af /tmp/test-auto-cancel/rocketship.yaml &
 ROCKETSHIP_PID=$!
 
 # Wait for the test to start (give it a few seconds to begin)
@@ -89,7 +90,8 @@ echo ""
 echo "📋 Test 3: Verify normal auto mode still works after cancellation test..."
 
 # Create a short test that should complete normally
-cat > /tmp/test-auto-normal.yaml << 'EOF'
+mkdir -p /tmp/test-auto-normal
+cat > /tmp/test-auto-normal/rocketship.yaml << 'EOF'
 name: Normal Auto Mode Test
 tests:
   - name: Quick test
@@ -101,7 +103,7 @@ tests:
 EOF
 
 echo "  → Running quick test in auto mode (should complete normally)..."
-OUTPUT=$(rocketship run -af /tmp/test-auto-normal.yaml)
+OUTPUT=$(rocketship run -af /tmp/test-auto-normal/rocketship.yaml)
 
 # Check if test completed successfully
 if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
@@ -113,7 +115,7 @@ else
 fi
 
 # Cleanup test files
-rm -f /tmp/test-auto-cancel.yaml /tmp/test-auto-normal.yaml
+rm -rf /tmp/test-auto-cancel /tmp/test-auto-normal
 
 echo ""
 echo "🎉 All auto mode cancellation tests passed!"

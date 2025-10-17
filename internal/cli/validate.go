@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/spf13/cobra"
@@ -17,9 +16,11 @@ func NewValidateCmd() *cobra.Command {
 		Long: `Validate one or more Rocketship test files against the JSON schema.
 This command checks test file syntax, structure, and configuration without executing tests.
 
+When validating a directory, only files named "rocketship.yaml" are validated (matching run command behavior).
+
 Examples:
-  rocketship validate test.yaml                    # Validate a single file
-  rocketship validate ./tests/                     # Validate all YAML files in a directory
+  rocketship validate rocketship.yaml              # Validate a single file
+  rocketship validate ./tests/                     # Validate all rocketship.yaml files in directory
   rocketship validate test1.yaml test2.yaml       # Validate multiple files`,
 		RunE: runValidate,
 	}
@@ -44,28 +45,21 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 
 		if stat.IsDir() {
-			// Find all YAML files in directory
-			err := filepath.Walk(arg, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if !info.IsDir() && (filepath.Ext(path) == ".yaml" || filepath.Ext(path) == ".yml") {
-					files = append(files, path)
-				}
-				return nil
-			})
+			// Find all rocketship.yaml files in directory (same logic as run command)
+			dirFiles, err := findRocketshipFiles(arg)
 			if err != nil {
 				Logger.Error("failed to scan directory", "path", arg, "error", err)
 				totalInvalid++
 				continue
 			}
+			files = append(files, dirFiles...)
 		} else {
 			files = append(files, arg)
 		}
 	}
 
 	if len(files) == 0 {
-		return fmt.Errorf("no YAML files found to validate")
+		return fmt.Errorf("no rocketship.yaml files found to validate")
 	}
 
 	Logger.Info("validating files", "count", len(files))
@@ -104,7 +98,7 @@ func validateFile(filePath string) error {
 	}
 
 	// Additional summary for verbose output
-	Logger.Debug("file details", 
+	Logger.Debug("file details",
 		"name", config.Name,
 		"tests", len(config.Tests),
 		"description", config.Description,

@@ -34,7 +34,8 @@ fi
 echo ""
 echo "📋 Test 2: HTTP plugin retry with failing endpoint..."
 
-cat > /tmp/test-http-retry.yaml << 'EOF'
+mkdir -p /tmp/test-http-retry
+cat > /tmp/test-http-retry/rocketship.yaml << 'EOF'
 name: HTTP Retry Test
 tests:
   - name: HTTP with retries
@@ -57,7 +58,7 @@ EOF
 echo "  → Running HTTP retry test with debug logging..."
 set +e  # Don't exit on failure for this test
 
-OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-http-retry.yaml 2>&1)
+OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-http-retry/rocketship.yaml 2>&1)
 EXIT_CODE=$?
 
 set -e
@@ -86,7 +87,8 @@ fi
 echo ""
 echo "📋 Test 3: Script plugin retry with failing script..."
 
-cat > /tmp/test-script-retry.yaml << 'EOF'
+mkdir -p /tmp/test-script-retry
+cat > /tmp/test-script-retry/rocketship.yaml << 'EOF'
 name: Script Retry Test
 tests:
   - name: Script with retries
@@ -107,7 +109,7 @@ EOF
 
 echo "  → Running Script retry test with debug logging..."
 set +e  # Don't exit on failure for this test
-OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-script-retry.yaml 2>&1)
+OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-script-retry/rocketship.yaml 2>&1)
 EXIT_CODE=$?
 set -e
 
@@ -135,7 +137,8 @@ fi
 echo ""
 echo "📋 Test 4: No retry configuration should fail immediately (no retries)..."
 
-cat > /tmp/test-no-retry.yaml << 'EOF'
+mkdir -p /tmp/test-no-retry
+cat > /tmp/test-no-retry/rocketship.yaml << 'EOF'
 name: No Retry Test
 tests:
   - name: No retry config
@@ -152,7 +155,7 @@ EOF
 
 echo "  → Running no-retry test with debug logging..."
 set +e  # Don't exit on failure for this test
-OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-no-retry.yaml 2>&1)
+OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-no-retry/rocketship.yaml 2>&1)
 EXIT_CODE=$?
 set -e
 
@@ -181,7 +184,8 @@ fi
 echo ""
 echo "📋 Test 5: Successful step with retry config should not retry..."
 
-cat > /tmp/test-success-no-retry.yaml << 'EOF'
+mkdir -p /tmp/test-success-no-retry
+cat > /tmp/test-success-no-retry/rocketship.yaml << 'EOF'
 name: Success No Retry Test
 tests:
   - name: Success with retry config
@@ -202,7 +206,7 @@ tests:
 EOF
 
 echo "  → Running success test with retry config..."
-OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-success-no-retry.yaml 2>&1)
+OUTPUT=$(ROCKETSHIP_LOG=DEBUG rocketship run -af /tmp/test-success-no-retry/rocketship.yaml 2>&1)
 
 # This should succeed
 if echo "$OUTPUT" | grep -q "✓ Passed Tests: 1"; then
@@ -223,7 +227,7 @@ else
 fi
 
 # Clean up
-rm -f /tmp/test-*-retry.yaml /tmp/test-no-retry.yaml /tmp/test-success-no-retry.yaml
+rm -rf /tmp/test-http-retry /tmp/test-script-retry /tmp/test-no-retry /tmp/test-success-no-retry
 
 echo ""
 echo "🎉 All retry functionality tests passed!"

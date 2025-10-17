@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -9,6 +10,25 @@ import (
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
 )
+
+// ExtractCleanError removes Temporal error wrapping duplication.
+// Temporal wraps errors multiple times with "(type: wrapError, retryable: true):" markers,
+// causing the same error to appear 2-3 times. We truncate at the first marker.
+func ExtractCleanError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	errMsg := err.Error()
+
+	// Truncate at first Temporal wrap marker to avoid showing the same error multiple times
+	marker := " (type: wrapError, retryable: true):"
+	if idx := strings.Index(errMsg, marker); idx != -1 {
+		return strings.TrimSpace(errMsg[:idx])
+	}
+
+	return errMsg
+}
 
 type stepPhase string
 
@@ -53,15 +73,16 @@ func (p stepPhase) successMessage() string {
 }
 
 func (p stepPhase) failureMessage(err error) string {
+	cleanErr := ExtractCleanError(err)
 	switch p {
 	case phaseInit:
-		return fmt.Sprintf("Init step failed: %v", err)
+		return fmt.Sprintf("Init step failed: %s", cleanErr)
 	case phaseCleanupAlways:
-		return fmt.Sprintf("Cleanup step failed: %v", err)
+		return fmt.Sprintf("Cleanup step failed: %s", cleanErr)
 	case phaseCleanupFailure:
-		return fmt.Sprintf("Cleanup (on_failure) step failed: %v", err)
+		return fmt.Sprintf("Cleanup (on_failure) step failed: %s", cleanErr)
 	default:
-		return fmt.Sprintf("Step failed: %v", err)
+		return fmt.Sprintf("Step failed: %s", cleanErr)
 	}
 }
 
@@ -256,6 +277,9 @@ func executePlugin(ctx workflow.Context, step dsl.Step, state map[string]string,
 		"plugin": step.Plugin,
 		"config": step.Config,
 		"state":  state,
+		"run": map[string]interface{}{
+			"id": runID,
+		},
 	}
 
 	// Add additional parameters based on plugin type

@@ -508,7 +508,7 @@ func TestNoDeadlockInMixedOperations(t *testing.T) {
 		go func(opID int) {
 			defer wg.Done()
 			runID := fmt.Sprintf("run-%d", opID%5)
-			
+
 			switch opID % 4 {
 			case 0:
 				// Read operation
@@ -546,9 +546,9 @@ func TestStreamLogsNonBlocking(t *testing.T) {
 	// Test that we can still perform operations while streaming is theoretically happening
 	// (We can't easily test the actual streaming without complex gRPC setup, but we can
 	// test that the log reading operations don't block other operations)
-	
+
 	var wg sync.WaitGroup
-	
+
 	// Simulate what StreamLogs does (reading logs)
 	for i := 0; i < 10; i++ {
 		wg.Add(1)

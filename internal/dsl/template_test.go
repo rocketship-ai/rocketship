@@ -46,15 +46,15 @@ func TestEscapedHandlebars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				
+
 				Runtime: tt.runtime,
 			}
-			
+
 			result, err := ProcessTemplate(tt.input, context)
 			if err != nil {
 				t.Fatalf("ProcessTemplate failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessTemplate result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
@@ -89,7 +89,7 @@ func TestEscapedHandlebarsConfigOnly(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ProcessConfigVariablesOnly failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessConfigVariablesOnly result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
@@ -159,15 +159,15 @@ func TestMultiLevelEscapedHandlebars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				
+
 				Runtime: tt.runtime,
 			}
-			
+
 			result, err := ProcessTemplate(tt.input, context)
 			if err != nil {
 				t.Fatalf("ProcessTemplate failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessTemplate result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
@@ -202,7 +202,7 @@ func TestMultiLevelEscapedHandlebarsConfigOnly(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ProcessConfigVariablesOnly failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessConfigVariablesOnly result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
@@ -310,15 +310,15 @@ func TestEnvironmentVariables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				
+
 				Runtime: tt.runtime,
 			}
-			
+
 			result, err := ProcessTemplate(tt.input, context)
 			if err != nil {
 				t.Fatalf("ProcessTemplate failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessTemplate result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
@@ -385,7 +385,7 @@ func TestEnvironmentVariablesConfigOnly(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ProcessConfigVariablesOnly failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessConfigVariablesOnly result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}
@@ -459,15 +459,15 @@ func TestEnvironmentVariablesWithEscaping(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			context := TemplateContext{
-				
+
 				Runtime: tt.runtime,
 			}
-			
+
 			result, err := ProcessTemplate(tt.input, context)
 			if err != nil {
 				t.Fatalf("ProcessTemplate failed: %v", err)
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("ProcessTemplate result mismatch:\nexpected: %q\ngot:      %q", tt.expected, result)
 			}

@@ -19,7 +19,8 @@ TEST_TIMEOUT=5
 EOF
 
 # Create a test YAML that uses these env vars
-cat > /tmp/test-env.yaml << 'EOF'
+mkdir -p /tmp/test-env
+cat > /tmp/test-env/rocketship.yaml << 'EOF'
 name: Env File Test
 tests:
   - name: Test env vars
@@ -58,7 +59,7 @@ tests:
 EOF
 
 echo "  → Running test with --env-file..."
-OUTPUT=$(rocketship run -af /tmp/test-env.yaml --env-file /tmp/test.env)
+OUTPUT=$(rocketship run -af /tmp/test-env/rocketship.yaml --env-file /tmp/test.env)
 
 # Verify the output contains expected values
 if echo "$OUTPUT" | grep -q "URL: https://test.example.com, Key: test-key-123, Env: testing"; then
@@ -90,7 +91,8 @@ SPECIAL_CHARS=test@example.com#123
 PATH_VALUE=/usr/local/bin:/usr/bin
 EOF
 
-cat > /tmp/test-quotes.yaml << 'EOF'
+mkdir -p /tmp/test-quotes
+cat > /tmp/test-quotes/rocketship.yaml << 'EOF'
 name: Quotes Test
 tests:
   - name: Test quoted values
@@ -125,7 +127,7 @@ tests:
 EOF
 
 echo "  → Running quotes test..."
-OUTPUT=$(rocketship run -af /tmp/test-quotes.yaml --env-file /tmp/test-quotes.env)
+OUTPUT=$(rocketship run -af /tmp/test-quotes/rocketship.yaml --env-file /tmp/test-quotes.env)
 
 if echo "$OUTPUT" | grep -q "Step completed successfully" && echo "$OUTPUT" | grep -q "passed"; then
     echo "✅ Quotes and special characters handled correctly"
@@ -148,7 +150,8 @@ TEST_PRECEDENCE=file_value
 TEST_FILE_ONLY=file_only_value
 EOF
 
-cat > /tmp/test-precedence.yaml << 'EOF'
+mkdir -p /tmp/test-precedence
+cat > /tmp/test-precedence/rocketship.yaml << 'EOF'
 name: Precedence Test
 tests:
   - name: Test precedence
@@ -160,7 +163,7 @@ tests:
 EOF
 
 echo "  → Running precedence test..."
-OUTPUT=$(rocketship run -af /tmp/test-precedence.yaml --env-file /tmp/test-precedence.env)
+OUTPUT=$(rocketship run -af /tmp/test-precedence/rocketship.yaml --env-file /tmp/test-precedence.env)
 
 if echo "$OUTPUT" | grep -q "Precedence: system_value, File only: file_only_value"; then
     echo "✅ System env vars correctly take precedence over file values"
@@ -172,7 +175,8 @@ fi
 
 # Clean up
 unset TEST_PRECEDENCE
-rm -f /tmp/test*.env /tmp/test*.yaml
+rm -f /tmp/test*.env
+rm -rf /tmp/test-env /tmp/test-quotes /tmp/test-precedence
 
 echo ""
 echo "🎉 All --env-file tests passed!"

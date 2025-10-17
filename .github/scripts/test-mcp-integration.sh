@@ -286,7 +286,7 @@ print_info "Test 3: Testing YAML validation with Rocketship CLI..."
 
 # Create test YAML content based on MCP guidance patterns
 mkdir -p test-generated
-cat > test-generated/test.yaml << 'EOF'
+cat > test-generated/rocketship.yaml << 'EOF'
 name: "MCP Assisted Test Suite"
 description: "Test file created with MCP guidance"
 vars:
@@ -313,7 +313,7 @@ tests:
 EOF
 
 # Validate with Rocketship CLI
-if rocketship validate test-generated/test.yaml; then
+if rocketship validate test-generated/rocketship.yaml; then
     print_success "YAML validation test passed"
 else
     print_error "YAML validation test failed"
@@ -485,15 +485,15 @@ fi
 print_info "Test 9: Verifying assistive (non-generative) behavior..."
 
 # Verify our test YAML for completeness
-if [ -f "test-generated/test.yaml" ]; then
-    if grep -q "plugin:" test-generated/test.yaml; then
+if [ -f "test-generated/rocketship.yaml" ]; then
+    if grep -q "plugin:" test-generated/rocketship.yaml; then
         print_success "Test YAML contains plugin configuration"
     else
         print_error "Test YAML missing plugin configuration"
         exit 1
     fi
     
-    if grep -q "assertions:" test-generated/test.yaml; then
+    if grep -q "assertions:" test-generated/rocketship.yaml; then
         print_success "Test YAML contains assertions"
     else
         print_error "Test YAML missing assertions"

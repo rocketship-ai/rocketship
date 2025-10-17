@@ -28,7 +28,7 @@ type ClaudeCodeConfig struct {
 type ClaudeCodeResponse struct {
 	Type          string  `json:"type"`
 	Subtype       string  `json:"subtype"`
-	Result        string  `json:"result"`        // This contains the actual Claude response
+	Result        string  `json:"result"` // This contains the actual Claude response
 	SessionID     string  `json:"session_id"`
 	CostUSD       float64 `json:"cost_usd"`
 	IsError       bool    `json:"is_error"`
@@ -182,12 +182,12 @@ func (e *ClaudeCodeExecutor) parseJSONResponse(output string, response *Response
 	response.Content = claudeResp.Result
 	response.SessionID = claudeResp.SessionID
 	response.Cost = claudeResp.CostUSD
-	
+
 	// Convert duration from milliseconds to time.Duration
 	if claudeResp.DurationMS > 0 {
 		response.Duration = time.Duration(claudeResp.DurationMS) * time.Millisecond
 	}
-	
+
 	// Add additional metadata from Claude Code response
 	response.Metadata = map[string]string{
 		"type":            claudeResp.Type,

@@ -23,7 +23,7 @@ func TestNewRunCmd(t *testing.T) {
 	fileFlag := cmd.Flags().Lookup("file")
 	assert.NotNil(t, fileFlag, "file flag should exist")
 	assert.Equal(t, "file", fileFlag.Name)
-	assert.Equal(t, "Path to a single test file (default: rocketship.yaml in current directory)", fileFlag.Usage)
+	assert.Equal(t, "Path to a rocketship.yaml file (must be named 'rocketship.yaml')", fileFlag.Usage)
 
 	dirFlag := cmd.Flags().Lookup("dir")
 	assert.NotNil(t, dirFlag, "dir flag should exist")

@@ -1,298 +1,275 @@
-# Browser Plugin - AI-Powered Web Automation
+# Browser Testing - AI-Powered Web Automation
 
-Test web applications using AI-driven browser automation. The browser plugin uses natural language instructions to navigate websites, extract data, and validate interfaces.
+Test web applications using persistent browser sessions that combine deterministic scripting (Playwright) with AI-driven automation (browser_use).
 
-## Prerequisites
+## Quick Start
 
 ```bash
-# Install dependencies (automatic on first use)
-pip install browser-use playwright
+# Install dependencies
+pip install playwright browser-use langchain-openai
 playwright install chromium
 
-# Set API key (OpenAI or Anthropic)
+# Set API key
 export OPENAI_API_KEY=sk-your-key-here
-# OR
-export ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
-## Basic Usage
+## Basic Workflow
 
 ```yaml
-- name: "Check website content"
-  plugin: browser
-  config:
-    task: "Navigate to https://example.com and extract the main heading"
-    llm:
-      provider: "openai"  # or "anthropic"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    headless: true
-    timeout: "1m"
-  save:
-    - json_path: ".result"
-      as: "page_content"
-  assertions:
-    - type: "json_path"
-      path: ".success"
-      expected: true
+name: "Browser Test"
+tests:
+  - name: "Test with AI"
+    cleanup:
+      always:
+        - name: "stop browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "test-{{ .run.id }}"
+    steps:
+      # 1. Start browser session
+      - name: "start browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "test-{{ .run.id }}"
+          headless: true
+
+      # 2. Navigate with Playwright (deterministic)
+      - name: "navigate to site"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "test-{{ .run.id }}"
+          language: python
+          script: |
+            from playwright.sync_api import expect
+            page.goto("https://example.com")
+            expect(page).to_have_url("https://example.com/")
+
+      # 3. Verify with AI (intelligent)
+      - name: "verify content"
+        plugin: browser_use
+        config:
+          session_id: "test-{{ .run.id }}"
+          task: "Verify the page has a heading 'Example Domain'"
+          max_steps: 3
+          use_vision: true
+          llm:
+            provider: "openai"
+            model: "gpt-4o"
+            config:
+              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 ```
 
-## Configuration
+## Key Concepts
 
-### Required Fields
+### Session Sharing
+
+Both plugins share a single Chromium instance via Chrome DevTools Protocol (CDP):
+
+- **Playwright** - Deterministic scripts, precise DOM manipulation, fast assertions
+- **browser_use** - AI-driven tasks, natural language instructions, visual understanding
+
+### Structured Output
+
+browser_use returns structured test results (pass/fail) for reliable QA automation:
+
+```json
+{
+  "status": "pass",
+  "message": "Verified heading 'Example Domain' exists",
+  "error": null
+}
+```
+
+## Common Patterns
+
+### Login Flow
 
 ```yaml
-config:
-  task: "Natural language instruction"  # What the browser should do
-  llm:                                   # LLM provider configuration
-    provider: "openai"                   # "openai" or "anthropic"
-    model: "gpt-4o"                      # Model name
+steps:
+  - name: "start browser"
+    plugin: playwright
     config:
-      OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-```
+      role: start
+      session_id: "login-test"
 
-### Optional Fields
+  - name: "navigate to login"
+    plugin: playwright
+    config:
+      role: script
+      session_id: "login-test"
+      script: |
+        page.goto("https://app.example.com/login")
 
-```yaml
-config:
-  headless: true               # Run without visible browser (default: true)
-  timeout: "2m"                # Max execution time (default: 2m)
-  use_vision: false            # Enable visual analysis (default: false)
-  max_actions_per_step: 10     # Action limit per step (default: 10)
-  allowed_domains:             # Restrict navigation (optional)
-    - "example.com"
-    - "api.example.com"
-  viewport:                    # Custom browser size
-    width: 1920
-    height: 1080
-```
-
-## LLM Providers
-
-### OpenAI
-
-```yaml
-llm:
-  provider: "openai"
-  model: "gpt-4o"  # or "gpt-4", "gpt-3.5-turbo"
-  config:
-    OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-```
-
-### Anthropic
-
-```yaml
-llm:
-  provider: "anthropic"
-  model: "claude-3-5-sonnet-20241022"  # or other Claude models
-  config:
-    ANTHROPIC_API_KEY: "{{ .env.ANTHROPIC_API_KEY }}"
-```
-
-## Save & Assert
-
-### Extract Data
-
-```yaml
-- name: "Scrape product info"
-  plugin: browser
-  config:
-    task: "Go to https://example.com/product and extract the price and title"
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-  save:
-    - json_path: ".result"
-      as: "product_data"
-    - json_path: ".actions_taken"
-      as: "action_count"
-```
-
-### Assert Success
-
-```yaml
-assertions:
-  - type: "json_path"
-    path: ".success"
-    expected: true
-  - type: "json_path"
-    path: ".actions_taken"
-    exists: true
-```
-
-## Common Use Cases
-
-### Web Application Testing
-
-```yaml
-- name: "Test login flow"
-  plugin: browser
-  config:
-    task: |
-      1. Go to https://app.example.com/login
-      2. Enter email: test@example.com
-      3. Enter password: testpass123
-      4. Click login button
-      5. Verify you see the dashboard
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    timeout: "3m"
+  - name: "perform login with AI"
+    plugin: browser_use
+    config:
+      session_id: "login-test"
+      task: |
+        Fill in the login form:
+        - Email: test@example.com
+        - Password: testpass123
+        Click login and verify dashboard appears.
+      max_steps: 5
+      llm:
+        provider: "openai"
+        model: "gpt-4o"
+        config:
+          OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 ```
 
 ### Data Extraction
 
 ```yaml
-- name: "Scrape pricing table"
-  plugin: browser
-  config:
-    task: "Navigate to https://example.com/pricing and extract all plan names and prices"
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    use_vision: true  # Better for visual elements
-  save:
-    - json_path: ".result"
-      as: "pricing_data"
+steps:
+  - name: "navigate to pricing"
+    plugin: playwright
+    config:
+      role: script
+      session_id: "scraper"
+      script: |
+        page.goto("https://example.com/pricing")
+
+  - name: "extract prices"
+    plugin: browser_use
+    config:
+      session_id: "scraper"
+      task: "Extract all plan names and monthly prices"
+      use_vision: true
+      max_steps: 3
+      llm:
+        provider: "openai"
+        model: "gpt-4o"
+        config:
+          OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+    save:
+      - json_path: ".result"
+        as: "pricing_data"
 ```
 
-### Form Submission
+### Form Validation
 
 ```yaml
-- name: "Fill contact form"
-  plugin: browser
-  config:
-    task: |
-      Go to https://example.com/contact
-      Fill in:
-      - Name: Test User
-      - Email: test@example.com
-      - Message: Automated test message
-      Click submit
-      Verify success message appears
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    headless: false  # Watch it work
+steps:
+  - name: "submit form"
+    plugin: playwright
+    config:
+      role: script
+      session_id: "form-test"
+      script: |
+        page.fill('input[name="name"]', 'Test User')
+        page.click('button[type="submit"]')
+
+  - name: "verify success"
+    plugin: browser_use
+    config:
+      session_id: "form-test"
+      task: "Check if success message appears"
+      llm:
+        provider: "openai"
+        model: "gpt-4o"
 ```
 
-## Multi-Step Workflows
+## Configuration Reference
+
+### Playwright Options
 
 ```yaml
-tests:
-  - name: "Complete purchase flow"
-    steps:
-      - name: "Browse products"
-        plugin: browser
-        config:
-          task: "Go to https://shop.example.com and find the first product"
-          llm:
-            provider: "openai"
-            model: "gpt-4o"
-            config:
-              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-        save:
-          - json_path: ".result"
-            as: "product_url"
-
-      - name: "Add to cart"
-        plugin: browser
-        config:
-          task: "Go to {{ product_url }} and click add to cart"
-          llm:
-            provider: "openai"
-            model: "gpt-4o"
-            config:
-              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-
-      - name: "Checkout"
-        plugin: browser
-        config:
-          task: "Navigate to cart and proceed to checkout"
-          llm:
-            provider: "openai"
-            model: "gpt-4o"
-            config:
-              OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+- plugin: playwright
+  config:
+    role: start | script | stop
+    session_id: "unique-id"          # Required
+    headless: true                   # Optional (default: true)
+    window_width: 1280               # Optional (default: 1280)
+    window_height: 720               # Optional (default: 720)
+    script: |                        # For role: script
+      # Python code with `page` object available
+      result = {"key": "value"}
 ```
+
+### browser_use Options
+
+```yaml
+- plugin: browser_use
+  config:
+    session_id: "unique-id"          # Required (must match playwright)
+    task: "Natural language task"    # Required
+    max_steps: 10                    # Optional (default: 10)
+    use_vision: true                 # Optional (default: false)
+    timeout: "5m"                    # Optional (default: "5m")
+    llm:                             # Required
+      provider: "openai"             # "openai" or "anthropic"
+      model: "gpt-4o"                # Optional (uses provider default)
+      config:                        # Optional (see API Key Configuration below)
+        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+```
+
+**API Key Configuration:**
+
+The plugin needs access to your LLM provider's API key. You have two options:
+
+1. **Environment variable** (recommended): Export `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in your shell, and the plugin will automatically use it:
+   ```bash
+   export OPENAI_API_KEY=sk-your-key-here
+   ```
+   ```yaml
+   llm:
+     provider: "openai"  # No config block needed
+   ```
+
+2. **Explicit config**: Pass the key explicitly via the `llm.config` block:
+   ```yaml
+   llm:
+     provider: "openai"
+     config:
+       OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"  # Read from env
+       # or
+       OPENAI_API_KEY: "sk-your-key-here"  # Hardcoded (not recommended)
+   ```
+
+The `{{ .env.VARIABLE_NAME }}` template syntax reads from environment variables, which is useful when you want to explicitly document which variables the test requires.
 
 ## Best Practices
 
-**Clear Instructions**: Be specific about what the browser should do
+**Always use cleanup blocks** to stop browsers:
 ```yaml
+cleanup:
+  always:
+    - name: "stop browser"
+      plugin: playwright
+      config:
+        role: stop
+        session_id: "my-session"
+```
+
+**Be specific in AI tasks**:
+```yaml
+# ✅ Good
+task: "Find the first product under $50 and click 'Add to Cart'"
+
 # ❌ Vague
 task: "Check the website"
-
-# ✅ Specific
-task: "Navigate to https://example.com/products, click on the first product, and extract its price"
 ```
 
-**Appropriate Timeouts**: Complex tasks need more time
+**Set appropriate timeouts**:
 ```yaml
-# Simple navigation: 1m
-# Form filling: 2-3m
-# Multi-page workflows: 5m+
-timeout: "3m"
+timeout: "30s"  # Simple tasks
+timeout: "2m"   # Multi-step workflows
+timeout: "5m"   # Complex AI tasks
 ```
 
-**Headless vs Headful**:
-- Use `headless: true` for CI/CD and faster execution
-- Use `headless: false` for debugging and watching the browser
-
-**Vision Mode**: Enable for visual elements (charts, images)
+**Enable vision for visual elements**:
 ```yaml
-use_vision: true  # Better accuracy for visual content, slower execution
-```
-
-**Restrict Domains**: Prevent navigation to unexpected sites
-```yaml
-allowed_domains:
-  - "example.com"
-  - "app.example.com"
+use_vision: true  # Better for charts, images, complex layouts
 ```
 
 ## Troubleshooting
+**Session not found**: Ensure `session_id` matches between steps
+**Timeout errors**: Increase `timeout` or reduce `max_steps`
+**Browser won't start**: Run `playwright install chromium`
 
-**Browser won't start**: Install Playwright browsers
-```bash
-playwright install chromium
-```
-
-**Timeout errors**: Increase timeout or simplify task
-```yaml
-timeout: "5m"  # For complex workflows
-```
-
-**Actions not working**: Add debug logging
-```yaml
-- name: "Debug browser actions"
-  plugin: log
-  config:
-    message: "Actions taken: {{ action_count }}"
-```
-
-**Navigation fails**: Check allowed_domains
-```yaml
-allowed_domains:
-  - "*.example.com"  # Allow all subdomains
-```
-
-## Running Examples
-
-```bash
-# Run browser tests
-rocketship run -af examples/browser-testing/rocketship.yaml
-
-# With specific env file
-rocketship run -af examples/browser-testing/rocketship.yaml \
-  --env-file .env
-```
+## See Also
+- [Persistent Sessions Guide](../../plugins/browser/persistent-sessions.md)
+- YAML Reference for full plugin documentation

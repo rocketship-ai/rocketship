@@ -10,11 +10,11 @@ type ScriptConfig struct {
 
 // ActivityRequest represents the input to the script activity
 type ActivityRequest struct {
-	Name       string                 `json:"name"`
-	Plugin     string                 `json:"plugin"`
-	Config     map[string]interface{} `json:"config"`
-	State      map[string]string      `json:"state"`
-	Vars       map[string]interface{} `json:"vars"`
+	Name   string                 `json:"name"`
+	Plugin string                 `json:"plugin"`
+	Config map[string]interface{} `json:"config"`
+	State  map[string]string      `json:"state"`
+	Vars   map[string]interface{} `json:"vars"`
 }
 
 // ActivityResponse represents the output from the script activity

@@ -13,10 +13,10 @@ import (
 	"go.temporal.io/sdk/activity"
 
 	// Database drivers
+	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
-	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // Auto-register the plugin when the package is imported
@@ -32,7 +32,7 @@ func (sp *SQLPlugin) GetType() string {
 // Activity executes SQL operations and returns results
 func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (interface{}, error) {
 	logger := activity.GetLogger(ctx)
-	
+
 	// Parse configuration from parameters
 	configData, ok := p["config"].(map[string]interface{})
 	if !ok {
@@ -110,7 +110,7 @@ func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
 	if timeout, ok := configData["timeout"].(string); ok {
 		config.Timeout = timeout
 	}
-	
+
 	// Parse commands array
 	if commandsInterface, ok := configData["commands"]; ok {
 		if commandsSlice, ok := commandsInterface.([]interface{}); ok {
@@ -121,7 +121,7 @@ func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -131,7 +131,7 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}) e
 	context := dsl.TemplateContext{
 		Runtime: state,
 	}
-	
+
 	// Process DSN
 	if config.DSN != "" {
 		processedDSN, err := dsl.ProcessTemplate(config.DSN, context)
@@ -140,7 +140,7 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}) e
 		}
 		config.DSN = processedDSN
 	}
-	
+
 	// Process commands
 	for i, cmd := range config.Commands {
 		processedCmd, err := dsl.ProcessTemplate(cmd, context)
@@ -149,7 +149,7 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}) e
 		}
 		config.Commands[i] = processedCmd
 	}
-	
+
 	return nil
 }
 
@@ -158,22 +158,22 @@ func getQueries(config *SQLConfig) ([]string, error) {
 	if len(config.Commands) > 0 {
 		return config.Commands, nil
 	}
-	
+
 	if config.File != "" {
 		content, err := os.ReadFile(config.File)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read SQL file %s: %w", config.File, err)
 		}
-		
+
 		// Parse SQL file content with proper delimiter handling
 		queries, err := parseSQLFile(string(content))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse SQL file %s: %w", config.File, err)
 		}
-		
+
 		return queries, nil
 	}
-	
+
 	return nil, fmt.Errorf("no queries specified")
 }
 
@@ -181,13 +181,13 @@ func getQueries(config *SQLConfig) ([]string, error) {
 func parseSQLFile(content string) ([]string, error) {
 	var queries []string
 	var currentQuery strings.Builder
-	
+
 	runes := []rune(content)
 	length := len(runes)
-	
+
 	for i := 0; i < length; i++ {
 		char := runes[i]
-		
+
 		switch char {
 		case '-':
 			// Handle SQL line comments (-- comment)
@@ -202,7 +202,7 @@ func parseSQLFile(content string) ([]string, error) {
 				continue
 			}
 			currentQuery.WriteRune(char)
-			
+
 		case '/':
 			// Handle SQL block comments (/* comment */)
 			if i+1 < length && runes[i+1] == '*' {
@@ -219,7 +219,7 @@ func parseSQLFile(content string) ([]string, error) {
 				continue
 			}
 			currentQuery.WriteRune(char)
-			
+
 		case '\'':
 			// Handle single-quoted strings
 			currentQuery.WriteRune(char)
@@ -238,7 +238,7 @@ func parseSQLFile(content string) ([]string, error) {
 				}
 				i++
 			}
-			
+
 		case '"':
 			// Handle double-quoted identifiers
 			currentQuery.WriteRune(char)
@@ -257,7 +257,7 @@ func parseSQLFile(content string) ([]string, error) {
 				}
 				i++
 			}
-			
+
 		case ';':
 			// Found statement delimiter outside of strings/comments
 			currentQuery.WriteRune(char)
@@ -271,12 +271,12 @@ func parseSQLFile(content string) ([]string, error) {
 				}
 			}
 			currentQuery.Reset()
-			
+
 		default:
 			currentQuery.WriteRune(char)
 		}
 	}
-	
+
 	// Handle any remaining content as the last query
 	lastQuery := strings.TrimSpace(currentQuery.String())
 	if lastQuery != "" {
@@ -287,7 +287,7 @@ func parseSQLFile(content string) ([]string, error) {
 			queries = append(queries, lastQuery)
 		}
 	}
-	
+
 	return queries, nil
 }
 
@@ -295,7 +295,7 @@ func parseSQLFile(content string) ([]string, error) {
 func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*SQLResponse, error) {
 	logger := activity.GetLogger(ctx)
 	startTime := time.Now()
-	
+
 	// Establish database connection
 	db, err := sqlx.Connect(config.Driver, config.DSN)
 	if err != nil {
@@ -306,9 +306,9 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 			logger.Warn("Failed to close database connection", "error", err)
 		}
 	}()
-	
+
 	connectionTime := time.Since(startTime)
-	
+
 	// Set connection timeout
 	if config.Timeout != "" {
 		timeout, err := time.ParseDuration(config.Timeout)
@@ -317,12 +317,12 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 		}
 		db.SetConnMaxLifetime(timeout)
 	}
-	
+
 	// Configure connection pool for integration testing
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(2)
 	db.SetConnMaxIdleTime(5 * time.Minute)
-	
+
 	response := &SQLResponse{
 		Queries: make([]QueryResult, 0, len(queries)),
 		Stats: ExecutionStats{
@@ -330,13 +330,13 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 			ConnectionTime: connectionTime.String(),
 		},
 	}
-	
+
 	// Execute each query
 	var queryErrors []string
 	for i, query := range queries {
 		queryResult := executeQuery(ctx, db, query)
 		response.Queries = append(response.Queries, queryResult)
-		
+
 		if queryResult.Error == "" {
 			response.Stats.SuccessCount++
 		} else {
@@ -345,32 +345,32 @@ func executeQueries(ctx context.Context, config *SQLConfig, queries []string) (*
 			queryErrors = append(queryErrors, fmt.Sprintf("Query %d failed: %s. Query: %s", i+1, queryResult.Error, query))
 		}
 	}
-	
+
 	response.Stats.TotalDuration = time.Since(startTime).String()
-	
+
 	// If any queries failed, return an error with detailed information
 	if len(queryErrors) > 0 {
 		return response, fmt.Errorf("SQL execution failed with %d error(s):\n%s", len(queryErrors), strings.Join(queryErrors, "\n"))
 	}
-	
+
 	return response, nil
 }
 
 // executeQuery executes a single SQL query
 func executeQuery(ctx context.Context, db *sqlx.DB, query string) QueryResult {
 	startTime := time.Now()
-	
+
 	result := QueryResult{
 		Query: query,
 		Rows:  make([]map[string]interface{}, 0),
 	}
-	
+
 	// Determine if this is a SELECT query or a modification query
 	trimmedQuery := strings.TrimSpace(strings.ToUpper(query))
-	isSelect := strings.HasPrefix(trimmedQuery, "SELECT") || 
-		       strings.HasPrefix(trimmedQuery, "WITH") ||
-		       strings.Contains(trimmedQuery, "RETURNING")
-	
+	isSelect := strings.HasPrefix(trimmedQuery, "SELECT") ||
+		strings.HasPrefix(trimmedQuery, "WITH") ||
+		strings.Contains(trimmedQuery, "RETURNING")
+
 	if isSelect {
 		// Execute SELECT query
 		rows, err := db.QueryxContext(ctx, query)
@@ -384,7 +384,7 @@ func executeQuery(ctx context.Context, db *sqlx.DB, query string) QueryResult {
 				activity.GetLogger(ctx).Warn("Failed to close query rows", "error", err)
 			}
 		}()
-		
+
 		// Process rows
 		for rows.Next() {
 			row := make(map[string]interface{})
@@ -394,11 +394,11 @@ func executeQuery(ctx context.Context, db *sqlx.DB, query string) QueryResult {
 			}
 			result.Rows = append(result.Rows, row)
 		}
-		
+
 		if err := rows.Err(); err != nil && result.Error == "" {
 			result.Error = err.Error()
 		}
-		
+
 	} else {
 		// Execute modification query (INSERT, UPDATE, DELETE)
 		execResult, err := db.ExecContext(ctx, query)
@@ -407,12 +407,12 @@ func executeQuery(ctx context.Context, db *sqlx.DB, query string) QueryResult {
 			result.Duration = time.Since(startTime).String()
 			return result
 		}
-		
+
 		if rowsAffected, err := execResult.RowsAffected(); err == nil {
 			result.RowsAffected = rowsAffected
 		}
 	}
-	
+
 	result.Duration = time.Since(startTime).String()
 	return result
 }
@@ -420,18 +420,18 @@ func executeQuery(ctx context.Context, db *sqlx.DB, query string) QueryResult {
 // processSaveConfig processes save configuration to extract values from results
 func processSaveConfig(response *SQLResponse, saveConfig []interface{}) map[string]string {
 	savedValues := make(map[string]string)
-	
+
 	for _, saveItem := range saveConfig {
 		saveMap, ok := saveItem.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		
+
 		asValue, ok := saveMap["as"].(string)
 		if !ok {
 			continue
 		}
-		
+
 		// Extract value based on sql_result configuration
 		if sqlResult, ok := saveMap["sql_result"].(string); ok {
 			value := extractSQLValue(response, sqlResult)
@@ -440,7 +440,7 @@ func processSaveConfig(response *SQLResponse, saveConfig []interface{}) map[stri
 			}
 		}
 	}
-	
+
 	return savedValues
 }
 
@@ -450,11 +450,11 @@ func extractSQLValue(response *SQLResponse, path string) string {
 	// ".queries[0].rows[0].id" - first query, first row, id column
 	// ".queries[0].rows_affected" - first query rows affected count
 	// ".stats.success_count" - overall success count
-	
+
 	if len(response.Queries) == 0 {
 		return ""
 	}
-	
+
 	// Simple path parsing for common cases
 	if strings.HasPrefix(path, ".queries[0].rows[0].") {
 		if len(response.Queries[0].Rows) > 0 {
@@ -468,7 +468,7 @@ func extractSQLValue(response *SQLResponse, path string) string {
 	} else if path == ".stats.success_count" {
 		return fmt.Sprintf("%d", response.Stats.SuccessCount)
 	}
-	
+
 	return ""
 }
 
@@ -479,14 +479,14 @@ func processAssertions(response *SQLResponse, assertions []interface{}) error {
 		if !ok {
 			continue
 		}
-		
+
 		assertionType, ok := assertion["type"].(string)
 		if !ok {
 			return fmt.Errorf("assertion type is required")
 		}
-		
+
 		expected := assertion["expected"]
-		
+
 		switch assertionType {
 		case "query_count":
 			expectedCount, ok := expected.(float64) // JSON numbers are float64
@@ -496,7 +496,7 @@ func processAssertions(response *SQLResponse, assertions []interface{}) error {
 			if float64(response.Stats.TotalQueries) != expectedCount {
 				return fmt.Errorf("query count assertion failed: expected %v, got %d", expectedCount, response.Stats.TotalQueries)
 			}
-			
+
 		case "success_count":
 			expectedCount, ok := expected.(float64)
 			if !ok {
@@ -505,7 +505,7 @@ func processAssertions(response *SQLResponse, assertions []interface{}) error {
 			if float64(response.Stats.SuccessCount) != expectedCount {
 				return fmt.Errorf("success count assertion failed: expected %v, got %d", expectedCount, response.Stats.SuccessCount)
 			}
-			
+
 		case "row_count":
 			queryIndex, ok := assertion["query_index"].(float64)
 			if !ok {
@@ -515,17 +515,17 @@ func processAssertions(response *SQLResponse, assertions []interface{}) error {
 			if !ok {
 				return fmt.Errorf("row_count assertion expected must be a number")
 			}
-			
+
 			queryIdx := int(queryIndex)
 			if queryIdx >= len(response.Queries) || queryIdx < 0 {
 				return fmt.Errorf("query_index %d is out of range", queryIdx)
 			}
-			
+
 			actualCount := len(response.Queries[queryIdx].Rows)
 			if float64(actualCount) != expectedCount {
 				return fmt.Errorf("row count assertion failed for query %d: expected %v, got %d", queryIdx, expectedCount, actualCount)
 			}
-			
+
 		case "column_value":
 			queryIndex, ok := assertion["query_index"].(float64)
 			if !ok {
@@ -539,34 +539,34 @@ func processAssertions(response *SQLResponse, assertions []interface{}) error {
 			if !ok {
 				return fmt.Errorf("column_value assertion requires column")
 			}
-			
+
 			queryIdx := int(queryIndex)
 			rowIdx := int(rowIndex)
-			
+
 			if queryIdx >= len(response.Queries) || queryIdx < 0 {
 				return fmt.Errorf("query_index %d is out of range", queryIdx)
 			}
 			if rowIdx >= len(response.Queries[queryIdx].Rows) || rowIdx < 0 {
 				return fmt.Errorf("row_index %d is out of range for query %d", rowIdx, queryIdx)
 			}
-			
+
 			actualValue, exists := response.Queries[queryIdx].Rows[rowIdx][column]
 			if !exists {
 				return fmt.Errorf("column '%s' not found in query %d, row %d", column, queryIdx, rowIdx)
 			}
-			
+
 			// Convert both values to strings for comparison
 			expectedStr := fmt.Sprintf("%v", expected)
 			actualStr := fmt.Sprintf("%v", actualValue)
-			
+
 			if actualStr != expectedStr {
 				return fmt.Errorf("column value assertion failed for query %d, row %d, column '%s': expected %v, got %v", queryIdx, rowIdx, column, expected, actualValue)
 			}
-			
+
 		default:
 			return fmt.Errorf("unsupported assertion type: %s", assertionType)
 		}
 	}
-	
+
 	return nil
 }

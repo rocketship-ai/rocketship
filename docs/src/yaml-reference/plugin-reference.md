@@ -37,6 +37,8 @@
 - `log`
 - `agent`
 - `browser`
+- `playwright`
+- `browser_use`
 - `supabase`
 
 
