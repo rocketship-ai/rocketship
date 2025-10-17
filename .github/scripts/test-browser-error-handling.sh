@@ -18,7 +18,8 @@ ERRORS_FOUND=0
 # ==============================================================================
 log "Test 1: playwright Python exception"
 
-cat > "$TEMP_DIR/test1.yaml" << 'EOF'
+mkdir -p "$TEMP_DIR/test1"
+cat > "$TEMP_DIR/test1/rocketship.yaml" << 'EOF'
 name: "Test 1: Python Exception"
 tests:
   - name: "playwright Python exception"
@@ -50,7 +51,7 @@ tests:
             result = 1 / 0
 EOF
 
-OUTPUT1=$(rocketship run -af "$TEMP_DIR/test1.yaml" 2>&1 || true)
+OUTPUT1=$(rocketship run -af "$TEMP_DIR/test1/rocketship.yaml" 2>&1 || true)
 
 if echo "$OUTPUT1" | grep -qE "(ZeroDivisionError|division by zero|python execution failed)"; then
     log "✅ Test 1: Found Python exception error"
@@ -69,7 +70,8 @@ sleep 5
 # ==============================================================================
 log "Test 2: playwright assertion failure"
 
-cat > "$TEMP_DIR/test2.yaml" << 'EOF'
+mkdir -p "$TEMP_DIR/test2"
+cat > "$TEMP_DIR/test2/rocketship.yaml" << 'EOF'
 name: "Test 2: Assertion Error"
 tests:
   - name: "playwright assertion failure"
@@ -105,7 +107,7 @@ tests:
             result = {"should": "not reach here"}
 EOF
 
-OUTPUT2=$(rocketship run -af "$TEMP_DIR/test2.yaml" 2>&1 || true)
+OUTPUT2=$(rocketship run -af "$TEMP_DIR/test2/rocketship.yaml" 2>&1 || true)
 
 if echo "$OUTPUT2" | grep -qE "(AssertionError|Assertion failed|expect.*to_have_title.*failed|Timeout.*waiting for)"; then
     log "✅ Test 2: Found playwright assertion error"
@@ -124,7 +126,8 @@ sleep 5
 # ==============================================================================
 log "Test 3: invalid session error"
 
-cat > "$TEMP_DIR/test3.yaml" << 'EOF'
+mkdir -p "$TEMP_DIR/test3"
+cat > "$TEMP_DIR/test3/rocketship.yaml" << 'EOF'
 name: "Test 3: Invalid Session"
 tests:
   - name: "invalid session error"
@@ -140,7 +143,7 @@ tests:
             result = {"should": "not reach here"}
 EOF
 
-OUTPUT3=$(rocketship run -af "$TEMP_DIR/test3.yaml" 2>&1 || true)
+OUTPUT3=$(rocketship run -af "$TEMP_DIR/test3/rocketship.yaml" 2>&1 || true)
 
 if echo "$OUTPUT3" | grep -q 'session "this-session-was-never-started-12345" is not active'; then
     log "✅ Test 3: Found invalid session error"
@@ -159,7 +162,8 @@ sleep 5
 # ==============================================================================
 log "Test 4: browser_use task failure"
 
-cat > "$TEMP_DIR/test4.yaml" << 'EOF'
+mkdir -p "$TEMP_DIR/test4"
+cat > "$TEMP_DIR/test4/rocketship.yaml" << 'EOF'
 name: "Test 4: Task Failure"
 tests:
   - name: "browser_use task failure"
@@ -205,7 +209,7 @@ tests:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 EOF
 
-OUTPUT4=$(rocketship run -af "$TEMP_DIR/test4.yaml" 2>&1 || true)
+OUTPUT4=$(rocketship run -af "$TEMP_DIR/test4/rocketship.yaml" 2>&1 || true)
 
 if echo "$OUTPUT4" | grep -qE "(browser-use execution failed|Task failed|Max steps reached|AgentError|Failed to complete task)"; then
     log "✅ Test 4: Found browser_use task failure error"
@@ -224,7 +228,8 @@ sleep 5
 # ==============================================================================
 log "Test 5: browser_use timeout error"
 
-cat > "$TEMP_DIR/test5.yaml" << 'EOF'
+mkdir -p "$TEMP_DIR/test5"
+cat > "$TEMP_DIR/test5/rocketship.yaml" << 'EOF'
 name: "Test 5: Timeout Error"
 tests:
   - name: "browser_use timeout error"
@@ -271,7 +276,7 @@ tests:
               OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 EOF
 
-OUTPUT5=$(rocketship run -af "$TEMP_DIR/test5.yaml" 2>&1 || true)
+OUTPUT5=$(rocketship run -af "$TEMP_DIR/test5/rocketship.yaml" 2>&1 || true)
 
 if echo "$OUTPUT5" | grep -qE "(signal: killed|context deadline exceeded|timeout)"; then
     log "✅ Test 5: Found timeout/killed error"

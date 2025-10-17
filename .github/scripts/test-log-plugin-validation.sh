@@ -5,7 +5,8 @@ set -e
 echo "Testing log plugin validation..."
 
 # Create a temporary invalid test file
-cat > /tmp/invalid-log-test.yaml << 'EOF'
+mkdir -p /tmp/invalid-log-test
+cat > /tmp/invalid-log-test/rocketship.yaml << 'EOF'
 name: "Invalid Log Test"
 tests:
   - name: "Test invalid log config"
@@ -23,15 +24,16 @@ if rocketship validate /tmp/invalid-log-test.yaml 2>&1 | grep -q "validation fai
   echo "✅ Log plugin validation test passed: missing message field caught"
 else
   echo "❌ Log plugin validation test failed: missing message field not caught"
-  rm -f /tmp/invalid-log-test.yaml
+  rm -rf /tmp/invalid-log-test /tmp/valid-log-test
   exit 1
 fi
 
 # Clean up
-rm -f /tmp/invalid-log-test.yaml
+rm -rf /tmp/invalid-log-test /tmp/valid-log-test
 
 # Create a valid test file to ensure validation passes
-cat > /tmp/valid-log-test.yaml << 'EOF'
+mkdir -p /tmp/valid-log-test
+cat > /tmp/valid-log-test/rocketship.yaml << 'EOF'
 name: "Valid Log Test"
 tests:
   - name: "Test valid log config"
@@ -48,11 +50,11 @@ if rocketship validate /tmp/valid-log-test.yaml 2>&1 | grep -q "validation passe
   echo "✅ Log plugin validation test passed: valid config accepted"
 else
   echo "❌ Log plugin validation test failed: valid config rejected"
-  rm -f /tmp/valid-log-test.yaml
+  rm -rf /tmp/invalid-log-test /tmp/valid-log-test
   exit 1
 fi
 
 # Clean up
-rm -f /tmp/valid-log-test.yaml
+rm -rf /tmp/invalid-log-test /tmp/valid-log-test
 
 echo "✅ All log plugin validation tests passed!"
