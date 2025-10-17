@@ -15,9 +15,56 @@ logging.basicConfig(
 
 try:
     from browser_use import Agent, BrowserSession
+    from pydantic import BaseModel, Field
+    from typing import Literal
 except ImportError as exc:
     sys.stdout.write(json.dumps({"ok": False, "error": f"browser-use not available: {exc}"}) + "\n")
     sys.exit(1)
+
+
+# Structured output schema for QA testing (qa-use pattern)
+class BrowserTestResult(BaseModel):
+    """
+    Structured output schema for browser-based QA testing.
+    Forces the agent to return machine-readable pass/fail status.
+    """
+    status: Literal["pass", "fail"] = Field(
+        description="Test status - 'pass' if all criteria met, 'fail' otherwise"
+    )
+    message: str = Field(
+        description="Description of what was verified or what went wrong"
+    )
+    error: str | None = Field(
+        default=None,
+        description="Detailed error message if status is 'fail', otherwise null"
+    )
+    extracted_data: dict | None = Field(
+        default=None,
+        description="Any data extracted during test execution"
+    )
+
+
+# QA-focused system prompt for structured output
+QA_TESTING_SYSTEM_PROMPT = """
+You are a QA testing agent that validates web application behavior.
+
+CRITICAL: You MUST return your response as a JSON object with this exact structure:
+{
+  "status": "pass" or "fail",
+  "message": "description of what you verified",
+  "error": "detailed error if failed, otherwise null",
+  "extracted_data": "any data you extracted, otherwise null"
+}
+
+Set status to "pass" ONLY if you successfully completed the task and verified all requirements.
+Set status to "fail" if you:
+- Encountered errors or exceptions
+- Could not find required elements
+- Could not complete the task as specified
+- Partially completed the task but not fully
+
+Be specific and detailed in your message and error fields so users can understand what happened.
+"""
 
 
 def _write(payload: dict) -> None:
@@ -133,13 +180,10 @@ async def _run(args: argparse.Namespace) -> None:
         "task": args.task,
         "llm": llm,
         "browser_session": session,
-        # Add system message to ensure agent treats incomplete tasks as failures
-        "extend_system_message": (
-            "\n\nIMPORTANT: You MUST complete the full task as specified. "
-            "If you cannot complete ANY part of the task due to missing elements, "
-            "errors, or inability to find required content, you should report this as a failure. "
-            "Do NOT report success if you only partially completed the task or could not find required elements."
-        ),
+        # Use structured output schema (qa-use pattern)
+        "output_model_schema": BrowserTestResult,
+        # QA-focused system prompt
+        "extend_system_message": QA_TESTING_SYSTEM_PROMPT,
     }
 
     if args.allowed_domain:
@@ -159,63 +203,75 @@ async def _run(args: argparse.Namespace) -> None:
     try:
         result = await agent.run(max_steps=args.max_steps if args.max_steps > 0 else None)
 
-        # Check if task actually completed
-        task_completed = result.is_done() if hasattr(result, 'is_done') else False
+        # Parse structured output (qa-use pattern)
+        from pydantic import ValidationError
 
-        # Additionally check if the final result indicates failure
-        error_message = None
-        if hasattr(result, 'final_result'):
-            final_text = str(result.final_result()).lower()
-            # Check for common failure indicators in the agent's response
-            failure_indicators = [
-                'unable to',
-                'could not',
-                'couldn\'t',
-                'cannot',
-                'can\'t',
-                'did not find',
-                'didn\'t find',
-                'not found',
-                'failed to',
-                'failure',
-            ]
-            if any(indicator in final_text for indicator in failure_indicators):
-                task_completed = False
-                error_message = f"Agent reported task failure: {result.final_result()}"
-
-        # Check for errors in the result
-        if hasattr(result, 'errors'):
-            errors = result.errors()
-            if errors and any(e is not None for e in errors):
-                task_completed = False
-                if not error_message:
-                    error_message = f"Agent encountered errors: {errors}"
-
-        # Extract final URL from browser context
-        final_url = ""
         try:
-            if hasattr(session, "context") and session.context:
-                pages = session.context.pages
-                if pages and len(pages) > 0:
-                    final_url = pages[0].url
-            elif hasattr(session, "browser") and hasattr(session.browser, "contexts"):
-                contexts = session.browser.contexts
-                if contexts and len(contexts) > 0:
-                    pages = contexts[0].pages
+            # Extract and validate structured output from agent
+            test_result = BrowserTestResult.model_validate_json(result.final_result())
+
+            # Extract final URL from browser context
+            final_url = ""
+            try:
+                if hasattr(session, "context") and session.context:
+                    pages = session.context.pages
                     if pages and len(pages) > 0:
                         final_url = pages[0].url
-        except Exception:
-            # If we can't get URL, just leave it empty
-            pass
+                elif hasattr(session, "browser") and hasattr(session.browser, "contexts"):
+                    contexts = session.browser.contexts
+                    if contexts and len(contexts) > 0:
+                        pages = contexts[0].pages
+                        if pages and len(pages) > 0:
+                            final_url = pages[0].url
+            except Exception:
+                # If we can't get URL, just leave it empty
+                pass
 
-        payload = {
-            "ok": task_completed,
-            "result": _serialize(result),
-            "finalUrl": final_url,
-        }
-        if not task_completed:
-            payload["error"] = error_message or "Task did not complete within max_steps limit"
-        _write(payload)
+            # Build payload from structured output
+            payload = {
+                "ok": test_result.status == "pass",
+                "result": _serialize(result),
+                "finalUrl": final_url,
+                "message": test_result.message,
+            }
+
+            # Add error details if test failed
+            if test_result.status == "fail":
+                payload["error"] = test_result.error or test_result.message
+
+            # Add extracted data if present
+            if test_result.extracted_data:
+                payload["extracted_data"] = test_result.extracted_data
+
+            _write(payload)
+
+        except (ValidationError, json.JSONDecodeError) as e:
+            # Graceful fallback if structured output parsing fails
+            # This should rarely happen with native LLM enforcement
+
+            # Extract final URL even in fallback case
+            final_url = ""
+            try:
+                if hasattr(session, "context") and session.context:
+                    pages = session.context.pages
+                    if pages and len(pages) > 0:
+                        final_url = pages[0].url
+                elif hasattr(session, "browser") and hasattr(session.browser, "contexts"):
+                    contexts = session.browser.contexts
+                    if contexts and len(contexts) > 0:
+                        pages = contexts[0].pages
+                        if pages and len(pages) > 0:
+                            final_url = pages[0].url
+            except Exception:
+                pass
+
+            payload = {
+                "ok": False,
+                "error": f"Agent returned invalid response format: {str(e)[:200]}",
+                "result": _serialize(result),
+                "finalUrl": final_url,
+            }
+            _write(payload)
     except Exception:
         exc_type, exc_value, exc_tb = sys.exc_info()
         short_error = "".join(traceback.format_exception_only(exc_type, exc_value)).strip()

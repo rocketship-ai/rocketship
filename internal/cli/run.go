@@ -519,6 +519,10 @@ func NewRunCmd() *cobra.Command {
 					return fmt.Errorf("no rocketship.yaml files found in directory: %s", dirPath)
 				}
 			} else if testFile != "" {
+				// Validate that the file is named rocketship.yaml
+				if filepath.Base(testFile) != "rocketship.yaml" {
+					return fmt.Errorf("file must be named 'rocketship.yaml', got: %s", filepath.Base(testFile))
+				}
 				testFiles = []string{testFile}
 			} else {
 				// Look for rocketship.yaml in current directory
@@ -592,7 +596,7 @@ func NewRunCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP("file", "f", "", "Path to a single test file (default: rocketship.yaml in current directory)")
+	cmd.Flags().StringP("file", "f", "", "Path to a rocketship.yaml file (must be named 'rocketship.yaml')")
 	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
 	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (defaults to active profile)")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
