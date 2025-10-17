@@ -201,10 +201,35 @@ steps:
     timeout: "5m"                    # Optional (default: "5m")
     llm:                             # Required
       provider: "openai"             # "openai" or "anthropic"
-      model: "gpt-4o"
-      config:
+      model: "gpt-4o"                # Optional (uses provider default)
+      config:                        # Optional (see API Key Configuration below)
         OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
 ```
+
+**API Key Configuration:**
+
+The plugin needs access to your LLM provider's API key. You have two options:
+
+1. **Environment variable** (recommended): Export `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` in your shell, and the plugin will automatically use it:
+   ```bash
+   export OPENAI_API_KEY=sk-your-key-here
+   ```
+   ```yaml
+   llm:
+     provider: "openai"  # No config block needed
+   ```
+
+2. **Explicit config**: Pass the key explicitly via the `llm.config` block:
+   ```yaml
+   llm:
+     provider: "openai"
+     config:
+       OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"  # Read from env
+       # or
+       OPENAI_API_KEY: "sk-your-key-here"  # Hardcoded (not recommended)
+   ```
+
+The `{{ .env.VARIABLE_NAME }}` template syntax reads from environment variables, which is useful when you want to explicitly document which variables the test requires.
 
 ## Best Practices
 
