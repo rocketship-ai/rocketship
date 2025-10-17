@@ -8,28 +8,28 @@
       
       
       
-        <link rel="canonical" href="https://docs.rocketship.sh/reference/rocketship_version/">
+        <link rel="canonical" href="https://docs.rocketship.sh/plugins/browser/persistent-sessions/">
       
       
-        <link rel="prev" href="../rocketship_validate/">
+        <link rel="prev" href="../../../examples/ai/browser-testing/">
       
       
-        <link rel="next" href="../../contributing/">
+        <link rel="next" href="../../../examples/logging/log-plugin/">
       
       
-      <link rel="icon" href="../../assets/transparent.png">
+      <link rel="icon" href="../../../assets/transparent.png">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.12">
     
     
       
-        <title>version - Rocketship CLI</title>
+        <title>Persistent Browser Sessions - Rocketship CLI</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.7e359304.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.7e359304.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -48,9 +48,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#rocketship-version" class="md-skip">
+        <a href="#persistent-browser-sessions-with-playwright-browser-use" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +92,9 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../../.." title="Rocketship CLI" class="md-header__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../../assets/transparent-reverse.png" alt="logo">
+  <img src="../../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +111,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              version
+              Persistent Browser Sessions
             
           </span>
         </div>
@@ -226,9 +226,9 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
+    <a href="../../.." title="Rocketship CLI" class="md-nav__button md-logo" aria-label="Rocketship CLI" data-md-component="logo">
       
-  <img src="../../assets/transparent-reverse.png" alt="logo">
+  <img src="../../../assets/transparent-reverse.png" alt="logo">
 
     </a>
     Rocketship CLI
@@ -255,7 +255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -327,7 +327,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
+      <a href="../../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -348,7 +348,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../../../quickstart/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -369,7 +369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../test-run-management/" class="md-nav__link">
+      <a href="../../../test-run-management/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -390,7 +390,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../system-limits/" class="md-nav__link">
+      <a href="../../../system-limits/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -415,8 +415,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -446,13 +448,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -466,7 +466,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Examples
@@ -480,7 +480,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/" class="md-nav__link">
+      <a href="../../../examples/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -546,7 +546,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/http/request-chaining/" class="md-nav__link">
+      <a href="../../../examples/http/request-chaining/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -567,7 +567,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/http/openapi-validation/" class="md-nav__link">
+      <a href="../../../examples/http/openapi-validation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -639,7 +639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/sql-testing/" class="md-nav__link">
+      <a href="../../../examples/sql-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -711,7 +711,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/supabase-testing/" class="md-nav__link">
+      <a href="../../../examples/supabase-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -787,7 +787,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/variables/variables/" class="md-nav__link">
+      <a href="../../../examples/variables/variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -808,7 +808,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/variables/environment-variables/" class="md-nav__link">
+      <a href="../../../examples/variables/environment-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -829,7 +829,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/variables/config-variables/" class="md-nav__link">
+      <a href="../../../examples/variables/config-variables/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -903,7 +903,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/scripting/custom-scripting/" class="md-nav__link">
+      <a href="../../../examples/scripting/custom-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -924,7 +924,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/scripting/shell-scripting/" class="md-nav__link">
+      <a href="../../../examples/scripting/shell-scripting/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -950,8 +950,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -966,13 +968,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" checked>
         
           
           <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
@@ -986,7 +986,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_7">
             <span class="md-nav__icon md-icon"></span>
             AI Testing
@@ -1000,7 +1000,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/ai/agent-testing/" class="md-nav__link">
+      <a href="../../../examples/ai/agent-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1021,7 +1021,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/ai/browser-testing/" class="md-nav__link">
+      <a href="../../../examples/ai/browser-testing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1039,10 +1039,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../plugins/browser/persistent-sessions/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Persistent Browser Sessions
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1051,6 +1071,62 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#session-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Session Files
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Lifecycle
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Flow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tips
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1114,7 +1190,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/logging/log-plugin/" class="md-nav__link">
+      <a href="../../../examples/logging/log-plugin/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1188,7 +1264,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/reliability/delays/" class="md-nav__link">
+      <a href="../../../examples/reliability/delays/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1209,7 +1285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../examples/reliability/retry-policies/" class="md-nav__link">
+      <a href="../../../examples/reliability/retry-policies/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1293,7 +1369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../yaml-reference/plugin-reference/" class="md-nav__link">
+      <a href="../../../yaml-reference/plugin-reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1314,7 +1390,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../yaml-reference/lifecycle-hooks/" class="md-nav__link">
+      <a href="../../../yaml-reference/lifecycle-hooks/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1342,7 +1418,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../mcp-server/" class="md-nav__link">
+      <a href="../../../mcp-server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1412,7 +1488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy-on-your-cloud/" class="md-nav__link">
+      <a href="../../../deploy-on-your-cloud/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1433,7 +1509,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy/minikube/" class="md-nav__link">
+      <a href="../../../deploy/minikube/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1454,7 +1530,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deploy/digitalocean/" class="md-nav__link">
+      <a href="../../../deploy/digitalocean/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1479,10 +1555,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -1512,11 +1586,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
@@ -1530,7 +1606,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Command Reference
@@ -1544,7 +1620,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship/" class="md-nav__link">
+      <a href="../../../reference/rocketship/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1618,7 +1694,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1639,7 +1715,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_create/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_create/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1660,7 +1736,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_delete/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_delete/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1681,7 +1757,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_list/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1702,7 +1778,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_show/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_show/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1723,7 +1799,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_profile_use/" class="md-nav__link">
+      <a href="../../../reference/rocketship_profile_use/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1752,7 +1828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_run/" class="md-nav__link">
+      <a href="../../../reference/rocketship_run/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1773,7 +1849,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_list/" class="md-nav__link">
+      <a href="../../../reference/rocketship_list/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1794,7 +1870,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_get/" class="md-nav__link">
+      <a href="../../../reference/rocketship_get/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1860,7 +1936,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start/" class="md-nav__link">
+      <a href="../../../reference/rocketship_start/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1881,7 +1957,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_start_server/" class="md-nav__link">
+      <a href="../../../reference/rocketship_start_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1955,7 +2031,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop/" class="md-nav__link">
+      <a href="../../../reference/rocketship_stop/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1976,7 +2052,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_stop_server/" class="md-nav__link">
+      <a href="../../../reference/rocketship_stop_server/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2005,7 +2081,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rocketship_validate/" class="md-nav__link">
+      <a href="../../../reference/rocketship_validate/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2023,28 +2099,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    version
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../../reference/rocketship_version/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2053,90 +2111,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#rocketship-version" class="md-nav__link">
-    <span class="md-ellipsis">
-      rocketship version
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship version">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options inherited from parent commands
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      SEE ALSO
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-17-oct-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 17-Oct-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2156,7 +2130,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -2186,6 +2160,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -2194,68 +2170,38 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#rocketship-version" class="md-nav__link">
+  <a href="#session-files" class="md-nav__link">
     <span class="md-ellipsis">
-      rocketship version
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="rocketship version">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#synopsis" class="md-nav__link">
-    <span class="md-ellipsis">
-      Synopsis
+      Session Files
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      Lifecycle
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#options-inherited-from-parent-commands" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#example-flow" class="md-nav__link">
     <span class="md-ellipsis">
-      Options inherited from parent commands
+      Example Flow
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#tips" class="md-nav__link">
     <span class="md-ellipsis">
-      SEE ALSO
+      Tips
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="SEE ALSO">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-generated-by-spf13cobra-on-17-oct-2025" class="md-nav__link">
-    <span class="md-ellipsis">
-      Auto generated by spf13/cobra on 17-Oct-2025
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2277,25 +2223,70 @@
   
 
 
-  <h1>version</h1>
-
-<h2 id="rocketship-version">rocketship version</h2>
-<p>Print the version number of Rocketship</p>
-<h3 id="synopsis">Synopsis</h3>
-<p>Print the version number of Rocketship CLI.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>rocketship version [flags]
-</code></pre></div>
-<h3 id="options">Options</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>  -h, --help   help for version
-</code></pre></div>
-<h3 id="options-inherited-from-parent-commands">Options inherited from parent commands</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>      --debug   Enable debug logging
-</code></pre></div>
-<h3 id="see-also">SEE ALSO</h3>
+<h1 id="persistent-browser-sessions-with-playwright-browser-use">Persistent Browser Sessions with Playwright + browser-use</h1>
+<p>Rocketship splits browser testing across two plugins that share a single Chromium session via Chrome DevTools Protocol (CDP):</p>
 <ul>
-<li><a href="../rocketship/">rocketship</a>    - Rocketship CLI</li>
+<li><strong><code>playwright</code></strong> launches Chromium, records its CDP websocket, and runs deterministic Python scripts.</li>
+<li><strong><code>browser_use</code></strong> attaches to the same websocket and executes one concise, agentic task.</li>
 </ul>
-<h6 id="auto-generated-by-spf13cobra-on-17-oct-2025">Auto generated by spf13/cobra on 17-Oct-2025</h6>
+<h2 id="session-files">Session Files</h2>
+<p><code>playwright.start</code> spawns Chromium with <code>--remote-debugging-port=0</code>, then writes <code>${ROCKETSHIP_RUN_DIR:-.rocketship}/tmp/browser_sessions/&lt;session_id&gt;.json</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;wsEndpoint&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ws://127.0.0.1:45373/devtools/browser/6ce7...&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">53210</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;createdAt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-01-15T16:39:12Z&quot;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
+</code></pre></div>
+<p>The PID is the Chromium process. <code>playwright.stop</code> terminates it (SIGTERM on Unix, Kill on Windows) and removes the JSON file. A per-session profile directory is kept under <code>tmp/browser_sessions/&lt;session_id&gt;/profile</code> so cookies and storage survive across steps.</p>
+<h2 id="lifecycle">Lifecycle</h2>
+<ol>
+<li><strong>Start</strong> – <code>playwright.start</code> launches Chromium (headless by default), records <code>wsEndpoint</code>, and returns immediately.</li>
+<li><strong>Deterministic scripting</strong> – <code>playwright.script</code> (Python only) reconnects with <code>connect_over_cdp()</code> and runs the provided script. You can inject secrets via <code>config.env</code>.</li>
+<li><strong>Agentic follow-up</strong> – <code>browser_use</code> opens the same CDP endpoint, runs one short task, and reports extracted context or artifacts.</li>
+<li><strong>Stop</strong> – <code>playwright.stop</code> kills the stored PID and clears the session file to free the port/profile.</li>
+</ol>
+<p>Saves and assertions (<code>json_path</code>) remain available on every step for variable passing and validation.</p>
+<h2 id="example-flow">Example Flow</h2>
+<p><code>examples/browser/persistent-session/checkout.yaml</code> demonstrates an interleaved run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">start browser</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">playwright</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">start</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">session_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;checkout-{{</span><span class="nv"> </span><span class="s">.run.id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">headless</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">visit landing page</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">playwright</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">script</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">session_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;checkout-{{</span><span class="nv"> </span><span class="s">.run.id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">language</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">script</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">      </span><span class="no">page.goto(&quot;https://example.com&quot;)</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">      </span><span class="no">result = {&quot;title&quot;: page.title()}</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summarize via agent</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">browser_use</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">    </span><span class="nt">session_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;checkout-{{</span><span class="nv"> </span><span class="s">.run.id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">    </span><span class="nt">task</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Read</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">page</span><span class="nv"> </span><span class="s">currently</span><span class="nv"> </span><span class="s">open</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">summarize</span><span class="nv"> </span><span class="s">it</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">one</span><span class="nv"> </span><span class="s">sentence.&quot;</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">    </span><span class="nt">allowed_domains</span><span class="p">:</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">example.com</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">    </span><span class="nt">max_steps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stop browser</span>
+<a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">playwright</span>
+<a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">  </span><span class="nt">config</span><span class="p">:</span>
+<a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="w">    </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stop</span>
+<a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">    </span><span class="nt">session_id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;checkout-{{</span><span class="nv"> </span><span class="s">.run.id</span><span class="nv"> </span><span class="s">}}&quot;</span>
+</code></pre></div>
+<h2 id="tips">Tips</h2>
+<ul>
+<li>Keep <code>browser_use</code> prompts short; chain multiple steps for long flows so state persists cleanly.</li>
+<li>Ensure <code>python3</code>, <code>playwright</code>, and <code>browser-use</code> are installed (<code>pip install playwright browser-use</code> and <code>playwright install chromium</code>).</li>
+<li>If you encounter “session ... is not active”, confirm the session ID matches exactly and that <code>playwright.start</code> ran earlier in the same test.</li>
+<li>When debugging locally, set <code>ROCKETSHIP_LOG=DEBUG</code> to watch session creation, script execution, and teardown events.</li>
+</ul>
 
 
 
@@ -2342,10 +2333,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.indexes", "toc.follow", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.c8d2eff1.min.js"></script>
       
     
   </body>
