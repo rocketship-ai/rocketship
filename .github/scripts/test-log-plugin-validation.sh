@@ -20,7 +20,7 @@ EOF
 
 # Test that validation catches missing message field
 echo "Testing validation of invalid log plugin config (missing message)..."
-if rocketship validate /tmp/invalid-log-test.yaml 2>&1 | grep -q "validation failed"; then
+if rocketship validate /tmp/invalid-log-test/rocketship.yaml 2>&1 | grep -q "validation failed"; then
   echo "✅ Log plugin validation test passed: missing message field caught"
 else
   echo "❌ Log plugin validation test failed: missing message field not caught"
@@ -46,7 +46,7 @@ EOF
 
 # Test that validation passes for valid config
 echo "Testing validation of valid log plugin config..."
-if rocketship validate /tmp/valid-log-test.yaml 2>&1 | grep -q "validation passed"; then
+if rocketship validate /tmp/valid-log-test/rocketship.yaml 2>&1 | grep -q "validation passed"; then
   echo "✅ Log plugin validation test passed: valid config accepted"
 else
   echo "❌ Log plugin validation test failed: valid config rejected"
