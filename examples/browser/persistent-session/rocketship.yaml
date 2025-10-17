@@ -22,6 +22,8 @@ tests:
       - name: "summarize via agent"
         plugin: browser_use
         config:
+          llm:
+            provider: "openai"
           session_id: "checkout-{{ .run.id }}"
           task: "Read the page currently open and summarize it in one sentence."
           allowed_domains:
