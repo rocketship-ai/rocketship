@@ -27,12 +27,19 @@ log "Testing browser error handling"
 ./.github/scripts/test-browser-error-handling.sh
 
 log "Executing examples directory"
-OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb")
+set +e  # Temporarily disable exit on error to capture output
+OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb" 2>&1)
+EXIT_CODE=$?
+set -e  # Re-enable exit on error
+
+# Always show the output so we can see which test failed
 echo "$OUTPUT"
+
+# Check if any tests failed
 if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
   log "All examples passed"
 else
-  echo "❌ Example suite failures detected"
+  echo "❌ Example suite failures detected (exit code: $EXIT_CODE)"
   exit 1
 fi
 
