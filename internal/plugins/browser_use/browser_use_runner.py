@@ -183,20 +183,42 @@ async def _run(args: argparse.Namespace) -> None:
             from browser_use.browser.events import SwitchTabEvent
 
             try:
+                # DEBUG: Dump all available targets
+                if hasattr(session, '_cdp_get_all_pages'):
+                    all_targets = await session._cdp_get_all_pages(include_http=True, include_about=True, include_pages=True, include_iframes=False, include_workers=False)
+                    sys.stderr.write(f"[HANDOFF-DEBUG] Found {len(all_targets)} page targets:\n")
+                    for idx, target in enumerate(all_targets):
+                        target_id = target.get('targetId', 'unknown')
+                        url = target.get('url', 'unknown')
+                        target_type = target.get('type', 'unknown')
+                        sys.stderr.write(f"[HANDOFF-DEBUG]   [{idx}] ID={target_id[-12:]}, type={target_type}, url={url[:80]}\n")
+                    sys.stderr.flush()
+
                 # Get the most recently opened/active target (last in the list)
                 active_target_id = await session.get_most_recently_opened_target_id()
 
                 # Only switch if it's different from current focus
                 current_target = session.agent_focus.target_id if session.agent_focus else None
-                logging.debug(f"Refocus check: current={current_target}, active={active_target_id}")
+                sys.stderr.write(f"[HANDOFF-DEBUG] Current focus: {current_target}\n")
+                sys.stderr.write(f"[HANDOFF-DEBUG] Proposed active target: {active_target_id}\n")
+                sys.stderr.flush()
 
                 if active_target_id != current_target:
+                    sys.stderr.write(f"[HANDOFF-DEBUG] Re-focusing from {current_target[-12:] if current_target else 'None'} to {active_target_id[-12:]}\n")
+                    sys.stderr.flush()
                     logging.info(f"Re-focusing from target {current_target[-4:] if current_target else 'None'} to active target {active_target_id[-4:]}")
                     # Dispatch SwitchTabEvent to properly update agent_focus and all watchdogs
                     switch_event = session.event_bus.dispatch(SwitchTabEvent(target_id=active_target_id))
                     await switch_event
+                    sys.stderr.write(f"[HANDOFF-DEBUG] Successfully switched to target {active_target_id[-12:]}\n")
+                    sys.stderr.flush()
                     logging.info(f"Successfully switched to target {active_target_id[-4:]}")
+                else:
+                    sys.stderr.write("[HANDOFF-DEBUG] No switch needed - already on active target\n")
+                    sys.stderr.flush()
             except Exception as refocus_err:
+                sys.stderr.write(f"[HANDOFF-DEBUG] ERROR during refocus: {refocus_err}\n")
+                sys.stderr.flush()
                 logging.warning(f"Failed to re-focus to active target (continuing anyway): {refocus_err}")
                 # Continue execution - the initial target might still work
 
