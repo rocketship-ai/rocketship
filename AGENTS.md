@@ -175,7 +175,7 @@ Plugins implement the `Plugin` interface in `internal/plugins/plugin.go`. Each p
 - `Parse()`: Configuration parsing
 - Plugin-specific types in separate files
 
-Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, browser, supabase, etc.
+Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, playwright, browser_use, supabase, etc.
 
 ### Variable Replacement in Plugins
 
@@ -217,9 +217,14 @@ if err != nil {
 
 This ensures all plugins handle variables identically and support all documented features including escaped handlebars and environment variables.
 
-### Browser Plugin Notes
+### Browser Testing Plugins
 
-The browser plugin uses AI-driven web automation via the `browser-use` Python library. The Python script (`browser_automation.py`) is embedded into the binary using `go:embed` to ensure it's available at runtime.
+Rocketship provides two browser testing plugins:
+
+- **`playwright`**: For low-level browser control and scripted actions
+- **`browser_use`**: For AI-driven web automation using natural language tasks
+
+Both plugins can share persistent browser sessions via Chrome DevTools Protocol (CDP). The browser_use plugin uses the `browser-use` Python library, with scripts embedded into the binary using `go:embed`.
 
 ## 🚀 Minikube Environment (RECOMMENDED)
 
