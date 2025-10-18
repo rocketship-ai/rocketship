@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import inspect
 import json
 import logging
 import sys
@@ -166,15 +167,64 @@ async def _run(args: argparse.Namespace) -> None:
         _write({"ok": False, "error": f"Unsupported LLM provider: {args.llm_provider}"})
         return
 
+    session = None
     try:
         session = BrowserSession(cdp_url=args.ws_endpoint)
-    except Exception:
-        # Fallback to Browser for older versions
+        start_fn = getattr(session, "start", None)
+        if callable(start_fn):
+            maybe_coro = start_fn()
+            if inspect.isawaitable(maybe_coro):
+                await maybe_coro
+
+        # CRITICAL FIX: Re-focus to the correct target after external CDP changes (Playwright handoff)
+        # After start(), session.connect() picks the FIRST target from getTargets(), which may not be
+        # the active tab left open by Playwright. We need to find and switch to the most recently active target.
+        if hasattr(session, 'get_most_recently_opened_target_id') and hasattr(session, 'event_bus'):
+            from browser_use.browser.events import SwitchTabEvent
+
+            try:
+                # Get the most recently opened/active target (last in the list)
+                active_target_id = await session.get_most_recently_opened_target_id()
+
+                # Only switch if it's different from current focus
+                current_target = session.agent_focus.target_id if session.agent_focus else None
+                logging.debug(f"Refocus check: current={current_target}, active={active_target_id}")
+
+                if active_target_id != current_target:
+                    logging.info(f"Re-focusing from target {current_target[-4:] if current_target else 'None'} to active target {active_target_id[-4:]}")
+                    # Dispatch SwitchTabEvent to properly update agent_focus and all watchdogs
+                    switch_event = session.event_bus.dispatch(SwitchTabEvent(target_id=active_target_id))
+                    await switch_event
+                    logging.info(f"Successfully switched to target {active_target_id[-4:]}")
+            except Exception as refocus_err:
+                logging.warning(f"Failed to re-focus to active target (continuing anyway): {refocus_err}")
+                # Continue execution - the initial target might still work
+
+    except Exception as exc:
+        logging.warning("BrowserSession attach failed; falling back to Browser: %s", exc)
+        # Fallback to Browser for older versions or attachment failures
         from browser_use import Browser
 
         browser = Browser(cdp_url=args.ws_endpoint, keep_alive=True)
         await browser.start()
         session = browser
+
+        # Apply same refocus logic to Browser fallback path
+        if hasattr(session, 'get_most_recently_opened_target_id') and hasattr(session, 'event_bus'):
+            from browser_use.browser.events import SwitchTabEvent
+
+            try:
+                active_target_id = await session.get_most_recently_opened_target_id()
+                current_target = session.agent_focus.target_id if session.agent_focus else None
+                logging.debug(f"Fallback refocus check: current={current_target}, active={active_target_id}")
+
+                if active_target_id != current_target:
+                    logging.info(f"Fallback: Re-focusing from target {current_target[-4:] if current_target else 'None'} to active target {active_target_id[-4:]}")
+                    switch_event = session.event_bus.dispatch(SwitchTabEvent(target_id=active_target_id))
+                    await switch_event
+                    logging.info(f"Fallback: Successfully switched to target {active_target_id[-4:]}")
+            except Exception as refocus_err:
+                logging.warning(f"Fallback: Failed to re-focus to active target (continuing anyway): {refocus_err}")
 
     agent_kwargs = {
         "task": args.task,
