@@ -78,8 +78,8 @@ make docs           # Build documentation
 All processes (CLI, engine, worker) use unified structured logging from `internal/cli/logging.go`:
 
 ```bash
-ROCKETSHIP_LOG=DEBUG rocketship run -af test.yaml    # Full debug output
-ROCKETSHIP_LOG=INFO rocketship run -af test.yaml     # Info level (default)
+rocketship run --debug -af test.yaml    # Full debug output
+rocketship run -af test.yaml            # Info level (default)
 ROCKETSHIP_LOG=ERROR rocketship run -af test.yaml    # Errors only
 ```
 
@@ -98,7 +98,7 @@ When debugging complex issues with plugins or workflow state:
 
 ```bash
 # Run with debug logging and save to file for analysis
-export ROCKETSHIP_LOG=DEBUG && rocketship run -af test.yaml --env-file .env 2>&1 > /tmp/debug.log
+rocketship run --debug -af test.yaml --env-file .env 2>&1 > /tmp/debug.log
 
 # Search for specific plugin activity logs
 cat /tmp/debug.log | grep -A 10 "SUPABASE Activity"
@@ -134,7 +134,7 @@ cat /tmp/debug.log | grep -E "(undefined variables|failed to parse template)"
 
 1. **Make code changes** to engine/worker/CLI
 2. **Rebuild binaries**: `make install`
-3. **Test with debug logging**: `ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml`
+3. **Test with debug logging**: `rocketship run --debug -af examples/simple-http/rocketship.yaml`
 4. **Run lint and test suite**: `make lint && make test`
 
 ### Local Development Binary Usage
@@ -145,10 +145,10 @@ The system automatically uses local development binaries from `internal/embedded
 
 ```bash
 # Quick test with debug output
-ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml
+rocketship run --debug -af examples/simple-http/rocketship.yaml
 
 # Background server for iterative testing
-ROCKETSHIP_LOG=DEBUG rocketship start server --background
+rocketship --debug start server --background
 rocketship run --f test.yaml
 rocketship stop server
 

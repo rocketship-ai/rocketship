@@ -1,0 +1,86 @@
+name: Claude Agent with Playwright MCP - Browser Testing
+description: |
+  Demonstrates the new agent plugin with Playwright MCP server integration.
+  Shows persistent browser sessions, variable passing between steps, and
+  Claude Code agent controlling the browser via CDP.
+
+tests:
+  - name: "Agent-driven browser automation with variable passing"
+    cleanup:
+      always:
+        - name: "Stop browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "agent-test-{{ .run.id }}"
+
+    steps:
+      # Step 1: Start persistent browser session
+      - name: "Start browser session"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "agent-test-{{ .run.id }}"
+          headless: false
+
+      # Step 2: Use agent with Playwright MCP to navigate and extract data
+      - name: "Agent: Navigate to example.com and extract title"
+        plugin: agent
+        config:
+          prompt: "Navigate to https://example.com and extract the page title"
+          session_id: "agent-test-{{ .run.id }}"
+          # Configure Playwright MCP server
+          # The agent plugin automatically adds --cdp-endpoint flag using session_id
+          mcp_servers:
+            playwright:
+              type: stdio
+              command: npx
+              args:
+                - "@playwright/mcp@latest"
+          # Everything else uses smart defaults:
+          # - allowed_tools: ["*"] (all MCP tools)
+          # - permission_mode: bypassPermissions (non-blocking for testing)
+          # - max_turns: unlimited
+          # - timeout: unlimited
+        save:
+          - json_path: ".result"
+            as: "agent_response"
+
+      # Step 3: Use playwright script to verify the title
+      - name: "Verify title using direct playwright script"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "agent-test-{{ .run.id }}"
+          script: |
+            # Get the current page title and set result variable
+            result = {"title": page.title(), "verified": True}
+
+        save:
+          - json_path: ".title"
+            as: "verified_title"
+
+      # Step 4: Use agent again to perform a search (demonstrates session continuity)
+      - name: "Agent: Search for IANA on the page"
+        plugin: agent
+        config:
+          prompt: "Find any mention of 'IANA' on the current page"
+          session_id: "agent-test-{{ .run.id }}"
+          mcp_servers:
+            playwright:
+              type: stdio
+              command: npx
+              args:
+                - "@playwright/mcp@latest"
+        save:
+          - json_path: ".result"
+            as: "search_result"
+
+      # Step 5: Log the results
+      - name: "Log test results"
+        plugin: log
+        config:
+          message: |
+            Test completed successfully!
+            Page Title (verified by Playwright): {{ verified_title }}
+            Search Result (from agent): {{ search_result }}

@@ -2,6 +2,8 @@ package agent
 
 import (
 	"testing"
+
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -14,53 +16,131 @@ func TestParseConfig(t *testing.T) {
 		{
 			name: "valid minimal config",
 			configData: map[string]interface{}{
-				"agent":  "claude-code",
 				"prompt": "Test prompt",
 			},
 			expectError: false,
 			expected: &Config{
-				Agent:  "claude-code",
 				Prompt: "Test prompt",
 			},
 		},
 		{
-			name: "valid full config",
+			name: "valid full config with mode and session",
 			configData: map[string]interface{}{
-				"agent":              "claude-code",
-				"prompt":             "Test prompt with {{ variable }}",
-				"mode":               "continue",
-				"session_id":         "session-123",
-				"max_turns":          3,
-				"timeout":            "60s",
-				"system_prompt":      "You are a helpful assistant",
-				"output_format":      "json",
-				"continue_recent":    true,
-				"save_full_response": true,
+				"prompt":        "Test prompt",
+				"mode":          "continue",
+				"session_id":    "session-123",
+				"max_turns":     3,
+				"timeout":       "60s",
+				"system_prompt": "You are a helpful assistant",
+				"cwd":           "/tmp",
 			},
 			expectError: false,
 			expected: &Config{
-				Agent:            "claude-code",
-				Prompt:           "Test prompt with {{ variable }}",
-				Mode:             "continue",
-				SessionID:        "session-123",
-				MaxTurns:         3,
-				Timeout:          "60s",
-				SystemPrompt:     "You are a helpful assistant",
-				OutputFormat:     "json",
-				ContinueRecent:   true,
-				SaveFullResponse: true,
+				Prompt:       "Test prompt",
+				Mode:         ModeContinue,
+				SessionID:    "session-123",
+				MaxTurns:     3,
+				Timeout:      "60s",
+				SystemPrompt: "You are a helpful assistant",
+				Cwd:          "/tmp",
+			},
+		},
+		{
+			name: "config with allowed_tools wildcard",
+			configData: map[string]interface{}{
+				"prompt":        "Test prompt",
+				"allowed_tools": []interface{}{"*"},
+			},
+			expectError: false,
+			expected: &Config{
+				Prompt:       "Test prompt",
+				AllowedTools: []string{"*"},
+			},
+		},
+		{
+			name: "config with specific allowed_tools",
+			configData: map[string]interface{}{
+				"prompt": "Test prompt",
+				"allowed_tools": []interface{}{
+					"mcp__playwright__browser_navigate",
+					"mcp__playwright__browser_click",
+				},
+			},
+			expectError: false,
+			expected: &Config{
+				Prompt: "Test prompt",
+				AllowedTools: []string{
+					"mcp__playwright__browser_navigate",
+					"mcp__playwright__browser_click",
+				},
+			},
+		},
+		{
+			name: "config with MCP stdio server",
+			configData: map[string]interface{}{
+				"prompt": "Test prompt",
+				"mcp_servers": map[string]interface{}{
+					"playwright": map[string]interface{}{
+						"type":    "stdio",
+						"command": "npx",
+						"args": []interface{}{
+							"@playwright/mcp@latest",
+						},
+						"env": map[string]interface{}{
+							"DEBUG": "true",
+						},
+					},
+				},
+			},
+			expectError: false,
+			expected: &Config{
+				Prompt: "Test prompt",
+				MCPServers: map[string]MCPServerConfig{
+					"playwright": {
+						Type:    MCPServerTypeStdio,
+						Command: "npx",
+						Args:    []string{"@playwright/mcp@latest"},
+						Env:     map[string]string{"DEBUG": "true"},
+					},
+				},
+			},
+		},
+		{
+			name: "config with MCP sse server",
+			configData: map[string]interface{}{
+				"prompt": "Test prompt",
+				"mcp_servers": map[string]interface{}{
+					"remote": map[string]interface{}{
+						"type": "sse",
+						"url":  "https://example.com/mcp",
+						"headers": map[string]interface{}{
+							"Authorization": "Bearer token",
+						},
+					},
+				},
+			},
+			expectError: false,
+			expected: &Config{
+				Prompt: "Test prompt",
+				MCPServers: map[string]MCPServerConfig{
+					"remote": {
+						Type: MCPServerTypeSSE,
+						URL:  "https://example.com/mcp",
+						Headers: map[string]string{
+							"Authorization": "Bearer token",
+						},
+					},
+				},
 			},
 		},
 		{
 			name: "max_turns as float64",
 			configData: map[string]interface{}{
-				"agent":     "claude-code",
 				"prompt":    "Test prompt",
 				"max_turns": 5.0, // JSON numbers are parsed as float64
 			},
 			expectError: false,
 			expected: &Config{
-				Agent:    "claude-code",
 				Prompt:   "Test prompt",
 				MaxTurns: 5,
 			},
@@ -69,8 +149,11 @@ func TestParseConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := &Config{}
-			err := parseConfig(tt.configData, config)
+			templateContext := dsl.TemplateContext{
+				Runtime: make(map[string]interface{}),
+			}
+
+			config, err := parseConfig(tt.configData, templateContext)
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -84,17 +167,17 @@ func TestParseConfig(t *testing.T) {
 
 			if !tt.expectError {
 				// Check required fields
-				if config.Agent != tt.expected.Agent {
-					t.Errorf("Expected agent %s, got %s", tt.expected.Agent, config.Agent)
-				}
-
 				if config.Prompt != tt.expected.Prompt {
-					t.Errorf("Expected prompt %s, got %s", tt.expected.Prompt, config.Prompt)
+					t.Errorf("Expected prompt %q, got %q", tt.expected.Prompt, config.Prompt)
 				}
 
 				// Check optional fields if they were set
 				if tt.expected.Mode != "" && config.Mode != tt.expected.Mode {
-					t.Errorf("Expected mode %s, got %s", tt.expected.Mode, config.Mode)
+					t.Errorf("Expected mode %q, got %q", tt.expected.Mode, config.Mode)
+				}
+
+				if tt.expected.SessionID != "" && config.SessionID != tt.expected.SessionID {
+					t.Errorf("Expected session_id %q, got %q", tt.expected.SessionID, config.SessionID)
 				}
 
 				if tt.expected.MaxTurns != 0 && config.MaxTurns != tt.expected.MaxTurns {
@@ -102,19 +185,49 @@ func TestParseConfig(t *testing.T) {
 				}
 
 				if tt.expected.Timeout != "" && config.Timeout != tt.expected.Timeout {
-					t.Errorf("Expected timeout %s, got %s", tt.expected.Timeout, config.Timeout)
+					t.Errorf("Expected timeout %q, got %q", tt.expected.Timeout, config.Timeout)
 				}
 
-				if tt.expected.OutputFormat != "" && config.OutputFormat != tt.expected.OutputFormat {
-					t.Errorf("Expected output_format %s, got %s", tt.expected.OutputFormat, config.OutputFormat)
+				if tt.expected.SystemPrompt != "" && config.SystemPrompt != tt.expected.SystemPrompt {
+					t.Errorf("Expected system_prompt %q, got %q", tt.expected.SystemPrompt, config.SystemPrompt)
 				}
 
-				if config.ContinueRecent != tt.expected.ContinueRecent {
-					t.Errorf("Expected continue_recent %v, got %v", tt.expected.ContinueRecent, config.ContinueRecent)
+				if tt.expected.Cwd != "" && config.Cwd != tt.expected.Cwd {
+					t.Errorf("Expected cwd %q, got %q", tt.expected.Cwd, config.Cwd)
 				}
 
-				if config.SaveFullResponse != tt.expected.SaveFullResponse {
-					t.Errorf("Expected save_full_response %v, got %v", tt.expected.SaveFullResponse, config.SaveFullResponse)
+				if len(tt.expected.AllowedTools) > 0 {
+					if len(config.AllowedTools) != len(tt.expected.AllowedTools) {
+						t.Errorf("Expected %d allowed_tools, got %d", len(tt.expected.AllowedTools), len(config.AllowedTools))
+					} else {
+						for i, tool := range tt.expected.AllowedTools {
+							if config.AllowedTools[i] != tool {
+								t.Errorf("Expected allowed_tool[%d] %q, got %q", i, tool, config.AllowedTools[i])
+							}
+						}
+					}
+				}
+
+				if len(tt.expected.MCPServers) > 0 {
+					if len(config.MCPServers) != len(tt.expected.MCPServers) {
+						t.Errorf("Expected %d mcp_servers, got %d", len(tt.expected.MCPServers), len(config.MCPServers))
+					}
+					for name, expectedServer := range tt.expected.MCPServers {
+						actualServer, ok := config.MCPServers[name]
+						if !ok {
+							t.Errorf("Expected mcp_server %q not found", name)
+							continue
+						}
+						if actualServer.Type != expectedServer.Type {
+							t.Errorf("MCP server %q: expected type %q, got %q", name, expectedServer.Type, actualServer.Type)
+						}
+						if actualServer.Command != expectedServer.Command {
+							t.Errorf("MCP server %q: expected command %q, got %q", name, expectedServer.Command, actualServer.Command)
+						}
+						if actualServer.URL != expectedServer.URL {
+							t.Errorf("MCP server %q: expected url %q, got %q", name, expectedServer.URL, actualServer.URL)
+						}
+					}
 				}
 			}
 		})
@@ -125,28 +238,6 @@ func TestAgentPlugin_GetType(t *testing.T) {
 	plugin := &AgentPlugin{}
 	if plugin.GetType() != "agent" {
 		t.Errorf("Expected plugin type 'agent', got '%s'", plugin.GetType())
-	}
-}
-
-func TestClaudeCodeExecutor_ValidateAvailability(t *testing.T) {
-	executor := NewClaudeCodeExecutor()
-
-	// This test will fail if claude is not installed or ANTHROPIC_API_KEY is not set
-	// but that's expected behavior for the validation
-	err := executor.ValidateAvailability()
-
-	// We can't assert success/failure here since it depends on the environment
-	// This test mainly ensures the method doesn't panic
-	if err != nil {
-		t.Logf("Expected validation failure in test environment: %v", err)
-	} else {
-		t.Logf("Claude Code is available and properly configured")
-	}
-}
-
-func TestAgentType_Constants(t *testing.T) {
-	if AgentClaudeCode != "claude-code" {
-		t.Errorf("Expected AgentClaudeCode to be 'claude-code', got '%s'", AgentClaudeCode)
 	}
 }
 
@@ -164,16 +255,116 @@ func TestExecutionMode_Constants(t *testing.T) {
 	}
 }
 
-func TestOutputFormat_Constants(t *testing.T) {
-	if FormatText != "text" {
-		t.Errorf("Expected FormatText to be 'text', got '%s'", FormatText)
+func TestMCPServerType_Constants(t *testing.T) {
+	if MCPServerTypeStdio != "stdio" {
+		t.Errorf("Expected MCPServerTypeStdio to be 'stdio', got '%s'", MCPServerTypeStdio)
 	}
 
-	if FormatJSON != "json" {
-		t.Errorf("Expected FormatJSON to be 'json', got '%s'", FormatJSON)
+	if MCPServerTypeSSE != "sse" {
+		t.Errorf("Expected MCPServerTypeSSE to be 'sse', got '%s'", MCPServerTypeSSE)
+	}
+}
+
+func TestParseMCPServerConfig_Stdio(t *testing.T) {
+	serverData := map[string]interface{}{
+		"type":    "stdio",
+		"command": "npx",
+		"args":    []interface{}{"@playwright/mcp@latest", "--cdp-endpoint", "ws://localhost:9222"},
+		"env": map[string]interface{}{
+			"DEBUG": "true",
+		},
 	}
 
-	if FormatStreamingJSON != "streaming-json" {
-		t.Errorf("Expected FormatStreamingJSON to be 'streaming-json', got '%s'", FormatStreamingJSON)
+	templateContext := dsl.TemplateContext{
+		Runtime: make(map[string]interface{}),
+	}
+
+	config, err := parseMCPServerConfig(serverData, templateContext)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if config.Type != MCPServerTypeStdio {
+		t.Errorf("Expected type stdio, got %s", config.Type)
+	}
+
+	if config.Command != "npx" {
+		t.Errorf("Expected command npx, got %s", config.Command)
+	}
+
+	if len(config.Args) != 3 {
+		t.Errorf("Expected 3 args, got %d", len(config.Args))
+	}
+
+	if config.Env["DEBUG"] != "true" {
+		t.Errorf("Expected env DEBUG=true, got %s", config.Env["DEBUG"])
+	}
+}
+
+func TestParseMCPServerConfig_SSE(t *testing.T) {
+	serverData := map[string]interface{}{
+		"type": "sse",
+		"url":  "https://example.com/mcp",
+		"headers": map[string]interface{}{
+			"Authorization": "Bearer token123",
+		},
+	}
+
+	templateContext := dsl.TemplateContext{
+		Runtime: make(map[string]interface{}),
+	}
+
+	config, err := parseMCPServerConfig(serverData, templateContext)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if config.Type != MCPServerTypeSSE {
+		t.Errorf("Expected type sse, got %s", config.Type)
+	}
+
+	if config.URL != "https://example.com/mcp" {
+		t.Errorf("Expected URL https://example.com/mcp, got %s", config.URL)
+	}
+
+	if config.Headers["Authorization"] != "Bearer token123" {
+		t.Errorf("Expected Authorization header, got %s", config.Headers["Authorization"])
+	}
+}
+
+func TestParseMCPServerConfig_MissingRequired(t *testing.T) {
+	tests := []struct {
+		name       string
+		serverData map[string]interface{}
+	}{
+		{
+			name: "stdio without command",
+			serverData: map[string]interface{}{
+				"type": "stdio",
+			},
+		},
+		{
+			name: "sse without url",
+			serverData: map[string]interface{}{
+				"type": "sse",
+			},
+		},
+		{
+			name:       "missing type",
+			serverData: map[string]interface{}{},
+		},
+	}
+
+	templateContext := dsl.TemplateContext{
+		Runtime: make(map[string]interface{}),
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseMCPServerConfig(tt.serverData, templateContext)
+			if err == nil {
+				t.Error("Expected error but got none")
+			}
+		})
 	}
 }

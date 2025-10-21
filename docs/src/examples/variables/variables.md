@@ -1,16 +1,65 @@
 # Variables
 
-Rocketship supports three types of variables for parameterizing your tests:
+Rocketship supports four types of variables for parameterizing your tests:
 
 | Type | Syntax | Use Case | Example |
 |------|--------|----------|---------|
 | **Environment** | `{{ .env.VAR }}` | Secrets, API keys, environment-specific URLs | `{{ .env.API_KEY }}` |
 | **Config** | `{{ .vars.name }}` | Test parameters, non-sensitive config | `{{ .vars.base_url }}` |
 | **Runtime** | `{{ variable }}` | Values saved during test execution (including suite hooks) | `{{ user_id }}` |
+| **Built-in** | `{{ .run.id }}` | System-provided metadata about the current test run | `{{ .run.id }}` |
 
 > Suite-level and test-level hook saves both follow the runtime pattern: reference them as `{{ name }}` inside the relevant steps.
 
+## Built-in Variables
+
+Rocketship automatically provides metadata about the current test run:
+
+| Variable | Description | Example Value | Use Case |
+|----------|-------------|---------------|----------|
+| `{{ .run.id }}` | Unique ID for the current test run | `a3f2e91c` | Session IDs, unique test data, file naming |
+
+**Common use case - Persistent browser sessions:**
+```yaml
+- name: "Start browser session"
+  plugin: playwright
+  config:
+    role: start
+    session_id: "test-{{ .run.id }}"  # Unique per test run
+    headless: false
+
+- name: "Use agent with same session"
+  plugin: agent
+  config:
+    session_id: "test-{{ .run.id }}"  # Same session
+    mcp_servers:
+      playwright:
+        type: stdio
+        command: npx
+        args: ["@playwright/mcp@latest"]
+```
+
+**Common use case - Unique test data:**
+```yaml
+- name: "Create test user"
+  plugin: http
+  config:
+    method: POST
+    url: "{{ .env.API_URL }}/users"
+    body: |
+      {
+        "email": "test-{{ .run.id }}@example.com",
+        "username": "user-{{ .run.id }}"
+      }
+```
+
 ## Quick Decision Guide
+
+**Use Built-in Variables (`.run.*`) when:**
+- ✅ You need unique identifiers per test run
+- ✅ You're creating persistent sessions (browser, database)
+- ✅ You want to avoid test data collisions in concurrent runs
+- ✅ You need metadata about the current test execution
 
 **Use Environment Variables (`.env`) when:**
 - ✅ The value is a secret (API key, password, token)

@@ -617,58 +617,99 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": ["agent", "prompt"],
+                "required": ["prompt"],
                 "properties": {
-                  "agent": {
-                    "type": "string",
-                    "enum": ["claude-code"],
-                    "description": "Type of coding agent to use"
-                  },
                   "prompt": {
                     "type": "string",
-                    "description": "Prompt to send to the agent (supports template variables)"
+                    "description": "Task description for the agent (supports template variables)"
                   },
                   "mode": {
                     "type": "string",
                     "enum": ["single", "continue", "resume"],
-                    "description": "Agent execution mode",
-                    "default": "single"
+                    "description": "Execution mode (default: single)"
                   },
                   "session_id": {
                     "type": "string",
-                    "description": "Session ID for resume mode (supports template variables)"
+                    "description": "Session ID for continue/resume modes (supports template variables)"
                   },
                   "max_turns": {
                     "type": "integer",
-                    "description": "Maximum number of conversation turns",
-                    "minimum": 1,
-                    "default": 1
+                    "description": "Maximum conversation turns (default: unlimited)",
+                    "minimum": 1
                   },
                   "timeout": {
                     "type": "string",
                     "pattern": "^[0-9]+(s|m|h)$",
-                    "description": "Agent execution timeout",
-                    "default": "30s"
+                    "description": "Execution timeout (default: unlimited)"
                   },
                   "system_prompt": {
                     "type": "string",
-                    "description": "System prompt for the agent"
+                    "description": "System prompt prepended to conversation (supports template variables)"
                   },
-                  "output_format": {
+                  "cwd": {
                     "type": "string",
-                    "enum": ["text", "json", "streaming-json"],
-                    "description": "Output format from the agent",
-                    "default": "json"
+                    "description": "Working directory for agent execution"
                   },
-                  "continue_recent": {
-                    "type": "boolean",
-                    "description": "Continue the most recent conversation",
-                    "default": false
+                  "mcp_servers": {
+                    "type": "object",
+                    "description": "MCP server configurations",
+                    "additionalProperties": {
+                      "type": "object",
+                      "required": ["type"],
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["stdio", "sse"],
+                          "description": "MCP server type"
+                        },
+                        "command": {
+                          "type": "string",
+                          "description": "Command to execute (required for stdio type)"
+                        },
+                        "args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Command arguments (for stdio type)"
+                        },
+                        "env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Environment variables (for stdio type)"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "HTTP/SSE endpoint URL (required for sse type)"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "HTTP headers (for sse type)"
+                        }
+                      }
+                    }
                   },
-                  "save_full_response": {
-                    "type": "boolean",
-                    "description": "Save the complete response to context",
-                    "default": true
+                  "allowed_tools": {
+                    "oneOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "List of allowed MCP tool names"
+                      },
+                      {
+                        "type": "string",
+                        "enum": ["*"],
+                        "description": "Wildcard to allow all tools"
+                      }
+                    ],
+                    "description": "Tool permissions (default: ['*'] wildcard)"
                   }
                 }
               }
