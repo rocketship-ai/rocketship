@@ -192,15 +192,15 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install browser dependencies
+      - name: Install Python dependencies (browser, agent, playwright)
         run: |
           echo "Installing Python packages..."
-          pip install browser-use playwright langchain-openai
+          pip install browser-use playwright langchain-openai claude-agent-sdk
 
           echo "Installing Playwright browsers with system dependencies..."
           playwright install --with-deps chromium
 
-          echo "✅ Browser dependencies installed"
+          echo "✅ Python dependencies installed"
 
       - name: Wait for databases
         run: ./.github/scripts/wait-for-databases.sh
