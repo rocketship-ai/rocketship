@@ -21,7 +21,7 @@ tests:
         config:
           role: start
           session_id: "agent-test-{{ .run.id }}"
-          headless: false
+          headless: true
 
       # Step 2: Use agent with Playwright MCP to navigate and extract data
       - name: "Agent: Navigate to example.com and extract title"
