@@ -36,7 +36,7 @@ tests:
               type: stdio
               command: npx
               args:
-                - "@playwright/mcp@latest"
+                - "@playwright/mcp@0.0.43"
           # Everything else uses smart defaults:
           # - allowed_tools: ["*"] (all MCP tools)
           # - permission_mode: bypassPermissions (non-blocking for testing)
@@ -71,7 +71,7 @@ tests:
               type: stdio
               command: npx
               args:
-                - "@playwright/mcp@latest"
+                - "@playwright/mcp@0.0.43"
         save:
           - json_path: ".result"
             as: "search_result"
