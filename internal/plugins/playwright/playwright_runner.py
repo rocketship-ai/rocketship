@@ -125,14 +125,14 @@ def _launch_chromium(args: argparse.Namespace) -> Dict[str, Any]:
 
     chrome_args = [executable]
 
-    # Ensure Chromium can launch inside containerised CI environments.
+    # Essential flags for containerised CI environments.
+    # Note: --disable-gpu and --disable-software-rasterizer are intentionally NOT included
+    # to allow WebGL and GPU-accelerated features. Users can add them via launch_args if needed.
     chrome_args.extend(
         [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-software-rasterizer",
         ]
     )
 

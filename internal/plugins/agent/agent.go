@@ -204,6 +204,17 @@ func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[strin
 	// Check if agent needs Playwright MCP with CDP connection
 	if cfg.MCPServers != nil {
 		if playwrightServer, ok := cfg.MCPServers["playwright"]; ok {
+			// Ensure the server config has args array
+			if playwrightServer.Args == nil {
+				playwrightServer.Args = []string{}
+			}
+
+			// Configure output directory for MCP screenshots
+			// All MCP-generated artifacts go to .rocketship/tmp/mcp-<server-name>/
+			outputDir := ".rocketship/tmp/mcp-playwright"
+			playwrightServer.Args = append(playwrightServer.Args, "--output-dir", outputDir)
+			log.Printf("[DEBUG] Configuring Playwright MCP with output directory: %s", outputDir)
+
 			// If session_id is specified in config, try to get CDP endpoint
 			if cfg.SessionID != "" {
 				wsEndpoint, _, err := sessionfile.Read(ctx, cfg.SessionID)
@@ -211,20 +222,15 @@ func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[strin
 					// Configure Playwright MCP server with CDP endpoint
 					log.Printf("[DEBUG] Configuring Playwright MCP with CDP endpoint: %s", wsEndpoint)
 
-					// Ensure the server config has args array
-					if playwrightServer.Args == nil {
-						playwrightServer.Args = []string{}
-					}
-
 					// Add CDP endpoint flag
 					playwrightServer.Args = append(playwrightServer.Args, "--cdp-endpoint", wsEndpoint)
-
-					// Update the config
-					cfg.MCPServers["playwright"] = playwrightServer
 				} else if err != nil {
 					log.Printf("[WARN] Failed to read session file for CDP connection: %v", err)
 				}
 			}
+
+			// Update the config
+			cfg.MCPServers["playwright"] = playwrightServer
 		}
 	}
 

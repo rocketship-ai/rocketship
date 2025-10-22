@@ -207,7 +207,7 @@ func (p *Plugin) handleStart(ctx context.Context, cfg *startConfig) (map[string]
 		args = append(args, "--window-height", fmt.Sprintf("%d", cfg.WindowHeight))
 	}
 	for _, arg := range cfg.LaunchArgs {
-		args = append(args, "--launch-arg", arg)
+		args = append(args, fmt.Sprintf("--launch-arg=%s", arg))
 	}
 
 	cmd := exec.Command("python3", args...)
