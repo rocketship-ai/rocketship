@@ -103,7 +103,6 @@ config:
 ```yaml
 config:
   session_id: "browser-session"   # For browser testing (matches playwright)
-  mode: "single"                  # "single", "continue", or "resume"
   max_turns: 10                   # Max agent loop iterations (default: unlimited)
   timeout: "2m"                   # Max execution time (default: 5m)
   system_prompt: "Custom instructions for Claude"
@@ -198,11 +197,6 @@ config:
 
 ## Advanced Features
 
-**Continue Mode**: Chain prompts with shared context
-```yaml
-mode: "continue"  # Continues previous conversation
-```
-
 **System Prompts**: Customize agent behavior
 ```yaml
 system_prompt: "You are a QA agent. Always return JSON: {\"ok\": bool, \"result\": string}"
@@ -210,20 +204,20 @@ system_prompt: "You are a QA agent. Always return JSON: {\"ok\": bool, \"result\
 
 **Tool Filtering**: Restrict available tools
 ```yaml
-allowed_tools: ["browser_*", "screenshot"]  # Specific tools only
+allowed_tools: ["browser_*", "screenshot"]  # Only allow specific tools
 ```
 
 ## Comparison with browser_use Plugin
 
 | Feature | agent (MCP) | browser_use |
 |---------|-------------|-------------|
-| **Speed** | ✅ Fast (single inference) | ❌ Slow (multi-step loop) |
-| **Model** | Claude Sonnet 4.5 (256k context) | GPT-4o or Claude |
-| **Tools** | Browser + Files + APIs + Custom | Browser only |
-| **Reliability** | ✅ High (fewer deps) | ❌ Lower (complex stack) |
-| **Cost** | ✅ Lower (1 API call) | ❌ Higher (multiple calls) |
+| **Model** | Claude Sonnet 4.5 (256k context) | GPT-4o or Claude (via browser-use) |
+| **Tools** | Browser + Files + APIs + Custom MCP servers | Browser only |
+| **Architecture** | MCP server protocol | Integrated browser agent library |
 
-**Recommendation**: Use the agent plugin for all browser testing unless you specifically need `browser_use` for legacy compatibility.
+**When to use agent plugin**: Multi-tool workflows (browser + database + files), complex test verification, or leveraging Claude Sonnet 4.5's capabilities.
+
+**When to use browser_use**: Legacy compatibility or simple browser-only automation tasks.
 
 ## Best Practices
 

@@ -2,6 +2,10 @@
 """
 Claude Agent SDK executor for Rocketship.
 Supports MCP servers, sessions, and structured output.
+
+Requirements:
+- claude-agent-sdk >= 0.1.0
+- Claude Code >= v2.0.0 (recommended)
 """
 import argparse
 import asyncio
@@ -36,11 +40,15 @@ def _write(payload: dict) -> None:
 
 
 def _check_versions() -> Optional[dict]:
-    """Check required package versions. Returns error dict if versions insufficient, None if OK."""
+    """
+    Check required package versions. Returns error dict if versions insufficient, None if OK.
+
+    Note: This plugin requires Claude Code >= v2.0.0 for full functionality.
+    """
     from importlib.metadata import version, PackageNotFoundError
 
     required = {
-        "claude-agent-sdk": "0.1.0",  # Minimum version
+        "claude-agent-sdk": "0.1.0",  # Minimum version for MCP support
     }
 
     for package, min_version in required.items():

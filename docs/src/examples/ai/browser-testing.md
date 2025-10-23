@@ -1,12 +1,6 @@
 # Browser Testing - AI-Powered Web Automation
 
-> ⚠️ **PERFORMANCE WARNING**: The `browser_use` plugin shown in this guide is **not recommended** for most browser testing use cases. Consider using the **`agent` plugin** with Playwright MCP instead, which offers:
-> - ✅ Faster execution (single Claude inference vs. multi-step agent loop)
-> - ✅ Better reliability (fewer dependencies, cleaner architecture)
-> - ✅ More capabilities (browser + filesystem + APIs + database via MCP servers)
-> - ✅ Lower cost (single API call vs. multiple calls)
->
-> **See the [Agent Plugin Examples](../agent/browser-testing.md) for the recommended approach.**
+> ℹ️ **Alternative Available**: The `agent` plugin provides browser testing via Playwright MCP and can combine browser automation with other tools (filesystem, APIs, database). See [Agent Plugin Examples](../agent/agent-testing.md) for the MCP-based approach.
 
 Test web applications using persistent browser sessions that combine deterministic scripting (Playwright) with AI-driven automation (browser_use).
 

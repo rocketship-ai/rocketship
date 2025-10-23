@@ -35,11 +35,13 @@ The plugin includes a default system prompt that ensures consistent output. Ever
 ```
 
 **Just write your task naturally:**
+
 ```yaml
 prompt: "Navigate to example.com and verify the page title is 'Example Domain'"
 ```
 
 The agent will:
+
 - Execute the task using available MCP servers
 - Decide if it succeeded or failed
 - Always return JSON with `ok: true/false`
@@ -120,7 +122,7 @@ export ANTHROPIC_API_KEY=your_api_key_here
     # MCP servers configuration
     mcp_servers:
       playwright:
-        type: stdio  # or "sse" for HTTP/SSE servers
+        type: stdio # or "sse" for HTTP/SSE servers
         command: npx
         args:
           - "@playwright/mcp@latest"
@@ -195,7 +197,7 @@ steps:
     plugin: agent
     config:
       prompt: "Navigate to example.com and click the login button"
-      session_id: "test-{{ .run.id }}"  # Same session ID!
+      session_id: "test-{{ .run.id }}" # Same session ID!
 
       mcp_servers:
         playwright:
@@ -208,6 +210,7 @@ steps:
 ```
 
 **How it works:**
+
 1. The `playwright` plugin starts a browser and saves the CDP WebSocket endpoint
 2. The `agent` plugin reads the CDP endpoint using the same `session_id`
 3. The agent automatically adds `--cdp-endpoint <ws_url>` to the Playwright MCP server args
@@ -216,6 +219,7 @@ steps:
 ### 3. Execution Modes
 
 #### Single Mode (Default)
+
 One-off execution with no session persistence:
 
 ```yaml
@@ -225,6 +229,7 @@ config:
 ```
 
 #### Continue Mode
+
 Continues the most recent conversation:
 
 ```yaml
@@ -234,6 +239,7 @@ config:
 ```
 
 #### Resume Mode
+
 Resumes a specific session by ID:
 
 ```yaml
@@ -263,9 +269,7 @@ allowed_tools:
 
 Fine-grained control over agent capabilities:
 
-- **`rejectEdits`** (default, **recommended for QA**): Agent can use tools (MCP servers) but cannot edit files. Perfect for testing/QA scenarios where the agent should interact with browsers, databases, APIs, etc., but not modify your codebase.
-- **`acceptEdits`**: Agent can use tools AND edit files. Only use this if you explicitly want the agent to modify code.
-- **`rejectAll`**: Agent cannot use any tools (text generation only). Rarely needed.
+> **Note:** The permission mode is currently hardcoded to `bypassPermissions` for non-interactive, automated QA workflows. Users cannot configure permission modes at this time. The agent will never ask for user input or pause for permission.
 
 ### 6. Variable Saving and Passing
 
@@ -344,6 +348,7 @@ steps:
 ### Example 3: Interweaved Steps with Variable Passing
 
 See `examples/agent-browser-testing/rocketship.yaml` for a complete example showing:
+
 - Starting a persistent browser session
 - Agent using Playwright MCP via CDP
 - Variable extraction and passing between steps
@@ -352,16 +357,16 @@ See `examples/agent-browser-testing/rocketship.yaml` for a complete example show
 
 ## Comparison to browser_use Plugin
 
-| Feature | agent (new) | browser_use (deprecated) |
-|---------|-------------|--------------------------|
-| **AI Model** | Claude Code (latest Sonnet 4.5) | Various (GPT-4o, etc.) |
-| **Browser Control** | Playwright MCP via CDP | browser-use Python library |
-| **Accuracy** | Excellent | Poor |
-| **MCP Support** | Full support for any MCP server | None |
-| **Session Persistence** | Full CDP integration | Limited |
-| **Tool Ecosystem** | Entire MCP ecosystem | browser-use only |
-| **Variable Passing** | Full JSON path support | Limited |
-| **Performance** | Fast with direct CDP | Slower with Python library |
+| Feature                 | agent (new)                     | browser_use (deprecated)   |
+| ----------------------- | ------------------------------- | -------------------------- |
+| **AI Model**            | Claude Code (latest Sonnet 4.5) | Various (GPT-4o, etc.)     |
+| **Browser Control**     | Playwright MCP via CDP          | browser-use Python library |
+| **Accuracy**            | Excellent                       | Poor                       |
+| **MCP Support**         | Full support for any MCP server | None                       |
+| **Session Persistence** | Full CDP integration            | Limited                    |
+| **Tool Ecosystem**      | Entire MCP ecosystem            | browser-use only           |
+| **Variable Passing**    | Full JSON path support          | Limited                    |
+| **Performance**         | Fast with direct CDP            | Slower with Python library |
 
 **Recommendation**: Use the `agent` plugin with Playwright MCP instead of `browser_use` for all browser automation tasks.
 
@@ -374,6 +379,7 @@ error: agent executor returned no output
 ```
 
 **Solution**: Ensure claude-agent-sdk is installed:
+
 ```bash
 pip install claude-agent-sdk
 ```
@@ -385,6 +391,7 @@ error: ANTHROPIC_API_KEY environment variable is required
 ```
 
 **Solution**: Set your API key:
+
 ```bash
 export ANTHROPIC_API_KEY=your_key_here
 ```
@@ -396,6 +403,7 @@ error: command not found: npx
 ```
 
 **Solution**: Install Node.js and the Playwright MCP server:
+
 ```bash
 npm install -g @playwright/mcp
 ```
@@ -438,12 +446,14 @@ The Python script is embedded in the binary using `go:embed` and extracted to a 
 ### MCP Server Config
 
 #### stdio Type
+
 - **`type`**: "stdio"
 - **`command`** (string, required): Command to execute
 - **`args`** ([]string): Command arguments
 - **`env`** (map[string]string): Environment variables
 
 #### sse Type
+
 - **`type`**: "sse"
 - **`url`** (string, required): HTTP/SSE endpoint URL
 - **`headers`** (map[string]string): HTTP headers
