@@ -219,12 +219,20 @@ This ensures all plugins handle variables identically and support all documented
 
 ### Browser Testing Plugins
 
-Rocketship provides two browser testing plugins:
+Rocketship provides three browser testing plugins:
 
-- **`playwright`**: For low-level browser control and scripted actions
-- **`browser_use`**: For AI-driven web automation using natural language tasks
+- **`playwright`**: For low-level browser control and scripted actions (Python-based, uses Playwright library)
+- **`browser_use`**: For AI-driven web automation using natural language tasks (Python-based, uses `browser-use` library)
+- **`agent`**: For AI-driven testing using Claude with MCP servers (Python-based, uses Claude Agent SDK)
 
-Both plugins can share persistent browser sessions via Chrome DevTools Protocol (CDP). The browser_use plugin uses the `browser-use` Python library, with scripts embedded into the binary using `go:embed`.
+All three plugins support persistent browser sessions. The `playwright` and `browser_use` plugins manage browser instances directly, while the `agent` plugin can connect to browser sessions via Chrome DevTools Protocol (CDP) when using the Playwright MCP server (`@playwright/mcp`). This allows the agent to control browsers launched by the playwright plugin, enabling powerful multi-step workflows where low-level browser setup can be combined with high-level AI-driven interactions.
+
+**Key Differences:**
+- **`playwright`**: Direct Python Playwright API control - best for deterministic, scripted browser actions
+- **`browser_use`**: AI agent with browser control - best for complex navigation with natural language
+- **`agent`**: Claude-powered agent with MCP tool access - best for test verification, analysis, and workflows requiring multiple tool types (browser via Playwright MCP, filesystem, APIs, etc.)
+
+All Python-based browser plugins have their scripts embedded into the binary using `go:embed`.
 
 ## 🚀 Minikube Environment (RECOMMENDED)
 
