@@ -1025,7 +1025,7 @@
         
   
   <span class="md-ellipsis">
-    Browser Plugin
+    Browser Testing Plugins
   </span>
   
 
@@ -1435,15 +1435,6 @@
   <a href="#plugin-agent" class="md-nav__link">
     <span class="md-ellipsis">
       Plugin: agent
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#plugin-browser" class="md-nav__link">
-    <span class="md-ellipsis">
-      Plugin: browser
     </span>
   </a>
   
@@ -2381,15 +2372,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#plugin-browser" class="md-nav__link">
-    <span class="md-ellipsis">
-      Plugin: browser
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#plugin-supabase" class="md-nav__link">
     <span class="md-ellipsis">
       Plugin: supabase
@@ -2540,7 +2522,6 @@
 <li><code>sql</code></li>
 <li><code>log</code></li>
 <li><code>agent</code></li>
-<li><code>browser</code></li>
 <li><code>playwright</code></li>
 <li><code>browser_use</code></li>
 <li><code>supabase</code></li>
@@ -2837,206 +2818,66 @@
 </thead>
 <tbody>
 <tr>
-<td><code>agent</code></td>
-<td>✅</td>
-<td>Type of coding agent to use</td>
-<td><code>claude-code</code></td>
-<td>-</td>
-</tr>
-<tr>
 <td><code>prompt</code></td>
 <td>✅</td>
-<td>Prompt to send to the agent (supports template variables)</td>
+<td>Task description for the agent (supports template variables)</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>mode</code></td>
 <td></td>
-<td>Agent execution mode</td>
+<td>Execution mode (default: single)</td>
 <td><code>single</code>, <code>continue</code>, <code>resume</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>session_id</code></td>
 <td></td>
-<td>Session ID for resume mode (supports template variables)</td>
+<td>Session ID for continue/resume modes (supports template variables)</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>max_turns</code></td>
 <td></td>
-<td>Maximum number of conversation turns</td>
+<td>Maximum conversation turns (default: unlimited)</td>
 <td><code>integer</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>timeout</code></td>
 <td></td>
-<td>Agent execution timeout</td>
+<td>Execution timeout (default: unlimited)</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>system_prompt</code></td>
 <td></td>
-<td>System prompt for the agent</td>
+<td>System prompt prepended to conversation (supports template variables)</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
-<td><code>output_format</code></td>
+<td><code>cwd</code></td>
 <td></td>
-<td>Output format from the agent</td>
-<td><code>text</code>, <code>json</code>, <code>streaming-json</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>continue_recent</code></td>
-<td></td>
-<td>Continue the most recent conversation</td>
-<td><code>boolean</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>save_full_response</code></td>
-<td></td>
-<td>Save the complete response to context</td>
-<td><code>boolean</code></td>
-<td>-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="plugin-browser">Plugin: <code>browser</code></h3>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Required</th>
-<th>Description</th>
-<th>Type / Allowed Values</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>task</code></td>
-<td>✅</td>
-<td>Task description for the browser agent to perform (supports template variables)</td>
+<td>Working directory for agent execution</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
-<td><code>llm</code></td>
-<td>✅</td>
-<td>No description</td>
+<td><code>mcp_servers</code></td>
+<td></td>
+<td>MCP server configurations</td>
 <td><code>object</code></td>
 <td>-</td>
 </tr>
 <tr>
-<td><code>llm.provider</code></td>
-<td>✅</td>
-<td>LLM provider to use</td>
-<td><code>openai</code>, <code>anthropic</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>llm.model</code></td>
-<td>✅</td>
-<td>LLM model to use (e.g., gpt-4, claude-3-sonnet)</td>
-<td><code>string</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>llm.config</code></td>
+<td><code>allowed_tools</code></td>
 <td></td>
-<td>LLM configuration (API keys, etc.)</td>
-<td><code>object</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>executor_type</code></td>
-<td></td>
-<td>Browser executor type</td>
-<td><code>python</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>timeout</code></td>
-<td></td>
-<td>Browser automation timeout</td>
-<td><code>string</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>max_steps</code></td>
-<td></td>
-<td>Maximum number of browser automation steps</td>
-<td><code>integer</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>browser_type</code></td>
-<td></td>
-<td>Browser type to use</td>
-<td><code>chromium</code>, <code>chrome</code>, <code>edge</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>headless</code></td>
-<td></td>
-<td>Run browser in headless mode</td>
-<td><code>boolean</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>use_vision</code></td>
-<td></td>
-<td>Enable visual processing</td>
-<td><code>boolean</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>session_id</code></td>
-<td></td>
-<td>Browser session ID for session persistence (supports template variables)</td>
-<td><code>string</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>save_screenshots</code></td>
-<td></td>
-<td>Save screenshots during execution</td>
-<td><code>boolean</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>allowed_domains[]</code></td>
-<td></td>
-<td>List of allowed domains for browser navigation</td>
-<td><code>array of string</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>viewport</code></td>
-<td></td>
-<td>Browser viewport configuration</td>
-<td><code>object</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>viewport.width</code></td>
-<td></td>
-<td>Viewport width in pixels</td>
-<td><code>integer</code></td>
-<td>-</td>
-</tr>
-<tr>
-<td><code>viewport.height</code></td>
-<td></td>
-<td>Viewport height in pixels</td>
-<td><code>integer</code></td>
+<td>Tool permissions (default: ['*'] wildcard)</td>
+<td><code>any</code></td>
 <td>-</td>
 </tr>
 </tbody>
