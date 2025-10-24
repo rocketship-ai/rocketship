@@ -61,6 +61,7 @@ type Response struct {
 	Success   bool              `json:"ok"`
 	Error     string            `json:"error,omitempty"`
 	Result    string            `json:"result,omitempty"`
+	Variables map[string]string `json:"variables,omitempty"` // Auto-saved to workflow state
 	SessionID string            `json:"session_id,omitempty"`
 	Mode      string            `json:"mode,omitempty"`
 	Metadata  map[string]string `json:"metadata,omitempty"`

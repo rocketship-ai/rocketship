@@ -1,11 +1,19 @@
-name: Claude Agent with Playwright MCP - Browser Testing
+name: Claude Agent with Playwright MCP - Variable Passing
 description: |
-  Demonstrates the new agent plugin with Playwright MCP server integration.
-  Shows persistent browser sessions, variable passing between steps, and
-  Claude Code agent controlling the browser via CDP.
+  Demonstrates agent plugin variable passing with Playwright MCP.
+
+  This test shows TWO ways to save variables:
+  1. Natural language: Agent auto-saves when told "save as 'var_name'"
+  2. Explicit config: Traditional save configs with json_path
+
+  Flow demonstrates:
+  - Agent extracts data (natural language save)
+  - Playwright extracts data (explicit save config)
+  - Agent uses BOTH saved variables in subsequent prompt
+  - Cross-plugin variable flow throughout workflow
 
 tests:
-  - name: "Agent-driven browser automation with variable passing"
+  - name: "Agent variable passing: natural language + explicit"
     cleanup:
       always:
         - name: "Stop browser session"
@@ -23,48 +31,50 @@ tests:
           session_id: "agent-test-{{ .run.id }}"
           headless: true
 
-      # Step 2: Use agent with Playwright MCP to navigate and extract data
-      - name: "Agent: Navigate to example.com and extract title"
+      # Step 2: Natural language save - Agent extracts heading
+      - name: "Agent: Extract heading (natural language save)"
         plugin: agent
         config:
-          prompt: "Navigate to https://example.com and extract the page title"
+          prompt: |
+            Navigate to https://example.com
+
+            Extract the main heading text from the page and save it as 'page_heading'
           session_id: "agent-test-{{ .run.id }}"
-          # Configure Playwright MCP server
-          # The agent plugin automatically adds --cdp-endpoint flag using session_id
           mcp_servers:
             playwright:
               type: stdio
               command: npx
               args:
                 - "@playwright/mcp@0.0.43"
-          # Everything else uses smart defaults:
-          # - allowed_tools: ["*"] (all MCP tools)
-          # - permission_mode: bypassPermissions (non-blocking for testing)
-          # - max_turns: unlimited
-          # - timeout: unlimited
+        # Natural language save preferred, but explicit config as fallback
         save:
           - json_path: ".result"
-            as: "agent_response"
+            as: "page_heading"
 
-      # Step 3: Use playwright script to verify the title
-      - name: "Verify title using direct playwright script"
+      # Step 3: Explicit save - Playwright gets URL
+      - name: "Playwright: Get current page URL (explicit save)"
         plugin: playwright
         config:
           role: script
           session_id: "agent-test-{{ .run.id }}"
           script: |
-            # Get the current page title and set result variable
-            result = {"title": page.title(), "verified": True}
-
+            # Get current URL using Playwright API
+            result = {"url": page.url}
         save:
-          - json_path: ".title"
-            as: "verified_title"
+          - json_path: ".url"
+            as: "current_url"
 
-      # Step 4: Use agent again to perform a search (demonstrates session continuity)
-      - name: "Agent: Search for IANA on the page"
+      # Step 4: Agent uses BOTH saved variables + natural language save for link
+      - name: "Agent: Verify and extract link (uses both variables)"
         plugin: agent
         config:
-          prompt: "Find any mention of 'IANA' on the current page"
+          prompt: |
+            You are currently on {{ current_url }}.
+
+            The previous step reported: {{ page_heading }}
+
+            Verify the page heading contains "Example Domain".
+            Then find the link that says "More information..." or similar and extract its href URL.
           session_id: "agent-test-{{ .run.id }}"
           mcp_servers:
             playwright:
@@ -72,15 +82,25 @@ tests:
               command: npx
               args:
                 - "@playwright/mcp@0.0.43"
+        # Natural language save preferred, but explicit config as fallback
         save:
           - json_path: ".result"
-            as: "search_result"
+            as: "info_link"
 
-      # Step 5: Log the results
-      - name: "Log test results"
+      # Step 5: Log all variables to show the complete flow
+      - name: "Log variable flow results"
         plugin: log
         config:
           message: |
-            Test completed successfully!
-            Page Title (verified by Playwright): {{ verified_title }}
-            Search Result (from agent): {{ search_result }}
+            ✅ Variable Passing Test Complete!
+
+            Variables saved and used:
+            - page_heading (Agent, natural language): {{ page_heading }}
+            - current_url (Playwright, explicit save): {{ current_url }}
+            - info_link (Agent, natural language): {{ info_link }}
+
+            This demonstrates:
+            ✓ Natural language variable saves (no config needed)
+            ✓ Explicit save configs (traditional approach)
+            ✓ Agent→Playwright→Agent variable passing
+            ✓ Variables flow across different plugin types

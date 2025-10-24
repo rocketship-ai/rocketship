@@ -74,11 +74,15 @@ func (ap *AgentPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 
 Ultrathink. Use the MCP servers available to you if applicable.
 
-ALWAYS return your final result as JSON with this exact schema:
-- If the task succeeds: {"ok": true, "result": "description of what you found/did"}
-- If the task fails: {"ok": false, "error": "specific reason for failure"}
+ALWAYS return your final result as JSON with this EXACT schema:
+- If the task succeeds: {"ok": true, "result": "<a string describing what you found/did>", "variables": {"var_name": <value>, ...}}
+- If the task fails: {"ok": false, "error": "<a string describing the specific reason for failure>"}
 
-No file writing. No awaiting user input.`
+IMPORTANT: When the user asks to "save X as 'var_name'", you MUST include a "variables" object.
+Example: "save the heading as 'page_heading'" → {"ok": true, "result": "Found heading", "variables": {"page_heading": "Example Domain"}}
+
+No code changing. No awaiting user input. If you need file writing as a scratchpad, write to mkdir -p .rocketship/tmp directory.
+Clean it up after you are done with the task.`
 	}
 
 	// Default to wildcard tools - if you're using MCP servers, you want to use them
@@ -519,12 +523,22 @@ func extractState(p map[string]interface{}) map[string]interface{} {
 
 // processSaves processes the save configuration and extracts values from the agent response
 func processSaves(p map[string]interface{}, execResult *ExecutorResult, saved map[string]string) error {
+	// First: Auto-save from agent's variables field (natural language saves)
+	if len(execResult.Response.Variables) > 0 {
+		log.Printf("[DEBUG] Auto-saving %d variables from agent response", len(execResult.Response.Variables))
+		for key, value := range execResult.Response.Variables {
+			saved[key] = value
+			log.Printf("[DEBUG] Auto-saved variable: %s = %s", key, value)
+		}
+	}
+
+	// Second: Process explicit save configurations (can override auto-saved variables)
 	saves, ok := p["save"].([]interface{})
 	if !ok {
 		return nil
 	}
 
-	log.Printf("[DEBUG] Processing %d saves", len(saves))
+	log.Printf("[DEBUG] Processing %d explicit save configs", len(saves))
 	for _, save := range saves {
 		saveMap, ok := save.(map[string]interface{})
 		if !ok {
