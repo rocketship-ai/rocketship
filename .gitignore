@@ -29,6 +29,10 @@ cli-introspection.json
 **/.env
 .rocketship/
 
+# MCP server temporary artifacts (screenshots, etc.)
+# MCP servers write to .rocketship/tmp/mcp-<server-name>/
+.rocketship/tmp/
+
 # rocketship-internal code
 rocketship-internal
 charts/rocketship-internal/

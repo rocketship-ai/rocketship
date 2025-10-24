@@ -78,8 +78,8 @@ make docs           # Build documentation
 All processes (CLI, engine, worker) use unified structured logging from `internal/cli/logging.go`:
 
 ```bash
-ROCKETSHIP_LOG=DEBUG rocketship run -af test.yaml    # Full debug output
-ROCKETSHIP_LOG=INFO rocketship run -af test.yaml     # Info level (default)
+rocketship run --debug -af test.yaml    # Full debug output
+rocketship run -af test.yaml            # Info level (default)
 ROCKETSHIP_LOG=ERROR rocketship run -af test.yaml    # Errors only
 ```
 
@@ -98,7 +98,7 @@ When debugging complex issues with plugins or workflow state:
 
 ```bash
 # Run with debug logging and save to file for analysis
-export ROCKETSHIP_LOG=DEBUG && rocketship run -af test.yaml --env-file .env 2>&1 > /tmp/debug.log
+rocketship run --debug -af test.yaml --env-file .env 2>&1 > /tmp/debug.log
 
 # Search for specific plugin activity logs
 cat /tmp/debug.log | grep -A 10 "SUPABASE Activity"
@@ -134,7 +134,7 @@ cat /tmp/debug.log | grep -E "(undefined variables|failed to parse template)"
 
 1. **Make code changes** to engine/worker/CLI
 2. **Rebuild binaries**: `make install`
-3. **Test with debug logging**: `ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml`
+3. **Test with debug logging**: `rocketship run --debug -af examples/simple-http/rocketship.yaml`
 4. **Run lint and test suite**: `make lint && make test`
 
 ### Local Development Binary Usage
@@ -145,10 +145,10 @@ The system automatically uses local development binaries from `internal/embedded
 
 ```bash
 # Quick test with debug output
-ROCKETSHIP_LOG=DEBUG rocketship run -af examples/simple-http/rocketship.yaml
+rocketship run --debug -af examples/simple-http/rocketship.yaml
 
 # Background server for iterative testing
-ROCKETSHIP_LOG=DEBUG rocketship start server --background
+rocketship --debug start server --background
 rocketship run --f test.yaml
 rocketship stop server
 
@@ -175,7 +175,7 @@ Plugins implement the `Plugin` interface in `internal/plugins/plugin.go`. Each p
 - `Parse()`: Configuration parsing
 - Plugin-specific types in separate files
 
-Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, browser, supabase, etc.
+Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, playwright, browser_use, supabase, etc.
 
 ### Variable Replacement in Plugins
 
@@ -217,9 +217,22 @@ if err != nil {
 
 This ensures all plugins handle variables identically and support all documented features including escaped handlebars and environment variables.
 
-### Browser Plugin Notes
+### Browser Testing Plugins
 
-The browser plugin uses AI-driven web automation via the `browser-use` Python library. The Python script (`browser_automation.py`) is embedded into the binary using `go:embed` to ensure it's available at runtime.
+Rocketship provides three browser testing plugins:
+
+- **`playwright`**: For low-level browser control and scripted actions (Python-based, uses Playwright library)
+- **`browser_use`**: For AI-driven web automation using natural language tasks (Python-based, uses `browser-use` library)
+- **`agent`**: For AI-driven testing using Claude with MCP servers (Python-based, uses Claude Agent SDK)
+
+All three plugins support persistent browser sessions. The `playwright` and `browser_use` plugins manage browser instances directly, while the `agent` plugin can connect to browser sessions via Chrome DevTools Protocol (CDP) when using the Playwright MCP server (`@playwright/mcp`). This allows the agent to control browsers launched by the playwright plugin, enabling powerful multi-step workflows where low-level browser setup can be combined with high-level AI-driven interactions.
+
+**Key Differences:**
+- **`playwright`**: Direct Python Playwright API control - best for deterministic, scripted browser actions
+- **`browser_use`**: AI agent with browser control - best for complex navigation with natural language
+- **`agent`**: Claude-powered agent with MCP tool access - best for test verification, analysis, and workflows requiring multiple tool types (browser via Playwright MCP, filesystem, APIs, etc.)
+
+All Python-based browser plugins have their scripts embedded into the binary using `go:embed`.
 
 ## 🚀 Minikube Environment (RECOMMENDED)
 

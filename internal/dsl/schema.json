@@ -3,10 +3,7 @@
   "title": "Rocketship Test Suite Schema",
   "description": "Schema for Rocketship test suite definition files",
   "type": "object",
-  "required": [
-    "name",
-    "tests"
-  ],
+  "required": ["name", "tests"],
   "properties": {
     "name": {
       "type": "string",
@@ -46,9 +43,7 @@
           "description": "Duration (e.g. 30m, 1h) before a cached spec is automatically reloaded"
         }
       },
-      "required": [
-        "spec"
-      ]
+      "required": ["spec"]
     },
     "init": {
       "type": "array",
@@ -63,10 +58,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": [
-          "name",
-          "steps"
-        ],
+        "required": ["name", "steps"],
         "properties": {
           "name": {
             "type": "string",
@@ -136,11 +128,7 @@
   "definitions": {
     "step": {
       "type": "object",
-      "required": [
-        "name",
-        "plugin",
-        "config"
-      ],
+      "required": ["name", "plugin", "config"],
       "properties": {
         "name": {
           "type": "string",
@@ -156,7 +144,6 @@
             "sql",
             "log",
             "agent",
-            "browser",
             "playwright",
             "browser_use",
             "supabase"
@@ -171,10 +158,7 @@
           "description": "Assertions to validate the response",
           "items": {
             "type": "object",
-            "required": [
-              "type",
-              "expected"
-            ],
+            "required": ["type", "expected"],
             "properties": {
               "type": {
                 "type": "string",
@@ -222,66 +206,48 @@
                 "if": {
                   "properties": {
                     "type": {
-                      "enum": [
-                        "json_path"
-                      ]
+                      "enum": ["json_path"]
                     }
                   }
                 },
                 "then": {
-                  "required": [
-                    "path"
-                  ]
+                  "required": ["path"]
                 }
               },
               {
                 "if": {
                   "properties": {
                     "type": {
-                      "enum": [
-                        "header"
-                      ]
+                      "enum": ["header"]
                     }
                   }
                 },
                 "then": {
-                  "required": [
-                    "name"
-                  ]
+                  "required": ["name"]
                 }
               },
               {
                 "if": {
                   "properties": {
                     "type": {
-                      "enum": [
-                        "row_count"
-                      ]
+                      "enum": ["row_count"]
                     }
                   }
                 },
                 "then": {
-                  "required": [
-                    "query_index"
-                  ]
+                  "required": ["query_index"]
                 }
               },
               {
                 "if": {
                   "properties": {
                     "type": {
-                      "enum": [
-                        "column_value"
-                      ]
+                      "enum": ["column_value"]
                     }
                   }
                 },
                 "then": {
-                  "required": [
-                    "query_index",
-                    "row_index",
-                    "column"
-                  ]
+                  "required": ["query_index", "row_index", "column"]
                 }
               }
             ]
@@ -292,9 +258,7 @@
           "description": "Response values to save for use in later steps",
           "items": {
             "type": "object",
-            "required": [
-              "as"
-            ],
+            "required": ["as"],
             "properties": {
               "json_path": {
                 "type": "string",
@@ -319,19 +283,13 @@
             },
             "oneOf": [
               {
-                "required": [
-                  "json_path"
-                ]
+                "required": ["json_path"]
               },
               {
-                "required": [
-                  "header"
-                ]
+                "required": ["header"]
               },
               {
-                "required": [
-                  "sql_result"
-                ]
+                "required": ["sql_result"]
               }
             ]
           }
@@ -383,10 +341,7 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": [
-                  "method",
-                  "url"
-                ],
+                "required": ["method", "url"],
                 "properties": {
                   "method": {
                     "type": "string",
@@ -456,16 +411,11 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": [
-                  "language"
-                ],
+                "required": ["language"],
                 "properties": {
                   "language": {
                     "type": "string",
-                    "enum": [
-                      "javascript",
-                      "shell"
-                    ],
+                    "enum": ["javascript", "shell"],
                     "description": "Script language to use"
                   },
                   "script": {
@@ -484,14 +434,10 @@
                 },
                 "oneOf": [
                   {
-                    "required": [
-                      "script"
-                    ]
+                    "required": ["script"]
                   },
                   {
-                    "required": [
-                      "file"
-                    ]
+                    "required": ["file"]
                   }
                 ]
               }
@@ -510,19 +456,11 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": [
-                  "driver",
-                  "dsn"
-                ],
+                "required": ["driver", "dsn"],
                 "properties": {
                   "driver": {
                     "type": "string",
-                    "enum": [
-                      "postgres",
-                      "mysql",
-                      "sqlite",
-                      "sqlserver"
-                    ],
+                    "enum": ["postgres", "mysql", "sqlite", "sqlserver"],
                     "description": "Database driver to use"
                   },
                   "dsn": {
@@ -549,14 +487,10 @@
                 },
                 "oneOf": [
                   {
-                    "required": [
-                      "commands"
-                    ]
+                    "required": ["commands"]
                   },
                   {
-                    "required": [
-                      "file"
-                    ]
+                    "required": ["file"]
                   }
                 ]
               },
@@ -565,9 +499,7 @@
                 "description": "SQL result values to save for use in later steps",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "sql_result"
-                  ],
+                  "required": ["sql_result"],
                   "properties": {
                     "sql_result": {
                       "type": "string",
@@ -589,10 +521,7 @@
                 "description": "Assertions to validate SQL execution results",
                 "items": {
                   "type": "object",
-                  "required": [
-                    "type",
-                    "expected"
-                  ],
+                  "required": ["type", "expected"],
                   "properties": {
                     "type": {
                       "type": "string",
@@ -627,34 +556,24 @@
                       "if": {
                         "properties": {
                           "type": {
-                            "enum": [
-                              "row_count"
-                            ]
+                            "enum": ["row_count"]
                           }
                         }
                       },
                       "then": {
-                        "required": [
-                          "query_index"
-                        ]
+                        "required": ["query_index"]
                       }
                     },
                     {
                       "if": {
                         "properties": {
                           "type": {
-                            "enum": [
-                              "column_value"
-                            ]
+                            "enum": ["column_value"]
                           }
                         }
                       },
                       "then": {
-                        "required": [
-                          "query_index",
-                          "row_index",
-                          "column"
-                        ]
+                        "required": ["query_index", "row_index", "column"]
                       }
                     }
                   ]
@@ -675,9 +594,7 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": [
-                  "message"
-                ],
+                "required": ["message"],
                 "properties": {
                   "message": {
                     "type": "string",
@@ -700,197 +617,99 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": [
-                  "agent",
-                  "prompt"
-                ],
+                "required": ["prompt"],
                 "properties": {
-                  "agent": {
-                    "type": "string",
-                    "enum": [
-                      "claude-code"
-                    ],
-                    "description": "Type of coding agent to use"
-                  },
                   "prompt": {
                     "type": "string",
-                    "description": "Prompt to send to the agent (supports template variables)"
+                    "description": "Task description for the agent (supports template variables)"
                   },
                   "mode": {
                     "type": "string",
-                    "enum": [
-                      "single",
-                      "continue",
-                      "resume"
-                    ],
-                    "description": "Agent execution mode",
-                    "default": "single"
+                    "enum": ["single", "continue", "resume"],
+                    "description": "Execution mode (default: single)"
                   },
                   "session_id": {
                     "type": "string",
-                    "description": "Session ID for resume mode (supports template variables)"
+                    "description": "Session ID for continue/resume modes (supports template variables)"
                   },
                   "max_turns": {
                     "type": "integer",
-                    "description": "Maximum number of conversation turns",
-                    "minimum": 1,
-                    "default": 1
+                    "description": "Maximum conversation turns (default: unlimited)",
+                    "minimum": 1
                   },
                   "timeout": {
                     "type": "string",
                     "pattern": "^[0-9]+(s|m|h)$",
-                    "description": "Agent execution timeout",
-                    "default": "30s"
+                    "description": "Execution timeout (default: unlimited)"
                   },
                   "system_prompt": {
                     "type": "string",
-                    "description": "System prompt for the agent"
+                    "description": "System prompt prepended to conversation (supports template variables)"
                   },
-                  "output_format": {
+                  "cwd": {
                     "type": "string",
-                    "enum": [
-                      "text",
-                      "json",
-                      "streaming-json"
-                    ],
-                    "description": "Output format from the agent",
-                    "default": "json"
+                    "description": "Working directory for agent execution"
                   },
-                  "continue_recent": {
-                    "type": "boolean",
-                    "description": "Continue the most recent conversation",
-                    "default": false
-                  },
-                  "save_full_response": {
-                    "type": "boolean",
-                    "description": "Save the complete response to context",
-                    "default": true
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "plugin": {
-                "const": "browser"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "config": {
-                "type": "object",
-                "required": [
-                  "task",
-                  "llm"
-                ],
-                "properties": {
-                  "task": {
-                    "type": "string",
-                    "description": "Task description for the browser agent to perform (supports template variables)"
-                  },
-                  "llm": {
+                  "mcp_servers": {
                     "type": "object",
-                    "required": [
-                      "provider",
-                      "model"
-                    ],
-                    "properties": {
-                      "provider": {
-                        "type": "string",
-                        "enum": [
-                          "openai",
-                          "anthropic"
-                        ],
-                        "description": "LLM provider to use"
-                      },
-                      "model": {
-                        "type": "string",
-                        "description": "LLM model to use (e.g., gpt-4, claude-3-sonnet)"
-                      },
-                      "config": {
-                        "type": "object",
-                        "description": "LLM configuration (API keys, etc.)",
-                        "additionalProperties": {
-                          "type": "string"
+                    "description": "MCP server configurations",
+                    "additionalProperties": {
+                      "type": "object",
+                      "required": ["type"],
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["stdio", "sse"],
+                          "description": "MCP server type"
+                        },
+                        "command": {
+                          "type": "string",
+                          "description": "Command to execute (required for stdio type)"
+                        },
+                        "args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Command arguments (for stdio type)"
+                        },
+                        "env": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Environment variables (for stdio type)"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "HTTP/SSE endpoint URL (required for sse type)"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "HTTP headers (for sse type)"
                         }
                       }
                     }
                   },
-                  "executor_type": {
-                    "type": "string",
-                    "enum": [
-                      "python"
-                    ],
-                    "description": "Browser executor type",
-                    "default": "python"
-                  },
-                  "timeout": {
-                    "type": "string",
-                    "pattern": "^[0-9]+(s|m|h)$",
-                    "description": "Browser automation timeout",
-                    "default": "5m"
-                  },
-                  "max_steps": {
-                    "type": "integer",
-                    "description": "Maximum number of browser automation steps",
-                    "minimum": 1,
-                    "default": 50
-                  },
-                  "browser_type": {
-                    "type": "string",
-                    "enum": [
-                      "chromium",
-                      "chrome",
-                      "edge"
-                    ],
-                    "description": "Browser type to use",
-                    "default": "chromium"
-                  },
-                  "headless": {
-                    "type": "boolean",
-                    "description": "Run browser in headless mode",
-                    "default": true
-                  },
-                  "use_vision": {
-                    "type": "boolean",
-                    "description": "Enable visual processing",
-                    "default": true
-                  },
-                  "session_id": {
-                    "type": "string",
-                    "description": "Browser session ID for session persistence (supports template variables)"
-                  },
-                  "save_screenshots": {
-                    "type": "boolean",
-                    "description": "Save screenshots during execution",
-                    "default": false
-                  },
-                  "allowed_domains": {
-                    "type": "array",
-                    "description": "List of allowed domains for browser navigation",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "viewport": {
-                    "type": "object",
-                    "description": "Browser viewport configuration",
-                    "properties": {
-                      "width": {
-                        "type": "integer",
-                        "description": "Viewport width in pixels",
-                        "default": 1920
+                  "allowed_tools": {
+                    "oneOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "List of allowed MCP tool names"
                       },
-                      "height": {
-                        "type": "integer",
-                        "description": "Viewport height in pixels",
-                        "default": 1080
+                      {
+                        "type": "string",
+                        "enum": ["*"],
+                        "description": "Wildcard to allow all tools"
                       }
-                    }
+                    ],
+                    "description": "Tool permissions (default: ['*'] wildcard)"
                   }
                 }
               }
@@ -909,11 +728,7 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": [
-                  "url",
-                  "key",
-                  "operation"
-                ],
+                "required": ["url", "key", "operation"],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -957,20 +772,14 @@
                         "items": {
                           "type": "string"
                         },
-                        "default": [
-                          "*"
-                        ]
+                        "default": ["*"]
                       },
                       "filters": {
                         "type": "array",
                         "description": "Filters to apply",
                         "items": {
                           "type": "object",
-                          "required": [
-                            "column",
-                            "operator",
-                            "value"
-                          ],
+                          "required": ["column", "operator", "value"],
                           "properties": {
                             "column": {
                               "type": "string"
@@ -1007,9 +816,7 @@
                         "description": "Ordering configuration",
                         "items": {
                           "type": "object",
-                          "required": [
-                            "column"
-                          ],
+                          "required": ["column"],
                           "properties": {
                             "column": {
                               "type": "string"
@@ -1031,11 +838,7 @@
                       },
                       "count": {
                         "type": "string",
-                        "enum": [
-                          "exact",
-                          "planned",
-                          "estimated"
-                        ],
+                        "enum": ["exact", "planned", "estimated"],
                         "description": "Count type for query"
                       }
                     }
@@ -1057,9 +860,7 @@
                         "description": "Column(s) for conflict resolution"
                       }
                     },
-                    "required": [
-                      "data"
-                    ]
+                    "required": ["data"]
                   },
                   "update": {
                     "type": "object",
@@ -1074,11 +875,7 @@
                         "description": "Filters to apply for update",
                         "items": {
                           "type": "object",
-                          "required": [
-                            "column",
-                            "operator",
-                            "value"
-                          ],
+                          "required": ["column", "operator", "value"],
                           "properties": {
                             "column": {
                               "type": "string"
@@ -1093,9 +890,7 @@
                         }
                       }
                     },
-                    "required": [
-                      "data"
-                    ]
+                    "required": ["data"]
                   },
                   "delete": {
                     "type": "object",
@@ -1106,11 +901,7 @@
                         "description": "Filters to apply for delete",
                         "items": {
                           "type": "object",
-                          "required": [
-                            "column",
-                            "operator",
-                            "value"
-                          ],
+                          "required": ["column", "operator", "value"],
                           "properties": {
                             "column": {
                               "type": "string"
@@ -1125,9 +916,7 @@
                         }
                       }
                     },
-                    "required": [
-                      "filters"
-                    ]
+                    "required": ["filters"]
                   },
                   "rpc": {
                     "type": "object",
@@ -1142,9 +931,7 @@
                         "description": "Function parameters"
                       }
                     },
-                    "required": [
-                      "function"
-                    ]
+                    "required": ["function"]
                   },
                   "auth": {
                     "type": "object",

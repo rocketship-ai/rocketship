@@ -1,0 +1,106 @@
+name: Claude Agent with Playwright MCP - Variable Passing
+description: |
+  Demonstrates agent plugin variable passing with Playwright MCP.
+
+  This test shows TWO ways to save variables:
+  1. Natural language: Agent auto-saves when told "save as 'var_name'"
+  2. Explicit config: Traditional save configs with json_path
+
+  Flow demonstrates:
+  - Agent extracts data (natural language save)
+  - Playwright extracts data (explicit save config)
+  - Agent uses BOTH saved variables in subsequent prompt
+  - Cross-plugin variable flow throughout workflow
+
+tests:
+  - name: "Agent variable passing: natural language + explicit"
+    cleanup:
+      always:
+        - name: "Stop browser session"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "agent-test-{{ .run.id }}"
+
+    steps:
+      # Step 1: Start persistent browser session
+      - name: "Start browser session"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "agent-test-{{ .run.id }}"
+          headless: true
+
+      # Step 2: Natural language save - Agent extracts heading
+      - name: "Agent: Extract heading (natural language save)"
+        plugin: agent
+        config:
+          prompt: |
+            Navigate to https://example.com
+
+            Extract the main heading text from the page and save it as 'page_heading'
+          session_id: "agent-test-{{ .run.id }}"
+          mcp_servers:
+            playwright:
+              type: stdio
+              command: npx
+              args:
+                - "@playwright/mcp@0.0.43"
+        # Natural language save preferred, but explicit config as fallback
+        save:
+          - json_path: ".result"
+            as: "page_heading"
+
+      # Step 3: Explicit save - Playwright gets URL
+      - name: "Playwright: Get current page URL (explicit save)"
+        plugin: playwright
+        config:
+          role: script
+          session_id: "agent-test-{{ .run.id }}"
+          script: |
+            # Get current URL using Playwright API
+            result = {"url": page.url}
+        save:
+          - json_path: ".url"
+            as: "current_url"
+
+      # Step 4: Agent uses BOTH saved variables + natural language save for link
+      - name: "Agent: Verify and extract link (uses both variables)"
+        plugin: agent
+        config:
+          prompt: |
+            You are currently on {{ current_url }}.
+
+            The previous step reported: {{ page_heading }}
+
+            Verify the page heading contains "Example Domain".
+            Then find the link that says "More information..." or similar and extract its href URL.
+          session_id: "agent-test-{{ .run.id }}"
+          mcp_servers:
+            playwright:
+              type: stdio
+              command: npx
+              args:
+                - "@playwright/mcp@0.0.43"
+        # Natural language save preferred, but explicit config as fallback
+        save:
+          - json_path: ".result"
+            as: "info_link"
+
+      # Step 5: Log all variables to show the complete flow
+      - name: "Log variable flow results"
+        plugin: log
+        config:
+          message: |
+            ✅ Variable Passing Test Complete!
+
+            Variables saved and used:
+            - page_heading (Agent, natural language): {{ page_heading }}
+            - current_url (Playwright, explicit save): {{ current_url }}
+            - info_link (Agent, natural language): {{ info_link }}
+
+            This demonstrates:
+            ✓ Natural language variable saves (no config needed)
+            ✓ Explicit save configs (traditional approach)
+            ✓ Agent→Playwright→Agent variable passing
+            ✓ Variables flow across different plugin types

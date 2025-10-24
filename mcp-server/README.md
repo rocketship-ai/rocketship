@@ -43,6 +43,7 @@ npm install -g @rocketshipai/mcp-server
 Add to your MCP client configuration file:
 
 ### Claude Code
+
 ```json
 {
   "mcpServers": {
@@ -55,7 +56,9 @@ Add to your MCP client configuration file:
 ```
 
 ### Cursor
+
 Add to Cursor Settings > MCP Servers:
+
 ```json
 {
   "mcpServers": {
@@ -68,7 +71,9 @@ Add to Cursor Settings > MCP Servers:
 ```
 
 ### Windsurf
+
 Add to `~/.codeium/windsurf/mcp_config.json`:
+
 ```json
 {
   "mcpServers": {
@@ -83,31 +88,37 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 ## Available Tools
 
 ### 1. `get_rocketship_examples`
+
 Get real examples and best practices for specific Rocketship features from the current codebase.
 
-**Plugins:** `http`, `delay`, `script`, `sql`, `log`, `agent`, `browser`, `supabase`
+**Plugins:** `http`, `delay`, `script`, `sql`, `log`, `agent`, `playwright`, `browser_use`, `supabase`
 
 ### 2. `suggest_test_structure`
+
 Suggests proper file structure and test organization based on current project configuration.
 
 **Project Types:** `frontend`, `backend`, `fullstack`, `api`, `mobile`
 
 ### 3. `get_schema_info`
+
 Provides current schema information for validation and proper syntax.
 
 **Sections:** `plugins`, `assertions`, `save`, `structure`, `full`
 
 ### 4. `get_cli_guidance`
+
 Provides current CLI usage patterns and commands from introspection.
 
 **Command Types:** `run`, `validate`, `structure`
 
 ### 5. `get_rocketship_cli_installation_instructions`
+
 Get step-by-step instructions for installing the Rocketship CLI on different platforms.
 
 **Platforms:** `auto`, `macos-arm64`, `macos-intel`, `linux`, `windows`
 
 ### 6. `analyze_codebase_for_testing`
+
 Analyzes a codebase to suggest meaningful test scenarios based on available plugins.
 
 **Focus Areas:** `user_journeys`, `api_endpoints`, `critical_paths`, `integration_points`

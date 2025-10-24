@@ -1,0 +1,14 @@
+name: Agent Plugin - Assertion Failure
+description: |
+  This test demonstrates what happens when an agent assertion fails.
+  Expected: The test should FAIL because 2+2 does not equal 5.
+
+tests:
+  - name: "Agent assertion that will fail"
+    steps:
+      - name: "Verify 2+2 equals 5 (impossible)"
+        plugin: agent
+        config:
+          prompt: "Calculate 2+2 and verify the result equals 5"
+        # The agent will return {"ok": false, "error": "..."}
+        # which causes this step to fail

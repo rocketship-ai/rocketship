@@ -36,7 +36,6 @@
 - `sql`
 - `log`
 - `agent`
-- `browser`
 - `playwright`
 - `browser_use`
 - `supabase`
@@ -116,39 +115,15 @@
 
 | Field | Required | Description | Type / Allowed Values | Notes |
 | ----- | -------- | ----------- | --------------------- | ----- |
-| `agent` | ✅ | Type of coding agent to use | `claude-code` | - |
-| `prompt` | ✅ | Prompt to send to the agent (supports template variables) | `string` | - |
-| `mode` |  | Agent execution mode | `single`, `continue`, `resume` | - |
-| `session_id` |  | Session ID for resume mode (supports template variables) | `string` | - |
-| `max_turns` |  | Maximum number of conversation turns | `integer` | - |
-| `timeout` |  | Agent execution timeout | `string` | - |
-| `system_prompt` |  | System prompt for the agent | `string` | - |
-| `output_format` |  | Output format from the agent | `text`, `json`, `streaming-json` | - |
-| `continue_recent` |  | Continue the most recent conversation | `boolean` | - |
-| `save_full_response` |  | Save the complete response to context | `boolean` | - |
-
-
-### Plugin: `browser`
-
-| Field | Required | Description | Type / Allowed Values | Notes |
-| ----- | -------- | ----------- | --------------------- | ----- |
-| `task` | ✅ | Task description for the browser agent to perform (supports template variables) | `string` | - |
-| `llm` | ✅ | No description | `object` | - |
-| `llm.provider` | ✅ | LLM provider to use | `openai`, `anthropic` | - |
-| `llm.model` | ✅ | LLM model to use (e.g., gpt-4, claude-3-sonnet) | `string` | - |
-| `llm.config` |  | LLM configuration (API keys, etc.) | `object` | - |
-| `executor_type` |  | Browser executor type | `python` | - |
-| `timeout` |  | Browser automation timeout | `string` | - |
-| `max_steps` |  | Maximum number of browser automation steps | `integer` | - |
-| `browser_type` |  | Browser type to use | `chromium`, `chrome`, `edge` | - |
-| `headless` |  | Run browser in headless mode | `boolean` | - |
-| `use_vision` |  | Enable visual processing | `boolean` | - |
-| `session_id` |  | Browser session ID for session persistence (supports template variables) | `string` | - |
-| `save_screenshots` |  | Save screenshots during execution | `boolean` | - |
-| `allowed_domains[]` |  | List of allowed domains for browser navigation | `array of string` | - |
-| `viewport` |  | Browser viewport configuration | `object` | - |
-| `viewport.width` |  | Viewport width in pixels | `integer` | - |
-| `viewport.height` |  | Viewport height in pixels | `integer` | - |
+| `prompt` | ✅ | Task description for the agent (supports template variables) | `string` | - |
+| `mode` |  | Execution mode (default: single) | `single`, `continue`, `resume` | - |
+| `session_id` |  | Session ID for continue/resume modes (supports template variables) | `string` | - |
+| `max_turns` |  | Maximum conversation turns (default: unlimited) | `integer` | - |
+| `timeout` |  | Execution timeout (default: unlimited) | `string` | - |
+| `system_prompt` |  | System prompt prepended to conversation (supports template variables) | `string` | - |
+| `cwd` |  | Working directory for agent execution | `string` | - |
+| `mcp_servers` |  | MCP server configurations | `object` | - |
+| `allowed_tools` |  | Tool permissions (default: ['*'] wildcard) | `any` | - |
 
 
 ### Plugin: `supabase`

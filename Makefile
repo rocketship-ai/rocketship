@@ -30,7 +30,7 @@ lint: build-binaries install-workflowcheck lint-python lint-typescript go-lint w
 lint-python:
 	@echo "Running Python linter..."
 	@if command -v ruff &> /dev/null; then \
-		find . -name "*.py" -type f ! -path "*/venv/*" ! -path "*/.venv/*" ! -path "*/browser-venv/*" ! -path "*/docs/*" -print0 | xargs -0 -r ruff check; \
+		find . -name "*.py" -type f ! -path "*/venv/*" ! -path "*/.venv/*" ! -path "*/browser-venv/*" ! -path "*/docs/*" ! -path "*/.rocketship/*" ! -path "*/node_modules/*" -print0 | xargs -0 -r ruff check; \
 	else \
 		echo "Ruff not installed. Install with: pip install ruff"; \
 		exit 1; \

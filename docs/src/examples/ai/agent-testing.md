@@ -1,32 +1,87 @@
-# Agent Plugin - AI-Powered Test Analysis
+# Agent Plugin - AI-Powered Testing with MCP Servers
 
-Use AI to analyze test data, validate complex responses, and make intelligent assertions. The agent plugin executes LLM prompts within your test workflow.
+Use Claude with MCP (Model Context Protocol) servers to perform intelligent browser testing, file analysis, and multi-tool workflows in your tests.
+
+> 💡 **New Architecture**: This plugin uses the Claude Agent SDK with MCP server support, enabling AI-driven testing with access to browser control, filesystem, APIs, and more.
 
 ## Prerequisites
 
 ```bash
-# Set API key (OpenAI or Anthropic)
-export OPENAI_API_KEY=sk-your-key-here
-# OR
+# Set Anthropic API key
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
+
+# Install MCP servers (if using)
+npm install -g @playwright/mcp@0.0.43
 ```
 
-## Basic Usage
+## Quick Start: Browser Testing
 
 ```yaml
-- name: "Analyze API response"
+tests:
+  - name: "Login Test"
+    cleanup:
+      always:
+        - name: "Stop browser"
+          plugin: playwright
+          config:
+            role: stop
+            session_id: "login-{{ .run.id }}"
+    steps:
+      - name: "Start browser"
+        plugin: playwright
+        config:
+          role: start
+          session_id: "login-{{ .run.id }}"
+          headless: false
+
+      - name: "Agent: Login and verify"
+        plugin: agent
+        config:
+          prompt: |
+            Navigate to {{ .env.FRONTEND_URL }}/login and login with:
+            - Email: {{ .env.TEST_EMAIL }}
+            - Password: {{ .env.TEST_PASSWORD }}
+
+            Verify you land on the dashboard page.
+          session_id: "login-{{ .run.id }}"
+          mcp_servers:
+            playwright:
+              type: stdio
+              command: npx
+              args: ["@playwright/mcp@0.0.43"]
+```
+
+## Core Concepts
+
+### MCP Servers
+
+The agent plugin connects to MCP servers to access tools. Common servers:
+
+- **Playwright MCP** (`@playwright/mcp`): Browser control, screenshots, page navigation
+- **Filesystem MCP**: Read/write files, search directories
+- **Custom MCPs**: Build your own for API integrations, database access, etc.
+
+### Browser Session Handoff
+
+The agent can control browsers started by the `playwright` plugin via CDP:
+
+```yaml
+- name: "Start browser (Playwright)"
+  plugin: playwright
+  config:
+    role: start
+    session_id: "test-{{ .run.id }}"
+
+- name: "Test with AI (Agent)"
   plugin: agent
   config:
-    prompt: "Is this response valid? {{ api_response }}"
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "text"
-  save:
-    - json_path: ".result"
-      as: "analysis"
+    session_id: "test-{{ .run.id }}"  # Same session!
+    prompt: "Click the login button"
+    mcp_servers:
+      playwright:
+        type: stdio
+        command: npx
+        args: ["@playwright/mcp@0.0.43"]
 ```
 
 ## Configuration
@@ -35,314 +90,153 @@ export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 ```yaml
 config:
-  prompt: "Your question or instruction"  # Required: what to ask the LLM
-  llm:                                     # Required: LLM configuration
-    provider: "openai"                     # "openai" or "anthropic"
-    model: "gpt-4o"                        # Model name
-    config:
-      OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+  prompt: "Your natural language task"  # Required
+  mcp_servers:                          # Required (unless using default)
+    <server_name>:
+      type: stdio | sse
+      command: "npx"                    # For stdio servers
+      args: ["@playwright/mcp"]
 ```
 
 ### Optional Fields
 
 ```yaml
 config:
-  output_format: "json"        # "json" or "text" (default: "json")
-  system_prompt: "..."         # System instructions for the LLM
-  timeout: "1m"                # Max execution time (default: 1m)
-  mode: "single"               # "single", "continue", or "resume"
-```
-
-## LLM Providers
-
-### OpenAI
-
-```yaml
-llm:
-  provider: "openai"
-  model: "gpt-4o"  # or "gpt-4", "gpt-3.5-turbo"
-  config:
-    OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-```
-
-### Anthropic
-
-```yaml
-llm:
-  provider: "anthropic"
-  model: "claude-3-5-sonnet-20241022"  # or other Claude models
-  config:
-    ANTHROPIC_API_KEY: "{{ .env.ANTHROPIC_API_KEY }}"
-```
-
-## Output Formats
-
-### JSON Format
-
-Request structured output:
-
-```yaml
-- name: "Validate user data"
-  plugin: agent
-  config:
-    prompt: |
-      Analyze this user data: {{ user_json }}
-      Return JSON with:
-      {
-        "valid": boolean,
-        "issues": [list of issues],
-        "confidence": number (0-100)
-      }
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "json"
-  save:
-    - json_path: ".result.valid"
-      as: "is_valid"
-    - json_path: ".result.confidence"
-      as: "confidence_score"
-  assertions:
-    - type: "json_path"
-      path: ".result.valid"
-      expected: true
-```
-
-### Text Format
-
-Simple yes/no or descriptive answers:
-
-```yaml
-- name: "Check response quality"
-  plugin: agent
-  config:
-    prompt: "Does this API response contain complete user information? {{ response }}"
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "text"
-  save:
-    - json_path: ".result"
-      as: "answer"
-```
-
-## Execution Modes
-
-### Single Mode (Default)
-
-One-off prompt execution:
-
-```yaml
-mode: "single"  # Default, can be omitted
-```
-
-### Continue Mode
-
-Multi-turn conversation with previous context:
-
-```yaml
-- name: "Initial analysis"
-  plugin: agent
-  config:
-    prompt: "Analyze this data: {{ data }}"
-    mode: "single"
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-
-- name: "Follow-up question"
-  plugin: agent
-  config:
-    prompt: "Based on your previous analysis, what are the top 3 issues?"
-    mode: "continue"  # Continues previous conversation
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-```
-
-### Resume Mode
-
-Pick up from a specific conversation:
-
-```yaml
-- name: "Resume analysis"
-  plugin: agent
-  config:
-    prompt: "Continue from where we left off"
-    mode: "resume"
-    conversation_id: "{{ previous_conversation_id }}"
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
+  session_id: "browser-session"   # For browser testing (matches playwright)
+  max_turns: 10                   # Max agent loop iterations (default: unlimited)
+  timeout: "2m"                   # Max execution time (default: 5m)
+  system_prompt: "Custom instructions for Claude"
+  allowed_tools: ["*"]            # Tool filter (default: all)
 ```
 
 ## Common Use Cases
 
-### API Response Validation
+### 1. Multi-Step Browser Workflows
 
 ```yaml
-- name: "Fetch user data"
-  plugin: http
-  config:
-    url: "{{ .env.API_BASE_URL }}/users/123"
-  save:
-    - json_path: "."
-      as: "user_data"
-
-- name: "Validate completeness"
+- name: "Agent: Complete checkout flow"
   plugin: agent
   config:
     prompt: |
-      Check if this user data is complete: {{ user_data }}
-      Required fields: id, email, name, created_at
-      Return JSON: {"valid": true/false, "missing_fields": []}
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "json"
-  assertions:
-    - type: "json_path"
-      path: ".result.valid"
-      expected: true
-```
-
-### Intelligent Test Data Generation
-
-```yaml
-- name: "Generate test data"
-  plugin: agent
-  config:
-    prompt: |
-      Generate 5 realistic user profiles in JSON format.
-      Each should have: name, email, age, city
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "json"
+      Complete a checkout flow:
+      1. Add product ID {{ product_id }} to cart
+      2. Navigate to cart
+      3. Click checkout
+      4. Fill shipping form with test data
+      5. Verify order summary shows {{ product_id }}
+    session_id: "checkout-{{ .run.id }}"
+    max_turns: 15
+    mcp_servers:
+      playwright:
+        type: stdio
+        command: npx
+        args: ["@playwright/mcp@0.0.43"]
   save:
     - json_path: ".result"
-      as: "test_users"
+      as: "checkout_result"
 ```
 
-### Log Analysis
+### 2. Data Extraction
 
 ```yaml
-- name: "Analyze error logs"
+- name: "Agent: Extract pricing data"
   plugin: agent
   config:
     prompt: |
-      Analyze these error logs: {{ error_logs }}
-      Identify patterns and root causes.
-      Return JSON: {
-        "error_count": number,
-        "patterns": [strings],
-        "root_cause": string,
-        "severity": "low|medium|high"
-      }
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "json"
-```
-
-### Complex Assertions
-
-```yaml
-- name: "Intelligent validation"
-  plugin: agent
-  config:
-    prompt: |
-      Compare expected vs actual responses:
-      Expected: {{ expected_response }}
-      Actual: {{ actual_response }}
-
-      Are they semantically equivalent, ignoring minor formatting differences?
-      Return JSON: {"equivalent": true/false, "differences": []}
-    llm:
-      provider: "openai"
-      model: "gpt-4o"
-      config:
-        OPENAI_API_KEY: "{{ .env.OPENAI_API_KEY }}"
-    output_format: "json"
+      Go to /pricing and extract all plan names and prices.
+      Return as JSON array: [{"name": "...", "price": "..."}]
+    session_id: "scraper"
+    mcp_servers:
+      playwright:
+        type: stdio
+        command: npx
+        args: ["@playwright/mcp@0.0.43"]
+  save:
+    - json_path: ".result"
+      as: "pricing_plans"
   assertions:
-    - type: "json_path"
-      path: ".result.equivalent"
+    - type: json_path
+      path: ".ok"
       expected: true
 ```
+
+### 3. Multi-Tool Workflows (Browser + Database)
+
+```yaml
+- name: "Get expected vehicle count"
+  plugin: supabase
+  config:
+    url: "{{ .env.SUPABASE_URL }}"
+    key: "{{ .env.SUPABASE_SERVICE_KEY }}"
+    operation: "select"
+    table: "vehicles"
+    select:
+      columns: ["id"]
+      filters:
+        - column: "company_id"
+          operator: "eq"
+          value: "{{ company_id }}"
+  save:
+    - json_path: ". | length"
+      as: "vehicle_count"
+
+- name: "Agent: Verify fleet map"
+  plugin: agent
+  config:
+    prompt: |
+      Navigate to /fleet and verify:
+      - Map displays {{ vehicle_count }} vehicle markers (may be clustered)
+      - Vehicle cards at bottom show {{ vehicle_count }} vehicles
+    session_id: "fleet-test"
+    mcp_servers:
+      playwright:
+        type: stdio
+        command: npx
+        args: ["@playwright/mcp@0.0.43"]
+```
+
+## Advanced Features
+
+**System Prompts**: Customize agent behavior
+```yaml
+system_prompt: "You are a QA agent. Always return JSON: {\"ok\": bool, \"result\": string}"
+```
+
+**Tool Filtering**: Restrict available tools
+```yaml
+allowed_tools: ["browser_*", "screenshot"]  # Only allow specific tools
+```
+
+## Comparison with browser_use Plugin
+
+| Feature | agent (MCP) | browser_use |
+|---------|-------------|-------------|
+| **Model** | Claude Sonnet 4.5 (256k context) | GPT-4o or Claude (via browser-use) |
+| **Tools** | Browser + Files + APIs + Custom MCP servers | Browser only |
+| **Architecture** | MCP server protocol | Integrated browser agent library |
+
+**When to use agent plugin**: Multi-tool workflows (browser + database + files), complex test verification, or leveraging Claude Sonnet 4.5's capabilities.
+
+**When to use browser_use**: Legacy compatibility or simple browser-only automation tasks.
 
 ## Best Practices
 
-**Clear, Specific Prompts**: Tell the LLM exactly what you want
-```yaml
-# ❌ Vague
-prompt: "Check this data"
-
-# ✅ Specific
-prompt: "Validate that this user data contains all required fields (id, email, name) and email is valid format"
-```
-
-**Structured Output**: Use JSON for reliable parsing
-```yaml
-output_format: "json"  # Easier to assert on
-# vs
-output_format: "text"  # Harder to parse
-```
-
-**System Prompts**: Set consistent behavior
-```yaml
-system_prompt: "You are a test validation assistant. Always return concise, structured JSON responses."
-```
-
-**Handle Optional Data**: Use `required: false` for optional saves
-```yaml
-save:
-  - json_path: ".result.optional_field"
-    as: "optional_value"
-    required: false
-```
+- **Be specific**: `"Click 'Add to Cart' for product 123"` not `"Add something to cart"`
+- **Set timeouts**: 30s (simple), 2m (multi-step), 5m (complex/default)
+- **Always cleanup**: Use `cleanup.always` to stop browsers
+- **Handle dynamic content**: `"Wait for spinner to disappear, then verify..."`
 
 ## Troubleshooting
 
-**API key errors**: Check environment variables
-```bash
-echo $OPENAI_API_KEY
-echo $ANTHROPIC_API_KEY
-```
+| Issue | Solution |
+|-------|----------|
+| MCP connection error | `npm list -g @playwright/mcp` |
+| Session not found | Verify `session_id` matches playwright step |
+| Agent timeout | Increase `timeout` or reduce `max_turns` |
+| Tool execution fails | Run with `--debug` to see available tools |
 
-**Timeout errors**: Increase timeout for complex prompts
-```yaml
-timeout: "2m"  # For complex analysis
-```
+## See Also
 
-**JSON parsing fails**: Ensure output_format is "json" and prompt requests JSON
-```yaml
-output_format: "json"
-prompt: "Return JSON with structure: {\"field\": \"value\"}"
-```
-
-## Running Examples
-
-```bash
-# Run agent tests
-rocketship run -af examples/agent-testing/rocketship.yaml
-
-# With specific env file
-rocketship run -af examples/agent-testing/rocketship.yaml \
-  --env-file .env
-```
+- [Playwright Plugin](../../plugins/browser/persistent-sessions.md) - Browser session management
+- [browser_use Plugin](browser-testing.md) - Alternative (not recommended)
+- [MCP Servers](https://modelcontextprotocol.io/) - Build custom servers
