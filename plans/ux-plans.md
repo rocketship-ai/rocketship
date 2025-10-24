@@ -1,0 +1,5 @@
+- lifecycle clean up hook does not seem to work if i kill the run (need to test this to confirm)
+- can we have the agent plugin use a CC plan instead of the anthropic API key?
+- do we say that Anthropic api key needs to be loaded .env? Probably be good if you are allowed to specify it
+- fix up this doc page https://docs.rocketship.sh/examples/ai/browser-testing/
+- create ROCKETSHIP_QUICKSTART.md
