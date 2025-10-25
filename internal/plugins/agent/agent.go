@@ -470,6 +470,18 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 		config.AllowedTools = []string{allowedToolsStr}
 	}
 
+	// Parse api_key with template processing, auto-detect from ANTHROPIC_API_KEY if not provided
+	if apiKey, ok := configData["api_key"].(string); ok {
+		processed, err := dsl.ProcessTemplate(apiKey, templateContext)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process api_key template: %w", err)
+		}
+		config.APIKey = processed
+	} else {
+		// Auto-detect from environment if not provided
+		config.APIKey = os.Getenv("ANTHROPIC_API_KEY")
+	}
+
 	return config, nil
 }
 

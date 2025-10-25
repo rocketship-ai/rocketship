@@ -650,49 +650,17 @@
                     "type": "string",
                     "description": "Working directory for agent execution"
                   },
-                  "mcp_servers": {
-                    "type": "object",
-                    "description": "MCP server configurations",
-                    "additionalProperties": {
-                      "type": "object",
-                      "required": ["type"],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": ["stdio", "sse"],
-                          "description": "MCP server type"
-                        },
-                        "command": {
-                          "type": "string",
-                          "description": "Command to execute (required for stdio type)"
-                        },
-                        "args": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          },
-                          "description": "Command arguments (for stdio type)"
-                        },
-                        "env": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "Environment variables (for stdio type)"
-                        },
-                        "url": {
-                          "type": "string",
-                          "description": "HTTP/SSE endpoint URL (required for sse type)"
-                        },
-                        "headers": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "HTTP headers (for sse type)"
-                        }
-                      }
-                    }
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["browser"]
+                    },
+                    "description": "Agent capabilities that map to MCP servers (e.g., 'browser' for @playwright/mcp)"
+                  },
+                  "api_key": {
+                    "type": "string",
+                    "description": "Anthropic API key (optional - auto-detected from ANTHROPIC_API_KEY env var if not provided)"
                   },
                   "allowed_tools": {
                     "oneOf": [

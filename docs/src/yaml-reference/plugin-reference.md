@@ -122,7 +122,8 @@
 | `timeout` |  | Execution timeout (default: unlimited) | `string` | - |
 | `system_prompt` |  | System prompt prepended to conversation (supports template variables) | `string` | - |
 | `cwd` |  | Working directory for agent execution | `string` | - |
-| `mcp_servers` |  | MCP server configurations | `object` | - |
+| `capabilities[]` |  | Agent capabilities that map to MCP servers (e.g., 'browser' for @playwright/mcp) | `array of string` | - |
+| `api_key` |  | Anthropic API key (optional - auto-detected from ANTHROPIC_API_KEY env var if not provided) | `string` | - |
 | `allowed_tools` |  | Tool permissions (default: ['*'] wildcard) | `any` | - |
 
 

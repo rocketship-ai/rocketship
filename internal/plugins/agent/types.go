@@ -35,6 +35,9 @@ type Config struct {
 	// Tool permissions: list of allowed tool names, or ["*"] for all tools (default: ["*"])
 	AllowedTools []string `json:"allowed_tools,omitempty" yaml:"allowed_tools,omitempty"`
 
+	// Anthropic API key (optional - auto-detected from ANTHROPIC_API_KEY env var if not provided)
+	APIKey string `json:"api_key,omitempty" yaml:"api_key,omitempty"`
+
 	// Internal: MCP servers resolved from capabilities (populated internally, not from YAML)
 	MCPServers map[string]MCPServerConfig `json:"-" yaml:"-"`
 }
