@@ -68,7 +68,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -89,7 +89,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -162,7 +162,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "update"
           table: "companies"
           update:

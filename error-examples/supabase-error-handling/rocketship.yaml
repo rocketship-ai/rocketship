@@ -36,7 +36,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "this_table_does_not_exist_12345"
           select:
@@ -48,7 +48,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "rpc"
           rpc:
             function: "this_function_does_not_exist_12345"
@@ -59,7 +59,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "delete"
           table: "companies"
           delete:
@@ -72,7 +72,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -87,7 +87,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -102,7 +102,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:

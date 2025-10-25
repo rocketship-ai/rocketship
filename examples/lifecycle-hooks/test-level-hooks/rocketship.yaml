@@ -29,7 +29,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -65,7 +65,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -124,7 +124,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "update"
           table: "companies"
           update:
@@ -161,7 +161,7 @@ tests:
           plugin: supabase
           config:
             url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_ANON_KEY }}"
+            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
             operation: "delete"
             table: "companies"
             delete:
@@ -186,7 +186,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -203,7 +203,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -223,7 +223,7 @@ tests:
           plugin: supabase
           config:
             url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_ANON_KEY }}"
+            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
             operation: "delete"
             table: "companies"
             delete:

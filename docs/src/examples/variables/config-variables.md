@@ -72,6 +72,7 @@ rocketship run -af test.yaml \
 Use variable files for complex overrides:
 
 **Create `prod-vars.yaml`:**
+
 ```yaml
 base_url: "https://api.production.com"
 environment: "production"
@@ -80,6 +81,7 @@ max_retries: 5
 ```
 
 **Load variable file:**
+
 ```bash
 rocketship run -af test.yaml --var-file prod-vars.yaml
 
@@ -127,7 +129,7 @@ Runtime variables capture values during test execution for step chaining.
   plugin: "supabase"
   config:
     url: "{{ .vars.supabase_url }}"
-    key: "{{ .env.SUPABASE_ANON_KEY }}"
+    key: "{{ .env.SUPABASE_SERVICE_KEY }}"
     operation: "insert"
     table: "companies"
     insert:
@@ -141,7 +143,7 @@ Runtime variables capture values during test execution for step chaining.
   plugin: "supabase"
   config:
     url: "{{ .vars.supabase_url }}"
-    key: "{{ .env.SUPABASE_ANON_KEY }}"
+    key: "{{ .env.SUPABASE_SERVICE_KEY }}"
     operation: "insert"
     table: "users"
     insert:
@@ -156,7 +158,7 @@ Runtime variables capture values during test execution for step chaining.
   plugin: "supabase"
   config:
     url: "{{ .vars.supabase_url }}"
-    key: "{{ .env.SUPABASE_ANON_KEY }}"
+    key: "{{ .env.SUPABASE_SERVICE_KEY }}"
     operation: "select"
     table: "users"
     select:
@@ -241,6 +243,7 @@ tests:
 ```
 
 Run with different configurations:
+
 ```bash
 # Staging with 5 users
 rocketship run -af test.yaml \
