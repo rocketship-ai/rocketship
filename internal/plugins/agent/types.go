@@ -39,7 +39,7 @@ type Config struct {
 	APIKey string `json:"api_key,omitempty" yaml:"api_key,omitempty"`
 
 	// Internal: MCP servers resolved from capabilities (populated internally, not from YAML)
-	MCPServers map[string]MCPServerConfig `json:"-" yaml:"-"`
+	MCPServers map[string]MCPServerConfig `json:"mcp_servers,omitempty" yaml:"-"`
 }
 
 // MCPServerConfig represents configuration for an MCP server

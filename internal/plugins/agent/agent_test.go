@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -351,4 +352,63 @@ func TestParseMCPServerConfig_MissingRequired(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConfigJSONMarshaling verifies that MCPServers field is properly serialized to JSON
+func TestConfigJSONMarshaling(t *testing.T) {
+	cfg := &Config{
+		Prompt:       "test prompt",
+		Capabilities: []string{"browser"},
+		MCPServers: map[string]MCPServerConfig{
+			"playwright": {
+				Type:    MCPServerTypeStdio,
+				Command: "npx",
+				Args:    []string{"@playwright/mcp@0.0.43"},
+			},
+		},
+	}
+
+	// Marshal to JSON
+	jsonBytes, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("Failed to marshal config: %v", err)
+	}
+
+	// Unmarshal to verify structure
+	var result map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &result); err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	// Verify mcp_servers is present
+	mcpServers, ok := result["mcp_servers"]
+	if !ok {
+		t.Fatalf("mcp_servers field is missing from JSON output. Got: %v", result)
+	}
+
+	// Verify structure of mcp_servers
+	servers, ok := mcpServers.(map[string]interface{})
+	if !ok {
+		t.Fatalf("mcp_servers is not a map. Got type: %T", mcpServers)
+	}
+
+	playwright, ok := servers["playwright"]
+	if !ok {
+		t.Fatalf("playwright server is missing from mcp_servers")
+	}
+
+	playwrightMap, ok := playwright.(map[string]interface{})
+	if !ok {
+		t.Fatalf("playwright config is not a map. Got type: %T", playwright)
+	}
+
+	if playwrightMap["type"] != "stdio" {
+		t.Errorf("Expected type 'stdio', got '%v'", playwrightMap["type"])
+	}
+
+	if playwrightMap["command"] != "npx" {
+		t.Errorf("Expected command 'npx', got '%v'", playwrightMap["command"])
+	}
+
+	t.Logf("✅ MCPServers successfully serialized to mcp_servers in JSON")
 }
