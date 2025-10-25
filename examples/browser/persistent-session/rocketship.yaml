@@ -7,7 +7,7 @@ tests:
         plugin: playwright
         config:
           role: script
-          headless: true
+          headless: false
           language: python
           script: |
             page.goto("https://example.com")
