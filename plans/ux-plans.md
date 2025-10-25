@@ -3,3 +3,4 @@
 - can we have the agent plugin use a CC plan instead of the anthropic API key?
 - I wanna re organize the docs. A plugins section should exist. And fix up this doc page https://docs.rocketship.sh/examples/ai/browser-testing/
 - create ROCKETSHIP_QUICKSTART.md
+- why is generate-plugin-reference.py not working? I dont see the browser_use plugin.
