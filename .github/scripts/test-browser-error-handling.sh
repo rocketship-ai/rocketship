@@ -23,27 +23,13 @@ cat > "$TEMP_DIR/test1/rocketship.yaml" << 'EOF'
 name: "Test 1: Python Exception"
 tests:
   - name: "playwright Python exception"
-    cleanup:
-      always:
-        - name: "cleanup browser"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "exception-test"
     steps:
-      - name: "start browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "exception-test"
-          headless: true
-
       - name: "navigate and throw exception"
         plugin: playwright
         config:
           role: script
-          session_id: "exception-test"
           language: python
+          headless: true
           script: |
             page.goto("https://example.com")
 
@@ -75,27 +61,13 @@ cat > "$TEMP_DIR/test2/rocketship.yaml" << 'EOF'
 name: "Test 2: Assertion Error"
 tests:
   - name: "playwright assertion failure"
-    cleanup:
-      always:
-        - name: "cleanup browser"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "assertion-test"
     steps:
-      - name: "start browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "assertion-test"
-          headless: true
-
       - name: "navigate and fail assertion"
         plugin: playwright
         config:
           role: script
-          session_id: "assertion-test"
           language: python
+          headless: true
           script: |
             from playwright.sync_api import expect
 
@@ -167,27 +139,13 @@ cat > "$TEMP_DIR/test4/rocketship.yaml" << 'EOF'
 name: "Test 4: Task Failure"
 tests:
   - name: "browser_use task failure"
-    cleanup:
-      always:
-        - name: "cleanup browser"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "task-fail-test"
     steps:
-      - name: "start browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "task-fail-test"
-          headless: true
-
       - name: "navigate to example.com"
         plugin: playwright
         config:
           role: script
-          session_id: "task-fail-test"
           language: python
+          headless: true
           script: |
             page.goto("https://example.com")
             result = {"status": "ready"}
@@ -195,7 +153,6 @@ tests:
       - name: "browser_use with impossible task"
         plugin: browser_use
         config:
-          session_id: "task-fail-test"
           task: |
             Navigate to https://example.com, scroll down 50 times, find a blue button
             with text "Submit Rocketship Test Form XYZ", click it, and verify success.
@@ -233,27 +190,13 @@ cat > "$TEMP_DIR/test5/rocketship.yaml" << 'EOF'
 name: "Test 5: Timeout Error"
 tests:
   - name: "browser_use timeout error"
-    cleanup:
-      always:
-        - name: "cleanup browser"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "timeout-test"
     steps:
-      - name: "start browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "timeout-test"
-          headless: true
-
       - name: "navigate to test page"
         plugin: playwright
         config:
           role: script
-          session_id: "timeout-test"
           language: python
+          headless: true
           script: |
             page.goto("https://example.com")
             result = {"status": "ready"}
@@ -261,7 +204,6 @@ tests:
       - name: "browser_use with 3s timeout (will fail)"
         plugin: browser_use
         config:
-          session_id: "timeout-test"
           timeout: "3s"
           task: |
             Navigate to at least 5 different websites, take screenshots of each,

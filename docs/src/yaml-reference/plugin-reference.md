@@ -181,6 +181,47 @@
 | `timeout` |  | Operation timeout | `string` | - |
 
 
+### Plugin: `delay`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `duration` | ✅ | Duration to delay (e.g., '5s', '1m', '2h') | `string` | - |
+
+
+### Plugin: `playwright`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `session_id` | ✅ | Browser session identifier | `string` | - |
+| `role` | ✅ | Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser | `start`, `script`, `stop` | - |
+| `headless` |  | Run browser in headless mode (for 'start' role) | `boolean` | - |
+| `slow_mo_ms` |  | Slow down operations by N milliseconds (for 'start' role) | `integer` | - |
+| `launch_args[]` |  | Additional browser launch arguments (for 'start' role) | `array of string` | - |
+| `launch_timeout` |  | Browser launch timeout in milliseconds (for 'start' role) | `integer` | - |
+| `window_width` |  | Browser window width in pixels (for 'start' role) | `integer` | - |
+| `window_height` |  | Browser window height in pixels (for 'start' role) | `integer` | - |
+| `script` |  | Python script to execute (for 'script' role) | `string` | - |
+| `language` |  | Script language - only 'python' is supported (for 'script' role) | `python` | - |
+| `env` |  | Environment variables for script execution (for 'script' role) | `object` | - |
+
+
+### Plugin: `browser_use`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `session_id` | ✅ | Browser session identifier | `string` | - |
+| `task` | ✅ | Natural language task for the AI agent to perform | `string` | - |
+| `allowed_domains[]` |  | Restrict browser navigation to these domains | `array of string` | - |
+| `max_steps` |  | Maximum number of agent steps | `integer` | - |
+| `use_vision` |  | Enable vision capabilities for the AI agent | `boolean` | - |
+| `temperature` |  | LLM temperature for agent decisions | `number` | - |
+| `timeout` |  | Task execution timeout (e.g., '5m', '30s') | `string` | - |
+| `llm` |  | LLM configuration for the agent | `object` | - |
+| `llm.provider` |  | LLM provider (e.g., 'anthropic', 'openai') | `string` | - |
+| `llm.model` |  | LLM model name | `string` | - |
+| `llm.config` |  | LLM configuration (e.g., API keys as env vars) | `object` | - |
+
+
 ---
 
 ## Assertions
