@@ -996,11 +996,11 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": ["session_id", "role"],
+                "required": ["role"],
                 "properties": {
                   "session_id": {
                     "type": "string",
-                    "description": "Browser session identifier"
+                    "description": "Browser session identifier (optional - auto-injected by browser session management)"
                   },
                   "role": {
                     "type": "string",
@@ -1068,11 +1068,11 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": ["session_id", "task"],
+                "required": ["task"],
                 "properties": {
                   "session_id": {
                     "type": "string",
-                    "description": "Browser session identifier"
+                    "description": "Browser session identifier (optional - auto-injected by browser session management)"
                   },
                   "task": {
                     "type": "string",

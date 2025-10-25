@@ -193,7 +193,7 @@
 
 | Field | Required | Description | Type / Allowed Values | Notes |
 | ----- | -------- | ----------- | --------------------- | ----- |
-| `session_id` | ✅ | Browser session identifier | `string` | - |
+| `session_id` |  | Browser session identifier (optional - auto-injected by browser session management) | `string` | - |
 | `role` | ✅ | Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser | `start`, `script`, `stop` | - |
 | `headless` |  | Run browser in headless mode (for 'start' role) | `boolean` | - |
 | `slow_mo_ms` |  | Slow down operations by N milliseconds (for 'start' role) | `integer` | - |
@@ -210,7 +210,7 @@
 
 | Field | Required | Description | Type / Allowed Values | Notes |
 | ----- | -------- | ----------- | --------------------- | ----- |
-| `session_id` | ✅ | Browser session identifier | `string` | - |
+| `session_id` |  | Browser session identifier (optional - auto-injected by browser session management) | `string` | - |
 | `task` | ✅ | Natural language task for the AI agent to perform | `string` | - |
 | `allowed_domains[]` |  | Restrict browser navigation to these domains | `array of string` | - |
 | `max_steps` |  | Maximum number of agent steps | `integer` | - |
