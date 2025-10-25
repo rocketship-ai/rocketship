@@ -728,15 +728,15 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": ["url", "key", "operation"],
+                "required": ["operation"],
                 "properties": {
                   "url": {
                     "type": "string",
-                    "description": "Supabase project URL"
+                    "description": "Supabase project URL (optional - auto-detected from SUPABASE_URL env var if not provided)"
                   },
                   "key": {
                     "type": "string",
-                    "description": "Supabase API key (anon or service key)"
+                    "description": "Supabase API key (optional - auto-detected from SUPABASE_SECRET_KEY, SUPABASE_SERVICE_KEY, SUPABASE_PUBLISHABLE_KEY, or SUPABASE_ANON_KEY env vars if not provided)"
                   },
                   "operation": {
                     "type": "string",

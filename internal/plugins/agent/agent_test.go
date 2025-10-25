@@ -76,62 +76,46 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "config with MCP stdio server",
+			name: "config with browser capability",
+			configData: map[string]interface{}{
+				"prompt":       "Test prompt",
+				"capabilities": []interface{}{"browser"},
+			},
+			expectError: false,
+			expected: &Config{
+				Prompt:       "Test prompt",
+				Capabilities: []string{"browser"},
+				MCPServers: map[string]MCPServerConfig{
+					"playwright": {
+						Type:    MCPServerTypeStdio,
+						Command: "npx",
+						Args:    []string{"@playwright/mcp@0.0.43"},
+					},
+				},
+			},
+		},
+		{
+			name: "config with unknown capability should error",
+			configData: map[string]interface{}{
+				"prompt":       "Test prompt",
+				"capabilities": []interface{}{"invalid"},
+			},
+			expectError: true,
+			expected:    nil,
+		},
+		{
+			name: "config with old mcp_servers field should error",
 			configData: map[string]interface{}{
 				"prompt": "Test prompt",
 				"mcp_servers": map[string]interface{}{
 					"playwright": map[string]interface{}{
 						"type":    "stdio",
 						"command": "npx",
-						"args": []interface{}{
-							"@playwright/mcp@latest",
-						},
-						"env": map[string]interface{}{
-							"DEBUG": "true",
-						},
 					},
 				},
 			},
-			expectError: false,
-			expected: &Config{
-				Prompt: "Test prompt",
-				MCPServers: map[string]MCPServerConfig{
-					"playwright": {
-						Type:    MCPServerTypeStdio,
-						Command: "npx",
-						Args:    []string{"@playwright/mcp@latest"},
-						Env:     map[string]string{"DEBUG": "true"},
-					},
-				},
-			},
-		},
-		{
-			name: "config with MCP sse server",
-			configData: map[string]interface{}{
-				"prompt": "Test prompt",
-				"mcp_servers": map[string]interface{}{
-					"remote": map[string]interface{}{
-						"type": "sse",
-						"url":  "https://example.com/mcp",
-						"headers": map[string]interface{}{
-							"Authorization": "Bearer token",
-						},
-					},
-				},
-			},
-			expectError: false,
-			expected: &Config{
-				Prompt: "Test prompt",
-				MCPServers: map[string]MCPServerConfig{
-					"remote": {
-						Type: MCPServerTypeSSE,
-						URL:  "https://example.com/mcp",
-						Headers: map[string]string{
-							"Authorization": "Bearer token",
-						},
-					},
-				},
-			},
+			expectError: true,
+			expected:    nil,
 		},
 		{
 			name: "max_turns as float64",

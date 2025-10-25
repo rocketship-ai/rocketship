@@ -347,6 +347,37 @@ func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[strin
 }
 
 // parseConfig parses the configuration and applies template processing
+// resolveCapabilities maps capability names to MCP server configs
+func resolveCapabilities(capabilities []string) (map[string]MCPServerConfig, error) {
+	if len(capabilities) == 0 {
+		return nil, nil
+	}
+
+	servers := make(map[string]MCPServerConfig)
+	seen := make(map[string]bool)
+
+	for _, cap := range capabilities {
+		// Deduplicate
+		if seen[cap] {
+			continue
+		}
+		seen[cap] = true
+
+		switch cap {
+		case "browser":
+			servers["playwright"] = MCPServerConfig{
+				Type:    MCPServerTypeStdio,
+				Command: "npx",
+				Args:    []string{"@playwright/mcp@0.0.43"},
+			}
+		default:
+			return nil, fmt.Errorf("unknown capability %q (valid capabilities: browser)", cap)
+		}
+	}
+
+	return servers, nil
+}
+
 func parseConfig(configData map[string]interface{}, templateContext dsl.TemplateContext) (*Config, error) {
 	config := &Config{}
 
@@ -402,22 +433,28 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 		config.Cwd = cwd
 	}
 
-	// Parse MCP servers
-	if mcpServers, ok := configData["mcp_servers"].(map[string]interface{}); ok {
-		config.MCPServers = make(map[string]MCPServerConfig)
-		for name, serverData := range mcpServers {
-			serverMap, ok := serverData.(map[string]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid mcp_servers config for %q", name)
-			}
+	// Error if user tries to use old mcp_servers field
+	if _, ok := configData["mcp_servers"]; ok {
+		return nil, fmt.Errorf("unknown field 'mcp_servers'. Use 'capabilities' instead (e.g., capabilities: [\"browser\"])")
+	}
 
-			serverConfig, err := parseMCPServerConfig(serverMap, templateContext)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse mcp_server %q: %w", name, err)
+	// Parse capabilities and resolve to MCP servers
+	if caps, ok := configData["capabilities"].([]interface{}); ok {
+		config.Capabilities = make([]string, len(caps))
+		for i, cap := range caps {
+			if capStr, ok := cap.(string); ok {
+				config.Capabilities[i] = capStr
+			} else {
+				return nil, fmt.Errorf("capabilities must be an array of strings")
 			}
-
-			config.MCPServers[name] = *serverConfig
 		}
+
+		// Resolve capabilities to MCP servers
+		servers, err := resolveCapabilities(config.Capabilities)
+		if err != nil {
+			return nil, err
+		}
+		config.MCPServers = servers
 	}
 
 	// Parse allowed_tools

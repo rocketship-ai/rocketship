@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/plugins"
@@ -135,13 +136,40 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 			return "nil"
 		}())
 
-	// Validate required fields
+	// Auto-detect URL from environment if not provided
 	if config.URL == "" {
-		return nil, fmt.Errorf("url is required")
+		config.URL = os.Getenv("SUPABASE_URL")
+		if config.URL == "" {
+			return nil, fmt.Errorf("url is required (either in config or SUPABASE_URL env var)")
+		}
+		logger.Info("Using SUPABASE_URL from environment")
 	}
+
+	// Auto-detect Key from environment if not provided
+	// Precedence: SUPABASE_SECRET_KEY > SUPABASE_SERVICE_KEY > SUPABASE_PUBLISHABLE_KEY > SUPABASE_ANON_KEY
 	if config.Key == "" {
-		return nil, fmt.Errorf("key is required")
+		var keySource string
+		if key := os.Getenv("SUPABASE_SECRET_KEY"); key != "" {
+			config.Key = key
+			keySource = "SUPABASE_SECRET_KEY"
+		} else if key := os.Getenv("SUPABASE_SERVICE_KEY"); key != "" {
+			config.Key = key
+			keySource = "SUPABASE_SERVICE_KEY"
+		} else if key := os.Getenv("SUPABASE_PUBLISHABLE_KEY"); key != "" {
+			config.Key = key
+			keySource = "SUPABASE_PUBLISHABLE_KEY"
+		} else if key := os.Getenv("SUPABASE_ANON_KEY"); key != "" {
+			config.Key = key
+			keySource = "SUPABASE_ANON_KEY"
+		}
+
+		if config.Key == "" {
+			return nil, fmt.Errorf("key is required (either in config or one of: SUPABASE_SECRET_KEY, SUPABASE_SERVICE_KEY, SUPABASE_PUBLISHABLE_KEY, SUPABASE_ANON_KEY)")
+		}
+		logger.Info("Using Supabase key from environment", "source", keySource)
 	}
+
+	// Validate operation is provided
 	if config.Operation == "" {
 		return nil, fmt.Errorf("operation is required")
 	}

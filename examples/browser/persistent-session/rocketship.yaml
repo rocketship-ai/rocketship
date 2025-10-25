@@ -2,18 +2,12 @@ name: "Persistent browser session demo"
 tests:
   - name: "interleaved flow"
     steps:
-      - name: "start browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "checkout-{{ .run.id }}"
-          headless: true
-
+      # Browser auto-starts before first browser step!
       - name: "visit landing page"
         plugin: playwright
         config:
           role: script
-          session_id: "checkout-{{ .run.id }}"
+          headless: true
           language: python
           script: |
             page.goto("https://example.com")
@@ -24,14 +18,8 @@ tests:
         config:
           llm:
             provider: "openai"
-          session_id: "checkout-{{ .run.id }}"
           task: "Read the page currently open and summarize it in one sentence."
           allowed_domains:
             - "example.com"
           max_steps: 4
-
-      - name: "stop browser"
-        plugin: playwright
-        config:
-          role: stop
-          session_id: "checkout-{{ .run.id }}"
+      # Browser auto-stops in cleanup!

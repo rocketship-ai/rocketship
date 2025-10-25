@@ -130,8 +130,8 @@
 
 | Field | Required | Description | Type / Allowed Values | Notes |
 | ----- | -------- | ----------- | --------------------- | ----- |
-| `url` | ✅ | Supabase project URL | `string` | - |
-| `key` | ✅ | Supabase API key (anon or service key) | `string` | - |
+| `url` |  | Supabase project URL (optional - auto-detected from SUPABASE_URL env var if not provided) | `string` | - |
+| `key` |  | Supabase API key (optional - auto-detected from SUPABASE_SECRET_KEY, SUPABASE_SERVICE_KEY, SUPABASE_PUBLISHABLE_KEY, or SUPABASE_ANON_KEY env vars if not provided) | `string` | - |
 | `operation` | ✅ | Supabase operation to perform | `select`, `insert`, `update`, `delete`, `rpc`, `auth_create_user`, `auth_delete_user`, `auth_sign_up`, `auth_sign_in`, `storage_create_bucket`, `storage_delete_bucket`, `storage_upload`, `storage_download`, `storage_delete` | - |
 | `table` |  | Table name for database operations | `string` | - |
 | `select` |  | Configuration for select operation | `object` | - |

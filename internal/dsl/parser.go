@@ -108,5 +108,158 @@ func ParseYAML(yamlPayload []byte) (RocketshipConfig, error) {
 		return RocketshipConfig{}, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
+	// Process browser sessions (auto-inject start/stop steps)
+	if err := processBrowserSessions(&config); err != nil {
+		return RocketshipConfig{}, fmt.Errorf("failed to process browser sessions: %w", err)
+	}
+
 	return config, nil
+}
+
+// processBrowserSessions scans tests for browser-using plugins and auto-injects start/stop steps
+func processBrowserSessions(config *RocketshipConfig) error {
+	for i := range config.Tests {
+		test := &config.Tests[i]
+
+		// Scan test steps for browser-using plugins
+		needsBrowser, headless, err := scanForBrowserUsage(test.Steps)
+		if err != nil {
+			return fmt.Errorf("test %q: %w", test.Name, err)
+		}
+
+		if !needsBrowser {
+			continue
+		}
+
+		// Generate session ID for this test
+		sessionID := fmt.Sprintf("test-{{ .run.id }}-%d", i)
+
+		// Inject browser start at the beginning of steps
+		startStep := Step{
+			Name:   "__auto_browser_start__",
+			Plugin: "playwright",
+			Config: map[string]interface{}{
+				"role":       "start",
+				"session_id": sessionID,
+				"headless":   headless,
+			},
+		}
+		test.Steps = append([]Step{startStep}, test.Steps...)
+
+		// Inject browser stop in cleanup.always
+		stopStep := Step{
+			Name:   "__auto_browser_stop__",
+			Plugin: "playwright",
+			Config: map[string]interface{}{
+				"role":       "stop",
+				"session_id": sessionID,
+			},
+		}
+
+		if test.Cleanup == nil {
+			test.Cleanup = &CleanupSpec{}
+		}
+		test.Cleanup.Always = append(test.Cleanup.Always, stopStep)
+
+		// Inject session_id into all browser-using steps
+		for j := range test.Steps {
+			step := &test.Steps[j]
+			if isBrowserPlugin(step.Plugin) {
+				// Skip the auto-injected start step
+				if step.Name == "__auto_browser_start__" {
+					continue
+				}
+				// Only inject if session_id not already set
+				if _, hasSessionID := step.Config["session_id"]; !hasSessionID {
+					step.Config["session_id"] = sessionID
+				}
+			} else if step.Plugin == "agent" {
+				// Check if agent has browser capability
+				if caps, ok := step.Config["capabilities"].([]interface{}); ok {
+					for _, cap := range caps {
+						if capStr, ok := cap.(string); ok && capStr == "browser" {
+							// Only inject if session_id not already set
+							if _, hasSessionID := step.Config["session_id"]; !hasSessionID {
+								step.Config["session_id"] = sessionID
+							}
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// scanForBrowserUsage scans steps to determine if browser is needed and headless setting
+func scanForBrowserUsage(steps []Step) (needsBrowser bool, headless bool, err error) {
+	headless = true // Default to headless
+
+	for _, step := range steps {
+		// Error if user explicitly uses playwright start/stop
+		if step.Plugin == "playwright" {
+			if role, ok := step.Config["role"].(string); ok {
+				if role == "start" || role == "stop" {
+					return false, false, fmt.Errorf("step %q: invalid role %q. Browser sessions are now auto-managed. Only 'script' role is supported", step.Name, role)
+				}
+			}
+		}
+
+		// Check for browser plugins
+		if isBrowserPlugin(step.Plugin) {
+			needsBrowser = true
+
+			// Check headless setting
+			if h, ok := step.Config["headless"]; ok {
+				switch v := h.(type) {
+				case bool:
+					if !v {
+						headless = false
+					}
+				case string:
+					if strings.ToLower(v) == "false" || v == "{{ .env.HEADLESS }}" {
+						// For template vars, we'll default to headless unless explicitly false
+						if strings.ToLower(v) == "false" {
+							headless = false
+						}
+					}
+				}
+			}
+		}
+
+		// Check for agent with browser capability
+		if step.Plugin == "agent" {
+			if caps, ok := step.Config["capabilities"].([]interface{}); ok {
+				for _, cap := range caps {
+					if capStr, ok := cap.(string); ok && capStr == "browser" {
+						needsBrowser = true
+
+						// Check headless setting for agent
+						if h, ok := step.Config["headless"]; ok {
+							switch v := h.(type) {
+							case bool:
+								if !v {
+									headless = false
+								}
+							case string:
+								if strings.ToLower(v) == "false" {
+									headless = false
+								}
+							}
+						}
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return needsBrowser, headless, nil
+}
+
+// isBrowserPlugin returns true if the plugin uses browser sessions
+func isBrowserPlugin(plugin string) bool {
+	return plugin == "playwright" || plugin == "browser_use"
 }

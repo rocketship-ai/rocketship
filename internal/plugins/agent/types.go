@@ -28,11 +28,15 @@ type Config struct {
 	// or modify files. It's job is to execute test tasks and return pass/fail results.
 	Cwd string `json:"cwd,omitempty" yaml:"cwd,omitempty"`
 
-	// MCP servers configuration (key: server name, value: server config)
-	MCPServers map[string]MCPServerConfig `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
+	// Capabilities: simple array of capability names that map to MCP servers
+	// Valid capabilities: "browser" (maps to @playwright/mcp@0.0.43)
+	Capabilities []string `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
 
 	// Tool permissions: list of allowed tool names, or ["*"] for all tools (default: ["*"])
 	AllowedTools []string `json:"allowed_tools,omitempty" yaml:"allowed_tools,omitempty"`
+
+	// Internal: MCP servers resolved from capabilities (populated internally, not from YAML)
+	MCPServers map[string]MCPServerConfig `json:"-" yaml:"-"`
 }
 
 // MCPServerConfig represents configuration for an MCP server

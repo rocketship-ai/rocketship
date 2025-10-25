@@ -27,8 +27,6 @@ init:
   - name: "Create test database schema"
     plugin: supabase
     config:
-      url: "{{ .vars.supabase_url }}"
-      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "insert"
       table: "companies"
       insert:
@@ -46,8 +44,6 @@ init:
   - name: "Create shared auth user"
     plugin: supabase
     config:
-      url: "{{ .vars.supabase_url }}"
-      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "auth_create_user"
       auth:
         email: "{{ unique_email }}"
@@ -67,8 +63,6 @@ tests:
       - name: "Query shared company using suite variable"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -88,8 +82,6 @@ tests:
       - name: "Query company using suite globals"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -161,8 +153,6 @@ tests:
       - name: "Update shared company using suite variables"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "update"
           table: "companies"
           update:
@@ -184,8 +174,6 @@ cleanup:
     - name: "Capture company state for debugging"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "select"
         table: "companies"
         select:
@@ -200,8 +188,6 @@ cleanup:
     - name: "Delete shared company"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "delete"
         table: "companies"
         delete:
@@ -213,8 +199,6 @@ cleanup:
     - name: "Delete shared auth user"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "auth_delete_user"
         auth:
           user_id: "{{ shared_user_id }}"
@@ -222,8 +206,6 @@ cleanup:
     - name: "Verify cleanup completed"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "select"
         table: "companies"
         select:
