@@ -36,16 +36,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://docs.rocketship.sh/system-limits/</loc>
-         <lastmod>2025-10-26</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://docs.rocketship.sh/test-run-management/</loc>
-         <lastmod>2025-10-26</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://docs.rocketship.sh/deploy/digitalocean/</loc>
          <lastmod>2025-10-26</lastmod>
          <changefreq>daily</changefreq>
@@ -122,6 +112,76 @@
     </url>
     <url>
          <loc>https://docs.rocketship.sh/examples/variables/variables/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/features/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/features/lifecycle-hooks/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/features/retry-policies/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/features/variables/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/agent/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/browser-use/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/delay/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/http/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/log/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/playwright/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/script/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/sql/</loc>
+         <lastmod>2025-10-26</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://docs.rocketship.sh/plugins/supabase/</loc>
          <lastmod>2025-10-26</lastmod>
          <changefreq>daily</changefreq>
     </url>
