@@ -27,24 +27,30 @@ func TestParseConfig(t *testing.T) {
 		{
 			name: "valid full config with mode and session",
 			configData: map[string]interface{}{
-				"prompt":        "Test prompt",
-				"mode":          "continue",
-				"session_id":    "session-123",
-				"max_turns":     3,
-				"timeout":       "60s",
-				"system_prompt": "You are a helpful assistant",
-				"cwd":           "/tmp",
+				"prompt":     "Test prompt",
+				"mode":       "continue",
+				"session_id": "session-123",
+				"max_turns":  3,
+				"timeout":    "60s",
+				"cwd":        "/tmp",
 			},
 			expectError: false,
 			expected: &Config{
-				Prompt:       "Test prompt",
-				Mode:         ModeContinue,
-				SessionID:    "session-123",
-				MaxTurns:     3,
-				Timeout:      "60s",
-				SystemPrompt: "You are a helpful assistant",
-				Cwd:          "/tmp",
+				Prompt:    "Test prompt",
+				Mode:      ModeContinue,
+				SessionID: "session-123",
+				MaxTurns:  3,
+				Timeout:   "60s",
+				Cwd:       "/tmp",
 			},
+		},
+		{
+			name: "system_prompt is not user-configurable",
+			configData: map[string]interface{}{
+				"prompt":        "Test prompt",
+				"system_prompt": "You are a helpful assistant",
+			},
+			expectError: true,
 		},
 		{
 			name: "config with allowed_tools wildcard",
@@ -173,9 +179,7 @@ func TestParseConfig(t *testing.T) {
 					t.Errorf("Expected timeout %q, got %q", tt.expected.Timeout, config.Timeout)
 				}
 
-				if tt.expected.SystemPrompt != "" && config.SystemPrompt != tt.expected.SystemPrompt {
-					t.Errorf("Expected system_prompt %q, got %q", tt.expected.SystemPrompt, config.SystemPrompt)
-				}
+				// SystemPrompt is always set by the framework, not user-configurable
 
 				if tt.expected.Cwd != "" && config.Cwd != tt.expected.Cwd {
 					t.Errorf("Expected cwd %q, got %q", tt.expected.Cwd, config.Cwd)

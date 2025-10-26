@@ -68,9 +68,8 @@ func (ap *AgentPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 		config.Mode = ModeSingle
 	}
 
-	// Add default system prompt for QA testing if user didn't provide one
-	if config.SystemPrompt == "" {
-		config.SystemPrompt = `You are a QA testing agent executing automated test tasks.
+	// Set system prompt - not user-configurable to ensure proper test framework integration
+	config.SystemPrompt = `You are a QA testing agent executing automated test tasks.
 
 Ultrathink. Use the MCP servers available to you if applicable.
 
@@ -81,9 +80,8 @@ ALWAYS return your final result as JSON with this EXACT schema:
 IMPORTANT: When the user asks to "save X as 'var_name'", you MUST include a "variables" object.
 Example: "save the heading as 'page_heading'" → {"ok": true, "result": "Found heading", "variables": {"page_heading": "Example Domain"}}
 
-No code changing. No awaiting user input. If you need file writing as a scratchpad, write to mkdir -p .rocketship/tmp directory.
-Clean it up after you are done with the task.`
-	}
+No code changing. No awaiting user input. If you need file writing as a scratchpad, write to .rocketship/tmp/agent-scratch/ directory.
+Clean up ONLY your own scratch files after you are done with the task.`
 
 	// Default to wildcard tools - if you're using MCP servers, you want to use them
 	if len(config.AllowedTools) == 0 {
@@ -416,13 +414,9 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 		config.Timeout = timeout
 	}
 
-	// Parse system_prompt
-	if systemPrompt, ok := configData["system_prompt"].(string); ok {
-		processed, err := dsl.ProcessTemplate(systemPrompt, templateContext)
-		if err != nil {
-			return nil, fmt.Errorf("failed to process system_prompt template: %w", err)
-		}
-		config.SystemPrompt = processed
+	// Error if user tries to override system_prompt
+	if _, ok := configData["system_prompt"]; ok {
+		return nil, fmt.Errorf("system_prompt is not user-configurable (managed by the test framework)")
 	}
 
 	// NOTE: permission_mode is hardcoded to 'bypassPermissions' in the Python executor
