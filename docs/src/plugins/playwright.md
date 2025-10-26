@@ -8,6 +8,7 @@ Deterministic browser automation using Python scripts for precise DOM manipulati
 - name: "Navigate and verify"
   plugin: playwright
   config:
+    role: script
     script: |
       from playwright.sync_api import expect
 
@@ -22,8 +23,11 @@ Deterministic browser automation using Python scripts for precise DOM manipulati
 
 | Field | Description | Example |
 |-------|-------------|---------|
+| `role` | Must be `script` | `script` |
 | `script` | Python Playwright code | See examples below |
 | `env` | Environment variables for script | `{"KEY": "value"}` |
+
+**Note**: Browser session management and `session_id` are handled automatically - just specify `role: script` and your script.
 
 ## Common Patterns
 

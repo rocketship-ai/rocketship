@@ -158,6 +158,7 @@ rocketship run -ad .rocketship --debug     # Run an entire .rocketship directory
 ```yaml
 - plugin: playwright
   config:
+    role: script
     script: |
       from playwright.sync_api import expect
 
