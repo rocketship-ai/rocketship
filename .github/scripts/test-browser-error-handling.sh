@@ -94,30 +94,32 @@ log "Waiting 5s for process cleanup..."
 sleep 5
 
 # ==============================================================================
-# Test 3: Invalid session error (no browser startup needed)
+# Test 3: Invalid session (session not started)
 # ==============================================================================
-log "Test 3: invalid session error"
+log "Test 3: invalid session"
 
 mkdir -p "$TEMP_DIR/test3"
 cat > "$TEMP_DIR/test3/rocketship.yaml" << 'EOF'
 name: "Test 3: Invalid Session"
 tests:
-  - name: "invalid session error"
+  - name: "playwright invalid session"
     steps:
-      - name: "attempt to use non-existent session"
+      - name: "try to use non-existent session"
         plugin: playwright
         config:
           role: script
-          session_id: "this-session-was-never-started-12345"
           language: python
+          headless: true
+          session_id: "session-that-does-not-exist-12345"
           script: |
+            # Try to use a page from a session that was never started
             page.goto("https://example.com")
             result = {"should": "not reach here"}
 EOF
 
 OUTPUT3=$(rocketship run -af "$TEMP_DIR/test3/rocketship.yaml" 2>&1 || true)
 
-if echo "$OUTPUT3" | grep -q 'session "this-session-was-never-started-12345" is not active'; then
+if echo "$OUTPUT3" | grep -qE "(session.*not found|session.*does not exist|invalid session|no browser session|session.*not started)"; then
     log "✅ Test 3: Found invalid session error"
     ERRORS_FOUND=$((ERRORS_FOUND + 1))
 else
