@@ -28,7 +28,6 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.sections
-    - navigation.expand
     - navigation.indexes
     - toc.follow
     - search.suggest
@@ -56,37 +55,24 @@ nav:
   - Getting Started:
       - Installation: installation.md
       - Quick Start: quickstart.md
-      - Test Run Management: test-run-management.md
-      - System Limits: system-limits.md
-  - Examples:
-      - Overview: examples.md
-      - HTTP Testing:
-          - Request Chaining: examples/http/request-chaining.md
-          - Contract Validation: examples/http/openapi-validation.md
-      - SQL Testing:
-          - SQL Queries: examples/sql-testing.md
-      - Supabase Testing:
-          - Full-Stack Database Testing: examples/supabase-testing.md
-      - Parameterizing Tests:
-          - Variables Overview: examples/variables/variables.md
-          - Environment Variables: examples/variables/environment-variables.md
-          - Config & Runtime Variables: examples/variables/config-variables.md
-      - Custom Scripting:
-          - JavaScript Integration: examples/scripting/custom-scripting.md
-          - Shell Scripting: examples/scripting/shell-scripting.md
-      - AI Testing:
-          - Agent Plugin: examples/ai/agent-testing.md
-          - Browser Testing Plugins: examples/ai/browser-testing.md
-          - Persistent Browser Sessions: plugins/browser/persistent-sessions.md
-      - Logging:
-          - Log Plugin: examples/logging/log-plugin.md
-      - Reliability:
-          - Managing Delays: examples/reliability/delays.md
-          - Retry Policies: examples/reliability/retry-policies.md
-  - YAML Reference:
-      - Overview: yaml-reference/plugin-reference.md
-      - Lifecycle Hooks: yaml-reference/lifecycle-hooks.md
-  - MCP Server: mcp-server.md
+  - Features:
+      - Overview: features/index.md
+      - Plugins:
+          - Overview: plugins/index.md
+          - Reference: yaml-reference/plugin-reference.md
+          - HTTP: plugins/http.md
+          - SQL: plugins/sql.md
+          - Supabase: plugins/supabase.md
+          - Agent: plugins/agent.md
+          - Playwright: plugins/playwright.md
+          - Browser Use: plugins/browser-use.md
+          - Script: plugins/script.md
+          - Delay: plugins/delay.md
+          - Log: plugins/log.md
+      - Variables: features/variables.md
+      - Lifecycle Hooks: features/lifecycle-hooks.md
+      - Retry Policies: features/retry-policies.md
+      - MCP Server: mcp-server.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
       - Minikube (Local): deploy/minikube.md

@@ -1,5 +1,8 @@
 # Deploy Rocketship on DigitalOcean Kubernetes
 
+!!! warning "Early Beta - Not Recommended for Production Use"
+    This deployment guide is in early beta and not recommended for general usage yet. Features and deployment configurations may change without notice.
+
 This walkthrough recreates the production proof-of-concept we validated on DigitalOcean Kubernetes (DOKS). It covers standing up Temporal, publishing Rocketship images to DigitalOcean Container Registry (DOCR), terminating TLS through an NGINX ingress, and wiring the CLI via profiles.
 
 The steps assume you control public DNS for `cli.rocketship.globalbank.com`, `app.rocketship.globalbank.com`, and `auth.rocketship.globalbank.com` (or equivalent) and can issue a SAN certificate that covers all three hosts.
