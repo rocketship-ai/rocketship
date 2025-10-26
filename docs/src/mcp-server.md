@@ -3,7 +3,7 @@
 !!! warning "Early Beta - Not Recommended for Production Use"
     The Rocketship MCP server is in early beta and not recommended for general usage yet. Features and APIs may change without notice.
 
-    **Tip**: Instead of using the MCP server, copy and paste [ROCKETSHIP_AGENT_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_AGENT_QUICKSTART.md) into your coding agent's context window for a comprehensive reference.
+    **Tip**: Instead of using the MCP server, copy and paste [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) into your coding agent's context window for a comprehensive reference.
 
 Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents to access Rocketship examples, patterns, and guidance.
 
