@@ -2532,7 +2532,7 @@
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">API_BASE_URL</span><span class="o">=</span>https://api.staging.com
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">API_KEY</span><span class="o">=</span>sk-staging-key-123
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://user:pass@localhost/db
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">SUPABASE_ANON_KEY</span><span class="o">=</span>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">SUPABASE_SERVICE_KEY</span><span class="o">=</span>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 </code></pre></div>
 <p>Run tests:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
@@ -2554,13 +2554,13 @@
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>├── .env.production   # Production values (gitignore)
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>└── tests/api-tests.yaml
 </code></pre></div>
-<p><strong><code>.env.example</code></strong> (commit this):
+<p><strong><code>.env.example</code></strong> (commit this):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># API Configuration</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">API_BASE_URL</span><span class="o">=</span>https://api.example.com
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">API_KEY</span><span class="o">=</span>your-api-key-here
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://user:pass@host/db
-</code></pre></div></p>
-<p><strong>Usage:</strong>
+</code></pre></div>
+<p><strong>Usage:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Local</span>
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
@@ -2569,7 +2569,7 @@
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Production</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env.production
-</code></pre></div></p>
+</code></pre></div>
 <h2 id="cicd-integration">CI/CD Integration</h2>
 <h3 id="github-actions">GitHub Actions</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># .github/workflows/test.yml</span>
@@ -2590,10 +2590,12 @@
 <a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">DATABASE_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$CI_DATABASE_URL</span>
 </code></pre></div>
 <h3 id="environment-variables-in-ci">Environment Variables in CI</h3>
-<p>In CI, <strong>don't use <code>--env-file</code></strong>:
-1. Set secrets in your CI platform (GitHub Secrets, GitLab Variables)
-2. Reference them in workflow configuration
-3. Rocketship picks them up from system environment automatically</p>
+<p>In CI, <strong>don't use <code>--env-file</code></strong>:</p>
+<ol>
+<li>Set secrets in your CI platform (GitHub Secrets, GitLab Variables)</li>
+<li>Reference them in workflow configuration</li>
+<li>Rocketship picks them up from system environment automatically</li>
+</ol>
 <h2 id="security-best-practices">Security Best Practices</h2>
 <h3 id="gitignore-environment-files">Gitignore Environment Files</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># .gitignore</span>
@@ -2607,10 +2609,10 @@
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">DATABASE_URL</span><span class="o">=</span>postgres://user:pass@localhost/db
 <a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-...
 </code></pre></div>
-<p>Team members copy and fill in values:
+<p>Team members copy and fill in values:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Edit .env with actual credentials</span>
-</code></pre></div></p>
+</code></pre></div>
 <h3 id="validate-required-variables">Validate Required Variables</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Validate</span><span class="nv"> </span><span class="s">required</span><span class="nv"> </span><span class="s">env</span><span class="nv"> </span><span class="s">vars&quot;</span>
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;script&quot;</span>
@@ -2666,7 +2668,7 @@
 <a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">        </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;supabase&quot;</span>
 <a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">        </span><span class="nt">config</span><span class="p">:</span>
 <a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">          </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.vars.supabase_url</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.SUPABASE_ANON_KEY</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">          </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.SUPABASE_SERVICE_KEY</span><span class="nv"> </span><span class="s">}}&quot;</span>
 <a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">          </span><span class="nt">operation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;select&quot;</span>
 <a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">          </span><span class="nt">table</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;companies&quot;</span>
 <a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">          </span><span class="nt">select</span><span class="p">:</span>
@@ -2692,7 +2694,7 @@
 <a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
 <a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="w">            </span><span class="s">&quot;Authorization&quot;</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">{{</span><span class="nv"> </span><span class="s">.env.API_TOKEN</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<p>Run against different environments:
+<p>Run against different environments:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Local</span>
 <a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env
 <a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
@@ -2701,7 +2703,7 @@
 <a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
 <a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1"># Production</span>
 <a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>test.yaml<span class="w"> </span>--env-file<span class="w"> </span>.env.production
-</code></pre></div></p>
+</code></pre></div>
 <h2 id="common-patterns">Common Patterns</h2>
 <h3 id="build-urls-from-parts">Build URLs from Parts</h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">config</span><span class="p">:</span>

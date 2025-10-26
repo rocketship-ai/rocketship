@@ -1449,6 +1449,33 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#plugin-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: delay
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-playwright" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: playwright
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-browser_use" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: browser_use
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2380,6 +2407,33 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#plugin-delay" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: delay
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-playwright" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: playwright
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plugin-browser_use" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plugin: browser_use
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2867,10 +2921,17 @@
 <td>-</td>
 </tr>
 <tr>
-<td><code>mcp_servers</code></td>
+<td><code>capabilities[]</code></td>
 <td></td>
-<td>MCP server configurations</td>
-<td><code>object</code></td>
+<td>Agent capabilities that map to MCP servers (e.g., 'browser' for @playwright/mcp)</td>
+<td><code>array of string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>api_key</code></td>
+<td></td>
+<td>Anthropic API key (optional - auto-detected from ANTHROPIC_API_KEY env var if not provided)</td>
+<td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
@@ -2896,15 +2957,15 @@
 <tbody>
 <tr>
 <td><code>url</code></td>
-<td>✅</td>
-<td>Supabase project URL</td>
+<td></td>
+<td>Supabase project URL (optional - auto-detected from SUPABASE_URL env var if not provided)</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>key</code></td>
-<td>✅</td>
-<td>Supabase API key (anon or service key)</td>
+<td></td>
+<td>Supabase API key (optional - auto-detected from SUPABASE_SECRET_KEY, SUPABASE_SERVICE_KEY, SUPABASE_PUBLISHABLE_KEY, or SUPABASE_ANON_KEY env vars if not provided)</td>
 <td><code>string</code></td>
 <td>-</td>
 </tr>
@@ -3235,6 +3296,209 @@
 <td></td>
 <td>Operation timeout</td>
 <td><code>string</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-delay">Plugin: <code>delay</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>duration</code></td>
+<td>✅</td>
+<td>Duration to delay (e.g., '5s', '1m', '2h')</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-playwright">Plugin: <code>playwright</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session_id</code></td>
+<td></td>
+<td>Browser session identifier (optional - auto-injected by browser session management)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>✅</td>
+<td>Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser</td>
+<td><code>start</code>, <code>script</code>, <code>stop</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>headless</code></td>
+<td></td>
+<td>Run browser in headless mode (boolean or template string like {{ .vars.headless }})</td>
+<td><code>['boolean', 'string']</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>slow_mo_ms</code></td>
+<td></td>
+<td>Slow down operations by N milliseconds (for 'start' role)</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>launch_args[]</code></td>
+<td></td>
+<td>Additional browser launch arguments (for 'start' role)</td>
+<td><code>array of string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>launch_timeout</code></td>
+<td></td>
+<td>Browser launch timeout in milliseconds (for 'start' role)</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>window_width</code></td>
+<td></td>
+<td>Browser window width in pixels (for 'start' role)</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>window_height</code></td>
+<td></td>
+<td>Browser window height in pixels (for 'start' role)</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>script</code></td>
+<td></td>
+<td>Python script to execute (for 'script' role)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>language</code></td>
+<td></td>
+<td>Script language - only 'python' is supported (for 'script' role)</td>
+<td><code>python</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>env</code></td>
+<td></td>
+<td>Environment variables for script execution (for 'script' role)</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="plugin-browser_use">Plugin: <code>browser_use</code></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required</th>
+<th>Description</th>
+<th>Type / Allowed Values</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session_id</code></td>
+<td></td>
+<td>Browser session identifier (optional - auto-injected by browser session management)</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>task</code></td>
+<td>✅</td>
+<td>Natural language task for the AI agent to perform</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>allowed_domains[]</code></td>
+<td></td>
+<td>Restrict browser navigation to these domains</td>
+<td><code>array of string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>max_steps</code></td>
+<td></td>
+<td>Maximum number of agent steps</td>
+<td><code>integer</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>use_vision</code></td>
+<td></td>
+<td>Enable vision capabilities for the AI agent</td>
+<td><code>boolean</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>temperature</code></td>
+<td></td>
+<td>LLM temperature for agent decisions</td>
+<td><code>number</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td></td>
+<td>Task execution timeout (e.g., '5m', '30s')</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm</code></td>
+<td></td>
+<td>LLM configuration for the agent</td>
+<td><code>object</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm.provider</code></td>
+<td></td>
+<td>LLM provider (e.g., 'anthropic', 'openai')</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm.model</code></td>
+<td></td>
+<td>LLM model name</td>
+<td><code>string</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>llm.config</code></td>
+<td></td>
+<td>LLM configuration (e.g., API keys as env vars)</td>
+<td><code>object</code></td>
 <td>-</td>
 </tr>
 </tbody>
