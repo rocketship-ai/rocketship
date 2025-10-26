@@ -182,7 +182,9 @@ func processBrowserSessions(config *RocketshipConfig) error {
 
 // scanForBrowserUsage scans steps to determine if browser is needed and headless setting
 func scanForBrowserUsage(steps []Step) (needsBrowser bool, headless bool, err error) {
-	headless = false // Default to non-headless (show browser for local testing)
+	headless = false        // Default to non-headless (show browser for local testing)
+	seenExplicitTrue := false
+	seenExplicitFalse := false
 
 	for _, step := range steps {
 		// Error if user explicitly uses playwright start/stop
@@ -200,26 +202,33 @@ func scanForBrowserUsage(steps []Step) (needsBrowser bool, headless bool, err er
 
 			// Check headless setting
 			if h, ok := step.Config["headless"]; ok {
+				var stepValue bool
+
 				switch v := h.(type) {
 				case bool:
-					if !v {
-						headless = false
-					}
+					stepValue = v
 				case string:
 					// Check for explicit "true" or "false"
 					lower := strings.ToLower(v)
-					switch lower {
-					case "true":
-						headless = true
-					case "false":
-						headless = false
-					}
-					// For template vars like {{ .env.BROWSER_HEADLESS }}, we can't know the value at parse time
-					// Keep the current default (false) for template variables
+					stepValue = (lower == "true")
+				}
+
+				if stepValue {
+					seenExplicitTrue = true
+				} else {
+					seenExplicitFalse = true
 				}
 			}
 		}
 	}
+
+	// Apply precedence: false wins over true
+	if seenExplicitFalse {
+		headless = false
+	} else if seenExplicitTrue {
+		headless = true
+	}
+	// else: keep default (false)
 
 	return needsBrowser, headless, nil
 }

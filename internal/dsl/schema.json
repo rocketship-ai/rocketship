@@ -1008,8 +1008,8 @@
                     "description": "Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser"
                   },
                   "headless": {
-                    "type": "boolean",
-                    "description": "Run browser in headless mode (for 'start' role)",
+                    "type": ["boolean", "string"],
+                    "description": "Run browser in headless mode (boolean or template string like {{ .vars.headless }})",
                     "default": true
                   },
                   "slow_mo_ms": {

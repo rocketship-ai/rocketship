@@ -195,7 +195,7 @@
 | ----- | -------- | ----------- | --------------------- | ----- |
 | `session_id` |  | Browser session identifier (optional - auto-injected by browser session management) | `string` | - |
 | `role` | ✅ | Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser | `start`, `script`, `stop` | - |
-| `headless` |  | Run browser in headless mode (for 'start' role) | `boolean` | - |
+| `headless` |  | Run browser in headless mode (boolean or template string like {{ .vars.headless }}) | `['boolean', 'string']` | - |
 | `slow_mo_ms` |  | Slow down operations by N milliseconds (for 'start' role) | `integer` | - |
 | `launch_args[]` |  | Additional browser launch arguments (for 'start' role) | `array of string` | - |
 | `launch_timeout` |  | Browser launch timeout in milliseconds (for 'start' role) | `integer` | - |
