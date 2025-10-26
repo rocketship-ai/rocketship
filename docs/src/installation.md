@@ -1,6 +1,6 @@
 # Installation
 
-Rocketship ships prebuilt binaries for macOS, Linux, and Windows. Use the Homebrew tap on macOS for the smoothest experience, or the portable installer script everywhere else. This page walks through the supported options, prerequisites, and post-install checks.
+Rocketship ships prebuilt binaries for macOS and Linux. Use the Homebrew tap on macOS for the smoothest experience, or the portable installer script everywhere else. This page walks through the supported options, prerequisites, and post-install checks.
 
 ## Prerequisites
 
@@ -39,12 +39,6 @@ The script:
 
 Re-run the script to pick up future releases. To pin a version, set `ROCKETSHIP_VERSION=v0.5.23` (for example) before invoking the script.
 
-## Windows
-
-1. Download `rocketship-windows-amd64.exe` from the [latest release](https://github.com/rocketship-ai/rocketship/releases/latest)
-2. Rename it to `rocketship.exe`
-3. Place it somewhere on your `PATH` (e.g. `C:\\Users\\<you>\\AppData\\Local\\Microsoft\\WindowsApps`)
-
 ## Docker
 
 ```bash
@@ -60,27 +54,6 @@ After installing, confirm the CLI works:
 
 ```bash
 rocketship --version
-rocketship doctor
-```
-
-`rocketship doctor` inspects your `PATH`, config directory permissions, file ownership, and (on macOS) quarantine state, printing exact remediation steps if anything is off.
-
-Configuration lives under the path returned by `os.UserConfigDir()`—for example `~/Library/Application Support/Rocketship` on macOS or `~/.config/rocketship` on Linux. Directories are created with `0700` permissions and the config file with `0600`.
-
-Rocketship refuses to run as root unless you set `ROCKETSHIP_ALLOW_ROOT=1`. This avoids leaving behind root-owned config files that can break normal usage.
-
-## Optional quality-of-life tweaks
-
-Alias the command if you prefer a shorter entry point:
-
-```bash
-# macOS/Linux shell rc
-alias rs="rocketship"
-```
-
-```powershell
-# Windows PowerShell profile
-Set-Alias -Name rs -Value rocketship
 ```
 
 ## Next steps
