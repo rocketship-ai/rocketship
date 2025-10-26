@@ -164,7 +164,7 @@ func processBrowserSessions(config *RocketshipConfig) error {
 		// Inject session_id into all browser-using steps
 		for j := range test.Steps {
 			step := &test.Steps[j]
-			if isBrowserPlugin(step.Plugin) {
+			if usesBrowser(*step) {
 				// Skip the auto-injected start step
 				if step.Name == "__auto_browser_start__" {
 					continue
@@ -172,19 +172,6 @@ func processBrowserSessions(config *RocketshipConfig) error {
 				// Only inject if session_id not already set
 				if _, hasSessionID := step.Config["session_id"]; !hasSessionID {
 					step.Config["session_id"] = sessionID
-				}
-			} else if step.Plugin == "agent" {
-				// Check if agent has browser capability
-				if caps, ok := step.Config["capabilities"].([]interface{}); ok {
-					for _, cap := range caps {
-						if capStr, ok := cap.(string); ok && capStr == "browser" {
-							// Only inject if session_id not already set
-							if _, hasSessionID := step.Config["session_id"]; !hasSessionID {
-								step.Config["session_id"] = sessionID
-							}
-							break
-						}
-					}
 				}
 			}
 		}
@@ -207,8 +194,8 @@ func scanForBrowserUsage(steps []Step) (needsBrowser bool, headless bool, err er
 			}
 		}
 
-		// Check for browser plugins
-		if isBrowserPlugin(step.Plugin) {
+		// Check for browser usage
+		if usesBrowser(step) {
 			needsBrowser = true
 
 			// Check headless setting
@@ -228,38 +215,30 @@ func scanForBrowserUsage(steps []Step) (needsBrowser bool, headless bool, err er
 				}
 			}
 		}
-
-		// Check for agent with browser capability
-		if step.Plugin == "agent" {
-			if caps, ok := step.Config["capabilities"].([]interface{}); ok {
-				for _, cap := range caps {
-					if capStr, ok := cap.(string); ok && capStr == "browser" {
-						needsBrowser = true
-
-						// Check headless setting for agent
-						if h, ok := step.Config["headless"]; ok {
-							switch v := h.(type) {
-							case bool:
-								if !v {
-									headless = false
-								}
-							case string:
-								if strings.ToLower(v) == "false" {
-									headless = false
-								}
-							}
-						}
-						break
-					}
-				}
-			}
-		}
 	}
 
 	return needsBrowser, headless, nil
 }
 
-// isBrowserPlugin returns true if the plugin uses browser sessions
-func isBrowserPlugin(plugin string) bool {
-	return plugin == "playwright" || plugin == "browser_use"
+// usesBrowser returns true if the step uses browser sessions
+// This includes always-browser plugins (playwright, browser_use) and
+// agent steps configured with browser capability
+func usesBrowser(step Step) bool {
+	// Always-browser plugins
+	if step.Plugin == "playwright" || step.Plugin == "browser_use" {
+		return true
+	}
+
+	// Agent with browser capability
+	if step.Plugin == "agent" {
+		if caps, ok := step.Config["capabilities"].([]interface{}); ok {
+			for _, cap := range caps {
+				if capStr, ok := cap.(string); ok && capStr == "browser" {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
