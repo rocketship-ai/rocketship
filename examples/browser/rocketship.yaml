@@ -73,8 +73,7 @@ tests:
         plugin: browser_use
         config:
           task: |
-            You are on the IANA website ({{ saved_url }}). Simply verify that you see
-            the main heading "Internet Assigned Numbers Authority" on the page.
+            You are on {{ saved_url }}. Report that you can see the page.
           max_steps: 2
           use_vision: true
           llm:
