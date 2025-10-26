@@ -257,3 +257,92 @@ tests: []
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "schema validation failed")
 }
+
+func TestUsesBrowser(t *testing.T) {
+	tests := []struct {
+		name     string
+		step     Step
+		expected bool
+	}{
+		{
+			name: "playwright plugin",
+			step: Step{
+				Plugin: "playwright",
+				Config: map[string]interface{}{
+					"role": "script",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "browser_use plugin",
+			step: Step{
+				Plugin: "browser_use",
+				Config: map[string]interface{}{
+					"task": "Navigate to example.com",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "agent with browser capability",
+			step: Step{
+				Plugin: "agent",
+				Config: map[string]interface{}{
+					"prompt":       "Test the website",
+					"capabilities": []interface{}{"browser"},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "agent without browser capability",
+			step: Step{
+				Plugin: "agent",
+				Config: map[string]interface{}{
+					"prompt": "Answer a question",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "agent with empty capabilities",
+			step: Step{
+				Plugin: "agent",
+				Config: map[string]interface{}{
+					"prompt":       "Answer a question",
+					"capabilities": []interface{}{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "http plugin",
+			step: Step{
+				Plugin: "http",
+				Config: map[string]interface{}{
+					"method": "GET",
+					"url":    "https://example.com",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "delay plugin",
+			step: Step{
+				Plugin: "delay",
+				Config: map[string]interface{}{
+					"duration": "5s",
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := usesBrowser(tt.step)
+			assert.Equal(t, tt.expected, result, "usesBrowser should return %v for %s", tt.expected, tt.name)
+		})
+	}
+}

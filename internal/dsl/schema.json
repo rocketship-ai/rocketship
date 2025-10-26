@@ -650,49 +650,17 @@
                     "type": "string",
                     "description": "Working directory for agent execution"
                   },
-                  "mcp_servers": {
-                    "type": "object",
-                    "description": "MCP server configurations",
-                    "additionalProperties": {
-                      "type": "object",
-                      "required": ["type"],
-                      "properties": {
-                        "type": {
-                          "type": "string",
-                          "enum": ["stdio", "sse"],
-                          "description": "MCP server type"
-                        },
-                        "command": {
-                          "type": "string",
-                          "description": "Command to execute (required for stdio type)"
-                        },
-                        "args": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          },
-                          "description": "Command arguments (for stdio type)"
-                        },
-                        "env": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "Environment variables (for stdio type)"
-                        },
-                        "url": {
-                          "type": "string",
-                          "description": "HTTP/SSE endpoint URL (required for sse type)"
-                        },
-                        "headers": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "HTTP headers (for sse type)"
-                        }
-                      }
-                    }
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": ["browser"]
+                    },
+                    "description": "Agent capabilities that map to MCP servers (e.g., 'browser' for @playwright/mcp)"
+                  },
+                  "api_key": {
+                    "type": "string",
+                    "description": "Anthropic API key (optional - auto-detected from ANTHROPIC_API_KEY env var if not provided)"
                   },
                   "allowed_tools": {
                     "oneOf": [
@@ -728,15 +696,15 @@
             "properties": {
               "config": {
                 "type": "object",
-                "required": ["url", "key", "operation"],
+                "required": ["operation"],
                 "properties": {
                   "url": {
                     "type": "string",
-                    "description": "Supabase project URL"
+                    "description": "Supabase project URL (optional - auto-detected from SUPABASE_URL env var if not provided)"
                   },
                   "key": {
                     "type": "string",
-                    "description": "Supabase API key (anon or service key)"
+                    "description": "Supabase API key (optional - auto-detected from SUPABASE_SECRET_KEY, SUPABASE_SERVICE_KEY, SUPABASE_PUBLISHABLE_KEY, or SUPABASE_ANON_KEY env vars if not provided)"
                   },
                   "operation": {
                     "type": "string",
@@ -987,6 +955,175 @@
                     "pattern": "^[0-9]+(s|m|h)$",
                     "description": "Operation timeout",
                     "default": "30s"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "delay"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": ["duration"],
+                "properties": {
+                  "duration": {
+                    "type": "string",
+                    "description": "Duration to delay (e.g., '5s', '1m', '2h')"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "playwright"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": ["role"],
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "description": "Browser session identifier (optional - auto-injected by browser session management)"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": ["start", "script", "stop"],
+                    "description": "Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser"
+                  },
+                  "headless": {
+                    "type": ["boolean", "string"],
+                    "description": "Run browser in headless mode (boolean or template string like {{ .vars.headless }})",
+                    "default": true
+                  },
+                  "slow_mo_ms": {
+                    "type": "integer",
+                    "description": "Slow down operations by N milliseconds (for 'start' role)"
+                  },
+                  "launch_args": {
+                    "type": "array",
+                    "description": "Additional browser launch arguments (for 'start' role)",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "launch_timeout": {
+                    "type": "integer",
+                    "description": "Browser launch timeout in milliseconds (for 'start' role)"
+                  },
+                  "window_width": {
+                    "type": "integer",
+                    "description": "Browser window width in pixels (for 'start' role)"
+                  },
+                  "window_height": {
+                    "type": "integer",
+                    "description": "Browser window height in pixels (for 'start' role)"
+                  },
+                  "script": {
+                    "type": "string",
+                    "description": "Python script to execute (for 'script' role)"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Script language - only 'python' is supported (for 'script' role)",
+                    "enum": ["python"]
+                  },
+                  "env": {
+                    "type": "object",
+                    "description": "Environment variables for script execution (for 'script' role)",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plugin": {
+                "const": "browser_use"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "config": {
+                "type": "object",
+                "required": ["task"],
+                "properties": {
+                  "session_id": {
+                    "type": "string",
+                    "description": "Browser session identifier (optional - auto-injected by browser session management)"
+                  },
+                  "task": {
+                    "type": "string",
+                    "description": "Natural language task for the AI agent to perform"
+                  },
+                  "allowed_domains": {
+                    "type": "array",
+                    "description": "Restrict browser navigation to these domains",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "max_steps": {
+                    "type": "integer",
+                    "description": "Maximum number of agent steps",
+                    "default": 10
+                  },
+                  "use_vision": {
+                    "type": "boolean",
+                    "description": "Enable vision capabilities for the AI agent",
+                    "default": false
+                  },
+                  "temperature": {
+                    "type": "number",
+                    "description": "LLM temperature for agent decisions"
+                  },
+                  "timeout": {
+                    "type": "string",
+                    "description": "Task execution timeout (e.g., '5m', '30s')",
+                    "default": "5m"
+                  },
+                  "llm": {
+                    "type": "object",
+                    "description": "LLM configuration for the agent",
+                    "properties": {
+                      "provider": {
+                        "type": "string",
+                        "description": "LLM provider (e.g., 'anthropic', 'openai')"
+                      },
+                      "model": {
+                        "type": "string",
+                        "description": "LLM model name"
+                      },
+                      "config": {
+                        "type": "object",
+                        "description": "LLM configuration (e.g., API keys as env vars)",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    }
                   }
                 }
               }

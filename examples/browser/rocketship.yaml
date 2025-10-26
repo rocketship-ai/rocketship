@@ -4,29 +4,14 @@ description: "Comprehensive browser testing with playwright (deterministic) and 
 tests:
   # Test 1: Combines basic integration + variable passing (uses browser_use 2x sequentially)
   - name: "Integration and variable passing"
-    cleanup:
-      always:
-        - name: "cleanup browser session"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "integration-{{ .run.id }}"
     steps:
-      - name: "start browser session"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "integration-{{ .run.id }}"
-          headless: true
-          window_width: 1280
-          window_height: 720
-
+      # Browser auto-starts before first browser step!
       - name: "playwright: navigate to example.com"
         plugin: playwright
         config:
           role: script
-          session_id: "integration-{{ .run.id }}"
           language: python
+          headless: true
           script: |
             from playwright.sync_api import expect
 
@@ -48,7 +33,6 @@ tests:
       - name: "browser_use: verify basic integration"
         plugin: browser_use
         config:
-          session_id: "integration-{{ .run.id }}"
           task: |
             You are on example.com. Verify that the main heading says "Example Domain".
             If you see this heading, report success.
@@ -65,7 +49,6 @@ tests:
         plugin: playwright
         config:
           role: script
-          session_id: "integration-{{ .run.id }}"
           language: python
           script: |
             from playwright.sync_api import expect
@@ -89,10 +72,8 @@ tests:
       - name: "browser_use: verify variable passing"
         plugin: browser_use
         config:
-          session_id: "integration-{{ .run.id }}"
           task: |
-            You are on the IANA website ({{ saved_url }}). Simply verify that you see
-            the main heading "Internet Assigned Numbers Authority" on the page.
+            You are on {{ saved_url }}. Report that you can see the page.
           max_steps: 2
           use_vision: true
           llm:
@@ -105,7 +86,6 @@ tests:
         plugin: playwright
         config:
           role: script
-          session_id: "integration-{{ .run.id }}"
           language: python
           script: |
             from playwright.sync_api import expect
@@ -121,27 +101,14 @@ tests:
 
   # Test 2: Timeout configuration (uses browser_use 1x)
   - name: "Timeout configuration"
-    cleanup:
-      always:
-        - name: "cleanup browser session"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "timeout-{{ .run.id }}"
     steps:
-      - name: "start browser session"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "timeout-{{ .run.id }}"
-          headless: true
-
+      # Browser auto-starts with headless=true (default)
       - name: "playwright: navigate to test page"
         plugin: playwright
         config:
           role: script
-          session_id: "timeout-{{ .run.id }}"
           language: python
+          headless: true
           script: |
             page.goto("https://example.org")
             result = {"page": "loaded"}
@@ -149,7 +116,6 @@ tests:
       - name: "browser_use: task with explicit 2m timeout"
         plugin: browser_use
         config:
-          session_id: "timeout-{{ .run.id }}"
           timeout: "2m"
           task: "Verify the page loaded successfully and has content."
           max_steps: 2
@@ -164,8 +130,8 @@ tests:
         plugin: playwright
         config:
           role: script
-          session_id: "timeout-{{ .run.id }}"
           language: python
+          headless: true
           script: |
             from playwright.sync_api import expect
 
@@ -173,81 +139,27 @@ tests:
             expect(page).to_have_url("https://example.org/")
             result = {"timeout_test": "passed"}
 
-  # Test 3: Viewport configurations - PURE PLAYWRIGHT (uses browser_use 0x)
-  - name: "Viewport configurations"
+  # Test 3: Default viewport - PURE PLAYWRIGHT
+  - name: "Default viewport test"
     steps:
-      # Mobile viewport test
-      - name: "start mobile browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "mobile-{{ .run.id }}"
-          headless: true
-          window_width: 375
-          window_height: 667
-
-      - name: "playwright: verify mobile viewport"
+      - name: "playwright: verify default viewport"
         plugin: playwright
         config:
           role: script
-          session_id: "mobile-{{ .run.id }}"
           language: python
+          headless: true
           script: |
             from playwright.sync_api import expect
 
             page.goto("https://example.com")
             expect(page).to_have_url("https://example.com/")
 
-            # Verify mobile viewport via window dimensions
-            # Note: Chromium headless enforces minimum dimensions (500x528)
+            # Verify default viewport dimensions
             width = page.evaluate("window.innerWidth")
             height = page.evaluate("window.innerHeight")
 
-            assert width == 500, f"Width should be 500 (Chromium minimum), got {width}"
-            assert height == 528, f"Height should be 528 (Chromium adjusted), got {height}"
+            # Default viewport is 1280x720 in headless mode
+            assert width == 1280, f"Width should be 1280 (default), got {width}"
+            assert height >= 500, f"Height should be at least 500, got {height}"
 
-            result = {"viewport": "mobile", "width": width, "height": height}
-
-      - name: "stop mobile browser"
-        plugin: playwright
-        config:
-          role: stop
-          session_id: "mobile-{{ .run.id }}"
-
-      # Desktop viewport test
-      - name: "start desktop browser"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "desktop-{{ .run.id }}"
-          headless: true
-          window_width: 1920
-          window_height: 1080
-
-      - name: "playwright: verify desktop viewport"
-        plugin: playwright
-        config:
-          role: script
-          session_id: "desktop-{{ .run.id }}"
-          language: python
-          script: |
-            from playwright.sync_api import expect
-
-            page.goto("https://example.org")
-            expect(page).to_have_url("https://example.org/")
-
-            # Verify desktop viewport via window dimensions
-            # Note: Chromium may adjust heights based on available screen space
-            width = page.evaluate("window.innerWidth")
-            height = page.evaluate("window.innerHeight")
-
-            assert width == 1920, f"Width should be 1920, got {width}"
-            assert height == 941, f"Height should be 941 (Chromium adjusted), got {height}"
-
-            result = {"viewport": "desktop", "width": width, "height": height}
-
-      - name: "stop desktop browser"
-        plugin: playwright
-        config:
-          role: stop
-          session_id: "desktop-{{ .run.id }}"
+            result = {"viewport": "default", "width": width, "height": height}

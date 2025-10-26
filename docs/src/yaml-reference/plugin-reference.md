@@ -122,7 +122,8 @@
 | `timeout` |  | Execution timeout (default: unlimited) | `string` | - |
 | `system_prompt` |  | System prompt prepended to conversation (supports template variables) | `string` | - |
 | `cwd` |  | Working directory for agent execution | `string` | - |
-| `mcp_servers` |  | MCP server configurations | `object` | - |
+| `capabilities[]` |  | Agent capabilities that map to MCP servers (e.g., 'browser' for @playwright/mcp) | `array of string` | - |
+| `api_key` |  | Anthropic API key (optional - auto-detected from ANTHROPIC_API_KEY env var if not provided) | `string` | - |
 | `allowed_tools` |  | Tool permissions (default: ['*'] wildcard) | `any` | - |
 
 
@@ -130,8 +131,8 @@
 
 | Field | Required | Description | Type / Allowed Values | Notes |
 | ----- | -------- | ----------- | --------------------- | ----- |
-| `url` | ✅ | Supabase project URL | `string` | - |
-| `key` | ✅ | Supabase API key (anon or service key) | `string` | - |
+| `url` |  | Supabase project URL (optional - auto-detected from SUPABASE_URL env var if not provided) | `string` | - |
+| `key` |  | Supabase API key (optional - auto-detected from SUPABASE_SECRET_KEY, SUPABASE_SERVICE_KEY, SUPABASE_PUBLISHABLE_KEY, or SUPABASE_ANON_KEY env vars if not provided) | `string` | - |
 | `operation` | ✅ | Supabase operation to perform | `select`, `insert`, `update`, `delete`, `rpc`, `auth_create_user`, `auth_delete_user`, `auth_sign_up`, `auth_sign_in`, `storage_create_bucket`, `storage_delete_bucket`, `storage_upload`, `storage_download`, `storage_delete` | - |
 | `table` |  | Table name for database operations | `string` | - |
 | `select` |  | Configuration for select operation | `object` | - |
@@ -179,6 +180,47 @@
 | `storage.cache_control` |  | No description | `string` | - |
 | `storage.content_type` |  | No description | `string` | - |
 | `timeout` |  | Operation timeout | `string` | - |
+
+
+### Plugin: `delay`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `duration` | ✅ | Duration to delay (e.g., '5s', '1m', '2h') | `string` | - |
+
+
+### Plugin: `playwright`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `session_id` |  | Browser session identifier (optional - auto-injected by browser session management) | `string` | - |
+| `role` | ✅ | Playwright action: 'start' launches browser, 'script' runs Python code, 'stop' closes browser | `start`, `script`, `stop` | - |
+| `headless` |  | Run browser in headless mode (boolean or template string like {{ .vars.headless }}) | `['boolean', 'string']` | - |
+| `slow_mo_ms` |  | Slow down operations by N milliseconds (for 'start' role) | `integer` | - |
+| `launch_args[]` |  | Additional browser launch arguments (for 'start' role) | `array of string` | - |
+| `launch_timeout` |  | Browser launch timeout in milliseconds (for 'start' role) | `integer` | - |
+| `window_width` |  | Browser window width in pixels (for 'start' role) | `integer` | - |
+| `window_height` |  | Browser window height in pixels (for 'start' role) | `integer` | - |
+| `script` |  | Python script to execute (for 'script' role) | `string` | - |
+| `language` |  | Script language - only 'python' is supported (for 'script' role) | `python` | - |
+| `env` |  | Environment variables for script execution (for 'script' role) | `object` | - |
+
+
+### Plugin: `browser_use`
+
+| Field | Required | Description | Type / Allowed Values | Notes |
+| ----- | -------- | ----------- | --------------------- | ----- |
+| `session_id` |  | Browser session identifier (optional - auto-injected by browser session management) | `string` | - |
+| `task` | ✅ | Natural language task for the AI agent to perform | `string` | - |
+| `allowed_domains[]` |  | Restrict browser navigation to these domains | `array of string` | - |
+| `max_steps` |  | Maximum number of agent steps | `integer` | - |
+| `use_vision` |  | Enable vision capabilities for the AI agent | `boolean` | - |
+| `temperature` |  | LLM temperature for agent decisions | `number` | - |
+| `timeout` |  | Task execution timeout (e.g., '5m', '30s') | `string` | - |
+| `llm` |  | LLM configuration for the agent | `object` | - |
+| `llm.provider` |  | LLM provider (e.g., 'anthropic', 'openai') | `string` | - |
+| `llm.model` |  | LLM model name | `string` | - |
+| `llm.config` |  | LLM configuration (e.g., API keys as env vars) | `object` | - |
 
 
 ---

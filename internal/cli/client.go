@@ -202,6 +202,23 @@ func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 	return nil
 }
 
+// WaitForCleanup waits for all cleanup workflows to complete before shutdown
+func (c *EngineClient) WaitForCleanup(ctx context.Context) error {
+	resp, err := c.client.WaitForCleanup(ctx, &generated.WaitForCleanupRequest{})
+	if err != nil {
+		if wrapped := translateAuthError("failed to wait for cleanup", err); wrapped != nil {
+			return wrapped
+		}
+		return fmt.Errorf("failed to wait for cleanup: %w", err)
+	}
+
+	if !resp.Completed {
+		return fmt.Errorf("cleanup did not complete")
+	}
+
+	return nil
+}
+
 // ServerInfo represents server auth capabilities
 type ServerInfo struct {
 	Version        string

@@ -196,15 +196,25 @@ func (e *Engine) handleSuiteInitFailure(runID string, runInfo *RunInfo, initErr 
 }
 
 func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
+	slog.Info("triggerSuiteCleanup: Starting", "run_id", runID, "has_failure", hasFailure)
+
 	e.mu.Lock()
 	runInfo, exists := e.runs[runID]
 	if !exists {
 		e.mu.Unlock()
+		slog.Warn("triggerSuiteCleanup: Run not found", "run_id", runID)
 		return
 	}
 
-	if runInfo.SuiteCleanup == nil || runInfo.SuiteCleanupRan {
+	if runInfo.SuiteCleanup == nil {
 		e.mu.Unlock()
+		slog.Debug("triggerSuiteCleanup: No suite cleanup configured", "run_id", runID)
+		return
+	}
+
+	if runInfo.SuiteCleanupRan {
+		e.mu.Unlock()
+		slog.Debug("triggerSuiteCleanup: Suite cleanup already ran", "run_id", runID)
 		return
 	}
 
@@ -215,10 +225,16 @@ func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
 	suiteOpenAPI := runInfo.SuiteOpenAPI
 	e.mu.Unlock()
 
+	slog.Info("triggerSuiteCleanup: Starting suite cleanup workflow", "run_id", runID)
+
 	// Track suite cleanup workflow so server waits for completion before shutdown
 	e.cleanupWg.Add(1)
+	slog.Debug("triggerSuiteCleanup: Added to cleanupWg", "run_id", runID)
 	go func() {
-		defer e.cleanupWg.Done()
+		defer func() {
+			e.cleanupWg.Done()
+			slog.Debug("triggerSuiteCleanup: Removed from cleanupWg (Done called)", "run_id", runID)
+		}()
 
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
 		defer cancel()
@@ -238,19 +254,24 @@ func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
 			TreatAsFailure: hasFailure,
 		}
 
+		slog.Debug("triggerSuiteCleanup: Executing suite cleanup workflow", "run_id", runID, "workflow_id", options.ID)
 		execution, err := e.temporal.ExecuteWorkflow(ctx, options, "SuiteCleanupWorkflow", params)
 		if err != nil {
+			slog.Error("triggerSuiteCleanup: Failed to start suite cleanup workflow", "run_id", runID, "error", err)
 			log.Printf("[ERROR] Failed to start suite cleanup workflow for run %s: %v", runID, err)
 			e.addLog(runID, fmt.Sprintf("Failed to start suite cleanup: %v", err), "red", true)
 			return
 		}
 
+		slog.Debug("triggerSuiteCleanup: Suite cleanup workflow started, waiting for completion", "run_id", runID)
 		if err := execution.Get(ctx, nil); err != nil {
+			slog.Error("triggerSuiteCleanup: Suite cleanup workflow failed", "run_id", runID, "error", err)
 			log.Printf("[ERROR] Suite cleanup workflow failed for run %s: %v", runID, err)
 			e.addLog(runID, fmt.Sprintf("Suite cleanup workflow failed: %v", err), "red", true)
 			return
 		}
 
+		slog.Info("triggerSuiteCleanup: Suite cleanup completed successfully", "run_id", runID)
 		e.addLog(runID, "Suite cleanup completed", "green", true)
 	}()
 }
@@ -483,20 +504,105 @@ func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*gen
 	return nil, fmt.Errorf("run not found: %s", req.RunId)
 }
 
+// CancelRun cancels all workflows for a given run and marks it as cancelled
+func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest) (*generated.CancelRunResponse, error) {
+	if req.RunId == "" {
+		return nil, fmt.Errorf("run_id is required")
+	}
+
+	slog.Info("CancelRun: Starting cancellation", "run_id", req.RunId)
+
+	e.mu.Lock()
+	runInfo, exists := e.runs[req.RunId]
+	if !exists {
+		e.mu.Unlock()
+		slog.Warn("CancelRun: Run not found", "run_id", req.RunId)
+		return &generated.CancelRunResponse{
+			Success: false,
+			Message: fmt.Sprintf("run not found: %s", req.RunId),
+		}, nil
+	}
+
+	// Mark run as cancelled
+	runInfo.Status = "CANCELLED"
+	slog.Debug("CancelRun: Marked run as CANCELLED", "run_id", req.RunId)
+
+	// Get list of test workflow IDs to cancel
+	testWorkflows := make([]string, 0, len(runInfo.Tests))
+	for workflowID, testInfo := range runInfo.Tests {
+		testWorkflows = append(testWorkflows, workflowID)
+		slog.Debug("CancelRun: Found test workflow to cancel", "workflow_id", workflowID, "test_name", testInfo.Name, "status", testInfo.Status)
+	}
+	e.mu.Unlock()
+
+	slog.Info("CancelRun: Cancelling workflows", "run_id", req.RunId, "workflow_count", len(testWorkflows))
+
+	// Cancel all test workflows and wait for them to finish their cleanup
+	var cancelErrors []string
+	for _, workflowID := range testWorkflows {
+		slog.Debug("CancelRun: Attempting to cancel workflow", "workflow_id", workflowID)
+		if err := e.temporal.CancelWorkflow(ctx, workflowID, ""); err != nil {
+			slog.Warn("CancelRun: Failed to cancel workflow", "workflow_id", workflowID, "error", err)
+			cancelErrors = append(cancelErrors, fmt.Sprintf("workflow %s: %v", workflowID, err))
+			continue
+		}
+		slog.Info("CancelRun: Successfully cancelled workflow", "workflow_id", workflowID)
+
+		// Wait for the workflow to complete (including test-level cleanup.always)
+		slog.Debug("CancelRun: Waiting for workflow to complete cleanup", "workflow_id", workflowID)
+		workflowRun := e.temporal.GetWorkflow(ctx, workflowID, "")
+		var result interface{}
+		if err := workflowRun.Get(ctx, &result); err != nil {
+			// Workflow was cancelled, which is expected - just log it
+			slog.Debug("CancelRun: Workflow completed with cancellation", "workflow_id", workflowID, "error", err)
+		} else {
+			slog.Debug("CancelRun: Workflow completed successfully", "workflow_id", workflowID)
+		}
+	}
+
+	// Add cancellation log
+	e.addLog(req.RunId, "Run cancelled by user (Ctrl+C)", "yellow", true)
+
+	// Trigger suite cleanup to ensure browser processes are cleaned up
+	// This will run cleanup.always steps even though we're cancelling
+	slog.Debug("CancelRun: Triggering suite cleanup", "run_id", req.RunId)
+	e.triggerSuiteCleanup(req.RunId, true)
+
+	if len(cancelErrors) > 0 {
+		slog.Warn("CancelRun: Completed with errors", "run_id", req.RunId, "errors", cancelErrors)
+		return &generated.CancelRunResponse{
+			Success: false,
+			Message: fmt.Sprintf("cancelled with errors: %s", strings.Join(cancelErrors, "; ")),
+		}, nil
+	}
+
+	slog.Info("CancelRun: Completed successfully", "run_id", req.RunId)
+	return &generated.CancelRunResponse{
+		Success: true,
+		Message: "run cancelled successfully",
+	}, nil
+}
+
 // WaitForCleanup waits for all suite cleanup workflows to complete
 // This should be called before server shutdown to ensure cleanup completes
 func (e *Engine) WaitForCleanup(ctx context.Context, req *generated.WaitForCleanupRequest) (*generated.WaitForCleanupResponse, error) {
+	slog.Info("WaitForCleanup: Waiting for cleanup workflows to complete")
+
 	// Wait for all cleanup workflows with a timeout
 	done := make(chan struct{})
 	go func() {
+		slog.Debug("WaitForCleanup: Calling cleanupWg.Wait()")
 		e.cleanupWg.Wait()
+		slog.Debug("WaitForCleanup: cleanupWg.Wait() returned - all cleanups done")
 		close(done)
 	}()
 
 	select {
 	case <-done:
+		slog.Info("WaitForCleanup: All cleanup workflows completed successfully")
 		return &generated.WaitForCleanupResponse{Completed: true}, nil
 	case <-ctx.Done():
+		slog.Warn("WaitForCleanup: Context cancelled/timed out before cleanup completed", "error", ctx.Err())
 		return &generated.WaitForCleanupResponse{Completed: false}, ctx.Err()
 	}
 }

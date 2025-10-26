@@ -289,17 +289,21 @@ async def main():
         _write(version_error)
         return
 
-    # Check for ANTHROPIC_API_KEY
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        _write({"ok": False, "error": "ANTHROPIC_API_KEY environment variable is required"})
-        return
-
-    # Parse configuration
+    # Parse configuration first
     try:
         config = json.loads(args.config_json)
     except json.JSONDecodeError as exc:
         _write({"ok": False, "error": f"Invalid JSON configuration: {exc}"})
         return
+
+    # Check for ANTHROPIC_API_KEY - use config value if provided, otherwise fall back to environment
+    api_key = config.get("api_key") or os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        _write({"ok": False, "error": "api_key is required (either in config or ANTHROPIC_API_KEY environment variable)"})
+        return
+
+    # Set the API key in environment for the Anthropic SDK
+    os.environ["ANTHROPIC_API_KEY"] = api_key
 
     # Validate required fields
     if "prompt" not in config:

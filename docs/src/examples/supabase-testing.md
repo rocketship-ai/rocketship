@@ -9,7 +9,7 @@ Test your entire Supabase stack—database CRUD, authentication, storage, and RP
   plugin: supabase
   config:
     url: "{{ .env.SUPABASE_URL }}"
-    key: "{{ .env.SUPABASE_ANON_KEY }}"
+    key: "{{ .env.SUPABASE_SERVICE_KEY }}"
     operation: "select"
     table: "users"
     select:
@@ -25,6 +25,7 @@ Test your entire Supabase stack—database CRUD, authentication, storage, and RP
 ### CRUD Operations
 
 **SELECT** - Query with filtering, ordering, pagination:
+
 ```yaml
 select:
   columns: ["id", "name", "email"]
@@ -42,6 +43,7 @@ select:
 ```
 
 **INSERT** - Create records:
+
 ```yaml
 operation: "insert"
 table: "users"
@@ -55,6 +57,7 @@ save:
 ```
 
 **UPDATE** - Modify records:
+
 ```yaml
 operation: "update"
 table: "users"
@@ -68,6 +71,7 @@ update:
 ```
 
 **DELETE** - Remove records (filters required):
+
 ```yaml
 operation: "delete"
 table: "users"
@@ -108,6 +112,7 @@ save:
 ## Authentication
 
 ### Sign Up
+
 ```yaml
 operation: "auth_sign_up"
 auth:
@@ -137,6 +142,7 @@ save:
 ```
 
 Use extracted tokens in HTTP requests:
+
 ```yaml
 - name: "Call protected endpoint"
   plugin: http
@@ -167,6 +173,7 @@ auth:
 ## Storage Operations
 
 **Create bucket:**
+
 ```yaml
 operation: "storage_create_bucket"
 storage:
@@ -175,6 +182,7 @@ storage:
 ```
 
 **Upload file:**
+
 ```yaml
 operation: "storage_upload"
 storage:
@@ -185,6 +193,7 @@ storage:
 ```
 
 **Download file:**
+
 ```yaml
 operation: "storage_download"
 storage:
@@ -195,13 +204,15 @@ storage:
 ## Assertions
 
 **Check existence** - Use `save` instead of assertions (fails if path doesn't exist):
+
 ```yaml
 save:
   - json_path: ".user.id"
-    as: "user_id"  # Automatically validates existence
+    as: "user_id" # Automatically validates existence
 ```
 
 **Exact value match:**
+
 ```yaml
 assertions:
   - type: json_path
@@ -213,6 +224,7 @@ assertions:
 ```
 
 **Check array length:**
+
 ```yaml
 assertions:
   - type: json_path
@@ -258,7 +270,7 @@ tests:
         plugin: supabase
         config:
           url: "{{ .env.SUPABASE_URL }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_sign_in"
           auth:
             email: "{{ test_email }}"
@@ -293,14 +305,15 @@ tests:
 ## Best Practices
 
 1. **Use environment variables for credentials:**
+
    ```yaml
    vars:
      supabase_url: "{{ .env.SUPABASE_URL }}"
-     supabase_anon_key: "{{ .env.SUPABASE_ANON_KEY }}"
      supabase_service_key: "{{ .env.SUPABASE_SERVICE_KEY }}"
    ```
 
 2. **Always clean up test data:**
+
    ```yaml
    - name: "Cleanup"
      plugin: supabase
@@ -315,6 +328,7 @@ tests:
    ```
 
 3. **Generate unique test data:**
+
    ```yaml
    script: |
      const suffix = Date.now();
@@ -326,6 +340,7 @@ tests:
 ## Troubleshooting
 
 Enable debug logging for detailed operation information:
+
 ```bash
 ROCKETSHIP_LOG=DEBUG rocketship run -af your-test.yaml
 ```

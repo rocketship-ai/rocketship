@@ -68,9 +68,8 @@ func (ap *AgentPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 		config.Mode = ModeSingle
 	}
 
-	// Add default system prompt for QA testing if user didn't provide one
-	if config.SystemPrompt == "" {
-		config.SystemPrompt = `You are a QA testing agent executing automated test tasks.
+	// Set system prompt - not user-configurable to ensure proper test framework integration
+	config.SystemPrompt = `You are a QA testing agent executing automated test tasks.
 
 Ultrathink. Use the MCP servers available to you if applicable.
 
@@ -81,9 +80,8 @@ ALWAYS return your final result as JSON with this EXACT schema:
 IMPORTANT: When the user asks to "save X as 'var_name'", you MUST include a "variables" object.
 Example: "save the heading as 'page_heading'" → {"ok": true, "result": "Found heading", "variables": {"page_heading": "Example Domain"}}
 
-No code changing. No awaiting user input. If you need file writing as a scratchpad, write to mkdir -p .rocketship/tmp directory.
-Clean it up after you are done with the task.`
-	}
+No code changing. No awaiting user input. If you need file writing as a scratchpad, write to .rocketship/tmp/agent-scratch/ directory.
+Clean up ONLY your own scratch files after you are done with the task.`
 
 	// Default to wildcard tools - if you're using MCP servers, you want to use them
 	if len(config.AllowedTools) == 0 {
@@ -347,6 +345,37 @@ func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[strin
 }
 
 // parseConfig parses the configuration and applies template processing
+// resolveCapabilities maps capability names to MCP server configs
+func resolveCapabilities(capabilities []string) (map[string]MCPServerConfig, error) {
+	if len(capabilities) == 0 {
+		return nil, nil
+	}
+
+	servers := make(map[string]MCPServerConfig)
+	seen := make(map[string]bool)
+
+	for _, cap := range capabilities {
+		// Deduplicate
+		if seen[cap] {
+			continue
+		}
+		seen[cap] = true
+
+		switch cap {
+		case "browser":
+			servers["playwright"] = MCPServerConfig{
+				Type:    MCPServerTypeStdio,
+				Command: "npx",
+				Args:    []string{"@playwright/mcp@0.0.43"},
+			}
+		default:
+			return nil, fmt.Errorf("unknown capability %q (valid capabilities: browser)", cap)
+		}
+	}
+
+	return servers, nil
+}
+
 func parseConfig(configData map[string]interface{}, templateContext dsl.TemplateContext) (*Config, error) {
 	config := &Config{}
 
@@ -385,13 +414,9 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 		config.Timeout = timeout
 	}
 
-	// Parse system_prompt
-	if systemPrompt, ok := configData["system_prompt"].(string); ok {
-		processed, err := dsl.ProcessTemplate(systemPrompt, templateContext)
-		if err != nil {
-			return nil, fmt.Errorf("failed to process system_prompt template: %w", err)
-		}
-		config.SystemPrompt = processed
+	// Error if user tries to override system_prompt
+	if _, ok := configData["system_prompt"]; ok {
+		return nil, fmt.Errorf("system_prompt is not user-configurable (managed by the test framework)")
 	}
 
 	// NOTE: permission_mode is hardcoded to 'bypassPermissions' in the Python executor
@@ -402,22 +427,28 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 		config.Cwd = cwd
 	}
 
-	// Parse MCP servers
-	if mcpServers, ok := configData["mcp_servers"].(map[string]interface{}); ok {
-		config.MCPServers = make(map[string]MCPServerConfig)
-		for name, serverData := range mcpServers {
-			serverMap, ok := serverData.(map[string]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid mcp_servers config for %q", name)
-			}
+	// Error if user tries to use old mcp_servers field
+	if _, ok := configData["mcp_servers"]; ok {
+		return nil, fmt.Errorf("unknown field 'mcp_servers'. Use 'capabilities' instead (e.g., capabilities: [\"browser\"])")
+	}
 
-			serverConfig, err := parseMCPServerConfig(serverMap, templateContext)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse mcp_server %q: %w", name, err)
+	// Parse capabilities and resolve to MCP servers
+	if caps, ok := configData["capabilities"].([]interface{}); ok {
+		config.Capabilities = make([]string, len(caps))
+		for i, cap := range caps {
+			if capStr, ok := cap.(string); ok {
+				config.Capabilities[i] = capStr
+			} else {
+				return nil, fmt.Errorf("capabilities must be an array of strings")
 			}
-
-			config.MCPServers[name] = *serverConfig
 		}
+
+		// Resolve capabilities to MCP servers
+		servers, err := resolveCapabilities(config.Capabilities)
+		if err != nil {
+			return nil, err
+		}
+		config.MCPServers = servers
 	}
 
 	// Parse allowed_tools
@@ -431,6 +462,18 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 	} else if allowedToolsStr, ok := configData["allowed_tools"].(string); ok {
 		// Support single string (e.g., "*")
 		config.AllowedTools = []string{allowedToolsStr}
+	}
+
+	// Parse api_key with template processing, auto-detect from ANTHROPIC_API_KEY if not provided
+	if apiKey, ok := configData["api_key"].(string); ok {
+		processed, err := dsl.ProcessTemplate(apiKey, templateContext)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process api_key template: %w", err)
+		}
+		config.APIKey = processed
+	} else {
+		// Auto-detect from environment if not provided
+		config.APIKey = os.Getenv("ANTHROPIC_API_KEY")
 	}
 
 	return config, nil

@@ -28,8 +28,6 @@ tests:
       - name: "Pre-cleanup: Remove leftover test data"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "delete"
           table: "companies"
           delete:
@@ -44,8 +42,6 @@ tests:
       - name: "Setup: Create storage bucket"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_create_bucket"
           storage:
             bucket: "integration-tests"
@@ -57,8 +53,6 @@ tests:
       - name: "RPC: Test simple function call"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "rpc"
           rpc:
             function: "hello_rocketship"
@@ -70,8 +64,6 @@ tests:
       - name: "RPC: Test function with parameters"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "rpc"
           rpc:
             function: "hello_rocketship"
@@ -85,8 +77,6 @@ tests:
       - name: "RPC: Get initial company count"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "rpc"
           rpc:
             function: "get_company_count"
@@ -102,8 +92,6 @@ tests:
       - name: "CRUD: Query existing companies"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -121,8 +109,6 @@ tests:
       - name: "CRUD: Create test company via INSERT"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -141,8 +127,6 @@ tests:
       - name: "RPC: Create company via function"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "rpc"
           rpc:
             function: "create_test_company"
@@ -160,8 +144,6 @@ tests:
       - name: "CRUD: Query test companies with filters"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -187,8 +169,6 @@ tests:
       - name: "CRUD: Update test company"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "update"
           table: "companies"
           update:
@@ -212,8 +192,6 @@ tests:
       - name: "CRUD: Verify company update"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -236,8 +214,6 @@ tests:
       - name: "AUTH: Create user with auto-confirm"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_create_user"
           auth:
             email: "integration-test@rocketship.dev"
@@ -259,8 +235,6 @@ tests:
       - name: "STORAGE: Upload test file"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_upload"
           storage:
             bucket: "integration-tests"
@@ -283,8 +257,6 @@ tests:
       - name: "STORAGE: Upload JSON test file"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_upload"
           storage:
             bucket: "integration-tests"
@@ -308,8 +280,6 @@ tests:
       - name: "STORAGE: Download and verify text file"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_download"
           storage:
             bucket: "integration-tests"
@@ -319,8 +289,6 @@ tests:
       - name: "STORAGE: Download and verify JSON file"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_download"
           storage:
             bucket: "integration-tests"
@@ -335,8 +303,6 @@ tests:
       - name: "RPC: Test dynamic parameter substitution"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -358,8 +324,6 @@ tests:
       - name: "VERIFY: Final company count after operations"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "rpc"
           rpc:
             function: "get_company_count"
@@ -373,8 +337,6 @@ tests:
       - name: "CLEANUP: Delete test companies"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "delete"
           table: "companies"
           delete:
@@ -386,8 +348,6 @@ tests:
       - name: "CLEANUP: Delete storage files"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_delete"
           storage:
             bucket: "integration-tests"
@@ -396,8 +356,6 @@ tests:
       - name: "CLEANUP: Delete JSON storage file"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_delete"
           storage:
             bucket: "integration-tests"
@@ -406,8 +364,6 @@ tests:
       - name: "CLEANUP: Delete storage bucket"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_delete_bucket"
           storage:
             bucket: "integration-tests"
@@ -415,8 +371,6 @@ tests:
       - name: "CLEANUP: Delete test auth users via RPC"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "rpc"
           rpc:
             function: "cleanup_test_auth_users"
@@ -424,8 +378,6 @@ tests:
       - name: "VERIFY: Confirm companies cleanup completed"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -442,8 +394,6 @@ tests:
       - name: "VERIFY: Confirm comprehensive cleanup with RPC"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "rpc"
           rpc:
             function: "get_test_data_status"
@@ -465,8 +415,6 @@ tests:
       - name: "AUTH_TOKEN: Create user with auto-confirm"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_create_user"
           auth:
             email: "token-test@rocketship.dev"
@@ -489,8 +437,6 @@ tests:
       - name: "AUTH_TOKEN: Sign in and extract tokens"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "auth_sign_in"
           auth:
             email: "token-test@rocketship.dev"
@@ -529,8 +475,6 @@ tests:
       - name: "AUTH_TOKEN: Create user with runtime variables"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_create_user"
           auth:
             email: "{{ dynamic_email }}"
@@ -549,8 +493,6 @@ tests:
       - name: "AUTH_TOKEN: Sign in with dynamic credentials"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "auth_sign_in"
           auth:
             email: "{{ dynamic_email }}"
@@ -585,8 +527,6 @@ tests:
       - name: "AUTH_TOKEN: Cleanup first test user"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_delete_user"
           auth:
             user_id: "{{ token_test_user_id }}"
@@ -594,8 +534,6 @@ tests:
       - name: "AUTH_TOKEN: Cleanup dynamic test user"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_delete_user"
           auth:
             user_id: "{{ dynamic_user_id }}"
@@ -604,8 +542,6 @@ tests:
       - name: "AUTH_TOKEN: Verify cleanup completed"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "rpc"
           rpc:
             function: "get_test_data_status"

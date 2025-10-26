@@ -29,8 +29,6 @@ init:
   - name: "Create storage bucket for test suite"
     plugin: supabase
     config:
-      url: "{{ .vars.supabase_url }}"
-      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "storage_create_bucket"
       storage:
         bucket: "{{ bucket_name }}"
@@ -39,8 +37,6 @@ init:
   - name: "Create suite-level admin user"
     plugin: supabase
     config:
-      url: "{{ .vars.supabase_url }}"
-      key: "{{ .env.SUPABASE_SERVICE_KEY }}"
       operation: "auth_create_user"
       auth:
         email: "{{ admin_email }}"
@@ -60,8 +56,6 @@ tests:
       - name: "Create test-specific company"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -79,8 +73,6 @@ tests:
       - name: "Upload file using suite bucket"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "storage_upload"
           storage:
             bucket: "{{ bucket_name }}"
@@ -96,8 +88,6 @@ tests:
       - name: "Verify company with admin reference"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -161,8 +151,6 @@ tests:
         - name: "Delete uploaded file"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
             operation: "storage_delete"
             storage:
               bucket: "{{ bucket_name }}"
@@ -171,8 +159,6 @@ tests:
         - name: "Delete test company"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_ANON_KEY }}"
             operation: "delete"
             table: "companies"
             delete:
@@ -186,8 +172,6 @@ tests:
       - name: "Create another test company"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -205,8 +189,6 @@ tests:
       - name: "Verify company references suite admin"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -225,8 +207,6 @@ tests:
         - name: "Delete second company"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_ANON_KEY }}"
             operation: "delete"
             table: "companies"
             delete:
@@ -247,8 +227,6 @@ cleanup:
     - name: "Delete storage bucket"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "storage_delete_bucket"
         storage:
           bucket: "{{ bucket_name }}"
@@ -256,8 +234,6 @@ cleanup:
     - name: "Delete suite admin user"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "auth_delete_user"
         auth:
           user_id: "{{ suite_admin_id }}"
@@ -265,8 +241,6 @@ cleanup:
     - name: "Verify all companies deleted"
       plugin: supabase
       config:
-        url: "{{ .vars.supabase_url }}"
-        key: "{{ .env.SUPABASE_SERVICE_KEY }}"
         operation: "select"
         table: "companies"
         select:

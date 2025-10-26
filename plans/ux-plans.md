@@ -1,0 +1,5 @@
+- why is generate-plugin-reference.py not working? I dont see the browser_use plugin. ✅
+- lifecycle clean up hook does not seem to work if i kill the run (need to test this to confirm) ✅
+- can we have the agent plugin have the same env override that the supabase plugin has? Meaning that it by default inherits the ANTHROPIC_API_KEY from the environment, but it should be possible to override it in the config of the plugin. ✅
+- I wanna re organize the docs. A plugins section should exist. And fix up this doc page https://docs.rocketship.sh/examples/ai/browser-testing/
+- create ROCKETSHIP_QUICKSTART.md

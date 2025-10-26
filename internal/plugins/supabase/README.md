@@ -19,11 +19,10 @@ This plugin provides a unified interface for testing all aspects of a Supabase b
 - name: "Test step"
   plugin: "supabase"
   config:
-    url: "{{ SUPABASE_URL }}"                    # Your Supabase project URL
-    anon_key: "{{ SUPABASE_ANON_KEY }}"          # Anonymous/public API key
-    service_key: "{{ SUPABASE_SERVICE_KEY }}"    # Service role key (for admin operations)
-    operation: "select"                          # Operation type
-    table: "users"                               # Table name (for database operations)
+    url: "{{ SUPABASE_URL }}" # Your Supabase project URL
+    service_key: "{{ SUPABASE_SERVICE_KEY }}" # Service role key (for admin operations)
+    operation: "select" # Operation type
+    table: "users" # Table name (for database operations)
 ```
 
 ### Environment Variables
@@ -31,7 +30,6 @@ This plugin provides a unified interface for testing all aspects of a Supabase b
 Set these environment variables or use them in your test configuration:
 
 - `SUPABASE_URL`: Your Supabase project URL (e.g., `https://abc123.supabase.co`)
-- `SUPABASE_ANON_KEY`: Your project's anonymous/public API key
 - `SUPABASE_SERVICE_KEY`: Your project's service role key (for admin operations)
 
 ## Operations
@@ -45,27 +43,27 @@ Set these environment variables or use them in your test configuration:
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
     operation: "select"
     table: "users"
-    columns: "id,name,email"              # Columns to select (default: *)
-    filters:                              # Optional filters
+    columns: "id,name,email" # Columns to select (default: *)
+    filters: # Optional filters
       - column: "status"
         operator: "eq"
         value: "active"
       - column: "age"
         operator: "gte"
         value: 18
-    order:                                # Optional ordering
+    order: # Optional ordering
       - column: "created_at"
         ascending: false
-    limit: 10                             # Optional limit
-    offset: 0                             # Optional offset
-    count: "exact"                        # Optional: exact, planned, estimated
-    single: true                          # Return single object instead of array
+    limit: 10 # Optional limit
+    offset: 0 # Optional offset
+    count: "exact" # Optional: exact, planned, estimated
+    single: true # Return single object instead of array
 ```
 
 **Available Filter Operators:**
+
 - `eq` - Equal to
 - `neq` - Not equal to
 - `gt` - Greater than
@@ -86,7 +84,7 @@ Set these environment variables or use them in your test configuration:
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "insert"
     table: "users"
     data: |
@@ -95,11 +93,12 @@ Set these environment variables or use them in your test configuration:
         "email": "john@example.com",
         "age": 30
       }
-    upsert: true                          # Optional: enable upsert mode
-    on_conflict: "email"                  # Required for upsert: conflict resolution column
+    upsert: true # Optional: enable upsert mode
+    on_conflict: "email" # Required for upsert: conflict resolution column
 ```
 
 **Bulk Insert:**
+
 ```yaml
 data: |
   [
@@ -115,7 +114,7 @@ data: |
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "update"
     table: "users"
     data: |
@@ -123,7 +122,7 @@ data: |
         "name": "John Smith",
         "updated_at": "now()"
       }
-    filters:                              # Required: specify which rows to update
+    filters: # Required: specify which rows to update
       - column: "id"
         operator: "eq"
         value: "{{ user_id }}"
@@ -136,10 +135,10 @@ data: |
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "delete"
     table: "users"
-    filters:                              # Required: specify which rows to delete
+    filters: # Required: specify which rows to delete
       - column: "id"
         operator: "eq"
         value: "{{ user_id }}"
@@ -154,15 +153,15 @@ Call custom PostgreSQL functions:
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "rpc"
     rpc:
       function: "get_user_stats"
       params:
         user_id: 123
         start_date: "2024-01-01"
-      get: false                          # Optional: suppress data return
-      head: false                         # Optional: read-only access mode
+      get: false # Optional: suppress data return
+      head: false # Optional: read-only access mode
 ```
 
 ### Authentication Operations
@@ -182,10 +181,10 @@ Authentication operations require the `service_key`:
       action: "create_user"
       email: "user@example.com"
       password: "password123"
-      phone: "+1234567890"               # Optional
-      email_confirm: true                # Auto-confirm email
-      phone_confirm: false               # Auto-confirm phone
-      user_metadata:                     # Optional metadata
+      phone: "+1234567890" # Optional
+      email_confirm: true # Auto-confirm email
+      phone_confirm: false # Auto-confirm phone
+      user_metadata: # Optional metadata
         first_name: "John"
         last_name: "Doe"
 ```
@@ -202,9 +201,9 @@ Authentication operations require the `service_key`:
     auth:
       action: "update_user"
       user_id: "{{ auth_user_id }}"
-      email: "newemail@example.com"      # Optional
-      password: "newpassword"            # Optional
-      user_metadata:                     # Optional
+      email: "newemail@example.com" # Optional
+      password: "newpassword" # Optional
+      user_metadata: # Optional
         department: "Engineering"
 ```
 
@@ -220,7 +219,7 @@ Authentication operations require the `service_key`:
     auth:
       action: "delete_user"
       user_id: "{{ auth_user_id }}"
-      soft_delete: false                 # Optional: soft delete vs hard delete
+      soft_delete: false # Optional: soft delete vs hard delete
 ```
 
 ### Storage Operations
@@ -241,7 +240,7 @@ Authentication operations require the `service_key`:
       allowed_mime_types:
         - "image/jpeg"
         - "image/png"
-      file_size_limit: 1048576           # 1MB in bytes
+      file_size_limit: 1048576 # 1MB in bytes
 ```
 
 #### Upload File
@@ -251,17 +250,17 @@ Authentication operations require the `service_key`:
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "storage"
     storage:
       action: "upload"
       bucket: "avatars"
       path: "users/{{ user_id }}/avatar.jpg"
-      file_content: "{{ base64_encoded_content }}"  # Direct content
+      file_content: "{{ base64_encoded_content }}" # Direct content
       # OR
-      file_path: "/path/to/local/file.jpg"          # Local file path (not yet implemented)
+      file_path: "/path/to/local/file.jpg" # Local file path (not yet implemented)
       cache_control: "3600"
-      upsert: true                       # Overwrite if exists
+      upsert: true # Overwrite if exists
 ```
 
 #### List Files
@@ -271,14 +270,14 @@ Authentication operations require the `service_key`:
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "storage"
     storage:
       action: "list"
       bucket: "avatars"
-      path: "users/"                     # Optional: folder path
-      limit: 100                         # Optional
-      offset: 0                          # Optional
+      path: "users/" # Optional: folder path
+      limit: 100 # Optional
+      offset: 0 # Optional
 ```
 
 #### Delete File
@@ -288,7 +287,7 @@ Authentication operations require the `service_key`:
   plugin: "supabase"
   config:
     url: "{{ SUPABASE_URL }}"
-    anon_key: "{{ SUPABASE_ANON_KEY }}"
+    service_key: "{{ SUPABASE_SERVICE_KEY }}"
     operation: "storage"
     storage:
       action: "delete"
@@ -330,7 +329,7 @@ storage:
 assertions:
   - type: "row_count"
     expected: 5
-    operator: "eq"                      # eq, neq, gt, gte, lt, lte
+    operator: "eq" # eq, neq, gt, gte, lt, lte
 ```
 
 ### Field Assertions
@@ -342,10 +341,10 @@ assertions:
   - type: "field"
     field: "name"
     expected: "John Doe"
-    operator: "eq"                      # eq, neq, contains, exists
+    operator: "eq" # eq, neq, contains, exists
   - type: "field"
     field: "email"
-    exists: true                        # Just check if field exists
+    exists: true # Just check if field exists
 ```
 
 ### JSON Path Assertions
@@ -355,14 +354,14 @@ Use JQ expressions for complex data extraction:
 ```yaml
 assertions:
   - type: "json_path"
-    path: ".[] | select(.status == \"active\") | length"
+    path: '.[] | select(.status == "active") | length'
     expected: 3
   - type: "json_path"
     path: ".[0].user.profile.name"
     expected: "{{ expected_name }}"
   - type: "json_path"
     path: ".metadata"
-    exists: true                        # Check if path exists
+    exists: true # Check if path exists
 ```
 
 ## Save Configuration
@@ -371,20 +370,20 @@ assertions:
 
 ```yaml
 save:
-  - field: "id"                         # Field name from response
-    as: "user_id"                       # Variable name to save as
-    required: true                      # Whether value is required (default: true)
+  - field: "id" # Field name from response
+    as: "user_id" # Variable name to save as
+    required: true # Whether value is required (default: true)
 ```
 
 ### Save with JSON Path
 
 ```yaml
 save:
-  - json_path: ".[0].id"               # JQ expression
+  - json_path: ".[0].id" # JQ expression
     as: "first_user_id"
   - json_path: ".users | length"
     as: "user_count"
-    required: false                     # Optional value
+    required: false # Optional value
 ```
 
 ## Variable Replacement

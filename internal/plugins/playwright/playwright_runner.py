@@ -291,7 +291,7 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     start_parser = subparsers.add_parser("start")
-    start_parser.add_argument("--headless", default="true")
+    start_parser.add_argument("--headless", default="false")
     start_parser.add_argument("--slow-mo-ms", type=int, default=0)
     start_parser.add_argument("--launch-arg", action="append")
     start_parser.add_argument("--launch-timeout", type=int, default=30000)

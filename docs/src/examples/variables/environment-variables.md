@@ -13,7 +13,7 @@ Create a `.env` file:
 API_BASE_URL=https://api.staging.com
 API_KEY=sk-staging-key-123
 DATABASE_URL=postgres://user:pass@localhost/db
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 Run tests:
@@ -47,6 +47,7 @@ project/
 ```
 
 **`.env.example`** (commit this):
+
 ```bash
 # API Configuration
 API_BASE_URL=https://api.example.com
@@ -55,6 +56,7 @@ DATABASE_URL=postgres://user:pass@host/db
 ```
 
 **Usage:**
+
 ```bash
 # Local
 rocketship run -af test.yaml --env-file .env
@@ -96,6 +98,7 @@ test:
 ### Environment Variables in CI
 
 In CI, **don't use `--env-file`**:
+
 1. Set secrets in your CI platform (GitHub Secrets, GitLab Variables)
 2. Reference them in workflow configuration
 3. Rocketship picks them up from system environment automatically
@@ -121,6 +124,7 @@ OPENAI_API_KEY=sk-...
 ```
 
 Team members copy and fill in values:
+
 ```bash
 cp .env.example .env
 # Edit .env with actual credentials
@@ -193,7 +197,7 @@ tests:
         plugin: "supabase"
         config:
           url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
+          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -224,6 +228,7 @@ tests:
 ```
 
 Run against different environments:
+
 ```bash
 # Local
 rocketship run -af test.yaml --env-file .env

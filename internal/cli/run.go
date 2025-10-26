@@ -557,8 +557,25 @@ func NewRunCmd() *cobra.Command {
 			for {
 				select {
 				case <-ctx.Done():
-					Logger.Debug("Context cancelled during result collection, cleaning up auto mode server if needed")
-					// If we're in auto mode and context is cancelled, call cleanup immediately
+					Logger.Debug("Context cancelled during result collection")
+
+					// FIRST: Wait for all test goroutines to finish their CancelRun calls
+					Logger.Debug("Waiting for test goroutines to complete their cancellation requests...")
+					wg.Wait()
+					Logger.Debug("All test goroutines have completed cancellation")
+
+					// THEN: Wait for cleanup workflows to complete BEFORE shutting down server
+					Logger.Debug("Waiting for cleanup workflows to complete...")
+					cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+					defer cleanupCancel()
+
+					if err := client.WaitForCleanup(cleanupCtx); err != nil {
+						Logger.Warn("Failed to wait for cleanup", "error", err)
+					} else {
+						Logger.Debug("Cleanup workflows completed successfully")
+					}
+
+					// FINALLY: Now it's safe to shut down the server
 					if isAuto && cleanup != nil {
 						Logger.Debug("Calling cleanup function for auto mode server")
 						cleanup()

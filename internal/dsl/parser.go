@@ -108,5 +108,150 @@ func ParseYAML(yamlPayload []byte) (RocketshipConfig, error) {
 		return RocketshipConfig{}, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
+	// Process browser sessions (auto-inject start/stop steps)
+	if err := processBrowserSessions(&config); err != nil {
+		return RocketshipConfig{}, fmt.Errorf("failed to process browser sessions: %w", err)
+	}
+
 	return config, nil
+}
+
+// processBrowserSessions scans tests for browser-using plugins and auto-injects start/stop steps
+func processBrowserSessions(config *RocketshipConfig) error {
+	for i := range config.Tests {
+		test := &config.Tests[i]
+
+		// Scan test steps for browser-using plugins
+		needsBrowser, headless, err := scanForBrowserUsage(test.Steps)
+		if err != nil {
+			return fmt.Errorf("test %q: %w", test.Name, err)
+		}
+
+		if !needsBrowser {
+			continue
+		}
+
+		// Generate session ID for this test
+		sessionID := fmt.Sprintf("test-{{ .run.id }}-%d", i)
+
+		// Inject browser start at the beginning of steps
+		startStep := Step{
+			Name:   "__auto_browser_start__",
+			Plugin: "playwright",
+			Config: map[string]interface{}{
+				"role":       "start",
+				"session_id": sessionID,
+				"headless":   headless,
+			},
+		}
+		test.Steps = append([]Step{startStep}, test.Steps...)
+
+		// Inject browser stop in cleanup.always
+		stopStep := Step{
+			Name:   "__auto_browser_stop__",
+			Plugin: "playwright",
+			Config: map[string]interface{}{
+				"role":       "stop",
+				"session_id": sessionID,
+			},
+		}
+
+		if test.Cleanup == nil {
+			test.Cleanup = &CleanupSpec{}
+		}
+		test.Cleanup.Always = append(test.Cleanup.Always, stopStep)
+
+		// Inject session_id into all browser-using steps
+		for j := range test.Steps {
+			step := &test.Steps[j]
+			if usesBrowser(*step) {
+				// Skip the auto-injected start step
+				if step.Name == "__auto_browser_start__" {
+					continue
+				}
+				// Only inject if session_id not already set
+				if _, hasSessionID := step.Config["session_id"]; !hasSessionID {
+					step.Config["session_id"] = sessionID
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// scanForBrowserUsage scans steps to determine if browser is needed and headless setting
+func scanForBrowserUsage(steps []Step) (needsBrowser bool, headless bool, err error) {
+	headless = false        // Default to non-headless (show browser for local testing)
+	seenExplicitTrue := false
+	seenExplicitFalse := false
+
+	for _, step := range steps {
+		// Error if user explicitly uses playwright start/stop
+		if step.Plugin == "playwright" {
+			if role, ok := step.Config["role"].(string); ok {
+				if role == "start" || role == "stop" {
+					return false, false, fmt.Errorf("step %q: invalid role %q. Browser sessions are now auto-managed. Only 'script' role is supported", step.Name, role)
+				}
+			}
+		}
+
+		// Check for browser usage
+		if usesBrowser(step) {
+			needsBrowser = true
+
+			// Check headless setting
+			if h, ok := step.Config["headless"]; ok {
+				var stepValue bool
+
+				switch v := h.(type) {
+				case bool:
+					stepValue = v
+				case string:
+					// Check for explicit "true" or "false"
+					lower := strings.ToLower(v)
+					stepValue = (lower == "true")
+				}
+
+				if stepValue {
+					seenExplicitTrue = true
+				} else {
+					seenExplicitFalse = true
+				}
+			}
+		}
+	}
+
+	// Apply precedence: false wins over true
+	if seenExplicitFalse {
+		headless = false
+	} else if seenExplicitTrue {
+		headless = true
+	}
+	// else: keep default (false)
+
+	return needsBrowser, headless, nil
+}
+
+// usesBrowser returns true if the step uses browser sessions
+// This includes always-browser plugins (playwright, browser_use) and
+// agent steps configured with browser capability
+func usesBrowser(step Step) bool {
+	// Always-browser plugins
+	if step.Plugin == "playwright" || step.Plugin == "browser_use" {
+		return true
+	}
+
+	// Agent with browser capability
+	if step.Plugin == "agent" {
+		if caps, ok := step.Config["capabilities"].([]interface{}); ok {
+			for _, cap := range caps {
+				if capStr, ok := cap.(string); ok && capStr == "browser" {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }

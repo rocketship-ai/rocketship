@@ -14,24 +14,9 @@ description: |
 
 tests:
   - name: "Agent variable passing: natural language + explicit"
-    cleanup:
-      always:
-        - name: "Stop browser session"
-          plugin: playwright
-          config:
-            role: stop
-            session_id: "agent-test-{{ .run.id }}"
-
     steps:
-      # Step 1: Start persistent browser session
-      - name: "Start browser session"
-        plugin: playwright
-        config:
-          role: start
-          session_id: "agent-test-{{ .run.id }}"
-          headless: true
-
-      # Step 2: Natural language save - Agent extracts heading
+      # Step 1: Natural language save - Agent extracts heading
+      # Browser auto-starts before this step!
       - name: "Agent: Extract heading (natural language save)"
         plugin: agent
         config:
@@ -39,24 +24,18 @@ tests:
             Navigate to https://example.com
 
             Extract the main heading text from the page and save it as 'page_heading'
-          session_id: "agent-test-{{ .run.id }}"
-          mcp_servers:
-            playwright:
-              type: stdio
-              command: npx
-              args:
-                - "@playwright/mcp@0.0.43"
+          capabilities: ["browser"]
+          headless: true
         # Natural language save preferred, but explicit config as fallback
         save:
           - json_path: ".result"
             as: "page_heading"
 
-      # Step 3: Explicit save - Playwright gets URL
+      # Step 2: Explicit save - Playwright gets URL
       - name: "Playwright: Get current page URL (explicit save)"
         plugin: playwright
         config:
           role: script
-          session_id: "agent-test-{{ .run.id }}"
           script: |
             # Get current URL using Playwright API
             result = {"url": page.url}
@@ -64,7 +43,7 @@ tests:
           - json_path: ".url"
             as: "current_url"
 
-      # Step 4: Agent uses BOTH saved variables + natural language save for link
+      # Step 3: Agent uses BOTH saved variables + natural language save for link
       - name: "Agent: Verify and extract link (uses both variables)"
         plugin: agent
         config:
@@ -75,19 +54,13 @@ tests:
 
             Verify the page heading contains "Example Domain".
             Then find the link that says "More information..." or similar and extract its href URL.
-          session_id: "agent-test-{{ .run.id }}"
-          mcp_servers:
-            playwright:
-              type: stdio
-              command: npx
-              args:
-                - "@playwright/mcp@0.0.43"
+          capabilities: ["browser"]
         # Natural language save preferred, but explicit config as fallback
         save:
           - json_path: ".result"
             as: "info_link"
 
-      # Step 5: Log all variables to show the complete flow
+      # Step 4: Log all variables to show the complete flow
       - name: "Log variable flow results"
         plugin: log
         config:
@@ -104,3 +77,4 @@ tests:
             ✓ Explicit save configs (traditional approach)
             ✓ Agent→Playwright→Agent variable passing
             ✓ Variables flow across different plugin types
+            ✓ Browser session auto-managed (no explicit start/stop!)

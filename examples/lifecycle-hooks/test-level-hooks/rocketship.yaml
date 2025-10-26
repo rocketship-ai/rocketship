@@ -28,8 +28,6 @@ tests:
       - name: "Setup test-specific company"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -46,8 +44,6 @@ tests:
       - name: "Create test-specific auth user"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_SERVICE_KEY }}"
           operation: "auth_create_user"
           auth:
             email: "{{ test_email }}"
@@ -64,8 +60,6 @@ tests:
       - name: "Query company created in init"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -123,8 +117,6 @@ tests:
       - name: "Update company in test"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "update"
           table: "companies"
           update:
@@ -145,8 +137,6 @@ tests:
         - name: "Capture failed test state"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
             operation: "select"
             table: "companies"
             select:
@@ -160,8 +150,6 @@ tests:
         - name: "Delete test company"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_ANON_KEY }}"
             operation: "delete"
             table: "companies"
             delete:
@@ -173,8 +161,6 @@ tests:
         - name: "Delete test auth user"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_SERVICE_KEY }}"
             operation: "auth_delete_user"
             auth:
               user_id: "{{ test_user_id }}"
@@ -185,8 +171,6 @@ tests:
       - name: "Create second test company"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "insert"
           table: "companies"
           insert:
@@ -202,8 +186,6 @@ tests:
       - name: "Verify test isolation"
         plugin: supabase
         config:
-          url: "{{ .vars.supabase_url }}"
-          key: "{{ .env.SUPABASE_ANON_KEY }}"
           operation: "select"
           table: "companies"
           select:
@@ -222,8 +204,6 @@ tests:
         - name: "Cleanup second test company"
           plugin: supabase
           config:
-            url: "{{ .vars.supabase_url }}"
-            key: "{{ .env.SUPABASE_ANON_KEY }}"
             operation: "delete"
             table: "companies"
             delete:

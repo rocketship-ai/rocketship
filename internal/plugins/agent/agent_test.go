@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -26,24 +27,30 @@ func TestParseConfig(t *testing.T) {
 		{
 			name: "valid full config with mode and session",
 			configData: map[string]interface{}{
-				"prompt":        "Test prompt",
-				"mode":          "continue",
-				"session_id":    "session-123",
-				"max_turns":     3,
-				"timeout":       "60s",
-				"system_prompt": "You are a helpful assistant",
-				"cwd":           "/tmp",
+				"prompt":     "Test prompt",
+				"mode":       "continue",
+				"session_id": "session-123",
+				"max_turns":  3,
+				"timeout":    "60s",
+				"cwd":        "/tmp",
 			},
 			expectError: false,
 			expected: &Config{
-				Prompt:       "Test prompt",
-				Mode:         ModeContinue,
-				SessionID:    "session-123",
-				MaxTurns:     3,
-				Timeout:      "60s",
-				SystemPrompt: "You are a helpful assistant",
-				Cwd:          "/tmp",
+				Prompt:    "Test prompt",
+				Mode:      ModeContinue,
+				SessionID: "session-123",
+				MaxTurns:  3,
+				Timeout:   "60s",
+				Cwd:       "/tmp",
 			},
+		},
+		{
+			name: "system_prompt is not user-configurable",
+			configData: map[string]interface{}{
+				"prompt":        "Test prompt",
+				"system_prompt": "You are a helpful assistant",
+			},
+			expectError: true,
 		},
 		{
 			name: "config with allowed_tools wildcard",
@@ -76,62 +83,46 @@ func TestParseConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "config with MCP stdio server",
+			name: "config with browser capability",
+			configData: map[string]interface{}{
+				"prompt":       "Test prompt",
+				"capabilities": []interface{}{"browser"},
+			},
+			expectError: false,
+			expected: &Config{
+				Prompt:       "Test prompt",
+				Capabilities: []string{"browser"},
+				MCPServers: map[string]MCPServerConfig{
+					"playwright": {
+						Type:    MCPServerTypeStdio,
+						Command: "npx",
+						Args:    []string{"@playwright/mcp@0.0.43"},
+					},
+				},
+			},
+		},
+		{
+			name: "config with unknown capability should error",
+			configData: map[string]interface{}{
+				"prompt":       "Test prompt",
+				"capabilities": []interface{}{"invalid"},
+			},
+			expectError: true,
+			expected:    nil,
+		},
+		{
+			name: "config with old mcp_servers field should error",
 			configData: map[string]interface{}{
 				"prompt": "Test prompt",
 				"mcp_servers": map[string]interface{}{
 					"playwright": map[string]interface{}{
 						"type":    "stdio",
 						"command": "npx",
-						"args": []interface{}{
-							"@playwright/mcp@latest",
-						},
-						"env": map[string]interface{}{
-							"DEBUG": "true",
-						},
 					},
 				},
 			},
-			expectError: false,
-			expected: &Config{
-				Prompt: "Test prompt",
-				MCPServers: map[string]MCPServerConfig{
-					"playwright": {
-						Type:    MCPServerTypeStdio,
-						Command: "npx",
-						Args:    []string{"@playwright/mcp@latest"},
-						Env:     map[string]string{"DEBUG": "true"},
-					},
-				},
-			},
-		},
-		{
-			name: "config with MCP sse server",
-			configData: map[string]interface{}{
-				"prompt": "Test prompt",
-				"mcp_servers": map[string]interface{}{
-					"remote": map[string]interface{}{
-						"type": "sse",
-						"url":  "https://example.com/mcp",
-						"headers": map[string]interface{}{
-							"Authorization": "Bearer token",
-						},
-					},
-				},
-			},
-			expectError: false,
-			expected: &Config{
-				Prompt: "Test prompt",
-				MCPServers: map[string]MCPServerConfig{
-					"remote": {
-						Type: MCPServerTypeSSE,
-						URL:  "https://example.com/mcp",
-						Headers: map[string]string{
-							"Authorization": "Bearer token",
-						},
-					},
-				},
-			},
+			expectError: true,
+			expected:    nil,
 		},
 		{
 			name: "max_turns as float64",
@@ -188,9 +179,7 @@ func TestParseConfig(t *testing.T) {
 					t.Errorf("Expected timeout %q, got %q", tt.expected.Timeout, config.Timeout)
 				}
 
-				if tt.expected.SystemPrompt != "" && config.SystemPrompt != tt.expected.SystemPrompt {
-					t.Errorf("Expected system_prompt %q, got %q", tt.expected.SystemPrompt, config.SystemPrompt)
-				}
+				// SystemPrompt is always set by the framework, not user-configurable
 
 				if tt.expected.Cwd != "" && config.Cwd != tt.expected.Cwd {
 					t.Errorf("Expected cwd %q, got %q", tt.expected.Cwd, config.Cwd)
@@ -367,4 +356,63 @@ func TestParseMCPServerConfig_MissingRequired(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConfigJSONMarshaling verifies that MCPServers field is properly serialized to JSON
+func TestConfigJSONMarshaling(t *testing.T) {
+	cfg := &Config{
+		Prompt:       "test prompt",
+		Capabilities: []string{"browser"},
+		MCPServers: map[string]MCPServerConfig{
+			"playwright": {
+				Type:    MCPServerTypeStdio,
+				Command: "npx",
+				Args:    []string{"@playwright/mcp@0.0.43"},
+			},
+		},
+	}
+
+	// Marshal to JSON
+	jsonBytes, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("Failed to marshal config: %v", err)
+	}
+
+	// Unmarshal to verify structure
+	var result map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &result); err != nil {
+		t.Fatalf("Failed to unmarshal JSON: %v", err)
+	}
+
+	// Verify mcp_servers is present
+	mcpServers, ok := result["mcp_servers"]
+	if !ok {
+		t.Fatalf("mcp_servers field is missing from JSON output. Got: %v", result)
+	}
+
+	// Verify structure of mcp_servers
+	servers, ok := mcpServers.(map[string]interface{})
+	if !ok {
+		t.Fatalf("mcp_servers is not a map. Got type: %T", mcpServers)
+	}
+
+	playwright, ok := servers["playwright"]
+	if !ok {
+		t.Fatalf("playwright server is missing from mcp_servers")
+	}
+
+	playwrightMap, ok := playwright.(map[string]interface{})
+	if !ok {
+		t.Fatalf("playwright config is not a map. Got type: %T", playwright)
+	}
+
+	if playwrightMap["type"] != "stdio" {
+		t.Errorf("Expected type 'stdio', got '%v'", playwrightMap["type"])
+	}
+
+	if playwrightMap["command"] != "npx" {
+		t.Errorf("Expected command 'npx', got '%v'", playwrightMap["command"])
+	}
+
+	t.Logf("✅ MCPServers successfully serialized to mcp_servers in JSON")
 }

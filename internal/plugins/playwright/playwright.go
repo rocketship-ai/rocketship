@@ -429,9 +429,8 @@ func (p *Plugin) handleStop(ctx context.Context, cfg *stopConfig) (map[string]in
 		return nil, fmt.Errorf("failed to terminate process %d: %w", pid, err)
 	}
 
-	// Best effort wait
-	time.Sleep(500 * time.Millisecond)
-
+	// terminateProcessTree now waits synchronously for process to exit
+	// Safe to remove session file immediately after
 	if err := sessionfile.Remove(ctx, cfg.SessionID); err != nil {
 		return nil, err
 	}
@@ -463,13 +462,13 @@ func parseStartConfig(config map[string]interface{}, ctx dsl.TemplateContext) (*
 		return nil, err
 	}
 
-	headless := true
+	headless := false // Default to non-headless (show browser for local testing)
 	if v, ok := config["headless"]; ok {
 		switch val := v.(type) {
 		case bool:
 			headless = val
 		case string:
-			headless = strings.ToLower(val) != "false"
+			headless = strings.ToLower(val) == "true"
 		default:
 			return nil, fmt.Errorf("invalid headless value: %v", v)
 		}
