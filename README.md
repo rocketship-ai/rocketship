@@ -2,7 +2,7 @@
   <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
   <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
-<h3 align="center">Enterprise-Grade Testing for Humans and Agents</h3>
+<h3 align="center">E2E Testing for Coding Agents to Write, Run, and Maintain</h3>
 <p align="center">Validate Any Data Resource, API, or Customer Journey With Declarative Tests</p>
 
 <p align="center">
@@ -116,65 +116,23 @@ The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
 - Resources are isolated based off a session header
 - FYI: Resource cleanup is done hourly (every :00)
 
-## Try the MCP Server
+## For Coding Agents
 
-Rocketship includes an MCP (Model Context Protocol) server that enables AI coding agents like Cursor, Windsurf, or Claude Code write better Rocketship tests by providing examples, patterns, and guidance.
+If you're using a coding agent (Claude Code, Cursor, Windsurf, etc.), copy and paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your context window for a comprehensive reference guide.
 
-#### Quick Setup
+This quickstart covers:
 
-**For Claude Code:**
+- Installation and setup
+- All core plugins (HTTP, Supabase, Agent, Playwright, SQL)
+- Variables and lifecycle hooks
+- Retry policies and assertions
+- Real-world examples
 
-Add to the `.mcp.json` file in your project:
-
-```json
-{
-  "mcpServers": {
-    "rocketship": {
-      "command": "npx",
-      "args": ["-y", "@rocketshipai/mcp-server@latest"]
-    }
-  }
-}
-```
-
-**Head to the [Rocketship MCP Server Docs](https://docs.rocketship.sh/mcp-server) to see how to add it for Cursor, Windsurf, and more.**
-
-#### What Can It Do?
-
-The MCP server acts as a knowledgeable assistant, providing:
-
-- **`get_rocketship_examples`** - Get examples and best practices for specific Rocketship features
-- **`suggest_test_structure`** - Returns test templates with TODOs for you to implement
-- **`get_schema_info`** - Provides current schema information for validation and proper syntax
-- **`get_cli_guidance`** - Provides CLI usage patterns and commands from introspection
-- **`get_rocketship_cli_installation_instructions`** - Get step-by-step CLI installation instructions for different platforms
-- **`analyze_codebase_for_testing`** - Analyzes codebases to suggest meaningful test scenarios
-
-#### Example Usage
-
-Ask your coding agent for guidance:
-
-- "Show me examples of API testing with step chaining"
-- "What assertions should I use for JSON responses?"
-- "How do I install the Rocketship CLI?"
-- "How do I configure the Supabase plugin?"
-- "Give me a template for an E2E customer journey test"
-
-The agent will ask the MCP server for relevant examples and patterns, then help you create tests based on that guidance. You maintain full control over what gets written to your files.
+**Direct link:** [https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md)
 
 ## Documentation
 
 [https://docs.rocketship.sh](https://docs.rocketship.sh)
-
-## Roadmap
-
-Building the next-gen of integration testing for humans and AI agents. Suggestions and issues are welcomed! Here's what's coming in weeks, not years:
-
-- [x] **Parameterized Tests & Scripting** Parameterize your tests with environment variables, secrets, and scripted steps.
-- [x] **AI Agent Integration** MCP support for AI agents to automatically generate, run, and maintain integration tests based on code changes.
-- [x] **LLM Browser Testing** A plugin powered by [Browser Use](https://github.com/browser-use/browser-use) for browser-based testing.
-- [ ] **Test and Suite-Wide Config** Schedule tests on a cadence, add retryability, and more.
-- [ ] **More Native Plugins** Native plugin support for secret managers, databases (PostgreSQL, MongoDB), message queues (Kafka, RabbitMQ), file systems (S3, GCS), and more.
 
 ## Contribute!!!
 
