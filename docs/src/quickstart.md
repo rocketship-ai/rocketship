@@ -3,7 +3,7 @@
 Get started with Rocketship in minutes! This guide will help you install Rocketship and run your first test.
 
 !!! tip "For Coding Agents"
-    If you're a coding agent (Claude Code, Cursor, Windsurf, etc.), copy and paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your context window for a comprehensive reference.
+If you're a coding agent (Claude Code, Cursor, Windsurf, etc.), copy and paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your context window for a comprehensive reference.
 
 ## Installation
 

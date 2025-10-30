@@ -45,7 +45,7 @@ tests:
 
 ```bash
 rocketship run -af test.yaml      # Run a test file with auto start and stop the local server
-rocketship run -ad .rocketship --debug     # Run an entire .rocketship directory, also with debug logging
+rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST name all test files as rocketship.yaml in the directory recursively)
 ```
 
 ## Variables
