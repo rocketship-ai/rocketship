@@ -49,13 +49,13 @@ curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scrip
 ```bash
 cat > rocketship.yaml << 'EOF'
 name: "Simple Test Suite"
-description: "Showing some of the plugins"
+description: "API + Browser Testing"
 vars:
   base_url: "https://tryme.rocketship.sh"
 tests:
-  - name: "User Workflow with Processing Delay"
+  - name: "User Registration and Login"
     steps:
-      - name: "Create a new user"
+      - name: "Create a new user via API"
         plugin: http
         config:
           method: POST
@@ -68,39 +68,24 @@ tests:
         assertions:
           - type: status_code
             expected: 200
-          - type: json_path
-            path: ".name"
-            expected: "Nick Martin"
         save:
           - json_path: ".id"
             as: "user_id"
 
-      - name: "Wait for user processing"
-        plugin: delay
+      - name: "Verify user in browser"
+        plugin: playwright
         config:
-          duration: "2s"
-
-      - name: "Validate user creation with script"
-        plugin: script
-        config:
-          language: javascript
+          role: script
           script: |
-            function main() {
-              const userId = state.user_id;
+            from playwright.sync_api import expect
 
-              // Simulate some business logic validation
-              if (!userId || userId === "") {
-                throw new Error("User ID is missing or empty");
-              }
+            # Navigate to user profile
+            page.goto("{{ .vars.base_url }}/users/{{ user_id }}")
 
-              return {
-                validation_status: "passed",
-                user_ready: true,
-                message: `User ${userId} is ready for operations`
-              };
-            }
+            # Verify user details are displayed
+            expect(page.locator("h1")).to_contain_text("Nick Martin")
 
-            main();
+            result = {"verified": True}
 EOF
 ```
 
@@ -109,12 +94,6 @@ EOF
 ```bash
 rocketship run -af rocketship.yaml # starts the local engine, runs the tests, shuts the engine down
 ```
-
-The examples use a hosted test server at `tryme.rocketship.sh` that you can use:
-
-- Test CRUD operations for a resource type
-- Resources are isolated based off a session header
-- FYI: Resource cleanup is done hourly (every :00)
 
 ## For Coding Agents
 
