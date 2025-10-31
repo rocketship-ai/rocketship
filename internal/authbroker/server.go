@@ -43,6 +43,7 @@ func (s *Server) Close() error {
 
 type dataStore interface {
 	UpsertGitHubUser(ctx context.Context, input persistence.GitHubUserInput) (persistence.User, error)
+	UpdateUserEmail(ctx context.Context, userID uuid.UUID, email string) error
 	RoleSummary(ctx context.Context, userID uuid.UUID) (persistence.RoleSummary, error)
 	SaveRefreshToken(ctx context.Context, token string, rec persistence.RefreshTokenRecord) error
 	GetRefreshToken(ctx context.Context, token string) (persistence.RefreshTokenRecord, error)
@@ -1145,6 +1146,12 @@ func (s *Server) handleOrgRegistrationComplete(w http.ResponseWriter, r *http.Re
 			return
 		}
 		writeError(w, http.StatusUnauthorized, "verification code invalid")
+		return
+	}
+
+	if err := s.store.UpdateUserEmail(ctx, principal.UserID, reg.Email); err != nil {
+		log.Printf("failed to update user email: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to update user email")
 		return
 	}
 

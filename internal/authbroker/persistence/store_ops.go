@@ -223,6 +223,29 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
 	return user, nil
 }
 
+func (s *Store) UpdateUserEmail(ctx context.Context, userID uuid.UUID, email string) error {
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email required")
+	}
+
+	const query = `
+        UPDATE users
+        SET email = $2,
+            updated_at = NOW()
+        WHERE id = $1
+    `
+
+	res, err := s.db.ExecContext(ctx, query, userID, email)
+	if err != nil {
+		return fmt.Errorf("failed to update user email: %w", err)
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (s *Store) RoleSummary(ctx context.Context, userID uuid.UUID) (RoleSummary, error) {
 	summary := RoleSummary{}
 
