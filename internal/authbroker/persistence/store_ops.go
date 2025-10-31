@@ -35,6 +35,7 @@ type GitHubUserInput struct {
 var (
 	ErrRefreshTokenNotFound = errors.New("refresh token not found")
 	ErrOrganizationSlugUsed = errors.New("organization slug already in use")
+	ErrEmailInUse           = errors.New("email already in use")
 )
 
 type Organization struct {
@@ -198,7 +199,8 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
 	if input.GitHubUserID == 0 {
 		return User{}, errors.New("github user id required")
 	}
-	if strings.TrimSpace(input.Email) == "" {
+	email := normalizeEmail(input.Email)
+	if email == "" {
 		return User{}, errors.New("email required")
 	}
 
@@ -209,7 +211,6 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
         ON CONFLICT (github_user_id)
         DO UPDATE SET
-            email = EXCLUDED.email,
             name = EXCLUDED.name,
             username = EXCLUDED.username,
             updated_at = NOW()
@@ -217,7 +218,10 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
     `
 
 	var user User
-	if err := s.db.GetContext(ctx, &user, query, id, input.GitHubUserID, input.Email, input.Name, input.Username); err != nil {
+	if err := s.db.GetContext(ctx, &user, query, id, input.GitHubUserID, email, input.Name, input.Username); err != nil {
+		if isUniqueViolation(err, "users_email_unique") {
+			return User{}, ErrEmailInUse
+		}
 		return User{}, fmt.Errorf("failed to upsert user: %w", err)
 	}
 	return user, nil
@@ -238,6 +242,9 @@ func (s *Store) UpdateUserEmail(ctx context.Context, userID uuid.UUID, email str
 
 	res, err := s.db.ExecContext(ctx, query, userID, email)
 	if err != nil {
+		if isUniqueViolation(err, "users_email_unique") {
+			return ErrEmailInUse
+		}
 		return fmt.Errorf("failed to update user email: %w", err)
 	}
 	if rows, _ := res.RowsAffected(); rows == 0 {
@@ -861,6 +868,16 @@ func (s *Store) FindPendingOrgInvites(ctx context.Context, email string) ([]Orga
 
 func normalizeEmail(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func isUniqueViolation(err error, constraint string) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		if constraint == "" || pqErr.Constraint == constraint {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Store) MarkOrgInviteAccepted(ctx context.Context, inviteID, userID uuid.UUID) error {

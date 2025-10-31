@@ -1150,6 +1150,10 @@ func (s *Server) handleOrgRegistrationComplete(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := s.store.UpdateUserEmail(ctx, principal.UserID, reg.Email); err != nil {
+		if errors.Is(err, persistence.ErrEmailInUse) {
+			writeError(w, http.StatusConflict, "email already associated with another account")
+			return
+		}
 		log.Printf("failed to update user email: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to update user email")
 		return
