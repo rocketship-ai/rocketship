@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
 	"github.com/rocketship-ai/rocketship/internal/cli"
 	"github.com/rocketship-ai/rocketship/internal/orchestrator"
 	"go.temporal.io/sdk/client"
@@ -44,8 +45,28 @@ func main() {
 	}
 	defer c.Close()
 
+	logger.Debug("loading engine database configuration")
+	dbURL := strings.TrimSpace(os.Getenv("ROCKETSHIP_ENGINE_DATABASE_URL"))
+	if dbURL == "" {
+		logger.Error("ROCKETSHIP_ENGINE_DATABASE_URL environment variable is not set")
+		os.Exit(1)
+	}
+
+	storeCtx, storeCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer storeCancel()
+	runStore, err := persistence.NewStore(storeCtx, dbURL, nil)
+	if err != nil {
+		logger.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := runStore.Close(); err != nil {
+			logger.Debug("failed to close run store", "error", err)
+		}
+	}()
+
 	logger.Debug("creating engine orchestrator")
-	engine := orchestrator.NewEngine(c)
+	engine := orchestrator.NewEngine(c, runStore)
 
 	if err := configureAuthentication(engine); err != nil {
 		logger.Error("failed to configure authentication", "error", err)

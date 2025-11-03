@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 )
 
@@ -136,20 +138,47 @@ func (e *Engine) checkIfRunFinished(runID string) {
 
 	if counts.Failed == 0 && counts.TimedOut == 0 {
 		runInfo.Status = "PASSED"
-		runInfo.EndedAt = time.Now()
+		runInfo.EndedAt = time.Now().UTC()
+		orgID := runInfo.OrganizationID
+		endTime := runInfo.EndedAt
 		e.mu.Unlock()
 		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, counts.Total), "n/a", true)
+		if orgID != uuid.Nil {
+			if _, err := e.runStore.UpdateRun(context.Background(), persistence.RunUpdate{
+				RunID:          runID,
+				OrganizationID: orgID,
+				Status:         stringPtr("PASSED"),
+				EndedAt:        timePtr(endTime),
+				Totals:         makeRunTotals(counts),
+			}); err != nil {
+				slog.Error("checkIfRunFinished: failed to persist PASSED state", "run_id", runID, "error", err)
+			}
+		}
 		return
 	}
 
 	runInfo.Status = "FAILED"
-	runInfo.EndedAt = time.Now()
+	runInfo.EndedAt = time.Now().UTC()
+	orgID := runInfo.OrganizationID
+	endTime := runInfo.EndedAt
 	e.mu.Unlock()
 
 	if counts.TimedOut == 0 {
 		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed.", runName, counts.Passed, counts.Total, counts.Failed, counts.Total), "n/a", true)
 	} else {
 		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, counts.Passed, counts.Total, counts.Failed, counts.Total, counts.TimedOut, counts.Total), "n/a", true)
+	}
+
+	if orgID != uuid.Nil {
+		if _, err := e.runStore.UpdateRun(context.Background(), persistence.RunUpdate{
+			RunID:          runID,
+			OrganizationID: orgID,
+			Status:         stringPtr("FAILED"),
+			EndedAt:        timePtr(endTime),
+			Totals:         makeRunTotals(counts),
+		}); err != nil {
+			slog.Error("checkIfRunFinished: failed to persist FAILED state", "run_id", runID, "error", err)
+		}
 	}
 }
 

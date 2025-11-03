@@ -2,19 +2,22 @@ package orchestrator
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"sort"
+	"strings"
 	"time"
 
+	"github.com/oklog/ulid/v2"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 )
 
+var ulidEntropy = ulid.Monotonic(rand.Reader, 0)
+
 func generateID() (string, error) {
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
+	id, err := ulid.New(ulid.Timestamp(time.Now()), ulidEntropy)
+	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(b), nil
+	return strings.ToLower(id.String()), nil
 }
 
 func sortRuns(runs []*generated.RunSummary, orderBy string, ascending bool) {

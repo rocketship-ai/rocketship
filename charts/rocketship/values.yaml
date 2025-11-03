@@ -96,6 +96,10 @@ engine:
     tag: latest
     pullPolicy: IfNotPresent
   env: []
+  database:
+    url: ""
+    secretName: ""
+    secretKey: database-url
   resources: {}
   nodeSelector: {}
   tolerations: []

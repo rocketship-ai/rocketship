@@ -62,6 +62,7 @@ type Principal struct {
 	Roles    []string
 	Scopes   []string
 	TokenID  string
+	OrgID    string
 }
 
 func (p *Principal) allows(perm permission) bool {

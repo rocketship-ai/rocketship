@@ -39,6 +39,21 @@ spec:
               value: {{ .Values.temporal.host | quote }}
             - name: TEMPORAL_NAMESPACE
               value: {{ .Values.temporal.namespace | quote }}
+            {{- $engineDBSecret := .Values.engine.database.secretName }}
+            {{- if and .Values.postgres.enabled (eq $engineDBSecret "") }}
+            {{- $engineDBSecret = include "rocketship.authbroker.databaseSecretName" . -}}
+            {{- end }}
+            {{- $engineDBKey := default "database-url" .Values.engine.database.secretKey -}}
+            {{- if ne $engineDBSecret "" }}
+            - name: ROCKETSHIP_ENGINE_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $engineDBSecret }}
+                  key: {{ $engineDBKey }}
+            {{- else if .Values.engine.database.url }}
+            - name: ROCKETSHIP_ENGINE_DATABASE_URL
+              value: {{ .Values.engine.database.url | quote }}
+            {{- end }}
             {{- range .Values.engine.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}
