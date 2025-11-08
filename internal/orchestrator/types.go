@@ -1,22 +1,35 @@
 package orchestrator
 
 import (
+	"context"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
+	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"go.temporal.io/sdk/client"
 )
 
 type Engine struct {
 	generated.UnimplementedEngineServer
-	temporal   client.Client
-	runs       map[string]*RunInfo
-	mu         sync.RWMutex
-	authConfig authConfig
-	cleanupWg  sync.WaitGroup // Tracks active suite cleanup workflows
+	temporal        client.Client
+	runs            map[string]*RunInfo
+	mu              sync.RWMutex
+	authConfig      authConfig
+	cleanupWg       sync.WaitGroup // Tracks active suite cleanup workflows
+	runStore        RunStore
+	requireOrgScope bool
 }
+
+type RunStore interface {
+	InsertRun(ctx context.Context, run persistence.RunRecord) (persistence.RunRecord, error)
+	UpdateRun(ctx context.Context, update persistence.RunUpdate) (persistence.RunRecord, error)
+	GetRun(ctx context.Context, orgID uuid.UUID, runID string) (persistence.RunRecord, error)
+	ListRuns(ctx context.Context, orgID uuid.UUID, limit int) ([]persistence.RunRecord, error)
+}
+
 type RunInfo struct {
 	ID                 string
 	Name               string
@@ -33,6 +46,7 @@ type RunInfo struct {
 	SuiteCleanupRan    bool
 	Vars               map[string]interface{}
 	SuiteOpenAPI       *dsl.OpenAPISuiteConfig
+	OrganizationID     uuid.UUID
 }
 
 type LogLine struct {

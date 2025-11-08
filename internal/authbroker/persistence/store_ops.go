@@ -35,6 +35,7 @@ type GitHubUserInput struct {
 var (
 	ErrRefreshTokenNotFound = errors.New("refresh token not found")
 	ErrOrganizationSlugUsed = errors.New("organization slug already in use")
+	ErrEmailInUse           = errors.New("email already in use")
 )
 
 type Organization struct {
@@ -63,6 +64,49 @@ type ProjectMembership struct {
 	ProjectID      uuid.UUID
 	OrganizationID uuid.UUID
 	Role           string
+}
+
+type RunRecord struct {
+	ID             string         `db:"id"`
+	OrganizationID uuid.UUID      `db:"organization_id"`
+	ProjectID      uuid.NullUUID  `db:"project_id"`
+	Status         string         `db:"status"`
+	SuiteName      string         `db:"suite_name"`
+	Initiator      string         `db:"initiator"`
+	Trigger        string         `db:"trigger"`
+	ScheduleName   string         `db:"schedule_name"`
+	ConfigSource   string         `db:"config_source"`
+	Source         string         `db:"source"`
+	Branch         string         `db:"branch"`
+	Environment    string         `db:"environment"`
+	CommitSHA      sql.NullString `db:"commit_sha"`
+	BundleSHA      sql.NullString `db:"bundle_sha"`
+	TotalTests     int            `db:"total_tests"`
+	PassedTests    int            `db:"passed_tests"`
+	FailedTests    int            `db:"failed_tests"`
+	TimeoutTests   int            `db:"timeout_tests"`
+	CreatedAt      time.Time      `db:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at"`
+	StartedAt      sql.NullTime   `db:"started_at"`
+	EndedAt        sql.NullTime   `db:"ended_at"`
+}
+
+type RunTotals struct {
+	Total   int
+	Passed  int
+	Failed  int
+	Timeout int
+}
+
+type RunUpdate struct {
+	RunID          string
+	OrganizationID uuid.UUID
+	Status         *string
+	StartedAt      *time.Time
+	EndedAt        *time.Time
+	Totals         *RunTotals
+	CommitSHA      *string
+	BundleSHA      *string
 }
 
 type OrganizationRegistration struct {
@@ -198,7 +242,8 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
 	if input.GitHubUserID == 0 {
 		return User{}, errors.New("github user id required")
 	}
-	if strings.TrimSpace(input.Email) == "" {
+	email := normalizeEmail(input.Email)
+	if email == "" {
 		return User{}, errors.New("email required")
 	}
 
@@ -209,7 +254,6 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
         ON CONFLICT (github_user_id)
         DO UPDATE SET
-            email = EXCLUDED.email,
             name = EXCLUDED.name,
             username = EXCLUDED.username,
             updated_at = NOW()
@@ -217,10 +261,39 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
     `
 
 	var user User
-	if err := s.db.GetContext(ctx, &user, query, id, input.GitHubUserID, input.Email, input.Name, input.Username); err != nil {
+	if err := s.db.GetContext(ctx, &user, query, id, input.GitHubUserID, email, input.Name, input.Username); err != nil {
+		if isUniqueViolation(err, "users_email_unique") {
+			return User{}, ErrEmailInUse
+		}
 		return User{}, fmt.Errorf("failed to upsert user: %w", err)
 	}
 	return user, nil
+}
+
+func (s *Store) UpdateUserEmail(ctx context.Context, userID uuid.UUID, email string) error {
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email required")
+	}
+
+	const query = `
+        UPDATE users
+        SET email = $2,
+            updated_at = NOW()
+        WHERE id = $1
+    `
+
+	res, err := s.db.ExecContext(ctx, query, userID, email)
+	if err != nil {
+		if isUniqueViolation(err, "users_email_unique") {
+			return ErrEmailInUse
+		}
+		return fmt.Errorf("failed to update user email: %w", err)
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (s *Store) RoleSummary(ctx context.Context, userID uuid.UUID) (RoleSummary, error) {
@@ -838,6 +911,241 @@ func (s *Store) FindPendingOrgInvites(ctx context.Context, email string) ([]Orga
 
 func normalizeEmail(value string) string {
 	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func isUniqueViolation(err error, constraint string) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		if constraint == "" || pqErr.Constraint == constraint {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Store) InsertRun(ctx context.Context, run RunRecord) (RunRecord, error) {
+	if strings.TrimSpace(run.ID) == "" {
+		return RunRecord{}, errors.New("run id required")
+	}
+	if run.OrganizationID == uuid.Nil {
+		return RunRecord{}, errors.New("organization id required")
+	}
+	if strings.TrimSpace(run.Status) == "" {
+		return RunRecord{}, errors.New("status required")
+	}
+	if strings.TrimSpace(run.SuiteName) == "" {
+		return RunRecord{}, errors.New("suite name required")
+	}
+	if strings.TrimSpace(run.Initiator) == "" {
+		return RunRecord{}, errors.New("initiator required")
+	}
+	if strings.TrimSpace(run.ConfigSource) == "" {
+		return RunRecord{}, errors.New("config source required")
+	}
+
+	var projectID interface{}
+	if run.ProjectID.Valid {
+		projectID = run.ProjectID.UUID
+	}
+
+	var commitSha interface{}
+	if run.CommitSHA.Valid && strings.TrimSpace(run.CommitSHA.String) != "" {
+		commitSha = strings.TrimSpace(run.CommitSHA.String)
+	}
+
+	var bundleSha interface{}
+	if run.BundleSHA.Valid && strings.TrimSpace(run.BundleSHA.String) != "" {
+		bundleSha = strings.TrimSpace(run.BundleSHA.String)
+	}
+
+	var started interface{}
+	if run.StartedAt.Valid {
+		started = run.StartedAt.Time
+	}
+
+	var ended interface{}
+	if run.EndedAt.Valid {
+		ended = run.EndedAt.Time
+	}
+
+	const query = `
+	        INSERT INTO runs (
+	            id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, config_source,
+	            source, branch, environment, commit_sha, bundle_sha, total_tests, passed_tests,
+	            failed_tests, timeout_tests, started_at, ended_at
+	        )
+	        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+	        RETURNING id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, config_source,
+	                  source, branch, environment, commit_sha, bundle_sha, total_tests, passed_tests,
+	                  failed_tests, timeout_tests, created_at, updated_at, started_at, ended_at
+	    `
+
+	dest := RunRecord{}
+	if err := s.db.QueryRowxContext(ctx, query,
+		run.ID,
+		run.OrganizationID,
+		projectID,
+		run.Status,
+		run.SuiteName,
+		run.Initiator,
+		strings.TrimSpace(run.Trigger),
+		strings.TrimSpace(run.ScheduleName),
+		run.ConfigSource,
+		strings.TrimSpace(run.Source),
+		strings.TrimSpace(run.Branch),
+		strings.TrimSpace(run.Environment),
+		commitSha,
+		bundleSha,
+		run.TotalTests,
+		run.PassedTests,
+		run.FailedTests,
+		run.TimeoutTests,
+		started,
+		ended,
+	).StructScan(&dest); err != nil {
+		return RunRecord{}, fmt.Errorf("failed to insert run: %w", err)
+	}
+	return dest, nil
+}
+
+func (s *Store) UpdateRun(ctx context.Context, update RunUpdate) (RunRecord, error) {
+	if strings.TrimSpace(update.RunID) == "" {
+		return RunRecord{}, errors.New("run id required")
+	}
+	if update.OrganizationID == uuid.Nil {
+		return RunRecord{}, errors.New("organization id required")
+	}
+
+	assignments := make([]string, 0, 8)
+	args := make([]interface{}, 0, 10)
+
+	argIndex := 1
+	if update.Status != nil {
+		assignments = append(assignments, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, strings.TrimSpace(*update.Status))
+		argIndex++
+	}
+	if update.StartedAt != nil {
+		assignments = append(assignments, fmt.Sprintf("started_at = $%d", argIndex))
+		args = append(args, *update.StartedAt)
+		argIndex++
+	}
+	if update.EndedAt != nil {
+		assignments = append(assignments, fmt.Sprintf("ended_at = $%d", argIndex))
+		args = append(args, *update.EndedAt)
+		argIndex++
+	}
+	if update.Totals != nil {
+		assignments = append(assignments, fmt.Sprintf("total_tests = $%d", argIndex))
+		args = append(args, update.Totals.Total)
+		argIndex++
+
+		assignments = append(assignments, fmt.Sprintf("passed_tests = $%d", argIndex))
+		args = append(args, update.Totals.Passed)
+		argIndex++
+
+		assignments = append(assignments, fmt.Sprintf("failed_tests = $%d", argIndex))
+		args = append(args, update.Totals.Failed)
+		argIndex++
+
+		assignments = append(assignments, fmt.Sprintf("timeout_tests = $%d", argIndex))
+		args = append(args, update.Totals.Timeout)
+		argIndex++
+	}
+	if update.CommitSHA != nil {
+		assignments = append(assignments, fmt.Sprintf("commit_sha = $%d", argIndex))
+		args = append(args, strings.TrimSpace(*update.CommitSHA))
+		argIndex++
+	}
+	if update.BundleSHA != nil {
+		assignments = append(assignments, fmt.Sprintf("bundle_sha = $%d", argIndex))
+		args = append(args, strings.TrimSpace(*update.BundleSHA))
+		argIndex++
+	}
+
+	if len(assignments) == 0 {
+		return RunRecord{}, errors.New("no fields to update")
+	}
+
+	assignments = append(assignments, "updated_at = NOW()")
+
+	const selectColumns = `
+	        id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, config_source,
+	        source, branch, environment, commit_sha, bundle_sha, total_tests, passed_tests,
+	        failed_tests, timeout_tests, created_at, updated_at, started_at, ended_at
+	    `
+
+	query := fmt.Sprintf("UPDATE runs SET %s WHERE id = $%d AND organization_id = $%d RETURNING %s",
+		strings.Join(assignments, ", "),
+		argIndex,
+		argIndex+1,
+		selectColumns,
+	)
+
+	args = append(args, strings.TrimSpace(update.RunID), update.OrganizationID)
+
+	dest := RunRecord{}
+	if err := s.db.QueryRowxContext(ctx, query, args...).StructScan(&dest); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return RunRecord{}, sql.ErrNoRows
+		}
+		return RunRecord{}, fmt.Errorf("failed to update run: %w", err)
+	}
+	return dest, nil
+}
+
+func (s *Store) GetRun(ctx context.Context, orgID uuid.UUID, runID string) (RunRecord, error) {
+	if orgID == uuid.Nil {
+		return RunRecord{}, errors.New("organization id required")
+	}
+	if strings.TrimSpace(runID) == "" {
+		return RunRecord{}, errors.New("run id required")
+	}
+
+	const query = `
+	        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, config_source,
+	               source, branch, environment, commit_sha, bundle_sha, total_tests, passed_tests,
+	               failed_tests, timeout_tests, created_at, updated_at, started_at, ended_at
+	        FROM runs
+	        WHERE id = $1 AND organization_id = $2
+	    `
+
+	var record RunRecord
+	if err := s.db.GetContext(ctx, &record, query, strings.TrimSpace(runID), orgID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return RunRecord{}, sql.ErrNoRows
+		}
+		return RunRecord{}, fmt.Errorf("failed to load run: %w", err)
+	}
+	return record, nil
+}
+
+func (s *Store) ListRuns(ctx context.Context, orgID uuid.UUID, limit int) ([]RunRecord, error) {
+	if orgID == uuid.Nil {
+		return nil, errors.New("organization id required")
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+
+	const query = `
+	        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, config_source,
+	               source, branch, environment, commit_sha, bundle_sha, total_tests, passed_tests,
+	               failed_tests, timeout_tests, created_at, updated_at, started_at, ended_at
+	        FROM runs
+	        WHERE organization_id = $1
+	        ORDER BY created_at DESC
+	        LIMIT $2
+	    `
+
+	records := []RunRecord{}
+	if err := s.db.SelectContext(ctx, &records, query, orgID, limit); err != nil {
+		return nil, fmt.Errorf("failed to list runs: %w", err)
+	}
+	return records, nil
 }
 
 func (s *Store) MarkOrgInviteAccepted(ctx context.Context, inviteID, userID uuid.UUID) error {

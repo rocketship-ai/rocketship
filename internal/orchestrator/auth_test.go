@@ -37,7 +37,7 @@ func (s *testServerStream) SendMsg(interface{}) error    { return nil }
 func (s *testServerStream) RecvMsg(interface{}) error    { return nil }
 
 func TestAuthInterceptor_AllowsRequestsWhenDisabled(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 	interceptor := engine.NewAuthUnaryInterceptor()
 
 	called := false
@@ -56,7 +56,7 @@ func TestAuthInterceptor_AllowsRequestsWhenDisabled(t *testing.T) {
 }
 
 func TestAuthInterceptor_EnforcesToken(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 	engine.ConfigureToken("secret-token")
 
 	interceptor := engine.NewAuthUnaryInterceptor()
@@ -124,7 +124,7 @@ func TestAuthInterceptor_EnforcesToken(t *testing.T) {
 }
 
 func TestAuthInterceptor_ExemptMethods(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 	engine.ConfigureToken("secret-token")
 	interceptor := engine.NewAuthUnaryInterceptor()
 
@@ -140,7 +140,7 @@ func TestAuthInterceptor_ExemptMethods(t *testing.T) {
 }
 
 func TestAuthStreamInterceptor(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 	engine.ConfigureToken("secret-token")
 	interceptor := engine.NewAuthStreamInterceptor()
 
@@ -185,7 +185,7 @@ func TestAuthStreamInterceptor(t *testing.T) {
 }
 
 func TestConfigureServerInfo(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 	resp, err := engine.GetServerInfo(context.Background(), &generated.GetServerInfoRequest{})
 	if err != nil {
 		t.Fatalf("GetServerInfo returned error: %v", err)
@@ -214,7 +214,7 @@ func TestConfigureServerInfo(t *testing.T) {
 }
 
 func TestOIDCValidationRSA(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -260,7 +260,7 @@ func TestOIDCValidationRSA(t *testing.T) {
 }
 
 func TestOIDCValidationRSAMissingRolesFails(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -299,7 +299,7 @@ func TestOIDCValidationRSAMissingRolesFails(t *testing.T) {
 }
 
 func TestOIDCValidationEC(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 
 	ek, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -344,7 +344,7 @@ func TestOIDCValidationEC(t *testing.T) {
 }
 
 func TestAuthorizeRequiresWriteRole(t *testing.T) {
-	engine := NewEngine(&noopTemporalClient{})
+	engine := newTestEngineWithClient(&noopTemporalClient{})
 
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

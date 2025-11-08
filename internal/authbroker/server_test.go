@@ -146,6 +146,17 @@ func (f *fakeStore) UpsertGitHubUser(_ context.Context, input persistence.GitHub
 	return f.user, nil
 }
 
+func (f *fakeStore) UpdateUserEmail(_ context.Context, userID uuid.UUID, email string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.user.ID != userID {
+		return sql.ErrNoRows
+	}
+	f.user.Email = strings.ToLower(strings.TrimSpace(email))
+	f.user.UpdatedAt = time.Now()
+	return nil
+}
+
 func (f *fakeStore) RoleSummary(context.Context, uuid.UUID) (persistence.RoleSummary, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

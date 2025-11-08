@@ -407,6 +407,7 @@ func principalFromClaims(claims jwt.MapClaims) (*Principal, error) {
 		return nil, fmt.Errorf("token missing roles")
 	}
 	scopes := parseScopeClaim(claims["scope"])
+	orgID := stringClaim(claims["org_id"])
 	return &Principal{
 		Subject:  subject,
 		Email:    stringClaim(claims["email"]),
@@ -415,6 +416,7 @@ func principalFromClaims(claims jwt.MapClaims) (*Principal, error) {
 		Roles:    roles,
 		Scopes:   scopes,
 		TokenID:  stringClaim(claims["jti"]),
+		OrgID:    orgID,
 	}, nil
 }
 

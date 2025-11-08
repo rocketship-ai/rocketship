@@ -123,14 +123,14 @@ func runLogin(ctx context.Context, profileFlag string) error {
 		return fmt.Errorf("failed to persist profile metadata: %w", err)
 	}
 
-	if tokenData.IDToken != "" {
-		if user, err := decodeIDToken(tokenData.IDToken); err == nil {
-			fmt.Printf("Authenticated as %s\n", user)
-		}
-	}
 	fmt.Println("✅ Login complete")
 	if err := maybeRunOnboarding(ctx, name, tokenData, manager); err != nil {
 		return err
+	}
+	if updated, err := manager.Load(name); err == nil && updated.IDToken != "" {
+		if user, derr := decodeIDToken(updated.IDToken); derr == nil {
+			fmt.Printf("Authenticated as %s\n", user)
+		}
 	}
 	return nil
 }
