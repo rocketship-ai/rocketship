@@ -46,11 +46,15 @@ func main() {
 	defer c.Close()
 
 	logger.Debug("loading engine database configuration")
-	var runStore orchestrator.RunStore
+	var (
+		runStore        orchestrator.RunStore
+		requireOrgScope bool
+	)
 	dbURL := strings.TrimSpace(os.Getenv("ROCKETSHIP_ENGINE_DATABASE_URL"))
 	if dbURL == "" {
 		logger.Warn("ROCKETSHIP_ENGINE_DATABASE_URL not set; using in-memory run store")
 		runStore = orchestrator.NewMemoryRunStore()
+		requireOrgScope = false
 	} else {
 		storeCtx, storeCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer storeCancel()
@@ -65,10 +69,11 @@ func main() {
 			}
 		}()
 		runStore = dbStore
+		requireOrgScope = true
 	}
 
 	logger.Debug("creating engine orchestrator")
-	engine := orchestrator.NewEngine(c, runStore)
+	engine := orchestrator.NewEngine(c, runStore, requireOrgScope)
 
 	if err := configureAuthentication(engine); err != nil {
 		logger.Error("failed to configure authentication", "error", err)

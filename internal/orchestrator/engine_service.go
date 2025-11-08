@@ -587,19 +587,9 @@ func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest)
 
 	slog.Info("CancelRun: Starting cancellation", "run_id", req.RunId)
 
-	principal, ok := PrincipalFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		return nil, fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
+	_, orgID, err := e.resolvePrincipalAndOrg(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid organization identifier: %w", err)
+		return nil, err
 	}
 
 	e.mu.Lock()
@@ -612,7 +602,7 @@ func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest)
 			Message: fmt.Sprintf("run not found: %s", req.RunId),
 		}, nil
 	}
-	if runInfo.OrganizationID != orgID {
+	if orgID != uuid.Nil && runInfo.OrganizationID != orgID {
 		e.mu.Unlock()
 		slog.Warn("CancelRun: Run not accessible for caller", "run_id", req.RunId)
 		return &generated.CancelRunResponse{
@@ -909,10 +899,15 @@ func (e *Engine) resolvePrincipalAndOrg(ctx context.Context) (*Principal, uuid.U
 	if !ok {
 		return nil, uuid.Nil, fmt.Errorf("missing authentication context")
 	}
+
 	orgIDStr := strings.TrimSpace(principal.OrgID)
 	if orgIDStr == "" {
+		if !e.requireOrgScope {
+			return principal, uuid.Nil, nil
+		}
 		return nil, uuid.Nil, fmt.Errorf("token missing organization scope")
 	}
+
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
 		return nil, uuid.Nil, fmt.Errorf("invalid organization identifier: %w", err)

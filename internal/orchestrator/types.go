@@ -14,12 +14,13 @@ import (
 
 type Engine struct {
 	generated.UnimplementedEngineServer
-	temporal   client.Client
-	runs       map[string]*RunInfo
-	mu         sync.RWMutex
-	authConfig authConfig
-	cleanupWg  sync.WaitGroup // Tracks active suite cleanup workflows
-	runStore   RunStore
+	temporal        client.Client
+	runs            map[string]*RunInfo
+	mu              sync.RWMutex
+	authConfig      authConfig
+	cleanupWg       sync.WaitGroup // Tracks active suite cleanup workflows
+	runStore        RunStore
+	requireOrgScope bool
 }
 
 type RunStore interface {
