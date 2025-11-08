@@ -43,7 +43,7 @@ spec:
             {{- if and .Values.postgres.enabled (eq $engineDBSecret "") }}
             {{- $engineDBSecret = include "rocketship.authbroker.databaseSecretName" . -}}
             {{- end }}
-            {{- $engineDBKey := default "database-url" .Values.engine.database.secretKey -}}
+            {{- $engineDBKey := default "DATABASE_URL" .Values.engine.database.secretKey -}}
             {{- if ne $engineDBSecret "" }}
             - name: ROCKETSHIP_ENGINE_DATABASE_URL
               valueFrom:
