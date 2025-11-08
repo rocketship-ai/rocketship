@@ -46,24 +46,26 @@ func main() {
 	defer c.Close()
 
 	logger.Debug("loading engine database configuration")
+	var runStore orchestrator.RunStore
 	dbURL := strings.TrimSpace(os.Getenv("ROCKETSHIP_ENGINE_DATABASE_URL"))
 	if dbURL == "" {
-		logger.Error("ROCKETSHIP_ENGINE_DATABASE_URL environment variable is not set")
-		os.Exit(1)
-	}
-
-	storeCtx, storeCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer storeCancel()
-	runStore, err := persistence.NewStore(storeCtx, dbURL, nil)
-	if err != nil {
-		logger.Error("failed to connect to database", "error", err)
-		os.Exit(1)
-	}
-	defer func() {
-		if err := runStore.Close(); err != nil {
-			logger.Debug("failed to close run store", "error", err)
+		logger.Warn("ROCKETSHIP_ENGINE_DATABASE_URL not set; using in-memory run store")
+		runStore = orchestrator.NewMemoryRunStore()
+	} else {
+		storeCtx, storeCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer storeCancel()
+		dbStore, err := persistence.NewStore(storeCtx, dbURL, nil)
+		if err != nil {
+			logger.Error("failed to connect to database", "error", err)
+			os.Exit(1)
 		}
-	}()
+		defer func() {
+			if err := dbStore.Close(); err != nil {
+				logger.Debug("failed to close run store", "error", err)
+			}
+		}()
+		runStore = dbStore
+	}
 
 	logger.Debug("creating engine orchestrator")
 	engine := orchestrator.NewEngine(c, runStore)

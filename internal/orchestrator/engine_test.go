@@ -961,8 +961,9 @@ func TestHelperFunctions(t *testing.T) {
 
 func TestRunAPIsAreOrgScoped(t *testing.T) {
 	mockClient := &MockTemporalClient{}
-	store := newInMemoryRunStore()
+	store := NewMemoryRunStore()
 	engine := NewEngine(mockClient, store)
+	engine.authConfig.mode = authModeOIDC
 
 	orgA := uuid.New()
 	orgB := uuid.New()

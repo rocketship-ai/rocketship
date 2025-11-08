@@ -143,7 +143,7 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		endTime := runInfo.EndedAt
 		e.mu.Unlock()
 		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, counts.Total), "n/a", true)
-		if orgID != uuid.Nil {
+		if orgID != uuid.Nil && e.runStore != nil {
 			if _, err := e.runStore.UpdateRun(context.Background(), persistence.RunUpdate{
 				RunID:          runID,
 				OrganizationID: orgID,
@@ -169,7 +169,7 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. %d/%d tests passed, %d/%d tests failed, %d/%d tests timed out.", runName, counts.Passed, counts.Total, counts.Failed, counts.Total, counts.TimedOut, counts.Total), "n/a", true)
 	}
 
-	if orgID != uuid.Nil {
+	if orgID != uuid.Nil && e.runStore != nil {
 		if _, err := e.runStore.UpdateRun(context.Background(), persistence.RunUpdate{
 			RunID:          runID,
 			OrganizationID: orgID,

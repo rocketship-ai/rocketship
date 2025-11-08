@@ -27,19 +27,9 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		return nil, fmt.Errorf("YAML payload cannot be empty")
 	}
 
-	principal, ok := PrincipalFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		return nil, fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
+	principal, orgID, err := e.resolvePrincipalAndOrg(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid organization identifier: %w", err)
+		return nil, err
 	}
 
 	slog.Debug("CreateRun called", "payload_size", len(req.YamlPayload), "org_id", orgID.String())
@@ -66,30 +56,32 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	environment := detectEnvironment(runContext)
 	initiator := determineInitiator(principal)
 
-	record := persistence.RunRecord{
-		ID:             runID,
-		OrganizationID: orgID,
-		Status:         "RUNNING",
-		SuiteName:      run.Name,
-		Initiator:      initiator,
-		Trigger:        strings.TrimSpace(runContext.Trigger),
-		ScheduleName:   strings.TrimSpace(runContext.ScheduleName),
-		ConfigSource:   configSource,
-		Source:         strings.TrimSpace(runContext.Source),
-		Branch:         strings.TrimSpace(runContext.Branch),
-		Environment:    environment,
-		CommitSHA:      makeNullString(runContext.CommitSHA),
-		BundleSHA:      sql.NullString{},
-		TotalTests:     len(run.Tests),
-		PassedTests:    0,
-		FailedTests:    0,
-		TimeoutTests:   0,
-		StartedAt:      sql.NullTime{Time: startTime, Valid: true},
-	}
+	if orgID != uuid.Nil && e.runStore != nil {
+		record := persistence.RunRecord{
+			ID:             runID,
+			OrganizationID: orgID,
+			Status:         "RUNNING",
+			SuiteName:      run.Name,
+			Initiator:      initiator,
+			Trigger:        strings.TrimSpace(runContext.Trigger),
+			ScheduleName:   strings.TrimSpace(runContext.ScheduleName),
+			ConfigSource:   configSource,
+			Source:         strings.TrimSpace(runContext.Source),
+			Branch:         strings.TrimSpace(runContext.Branch),
+			Environment:    environment,
+			CommitSHA:      makeNullString(runContext.CommitSHA),
+			BundleSHA:      sql.NullString{},
+			TotalTests:     len(run.Tests),
+			PassedTests:    0,
+			FailedTests:    0,
+			TimeoutTests:   0,
+			StartedAt:      sql.NullTime{Time: startTime, Valid: true},
+		}
 
-	if _, err := e.runStore.InsertRun(ctx, record); err != nil {
-		slog.Error("CreateRun: failed to persist run metadata", "run_id", runID, "error", err)
-		return nil, fmt.Errorf("failed to persist run metadata: %w", err)
+		if _, err := e.runStore.InsertRun(ctx, record); err != nil {
+			slog.Error("CreateRun: failed to persist run metadata", "run_id", runID, "error", err)
+			return nil, fmt.Errorf("failed to persist run metadata: %w", err)
+		}
 	}
 
 	slog.Debug("Starting run",
@@ -182,17 +174,19 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			e.addLog(runID, fmt.Sprintf("Failed to start test \"%s\": %v", test.Name, err), "red", true)
 			e.triggerSuiteCleanup(runID, true)
 
-			status := "FAILED"
-			ended := time.Now().UTC()
-			totals := &persistence.RunTotals{Total: len(run.Tests)}
-			if _, updErr := e.runStore.UpdateRun(ctx, persistence.RunUpdate{
-				RunID:          runID,
-				OrganizationID: orgID,
-				Status:         &status,
-				EndedAt:        &ended,
-				Totals:         totals,
-			}); updErr != nil {
-				slog.Error("CreateRun: failed to mark run as failed after workflow start error", "run_id", runID, "error", updErr)
+			if orgID != uuid.Nil && e.runStore != nil {
+				status := "FAILED"
+				ended := time.Now().UTC()
+				totals := &persistence.RunTotals{Total: len(run.Tests)}
+				if _, updErr := e.runStore.UpdateRun(ctx, persistence.RunUpdate{
+					RunID:          runID,
+					OrganizationID: orgID,
+					Status:         &status,
+					EndedAt:        &ended,
+					Totals:         totals,
+				}); updErr != nil {
+					slog.Error("CreateRun: failed to mark run as failed after workflow start error", "run_id", runID, "error", updErr)
+				}
 			}
 
 			return nil, fmt.Errorf("failed to start workflow: %w", err)
@@ -257,7 +251,7 @@ func (e *Engine) handleSuiteInitFailure(runID string, runInfo *RunInfo, initErr 
 	e.addLog(runID, "Skipping all tests because suite init failed.", "red", true)
 	e.addLog(runID, fmt.Sprintf("Test run: \"%s\" ended without executing any tests.", runInfo.Name), "n/a", true)
 
-	if runInfo.OrganizationID != uuid.Nil {
+	if runInfo.OrganizationID != uuid.Nil && e.runStore != nil {
 		if _, err := e.runStore.UpdateRun(context.Background(), persistence.RunUpdate{
 			RunID:          runID,
 			OrganizationID: runInfo.OrganizationID,
@@ -356,19 +350,9 @@ func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
 func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.Engine_StreamLogsServer) error {
 	runID := req.RunId
 
-	principal, ok := PrincipalFromContext(stream.Context())
-	if !ok {
-		return fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		return fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
+	_, orgID, err := e.resolvePrincipalAndOrg(stream.Context())
 	if err != nil {
-		return fmt.Errorf("invalid organization identifier: %w", err)
+		return err
 	}
 
 	e.mu.RLock()
@@ -377,7 +361,7 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 		e.mu.RUnlock()
 		return fmt.Errorf("run not found: %s", runID)
 	}
-	if runInfo.OrganizationID != orgID {
+	if orgID != uuid.Nil && runInfo.OrganizationID != uuid.Nil && runInfo.OrganizationID != orgID {
 		e.mu.RUnlock()
 		return fmt.Errorf("run not found: %s", runID)
 	}
@@ -413,7 +397,7 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 				e.mu.RUnlock()
 				return fmt.Errorf("run not found: %s", runID)
 			}
-			if runInfo.OrganizationID != orgID {
+			if orgID != uuid.Nil && runInfo.OrganizationID != uuid.Nil && runInfo.OrganizationID != orgID {
 				e.mu.RUnlock()
 				return fmt.Errorf("run not found: %s", runID)
 			}
@@ -458,19 +442,9 @@ func (e *Engine) AddLog(ctx context.Context, req *generated.AddLogRequest) (*gen
 		return nil, fmt.Errorf("message is required")
 	}
 
-	principal, ok := PrincipalFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		return nil, fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
+	_, orgID, err := e.resolvePrincipalAndOrg(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid organization identifier: %w", err)
+		return nil, err
 	}
 
 	e.mu.RLock()
@@ -479,7 +453,7 @@ func (e *Engine) AddLog(ctx context.Context, req *generated.AddLogRequest) (*gen
 		e.mu.RUnlock()
 		return nil, fmt.Errorf("run not found: %s", req.RunId)
 	}
-	if runInfo.OrganizationID != orgID {
+	if orgID != uuid.Nil && runInfo.OrganizationID != uuid.Nil && runInfo.OrganizationID != orgID {
 		e.mu.RUnlock()
 		return nil, fmt.Errorf("run not found: %s", req.RunId)
 	}
@@ -519,22 +493,19 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 		"status", req.Status,
 		"limit", req.Limit)
 
-	principal, ok := PrincipalFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		return nil, fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
+	_, orgID, err := e.resolvePrincipalAndOrg(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid organization identifier: %w", err)
+		return nil, err
+	}
+
+	if orgID == uuid.Nil || e.runStore == nil {
+		return e.listRunsInMemory(req)
 	}
 
 	limit := int(req.Limit)
+	if limit <= 0 {
+		limit = 50
+	}
 	records, err := e.runStore.ListRuns(ctx, orgID, limit)
 	if err != nil {
 		slog.Error("ListRuns: failed to load runs", "error", err)
@@ -577,30 +548,24 @@ func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*gen
 		return nil, fmt.Errorf("run_id is required")
 	}
 
-	principal, ok := PrincipalFromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		return nil, fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
+	_, orgID, err := e.resolvePrincipalAndOrg(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid organization identifier: %w", err)
+		return nil, err
 	}
 
 	e.mu.RLock()
 	if runInfo, exists := e.runs[req.RunId]; exists {
-		if runInfo.OrganizationID == orgID {
+		if orgID == uuid.Nil || runInfo.OrganizationID == orgID {
 			e.mu.RUnlock()
 			slog.Debug("Found active run in memory", "run_id", req.RunId)
 			return mapRunInfoToRunDetails(runInfo), nil
 		}
 	}
 	e.mu.RUnlock()
+
+	if orgID == uuid.Nil || e.runStore == nil {
+		return e.getRunInMemory(req.RunId)
+	}
 
 	rec, err := e.runStore.GetRun(ctx, orgID, req.RunId)
 	if err != nil {
@@ -705,7 +670,7 @@ func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest)
 		counts = TestStatusCounts{}
 	}
 
-	if orgID != uuid.Nil {
+	if orgID != uuid.Nil && e.runStore != nil {
 		if _, updErr := e.runStore.UpdateRun(ctx, persistence.RunUpdate{
 			RunID:          req.RunId,
 			OrganizationID: orgID,
@@ -844,13 +809,15 @@ func mapRunRecordToSummary(rec persistence.RunRecord) *generated.RunSummary {
 	}
 
 	context := &generated.RunContext{
-		ProjectId:    "",
 		Source:       rec.Source,
 		Branch:       rec.Branch,
 		CommitSha:    commitSha,
 		Trigger:      rec.Trigger,
 		ScheduleName: rec.ScheduleName,
 		Metadata:     map[string]string{},
+	}
+	if rec.ProjectID.Valid {
+		context.ProjectId = rec.ProjectID.UUID.String()
 	}
 
 	startedAt := ""
@@ -909,7 +876,6 @@ func mapRunRecordToRunDetails(rec persistence.RunRecord) *generated.GetRunRespon
 		EndedAt:    endedAt,
 		DurationMs: duration,
 		Context: &generated.RunContext{
-			ProjectId:    "",
 			Source:       rec.Source,
 			Branch:       rec.Branch,
 			CommitSha:    commitSha,
@@ -918,6 +884,9 @@ func mapRunRecordToRunDetails(rec persistence.RunRecord) *generated.GetRunRespon
 			Metadata:     map[string]string{},
 		},
 		Tests: []*generated.TestDetails{},
+	}
+	if rec.ProjectID.Valid {
+		details.Context.ProjectId = rec.ProjectID.UUID.String()
 	}
 
 	return &generated.GetRunResponse{Run: details}
@@ -930,4 +899,127 @@ func makeRunTotals(counts TestStatusCounts) *persistence.RunTotals {
 		Failed:  counts.Failed,
 		Timeout: counts.TimedOut,
 	}
+}
+
+func (e *Engine) resolvePrincipalAndOrg(ctx context.Context) (*Principal, uuid.UUID, error) {
+	principal, ok := PrincipalFromContext(ctx)
+	if e.authConfig.mode == authModeNone {
+		if !ok {
+			return nil, uuid.Nil, nil
+		}
+		return principal, uuid.Nil, nil
+	}
+	if !ok {
+		return nil, uuid.Nil, fmt.Errorf("missing authentication context")
+	}
+	orgIDStr := strings.TrimSpace(principal.OrgID)
+	if orgIDStr == "" {
+		return nil, uuid.Nil, fmt.Errorf("token missing organization scope")
+	}
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		return nil, uuid.Nil, fmt.Errorf("invalid organization identifier: %w", err)
+	}
+	return principal, orgID, nil
+}
+
+func (e *Engine) listRunsInMemory(req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	runs := make([]*generated.RunSummary, 0)
+
+	for _, runInfo := range e.runs {
+		if req.Status != "" && runInfo.Status != req.Status {
+			continue
+		}
+		if req.ProjectId != "" && runInfo.Context.ProjectID != req.ProjectId {
+			continue
+		}
+		if req.Source != "" && runInfo.Context.Source != req.Source {
+			continue
+		}
+		if req.Branch != "" && !strings.EqualFold(runInfo.Context.Branch, req.Branch) {
+			continue
+		}
+		if req.ScheduleName != "" && runInfo.Context.ScheduleName != req.ScheduleName {
+			continue
+		}
+
+		var passed, failed, timeout int32
+		for _, test := range runInfo.Tests {
+			switch test.Status {
+			case "PASSED":
+				passed++
+			case "FAILED":
+				failed++
+			case "TIMEOUT":
+				timeout++
+			}
+		}
+
+		duration := int64(0)
+		if !runInfo.EndedAt.IsZero() {
+			duration = runInfo.EndedAt.Sub(runInfo.StartedAt).Milliseconds()
+		}
+
+		runs = append(runs, &generated.RunSummary{
+			RunId:        runInfo.ID,
+			SuiteName:    runInfo.Name,
+			Status:       runInfo.Status,
+			StartedAt:    runInfo.StartedAt.Format(time.RFC3339),
+			EndedAt:      runInfo.EndedAt.Format(time.RFC3339),
+			DurationMs:   duration,
+			TotalTests:   int32(len(runInfo.Tests)),
+			PassedTests:  passed,
+			FailedTests:  failed,
+			TimeoutTests: timeout,
+			Context: &generated.RunContext{
+				ProjectId:    runInfo.Context.ProjectID,
+				Source:       runInfo.Context.Source,
+				Branch:       runInfo.Context.Branch,
+				CommitSha:    runInfo.Context.CommitSHA,
+				Trigger:      runInfo.Context.Trigger,
+				ScheduleName: runInfo.Context.ScheduleName,
+				Metadata:     runInfo.Context.Metadata,
+			},
+		})
+	}
+
+	sortRuns(runs, req.OrderBy, !req.Descending)
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if len(runs) > int(limit) {
+		runs = runs[:limit]
+	}
+
+	return &generated.ListRunsResponse{
+		Runs:       runs,
+		TotalCount: int32(len(runs)),
+	}, nil
+}
+
+func (e *Engine) getRunInMemory(runID string) (*generated.GetRunResponse, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	if runInfo, exists := e.runs[runID]; exists {
+		slog.Debug("Found active run in memory", "run_id", runID)
+		return mapRunInfoToRunDetails(runInfo), nil
+	}
+
+	if len(runID) <= 12 {
+		slog.Debug("Searching for run by prefix", "prefix", runID)
+		for fullID, runInfo := range e.runs {
+			if strings.HasPrefix(fullID, runID) {
+				slog.Debug("Found run by prefix match", "prefix", runID, "full_id", fullID)
+				return mapRunInfoToRunDetails(runInfo), nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("run not found: %s", runID)
 }
