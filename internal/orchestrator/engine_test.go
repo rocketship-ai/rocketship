@@ -969,7 +969,7 @@ func TestRunAPIsAreOrgScoped(t *testing.T) {
 	orgB := uuid.New()
 
 	now := time.Now().UTC()
-	_, err := store.InsertRun(context.Background(), persistence.RunRecord{
+	_, err := engine.runStore.InsertRun(context.Background(), persistence.RunRecord{
 		ID:             "run-a",
 		OrganizationID: orgA,
 		Status:         "PASSED",

@@ -904,9 +904,6 @@ func makeRunTotals(counts TestStatusCounts) *persistence.RunTotals {
 func (e *Engine) resolvePrincipalAndOrg(ctx context.Context) (*Principal, uuid.UUID, error) {
 	principal, ok := PrincipalFromContext(ctx)
 	if e.authConfig.mode == authModeNone {
-		if !ok {
-			return nil, uuid.Nil, nil
-		}
 		return principal, uuid.Nil, nil
 	}
 	if !ok {
