@@ -61,6 +61,13 @@ func (f *fakeGitHub) ExchangeDeviceCode(_ context.Context, _ string) (TokenRespo
 	return f.tokenResp, f.tokenErr, nil
 }
 
+func (f *fakeGitHub) ExchangeAuthorizationCode(_ context.Context, _, _, _ string) (TokenResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.tokenCalls++
+	return f.tokenResp, nil
+}
+
 func (f *fakeGitHub) FetchUser(_ context.Context, _ string) (GitHubUser, error) {
 	return f.user, nil
 }

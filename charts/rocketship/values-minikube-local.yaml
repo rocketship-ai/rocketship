@@ -33,9 +33,9 @@ auth:
       - read:user
       - user:email
     github:
-      # This should be set via --set or as a secret
-      # Default to the production client ID for now (users can override)
-      clientID: Ov23li6jRbnoviVURzs9
+      # Local development OAuth App: "Rocketship Cloud - Local"
+      # Callback URL: http://auth.minikube.local/callback
+      clientID: Ov23li2GoXfR7bC7fR0y
       clientSecretSecret: rocketship-github-oauth
       clientSecretKey: ROCKETSHIP_GITHUB_CLIENT_SECRET
       scopes:

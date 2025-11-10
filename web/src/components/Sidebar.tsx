@@ -1,8 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Activity, User } from 'lucide-react'
+import { Home, Activity, User, LogOut } from 'lucide-react'
 import logoImage from '@/assets/no-name-transparent.png'
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
 
 export function Sidebar() {
+  const { logout } = useAuth()
+
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-white">
       {/* Logo Section */}
@@ -49,7 +53,7 @@ export function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="border-t p-4">
+      <div className="border-t p-4 space-y-3">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
             <User className="h-4 w-4 text-muted-foreground" />
@@ -59,6 +63,15 @@ export function Sidebar() {
             <p className="text-xs text-muted-foreground truncate">user@example.com</p>
           </div>
         </div>
+        <Button
+          onClick={logout}
+          variant="outline"
+          size="sm"
+          className="w-full justify-start"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Log out
+        </Button>
       </div>
     </div>
   )
