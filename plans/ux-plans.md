@@ -1,2 +1,0 @@
-- I wanna re organize the docs. A plugins section should exist. And fix up this doc page https://docs.rocketship.sh/examples/ai/browser-testing/
-- create ROCKETSHIP_QUICKSTART.md

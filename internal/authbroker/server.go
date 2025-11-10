@@ -275,9 +275,51 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleProjectRoutes))
 }
 
-// ServeHTTP satisfies http.Handler.
+// ServeHTTP satisfies http.Handler with CORS support.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
+	s.corsMiddleware(s.mux).ServeHTTP(w, r)
+}
+
+// corsMiddleware adds CORS headers for browser requests
+func (s *Server) corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+
+		if s.isAllowedOrigin(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+			w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
+		}
+
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// isAllowedOrigin checks if the request origin is allowed for CORS
+func (s *Server) isAllowedOrigin(origin string) bool {
+	// Allow localhost for local development
+	allowedOrigins := []string{
+		"http://localhost:5173",    // Vite dev server
+		"http://localhost:4173",    // Vite preview
+		"http://localhost:3000",    // Common React dev port
+		"https://app.rocketship.sh", // Production (future)
+	}
+
+	for _, allowed := range allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *Server) handleDeviceCode(w http.ResponseWriter, r *http.Request) {

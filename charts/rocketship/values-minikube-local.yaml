@@ -1,0 +1,138 @@
+# Minikube local development values
+# This configuration enables all services needed for full e2e testing:
+# - Engine + Worker
+# - Auth Broker (GitHub OAuth device flow)
+# - Postgres (user/org storage)
+#
+# Secrets are created by the install-minikube.sh script.
+# For local development, GitHub OAuth is configured but can use test credentials.
+
+auth:
+  mode: oidc
+  oidc:
+    mode: github
+    # Use ingress hostname that works both inside and outside the cluster
+    # Requires: minikube tunnel + /etc/hosts entry for auth.minikube.local
+    issuer: http://auth.minikube.local
+    clientID: rocketship-cli
+    audience: rocketship-cli
+    deviceEndpoint: http://auth.minikube.local/device/code
+    tokenEndpoint: http://auth.minikube.local/token
+    jwksURL: http://auth.minikube.local/.well-known/jwks.json
+    scopes:
+      - read:org
+      - read:user
+      - user:email
+  broker:
+    enabled: true
+    issuer: http://auth.minikube.local
+    audience: rocketship-cli
+    clientID: rocketship-cli
+    scopes:
+      - read:org
+      - read:user
+      - user:email
+    github:
+      # This should be set via --set or as a secret
+      # Default to the production client ID for now (users can override)
+      clientID: Ov23li6jRbnoviVURzs9
+      clientSecretSecret: rocketship-github-oauth
+      clientSecretKey: ROCKETSHIP_GITHUB_CLIENT_SECRET
+      scopes:
+        - read:org
+        - read:user
+        - user:email
+    signingKey:
+      secretName: rocketship-auth-broker-signing
+      key: signing-key.pem
+      mountPath: /var/run/rocketship
+      fileName: signing-key.pem
+    database:
+      secretName: rocketship-auth-broker-database
+      secretKey: DATABASE_URL
+    refreshTokenKey:
+      secretName: rocketship-auth-broker-secrets
+      secretKey: ROCKETSHIP_BROKER_REFRESH_KEY
+    env:
+      - name: ROCKETSHIP_BROKER_ACCESS_TTL
+        value: 15m
+      - name: ROCKETSHIP_BROKER_REFRESH_TTL
+        value: 720h
+    service:
+      type: ClusterIP
+      port: 8080
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: auth.minikube.local
+          paths:
+            - path: /
+              pathType: Prefix
+    envFrom:
+      - secretRef:
+          name: rocketship-github-oauth
+      - secretRef:
+          name: rocketship-postmark-secret
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+# Enable bundled Postgres for local development
+postgres:
+  enabled: true
+
+# Use the Bitnami Postgres subchart
+postgresql:
+  auth:
+    existingSecret: rocketship-postgres-auth
+    existingSecretPasswordKey: password
+    existingSecretPostgresPasswordKey: postgres-password
+    username: rocketship
+    database: rocketship
+  primary:
+    persistence:
+      enabled: true
+      size: 2Gi
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    tag: 16.3.0-debian-12-r23
+
+engine:
+  service:
+    type: ClusterIP
+  database:
+    secretName: rocketship-auth-broker-database
+    secretKey: DATABASE_URL
+  env:
+    - name: ROCKETSHIP_DISABLE_GRPC_WEB
+      value: "true"
+  # For minikube: point auth.minikube.local to ingress-nginx-controller ClusterIP
+  # This is more stable than using the LoadBalancer IP (192.168.58.2)
+  # To find: kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
+  hostAliases:
+    - ip: "10.101.7.183"  # ingress-nginx-controller ClusterIP
+      hostnames:
+        - "auth.minikube.local"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+worker:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"

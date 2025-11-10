@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
 	"github.com/rocketship-ai/rocketship/internal/cli"
@@ -104,7 +105,6 @@ func newHealthMux() http.Handler {
 func startGRPCServer(engine *orchestrator.Engine) {
 	logger := cli.Logger
 
-	logger.Debug("starting grpc server", "port", ":7700")
 	lis, err := net.Listen("tcp", ":7700")
 	if err != nil {
 		logger.Error("failed to listen on port 7700", "error", err)
@@ -117,11 +117,77 @@ func startGRPCServer(engine *orchestrator.Engine) {
 	)
 	generated.RegisterEngineServer(grpcServer, engine)
 
-	logger.Info("grpc server listening", "port", ":7700")
-	if err := grpcServer.Serve(lis); err != nil {
-		logger.Error("failed to serve grpc", "error", err)
+	// Check if grpc-web should be disabled (for local development with kubectl port-forward)
+	disableGrpcWeb := strings.ToLower(strings.TrimSpace(os.Getenv("ROCKETSHIP_DISABLE_GRPC_WEB"))) == "true"
+
+	if disableGrpcWeb {
+		// Serve pure gRPC without HTTP multiplexer
+		// This is required for kubectl port-forward compatibility
+		logger.Info("grpc server listening (native gRPC only, grpc-web disabled)", "port", ":7700")
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Error("failed to serve", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Production mode: wrap gRPC server with grpc-web for browser compatibility
+	logger.Debug("starting grpc server with grpc-web support", "port", ":7700")
+	wrappedServer := grpcweb.WrapServer(grpcServer,
+		grpcweb.WithOriginFunc(isAllowedOrigin),
+		grpcweb.WithWebsockets(true),              // Enable WebSocket for streaming
+		grpcweb.WithWebsocketOriginFunc(func(req *http.Request) bool {
+			return isAllowedOrigin(req.Header.Get("Origin"))
+		}),
+	)
+
+	// Create HTTP server that handles both native gRPC and grpc-web
+	httpServer := &http.Server{
+		Addr: ":7700",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if wrappedServer.IsGrpcWebRequest(r) ||
+				wrappedServer.IsAcceptableGrpcCorsRequest(r) ||
+				wrappedServer.IsGrpcWebSocketRequest(r) {
+				// Handle browser requests (grpc-web)
+				wrappedServer.ServeHTTP(w, r)
+			} else {
+				// Handle native gRPC requests (CLI)
+				grpcServer.ServeHTTP(w, r)
+			}
+		}),
+	}
+
+	logger.Info("grpc server listening (native gRPC + grpc-web)", "port", ":7700")
+	if err := httpServer.Serve(lis); err != nil {
+		logger.Error("failed to serve", "error", err)
 		os.Exit(1)
 	}
+}
+
+// isAllowedOrigin checks if the request origin is allowed for CORS
+func isAllowedOrigin(origin string) bool {
+	// Allow localhost for local development
+	allowedOrigins := []string{
+		"http://localhost:5173",    // Vite dev server
+		"http://localhost:4173",    // Vite preview
+		"http://localhost:3000",    // Common React dev port
+		"http://localhost:8080",    // Test server
+		"https://app.rocketship.sh", // Production (future)
+	}
+
+	for _, allowed := range allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+
+	// Also check environment variable for custom origins
+	customOrigin := strings.TrimSpace(os.Getenv("ROCKETSHIP_ALLOWED_ORIGIN"))
+	if customOrigin != "" && origin == customOrigin {
+		return true
+	}
+
+	return false
 }
 
 func loadEngineToken() (string, error) {

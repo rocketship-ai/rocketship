@@ -1,131 +1,158 @@
 # Run Rocketship on Minikube
 
-Use this guide when you want a fully isolated Rocketship stack on your laptop for development, demos, or CI automation. The repository ships with `scripts/install-minikube.sh`, which provisions Temporal plus the Rocketship engine and worker in a single namespace.
+Local Kubernetes cluster for development with full auth and database support.
 
 ## Prerequisites
 
-- macOS or Linux host with at least 4 vCPUs and 8 GB RAM free
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/) `v1.36+`
-- [Kubectl](https://kubernetes.io/docs/tasks/tools/) pointed to your Minikube context
+- macOS or Linux with 4+ vCPUs, 8+ GB RAM
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) v1.36+
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Helm 3](https://helm.sh/docs/intro/install/)
-- Docker (Minikube uses the local Docker daemon to build images)
+- Docker
 
-## 1. Launch the Stack
+## Setup
 
-From the repository root:
+### 1. Configure Secrets
+
+Copy `.env.example` to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+**Option A: Extract from production cluster** (requires kubectl access to `do-nyc1-rs-test-project`):
+
+```bash
+kubectl config use-context do-nyc1-rs-test-project
+kubectl get secret rocketship-github-oauth -n rocketship -o jsonpath='{.data.ROCKETSHIP_GITHUB_CLIENT_SECRET}' | base64 -d
+kubectl get secret rocketship-postmark-secret -n rocketship -o jsonpath='{.data.ROCKETSHIP_EMAIL_FROM}' | base64 -d
+kubectl get secret rocketship-postmark-secret -n rocketship -o jsonpath='{.data.ROCKETSHIP_POSTMARK_SERVER_TOKEN}' | base64 -d
+kubectl config use-context rocketship
+```
+
+**Option B: Get from team member** (if you don't have cluster access):
+
+Ask a team member with cluster access to share their `.env` file or provide the three required values.
+
+Fill in your `.env` file:
+
+```bash
+GITHUB_CLIENT_SECRET=<your-value>
+ROCKETSHIP_EMAIL_FROM=<your-value>
+ROCKETSHIP_POSTMARK_SERVER_TOKEN=<your-value>
+```
+
+### 2. Run Install Script
 
 ```bash
 scripts/install-minikube.sh
 ```
 
-The script performs the following steps:
+This creates a minikube cluster with:
+- Temporal (workflow engine)
+- Rocketship Engine (gRPC server)
+- Rocketship Worker (test runner)
+- Rocketship Auth Broker (OAuth)
+- PostgreSQL (database)
 
-1. Starts/ensures a Minikube profile (defaults to `rocketship`).
-2. Switches the Docker context to Minikube and builds the engine and worker images as `rocketship-engine-local:dev` and `rocketship-worker-local:dev`.
-3. Installs Temporal via the official Helm chart in the `rocketship` namespace using a minimal configuration (single replica services, Cassandra + Elasticsearch, no Prometheus/Grafana).
-4. Registers the Temporal logical namespace `rocketship` using the Temporal CLI.
-5. Installs the Rocketship Helm chart, pointing at the Temporal frontend service, and exposes ClusterIP services with named `grpc`/`http` ports.
-6. Prints summary information and port-forward helper commands.
+### 3. Set Up Local Access
 
-Typical output ends with:
-
-```
-Engine endpoint (gRPC): service rocketship-engine.rocketship:7700
-Health endpoint: service rocketship-engine.rocketship:7701
-Temporal host configured as: temporal-frontend.rocketship:7233
-```
-
-## 2. Customise the Install (Optional)
-
-Environment variables let you adjust namespaces, release names, and Temporal workflow namespace without editing the script:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
-| `ROCKETSHIP_NAMESPACE` | `rocketship` | Kubernetes namespace for Rocketship services |
-| `TEMPORAL_NAMESPACE` | `rocketship` | Namespace for Temporal Helm release |
-| `TEMPORAL_WORKFLOW_NAMESPACE` | `rocketship` | Temporal logical namespace registered via CLI |
-| `TEMPORAL_RELEASE` | `temporal` | Helm release name for Temporal |
-| `ROCKETSHIP_RELEASE` | `rocketship` | Helm release name for Rocketship |
-| `ROCKETSHIP_CHART_PATH` | `charts/rocketship` | Path to the chart (override when packaging) |
-
-Example: run everything inside a namespace called `testing`:
-
-```bash
-ROCKETSHIP_NAMESPACE=testing \
-TEMPORAL_NAMESPACE=testing \
-TEMPORAL_WORKFLOW_NAMESPACE=testing \
-scripts/install-minikube.sh
-```
-
-## 3. Verify the Deployment
-
-```bash
-kubectl get pods -n rocketship
-kubectl get svc -n rocketship
-```
-
-You should see Temporal pods (frontend, history, matching, worker, cassandra, elasticsearch) and two Rocketship deployments (`rocketship-engine`, `rocketship-worker`).
-
-To exercise the stack locally:
+**For CLI (engine only):**
 
 ```bash
 kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+```
+
+**For Auth (CLI + web app):**
+
+1. Add to `/etc/hosts`:
+   ```bash
+   echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
+   ```
+
+2. Run minikube tunnel (separate terminal, keep running):
+   ```bash
+   sudo minikube tunnel -p rocketship
+   ```
+
+3. Verify auth broker:
+   ```bash
+   curl http://auth.minikube.local/.well-known/jwks.json
+   ```
+
+## Usage
+
+### CLI Without Auth
+
+```bash
 rocketship profile create minikube grpc://localhost:7700
 rocketship profile use minikube
 rocketship run -af examples/simple-http/rocketship.yaml
 ```
 
-## 4. Manual Helm Flow (Optional)
-
-If you prefer to perform the steps yourself:
-
-1. Install Temporal:
-   ```bash
-   helm repo add temporal https://go.temporal.io/helm-charts
-   helm repo update
-   helm install temporal temporal/temporal \
-     --version 0.66.0 \
-     --namespace rocketship --create-namespace \
-     --set server.replicaCount=1 \
-     --set cassandra.config.cluster_size=1 \
-     --set elasticsearch.replicas=1 \
-     --set prometheus.enabled=false \
-     --set grafana.enabled=false \
-     --wait --timeout 15m
-   ```
-2. Register the Temporal namespace (default `rocketship`):
-   ```bash
-   kubectl exec -n rocketship deploy/temporal-admintools -- \
-     temporal operator namespace create --namespace rocketship
-   ```
-3. Build local images and load them into Minikube:
-   ```bash
-   eval "$(minikube docker-env)"
-   docker build -f .docker/Dockerfile.engine -t rocketship-engine-local:dev .
-   docker build -f .docker/Dockerfile.worker -t rocketship-worker-local:dev .
-   ```
-4. Install Rocketship using overrides:
-   ```bash
-   helm install rocketship charts/rocketship \
-     --namespace rocketship \
-     --set temporal.host=temporal-frontend.rocketship:7233 \
-     --set temporal.namespace=rocketship \
-     --set engine.image.repository=rocketship-engine-local \
-     --set engine.image.tag=dev \
-     --set worker.image.repository=rocketship-worker-local \
-     --set worker.image.tag=dev \
-     --values charts/rocketship/values-minikube.yaml \
-     --wait
-   ```
-
-## 5. Cleanup
+### CLI With Auth
 
 ```bash
-helm uninstall rocketship -n rocketship
-helm uninstall temporal -n rocketship
+rocketship login
+# Follow GitHub device flow prompts
+```
+
+### Web App
+
+1. Update `web/.env.local`:
+   ```
+   VITE_API_URL=http://auth.minikube.local
+   ```
+
+2. Start dev server:
+   ```bash
+   cd web && npm run dev
+   ```
+
+3. Visit `http://localhost:5173` and sign in
+
+## Customization
+
+Override defaults via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
+| `ROCKETSHIP_NAMESPACE` | `rocketship` | Kubernetes namespace |
+| `TEMPORAL_NAMESPACE` | `rocketship` | Temporal namespace |
+| `POSTGRES_PASSWORD` | `rocketship-dev-password` | Postgres password |
+
+Example:
+
+```bash
+ROCKETSHIP_NAMESPACE=testing scripts/install-minikube.sh
+```
+
+## Troubleshooting
+
+**Pods not ready**: Wait 2-3 minutes for Temporal and Postgres to initialize.
+
+**Auth broker fails**: Check `.env` has valid `GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
+
+**Can't connect to engine**: Ensure port-forward is running on port 7700.
+
+**Auth broker unreachable from inside cluster**: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:
+
+```bash
+kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
+helm upgrade rocketship charts/rocketship --namespace rocketship \
+  --values charts/rocketship/values-minikube-local.yaml \
+  --set temporal.host=temporal-frontend.rocketship:7233 \
+  --set temporal.namespace=rocketship \
+  --set "engine.hostAliases[0].ip=<YOUR-IP>" --wait
+```
+
+**Auth broker unreachable from local machine**: Ensure `/etc/hosts` entry exists and `sudo minikube tunnel` is running.
+
+## Cleanup
+
+```bash
+helm uninstall rocketship temporal -n rocketship
 kubectl delete namespace rocketship
 minikube delete -p rocketship
 ```
-
-You now have a repeatable local environment for building new features, running integration tests, or debugging plugin behaviour before deploying to a managed cluster.
