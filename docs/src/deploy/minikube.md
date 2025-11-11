@@ -1,6 +1,6 @@
 # Run Rocketship on Minikube
 
-Local Kubernetes cluster for development with full auth and database support.
+Local Kubernetes cluster for development with full auth, database support, and hot-reloading via Skaffold.
 
 ## Quick Start
 
@@ -10,18 +10,24 @@ echo "GITHUB_CLIENT_SECRET=..." > .env
 echo "ROCKETSHIP_EMAIL_FROM=..." >> .env
 echo "ROCKETSHIP_POSTMARK_SERVER_TOKEN=..." >> .env
 
-# 2. Run install script
-scripts/install-minikube.sh
+# 2. Run setup script (one-time infrastructure setup)
+scripts/setup-local-dev.sh
 
-# 3. Configure local access
+# 3. Configure local DNS
 echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
-sudo minikube tunnel -p rocketship  # Keep running in separate terminal
 
-# 4. Set up and start web UI
-cd web && npm install && npm run dev  # Keep running in separate terminal
+# 4. Start everything with one command
+scripts/start-dev.sh
 
 # 5. Visit http://auth.minikube.local and sign in with GitHub
 ```
+
+The `start-dev.sh` script automatically:
+- Starts minikube tunnel
+- Starts Vite dev server for the web UI
+- Runs Skaffold in dev mode for hot-reloading backend services
+
+Make code changes and watch them automatically rebuild and redeploy!
 
 ## Prerequisites
 
@@ -29,6 +35,7 @@ cd web && npm install && npm run dev  # Keep running in separate terminal
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/) v1.36+
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Helm 3](https://helm.sh/docs/intro/install/)
+- [Skaffold](https://skaffold.dev/docs/install/) v2.0+
 - Docker (required for Minikube driver)
 - [Node.js](https://nodejs.org/) v20+ and npm (for web UI development)
 
@@ -73,63 +80,93 @@ If you need to create your own OAuth app for testing:
 4. Copy the Client Secret to your `.env` file
 5. Update `charts/rocketship/values-minikube-local.yaml` with your Client ID
 
-### 2. Run Install Script
+### 2. Run Setup Script
 
 ```bash
-scripts/install-minikube.sh
+scripts/setup-local-dev.sh
 ```
 
-This creates a minikube cluster with:
+This sets up the minikube infrastructure (one-time setup):
 
+- Minikube cluster with ingress enabled
 - Temporal (workflow engine)
-- Rocketship Engine (gRPC server)
-- Rocketship Worker (test runner)
-- Rocketship Auth Broker (OAuth)
 - PostgreSQL (database)
+- All required secrets
+- Vite relay for web UI development
 
-### 3. Set Up Local Access
+**Note:** This script does NOT deploy Rocketship services. Skaffold handles that for hot-reloading.
 
-**For CLI (engine only):**
+### 3. Configure Local DNS
+
+Add to `/etc/hosts`:
 
 ```bash
-kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
 ```
 
-**For Auth (CLI + web app):**
+**Why needed:** This ensures:
+- Your browser sends `Host: auth.minikube.local` header (matches ingress rule)
+- Stable origin for cookies (`auth.minikube.local` instead of `localhost`)
+- OAuth callback URLs and JWT issuer URLs are consistent
 
-1. Add to `/etc/hosts`:
+## Usage
 
-   ```bash
-   echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
-   ```
+### Quick Start - All-in-One Script
 
-   **Why needed:** This ensures:
+```bash
+scripts/start-dev.sh
+```
 
-   - Your browser sends `Host: auth.minikube.local` header (matches ingress rule)
-   - Stable origin for cookies (`auth.minikube.local` instead of `localhost`)
-   - OAuth callback URLs and JWT issuer URLs are consistent
-   - Future HTTPS/TLS setup is easier (mkcert for `*.minikube.local`)
+This automatically starts:
+1. Minikube tunnel (binds ingress to `127.0.0.1`)
+2. Vite dev server for web UI
+3. Skaffold in development mode (watches code, rebuilds on changes)
 
-2. Run minikube tunnel (separate terminal, keep running):
+Visit `http://auth.minikube.local` and sign in with GitHub!
 
+**Hot Reloading:** Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/authbroker/`, or `internal/`, save, and Skaffold will automatically:
+- Rebuild the Docker image
+- Redeploy to Kubernetes
+- Stream logs to your terminal
+
+Press `Ctrl+C` to stop all processes.
+
+### Manual Development Workflow
+
+If you prefer to run components separately:
+
+1. Start minikube tunnel (separate terminal):
    ```bash
    sudo minikube tunnel -p rocketship
    ```
 
-   This binds the ingress LoadBalancer to `127.0.0.1`.
-
-3. Verify auth broker:
+2. Start Vite dev server (separate terminal):
    ```bash
-   curl http://auth.minikube.local/.well-known/jwks.json
+   cd web && npm run dev
    ```
 
-## Usage
+3. Run Skaffold (watches for changes and rebuilds):
+   ```bash
+   # Standard mode (all traffic through minikube tunnel)
+   skaffold dev
+
+   # Debug mode (with verbose logging)
+   skaffold dev -p debug
+   ```
 
 ### CLI Without Auth
 
+If you just need CLI access without web UI:
+
 ```bash
+# Port-forward the engine
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700 &
+
+# Configure CLI
 rocketship profile create minikube grpc://localhost:7700
 rocketship profile use minikube
+
+# Run tests
 rocketship run -af examples/simple-http/rocketship.yaml
 ```
 
@@ -142,34 +179,16 @@ rocketship login
 
 ### Web App
 
-The web UI is served through the same ingress as the auth broker (single-origin architecture) to enable cookie-based authentication.
+The web UI is served through the same ingress as the auth broker (single-origin architecture):
 
-1. Install web dependencies (first time only):
-
-   ```bash
-   cd web && npm install
-   ```
-
-2. Start Vite dev server (must listen on all interfaces):
-
-   ```bash
-   npm run dev
-   ```
-
-   Vite is configured in `vite.config.ts` to:
-
-   - Listen on `0.0.0.0:5173` (reachable from minikube pods)
-   - Accept requests from `auth.minikube.local`
-   - Enable HMR through the ingress
-
-3. Visit `http://auth.minikube.local` and sign in with GitHub
+- UI: `http://auth.minikube.local/`
+- Auth API: `http://auth.minikube.local/api`, `/authorize`, `/token`, `/callback`
+- Engine API: `http://auth.minikube.local/engine`
 
 **How it works:**
-
-- The `vite-relay` deployment in the cluster proxies requests from the ingress to your local Vite server
-- UI (`/`), Auth API (`/api`, `/authorize`, etc.), and Engine API (`/engine`) are all served from `auth.minikube.local`
-- Same-origin = cookies work automatically, HMR still functions
-- Frontend can call engine with: `fetch('/engine/health', { credentials: 'include' })`
+- The `vite-relay` deployment proxies requests to your local Vite server
+- All services share the same origin for cookie-based auth
+- Hot Module Replacement (HMR) still works through the ingress
 
 ## Customization
 
@@ -185,16 +204,35 @@ Override defaults via environment variables:
 Example:
 
 ```bash
-ROCKETSHIP_NAMESPACE=testing scripts/install-minikube.sh
+ROCKETSHIP_NAMESPACE=testing scripts/setup-local-dev.sh
 ```
 
+### Skaffold Configuration
+
+The `skaffold.yaml` file defines what gets built and deployed:
+
+- **Artifacts**: Three Docker images (engine, worker, authbroker)
+- **Deploy**: Helm-based deployment with values from `charts/rocketship/values-minikube-local.yaml`
+- **Profiles**:
+  - `debug`: Enables debug logging for all services
+  - `no-port-forward`: Disables port forwarding (use with minikube tunnel)
+
+Edit `skaffold.yaml` to customize build or deployment behavior.
+
 ## Troubleshooting
+
+**Skaffold build fails**: Ensure Docker is using minikube's daemon:
+```bash
+eval "$(minikube -p rocketship docker-env)"
+```
 
 **Pods not ready**: Wait 2-3 minutes for Temporal and Postgres to initialize.
 
 **Auth broker fails**: Check `.env` has valid `GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
 
-**Can't connect to engine**: Ensure port-forward is running on port 7700.
+**Skaffold not watching files**: Ensure you're in the repository root when running `skaffold dev`.
+
+**Changes not deploying**: Check Skaffold output for build errors. Press `Ctrl+C` and restart if needed.
 
 **Web UI not loading**:
 

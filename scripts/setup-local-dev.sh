@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Setup Local Development Environment
+# This script prepares the minikube environment for Skaffold-based development
+# Run this ONCE to set up infrastructure, then use Skaffold for hot-reloading
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO_ROOT"
@@ -17,13 +21,7 @@ MINIKUBE_PROFILE=${MINIKUBE_PROFILE:-rocketship}
 TEMPORAL_NAMESPACE=${TEMPORAL_NAMESPACE:-rocketship}
 ROCKETSHIP_NAMESPACE=${ROCKETSHIP_NAMESPACE:-rocketship}
 TEMPORAL_RELEASE=${TEMPORAL_RELEASE:-temporal}
-ROCKETSHIP_RELEASE=${ROCKETSHIP_RELEASE:-rocketship}
-ROCKETSHIP_CHART_PATH=${ROCKETSHIP_CHART_PATH:-charts/rocketship}
 TEMPORAL_WORKFLOW_NAMESPACE=${TEMPORAL_WORKFLOW_NAMESPACE:-default}
-ENGINE_IMAGE_LOCAL=${ENGINE_IMAGE_LOCAL:-rocketship-engine-local}
-WORKER_IMAGE_LOCAL=${WORKER_IMAGE_LOCAL:-rocketship-worker-local}
-AUTHBROKER_IMAGE_LOCAL=${AUTHBROKER_IMAGE_LOCAL:-rocketship-authbroker-local}
-LOCAL_IMAGE_TAG=${LOCAL_IMAGE_TAG:-dev}
 
 check_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -32,9 +30,11 @@ check_command() {
   fi
 }
 
+echo "Checking required tools..."
 check_command minikube
 check_command kubectl
 check_command helm
+check_command skaffold
 
 # Start or ensure minikube is running
 if ! minikube status -p "$MINIKUBE_PROFILE" >/dev/null 2>&1; then
@@ -47,6 +47,9 @@ fi
 # Use the correct profile for subsequent kubectl/helm commands
 export MINIKUBE_PROFILE
 kubectl config use-context "$MINIKUBE_PROFILE" >/dev/null 2>&1 || true
+
+# Point Docker CLI to minikube's Docker daemon for Skaffold
+eval "$(minikube -p "$MINIKUBE_PROFILE" docker-env)"
 
 # Enable ingress addon for auth broker hostname routing
 echo "Enabling ingress addon..."
@@ -61,8 +64,9 @@ kubectl wait --namespace ingress-nginx \
 
 INGRESS_CONTROLLER_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
 if [ -z "$INGRESS_CONTROLLER_IP" ]; then
-  echo "Warning: Could not get ingress controller ClusterIP. Engine may not be able to reach auth.minikube.local"
-  echo "  You may need to manually update charts/rocketship/values-minikube-local.yaml line 119"
+  echo "ERROR: Could not get ingress controller ClusterIP. Engine will not be able to reach auth.minikube.local"
+  echo "  This is required for authentication to work. Exiting."
+  exit 1
 else
   echo "Detected ingress controller ClusterIP: $INGRESS_CONTROLLER_IP"
 fi
@@ -73,14 +77,6 @@ if ! helm repo list 2>/dev/null | grep -q "go.temporal.io/helm-charts"; then
   helm repo add temporal https://go.temporal.io/helm-charts
 fi
 helm repo update
-
-# Build local Rocketship images inside the Minikube Docker daemon
-echo "Building Rocketship engine, worker, and auth broker images inside Minikube..."
-eval "$(minikube -p "$MINIKUBE_PROFILE" docker-env)"
-docker build -t "${ENGINE_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}" -f .docker/Dockerfile.engine .
-docker build -t "${WORKER_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}" -f .docker/Dockerfile.worker .
-docker build -t "${AUTHBROKER_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}" -f .docker/Dockerfile.authbroker .
-eval "$(minikube -p "$MINIKUBE_PROFILE" docker-env --unset)"
 
 # Install Temporal with minimal footprint suitable for minikube
 if ! helm status "$TEMPORAL_RELEASE" -n "$TEMPORAL_NAMESPACE" >/dev/null 2>&1; then
@@ -108,8 +104,8 @@ else
   echo "WARNING: admin tools deployment not ready; skipping namespace registration"
 fi
 
-# Determine Temporal frontend host
-TEMPORAL_HOST="${TEMPORAL_RELEASE}-frontend.${TEMPORAL_NAMESPACE}:7233"
+# Create namespace for Rocketship if it doesn't exist
+kubectl create namespace "$ROCKETSHIP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
 # Create secrets for auth broker and Postgres
 echo "Creating/updating secrets for auth broker and Postgres..."
@@ -122,10 +118,10 @@ kubectl create secret generic rocketship-postgres-auth \
   --from-literal=postgres-password="$POSTGRES_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Auth broker database URL (points to the postgres service that will be created)
+# Auth broker database URL (points to the postgres service that will be created by Skaffold)
 kubectl create secret generic rocketship-auth-broker-database \
   --namespace "$ROCKETSHIP_NAMESPACE" \
-  --from-literal=DATABASE_URL="postgres://rocketship:${POSTGRES_PASSWORD}@${ROCKETSHIP_RELEASE}-postgresql:5432/rocketship?sslmode=disable" \
+  --from-literal=DATABASE_URL="postgres://rocketship:${POSTGRES_PASSWORD}@rocketship-postgresql:5432/rocketship?sslmode=disable" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Refresh-token HMAC key (32 bytes, Base64 encoded)
@@ -177,127 +173,10 @@ kubectl create secret generic rocketship-postmark-secret \
   --from-literal=ROCKETSHIP_POSTMARK_SERVER_TOKEN="$ROCKETSHIP_POSTMARK_SERVER_TOKEN" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Build Helm command arguments
-HELM_ARGS=(
-  --namespace "$ROCKETSHIP_NAMESPACE" --create-namespace
-  --values "$ROCKETSHIP_CHART_PATH/values-minikube-local.yaml"
-  --set temporal.host="$TEMPORAL_HOST"
-  --set temporal.namespace="$TEMPORAL_WORKFLOW_NAMESPACE"
-  --set engine.image.repository="$ENGINE_IMAGE_LOCAL"
-  --set engine.image.tag="$LOCAL_IMAGE_TAG"
-  --set engine.image.pullPolicy=IfNotPresent
-  --set worker.image.repository="$WORKER_IMAGE_LOCAL"
-  --set worker.image.tag="$LOCAL_IMAGE_TAG"
-  --set worker.image.pullPolicy=IfNotPresent
-  --set auth.broker.image.repository="$AUTHBROKER_IMAGE_LOCAL"
-  --set auth.broker.image.tag="$LOCAL_IMAGE_TAG"
-  --set auth.broker.image.pullPolicy=IfNotPresent
-)
-
-# Add ingress controller IP if detected
-if [ -n "$INGRESS_CONTROLLER_IP" ]; then
-  HELM_ARGS+=(--set "engine.hostAliases[0].ip=$INGRESS_CONTROLLER_IP")
-fi
-
-# Install/upgrade Rocketship chart
-if helm status "$ROCKETSHIP_RELEASE" -n "$ROCKETSHIP_NAMESPACE" >/dev/null 2>&1; then
-  echo "Upgrading Rocketship chart..."
-  helm upgrade "$ROCKETSHIP_RELEASE" "$ROCKETSHIP_CHART_PATH" "${HELM_ARGS[@]}" --wait
-else
-  echo "Installing Rocketship chart..."
-  helm install "$ROCKETSHIP_RELEASE" "$ROCKETSHIP_CHART_PATH" "${HELM_ARGS[@]}" --wait
-fi
-
-# Configure gateway ingress with all necessary paths
-echo "Configuring gateway ingress with API paths..."
-if kubectl get ingress "${ROCKETSHIP_RELEASE}-gateway" -n "$ROCKETSHIP_NAMESPACE" >/dev/null 2>&1; then
-  # Replace the entire paths array with all required paths
-  kubectl patch ingress "${ROCKETSHIP_RELEASE}-gateway" -n "$ROCKETSHIP_NAMESPACE" --type=json -p='[
-    {
-      "op": "replace",
-      "path": "/spec/rules/0/http/paths",
-      "value": [
-        {
-          "path": "/api",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
-              "port": {"number": 8080}
-            }
-          }
-        },
-        {
-          "path": "/authorize",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
-              "port": {"number": 8080}
-            }
-          }
-        },
-        {
-          "path": "/token",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
-              "port": {"number": 8080}
-            }
-          }
-        },
-        {
-          "path": "/callback",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
-              "port": {"number": 8080}
-            }
-          }
-        },
-        {
-          "path": "/logout",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
-              "port": {"number": 8080}
-            }
-          }
-        },
-        {
-          "path": "/engine",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "'"${ROCKETSHIP_RELEASE}-engine"'",
-              "port": {"number": 7700}
-            }
-          }
-        },
-        {
-          "path": "/",
-          "pathType": "Prefix",
-          "backend": {
-            "service": {
-              "name": "vite-relay",
-              "port": {"number": 5173}
-            }
-          }
-        }
-      ]
-    }
-  ]' || echo "Warning: Could not configure ingress paths"
-  echo "Gateway ingress configured with all paths."
-fi
-
 # Deploy vite-relay for web UI development
 echo "Deploying vite-relay for local web UI development..."
 
-# Detect the host IP that pods can reach (typically 192.168.64.1 on Docker driver, 192.168.49.1 on others)
-# Test connectivity to common host gateway IPs
+# Detect the host IP that pods can reach
 HOST_IP=""
 for ip in "192.168.64.1" "192.168.49.1" "host.minikube.internal"; do
   echo "Testing connectivity to $ip from cluster..."
@@ -353,48 +232,66 @@ spec:
       targetPort: 5173
 VITE_RELAY
 
-echo "Deployment complete!"
-echo
+echo ""
+echo "=========================================="
+echo "Infrastructure Setup Complete!"
+echo "=========================================="
+echo ""
 cat <<SUMMARY
 Temporal namespace:          $TEMPORAL_NAMESPACE (release $TEMPORAL_RELEASE)
-Rocketship namespace:        $ROCKETSHIP_NAMESPACE (release $ROCKETSHIP_RELEASE)
-Temporal host used:          $TEMPORAL_HOST
+Rocketship namespace:        $ROCKETSHIP_NAMESPACE
+Temporal host:               temporal-frontend.${TEMPORAL_NAMESPACE}:7233
 Temporal workflow namespace: $TEMPORAL_WORKFLOW_NAMESPACE
-Engine image:                ${ENGINE_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}
-Worker image:                ${WORKER_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}
-Auth Broker image:           ${AUTHBROKER_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}
+Ingress controller IP:       ${INGRESS_CONTROLLER_IP:-not detected}
 Host IP for vite-relay:      $HOST_IP
 
-Services deployed:
-- Rocketship Engine (gRPC on 7700, HTTP on 7701)
-- Rocketship Worker
-- Rocketship Auth Broker (HTTP on 8080)
+Infrastructure deployed:
+- Temporal (workflow engine)
 - PostgreSQL database
 - Vite Relay (proxies to host Vite on ${HOST_IP}:5173)
+- All secrets configured
 
-To port-forward for local development:
-  # Engine gRPC (for CLI)
-  kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-engine 7700:7700
+Next Steps:
+============
 
-To connect CLI (without auth):
-  kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-engine 7700:7700 &
-  rocketship profile create minikube grpc://localhost:7700
-  rocketship profile use minikube
+1. Configure local DNS:
+   echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
 
-To enable auth and web UI:
-  1. Add to /etc/hosts:
-     echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
+2. Start minikube tunnel (in a separate terminal, keep running):
+   sudo minikube tunnel -p $MINIKUBE_PROFILE
 
-  2. Run minikube tunnel (keep running in separate terminal):
-     sudo minikube tunnel -p $MINIKUBE_PROFILE
+3. Start Vite dev server (in a separate terminal, keep running):
+   cd web && npm run dev
 
-  3. Start Vite dev server (must listen on all interfaces):
-     cd web && npm run dev
+4. Use Skaffold for hot-reloading development:
 
-  4. Visit http://auth.minikube.local and sign in with GitHub
+   # Standard mode (all traffic through minikube tunnel)
+   skaffold dev
+
+   # Or with debug logging
+   skaffold dev -p debug
+
+5. Visit http://auth.minikube.local and sign in with GitHub
+
+Alternative: Use the convenience script to start everything at once:
+   scripts/start-dev.sh
 
 To view logs:
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=engine --tail=50 -f
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=auth-broker --tail=50 -f
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app=vite-relay --tail=50 -f
 SUMMARY
+
+# Store configuration for Skaffold and other scripts
+cat > "$REPO_ROOT/.minikube-env" <<ENV
+export MINIKUBE_PROFILE=$MINIKUBE_PROFILE
+export ROCKETSHIP_NAMESPACE=$ROCKETSHIP_NAMESPACE
+export TEMPORAL_NAMESPACE=$TEMPORAL_NAMESPACE
+export INGRESS_CONTROLLER_IP=$INGRESS_CONTROLLER_IP
+export ROCKETSHIP_INGRESS_IP=$INGRESS_CONTROLLER_IP
+export HOST_IP=$HOST_IP
+ENV
+
+echo ""
+echo "Configuration saved to .minikube-env"
+echo "Run 'source .minikube-env' to load these variables in your shell"
