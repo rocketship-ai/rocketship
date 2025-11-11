@@ -72,7 +72,7 @@ deploy:
           auth.broker.image.tag: "dev"
           auth.broker.image.pullPolicy: "IfNotPresent"
           # CRITICAL: Engine must resolve auth.minikube.local to ingress controller
-          # This IP is detected by setup-local-dev.sh and exported in .minikube-env
+          # This IP is detected dynamically by start-dev.sh
           # NOTE: Must set BOTH ip and hostnames because Helm --set replaces entire array element
           engine.hostAliases[0].ip: "{{.ROCKETSHIP_INGRESS_IP}}"
           engine.hostAliases[0].hostnames[0]: "auth.minikube.local"

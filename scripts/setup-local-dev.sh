@@ -259,41 +259,18 @@ Next Steps:
 1. Configure local DNS:
    echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
 
-2. Start minikube tunnel (in a separate terminal, keep running):
-   sudo minikube tunnel -p $MINIKUBE_PROFILE
-
-3. Start Vite dev server (in a separate terminal, keep running):
-   cd web && npm run dev
-
-4. Use Skaffold for hot-reloading development:
-
-   # Standard mode (all traffic through minikube tunnel)
-   skaffold dev
-
-   # Or with debug logging
-   skaffold dev -p debug
-
-5. Visit http://auth.minikube.local and sign in with GitHub
-
-Alternative: Use the convenience script to start everything at once:
+2. Use the convenience script to start everything at once:
    scripts/start-dev.sh
+
+   Or manually:
+   - Start minikube tunnel: sudo minikube tunnel -p $MINIKUBE_PROFILE
+   - Start Vite dev server: cd web && npm run dev
+   - Run Skaffold: skaffold dev
+
+3. Visit http://auth.minikube.local and sign in with GitHub
 
 To view logs:
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=engine --tail=50 -f
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=auth-broker --tail=50 -f
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app=vite-relay --tail=50 -f
 SUMMARY
-
-# Store configuration for Skaffold and other scripts
-cat > "$REPO_ROOT/.minikube-env" <<ENV
-export MINIKUBE_PROFILE=$MINIKUBE_PROFILE
-export ROCKETSHIP_NAMESPACE=$ROCKETSHIP_NAMESPACE
-export TEMPORAL_NAMESPACE=$TEMPORAL_NAMESPACE
-export INGRESS_CONTROLLER_IP=$INGRESS_CONTROLLER_IP
-export ROCKETSHIP_INGRESS_IP=$INGRESS_CONTROLLER_IP
-export HOST_IP=$HOST_IP
-ENV
-
-echo ""
-echo "Configuration saved to .minikube-env"
-echo "Run 'source .minikube-env' to load these variables in your shell"

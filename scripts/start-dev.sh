@@ -9,24 +9,24 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO_ROOT"
 
-# Load minikube environment if available
-if [ -f "$REPO_ROOT/.minikube-env" ]; then
-  source "$REPO_ROOT/.minikube-env"
-else
-  echo "ERROR: .minikube-env file not found!"
-  echo "Run 'scripts/setup-local-dev.sh' first to set up the environment."
-  exit 1
-fi
-
+# Defaults (can be overridden via environment)
 MINIKUBE_PROFILE=${MINIKUBE_PROFILE:-rocketship}
+ROCKETSHIP_NAMESPACE=${ROCKETSHIP_NAMESPACE:-rocketship}
 
-# Validate critical environment variables
-if [ -z "${ROCKETSHIP_INGRESS_IP:-}" ]; then
-  echo "ERROR: ROCKETSHIP_INGRESS_IP not set in .minikube-env!"
-  echo "This is required for engine to reach auth broker."
-  echo "Run 'scripts/setup-local-dev.sh' to regenerate the environment."
+# Detect ingress controller ClusterIP dynamically
+echo "Detecting ingress controller ClusterIP..."
+ROCKETSHIP_INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+
+if [ -z "$ROCKETSHIP_INGRESS_IP" ]; then
+  echo "ERROR: Could not detect ingress controller ClusterIP!"
+  echo "Make sure you've run 'scripts/setup-local-dev.sh' first."
   exit 1
 fi
+
+# Export for Skaffold
+export ROCKETSHIP_INGRESS_IP
+export MINIKUBE_PROFILE
+export ROCKETSHIP_NAMESPACE
 
 # Check if minikube is running
 if ! minikube status -p "$MINIKUBE_PROFILE" >/dev/null 2>&1; then
