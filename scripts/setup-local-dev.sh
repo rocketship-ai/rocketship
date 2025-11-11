@@ -39,7 +39,9 @@ check_command skaffold
 # Start or ensure minikube is running
 if ! minikube status -p "$MINIKUBE_PROFILE" >/dev/null 2>&1; then
   echo "Starting minikube profile $MINIKUBE_PROFILE..."
-  minikube start -p "$MINIKUBE_PROFILE" --cpus=4 --memory=8192
+  # Increased resources for Go builds + Temporal stack
+  # 6 CPUs and 12GB RAM to handle concurrent builds and heavy workloads
+  minikube start -p "$MINIKUBE_PROFILE" --cpus=6 --memory=12288
 else
   echo "Minikube profile $MINIKUBE_PROFILE already running."
 fi

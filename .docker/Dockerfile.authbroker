@@ -1,3 +1,5 @@
+# Production Dockerfile for DigitalOcean cluster builds
+# NOTE: Local minikube development uses Skaffold's ko builder (see skaffold.yaml)
 FROM golang:1.24-alpine AS builder
 
 ARG TARGETOS=linux
@@ -11,7 +13,10 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /bin/auth-broker ./cmd/authbroker
+# Build the auth-broker binary
+# -p 1: Limit parallel compilation to reduce memory pressure
+# -ldflags="-w -s": Strip debug info to reduce memory during linking
+RUN go build -p 1 -ldflags="-w -s" -o /bin/auth-broker ./cmd/authbroker
 
 FROM alpine:3.16
 

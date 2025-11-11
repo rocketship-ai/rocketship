@@ -4,54 +4,46 @@ metadata:
   name: rocketship
 
 # Build configuration - watches Go source and rebuilds images on change
+# NOTE: Uses ko builder for fast local dev. Production builds (DigitalOcean) use Dockerfiles in .docker/
 build:
   artifacts:
     # Engine service
     - image: rocketship-engine-local
-      context: .
-      docker:
-        dockerfile: .docker/Dockerfile.engine
-      sync:
-        # Sync Go binaries directly for faster iteration
-        manual:
-          - src: "cmd/engine/**/*.go"
-            dest: .
-          - src: "internal/**/*.go"
-            dest: .
-          - src: "proto/**/*.proto"
-            dest: .
+      ko:
+        main: ./cmd/engine
+        flags:
+          - "-p"
+          - "1"  # Limit parallel compilation to reduce memory pressure
+        ldflags:
+          - "-w"  # Strip DWARF debug info
+          - "-s"  # Strip symbol table
 
     # Worker service
     - image: rocketship-worker-local
-      context: .
-      docker:
-        dockerfile: .docker/Dockerfile.worker
-      sync:
-        manual:
-          - src: "cmd/worker/**/*.go"
-            dest: .
-          - src: "internal/**/*.go"
-            dest: .
-          - src: "proto/**/*.proto"
-            dest: .
+      ko:
+        main: ./cmd/worker
+        flags:
+          - "-p"
+          - "1"
+        ldflags:
+          - "-w"
+          - "-s"
 
     # Auth Broker service
     - image: rocketship-authbroker-local
-      context: .
-      docker:
-        dockerfile: .docker/Dockerfile.authbroker
-      sync:
-        manual:
-          - src: "cmd/authbroker/**/*.go"
-            dest: .
-          - src: "internal/**/*.go"
-            dest: .
+      ko:
+        main: ./cmd/authbroker
+        flags:
+          - "-p"
+          - "1"
+        ldflags:
+          - "-w"
+          - "-s"
 
   # Use minikube's Docker daemon
   local:
     push: false
-    useBuildkit: true
-    concurrency: 0
+    concurrency: 1  # Build one image at a time to avoid overwhelming the system
 
 # Deploy configuration - uses Helm
 deploy:

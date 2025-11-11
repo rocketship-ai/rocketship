@@ -31,7 +31,7 @@ Make code changes and watch them automatically rebuild and redeploy!
 
 ## Prerequisites
 
-- macOS or Linux with 4+ vCPUs, 8+ GB RAM
+- macOS or Linux with **6+ vCPUs, 12+ GB RAM** (for Temporal + Go builds)
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/) v1.36+
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Helm 3](https://helm.sh/docs/intro/install/)
