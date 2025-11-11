@@ -166,13 +166,9 @@ func startGRPCServer(engine *orchestrator.Engine) {
 
 // isAllowedOrigin checks if the request origin is allowed for CORS
 func isAllowedOrigin(origin string) bool {
-	// Allow localhost for local development
 	allowedOrigins := []string{
-		"http://localhost:5173",    // Vite dev server
-		"http://localhost:4173",    // Vite preview
-		"http://localhost:3000",    // Common React dev port
-		"http://localhost:8080",    // Test server
-		"https://app.rocketship.sh", // Production (future)
+		"http://auth.minikube.local", // Local development (single-origin through ingress)
+		"https://app.rocketship.sh",  // Production
 	}
 
 	for _, allowed := range allowedOrigins {

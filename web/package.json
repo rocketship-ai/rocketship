@@ -7,9 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gen:proto": "mkdir -p src/generated && protoc --proto_path=../proto --plugin=protoc-gen-es=./node_modules/.bin/protoc-gen-es --es_out=target=ts,import_extension=ts:src/generated ../proto/engine.proto"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "2.10.0",
+    "@connectrpc/connect": "2.1.0",
+    "@connectrpc/connect-web": "2.1.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -59,6 +63,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@bufbuild/protoc-gen-es": "2.10.0",
     "@eslint/js": "^9.36.0",
     "@types/node": "^24.10.0",
     "@types/react": "^19.1.16",

@@ -62,13 +62,7 @@ auth:
       type: ClusterIP
       port: 8080
     ingress:
-      enabled: true
-      className: nginx
-      hosts:
-        - host: auth.minikube.local
-          paths:
-            - path: /
-              pathType: Prefix
+      enabled: false  # Using gateway ingress instead
     envFrom:
       - secretRef:
           name: rocketship-github-oauth
@@ -111,7 +105,7 @@ engine:
     secretKey: DATABASE_URL
   env:
     - name: ROCKETSHIP_DISABLE_GRPC_WEB
-      value: "true"
+      value: "false"  # Enable gRPC-Web for browser access through ingress
   # For minikube: point auth.minikube.local to ingress-nginx-controller ClusterIP
   # This is more stable than using the LoadBalancer IP (192.168.58.2)
   # To find: kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
@@ -136,3 +130,63 @@ worker:
     limits:
       memory: "1Gi"
       cpu: "1000m"
+
+# Gateway ingress - UI and auth endpoints (no rewrite)
+gateway:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: auth.minikube.local
+      paths:
+        # Auth broker endpoints
+        - path: /.well-known
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        - path: /api
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        - path: /authorize
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        - path: /token
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        - path: /callback
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        - path: /logout
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        - path: /device
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
+        # Vite dev server (catch-all for web UI)
+        - path: /
+          pathType: Prefix
+          serviceName: vite-relay
+          port: 5173
+
+# Engine ingress - separate to enable path rewrite for gRPC-Web
+engineIngress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  hosts:
+    - host: auth.minikube.local
+      paths:
+        - path: /engine(/|$)(.*)
+          pathType: ImplementationSpecific
+          serviceName: rocketship-engine
+          port: 7700

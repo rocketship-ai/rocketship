@@ -10,6 +10,13 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: [
+      "@bufbuild/protobuf",
+      "@connectrpc/connect",
+      "@connectrpc/connect-web"
+    ],
+  },
   server: {
     host: true,  // Listen on 0.0.0.0 (all interfaces)
     port: 5173,

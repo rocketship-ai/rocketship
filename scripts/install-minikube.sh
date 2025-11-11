@@ -273,7 +273,7 @@ if kubectl get ingress "${ROCKETSHIP_RELEASE}-gateway" -n "$ROCKETSHIP_NAMESPACE
           "backend": {
             "service": {
               "name": "'"${ROCKETSHIP_RELEASE}-engine"'",
-              "port": {"number": 7701}
+              "port": {"number": 7700}
             }
           }
         },

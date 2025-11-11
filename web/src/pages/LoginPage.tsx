@@ -38,7 +38,7 @@ async function generateCodeChallenge(codeVerifier: string): Promise<string> {
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, setAccessToken } = useAuth();
   const navigate = useNavigate();
   const hasProcessedCallback = useRef(false);
 
@@ -128,7 +128,10 @@ export default function LoginPage() {
           const data = await response.json();
 
           if (data.access_token) {
-            // Cookies are now set by the server automatically
+            // Save access token for gRPC requests
+            setAccessToken(data.access_token);
+
+            // Cookies are also set by the server for HTTP API endpoints
             // Fetch user data to determine status (pending/ready)
             await login();
 
