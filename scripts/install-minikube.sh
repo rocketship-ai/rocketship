@@ -208,6 +208,91 @@ else
   helm install "$ROCKETSHIP_RELEASE" "$ROCKETSHIP_CHART_PATH" "${HELM_ARGS[@]}" --wait
 fi
 
+# Configure gateway ingress with all necessary paths
+echo "Configuring gateway ingress with API paths..."
+if kubectl get ingress "${ROCKETSHIP_RELEASE}-gateway" -n "$ROCKETSHIP_NAMESPACE" >/dev/null 2>&1; then
+  # Replace the entire paths array with all required paths
+  kubectl patch ingress "${ROCKETSHIP_RELEASE}-gateway" -n "$ROCKETSHIP_NAMESPACE" --type=json -p='[
+    {
+      "op": "replace",
+      "path": "/spec/rules/0/http/paths",
+      "value": [
+        {
+          "path": "/api",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
+              "port": {"number": 8080}
+            }
+          }
+        },
+        {
+          "path": "/authorize",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
+              "port": {"number": 8080}
+            }
+          }
+        },
+        {
+          "path": "/token",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
+              "port": {"number": 8080}
+            }
+          }
+        },
+        {
+          "path": "/callback",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
+              "port": {"number": 8080}
+            }
+          }
+        },
+        {
+          "path": "/logout",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "'"${ROCKETSHIP_RELEASE}-auth-broker"'",
+              "port": {"number": 8080}
+            }
+          }
+        },
+        {
+          "path": "/engine",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "'"${ROCKETSHIP_RELEASE}-engine"'",
+              "port": {"number": 7701}
+            }
+          }
+        },
+        {
+          "path": "/",
+          "pathType": "Prefix",
+          "backend": {
+            "service": {
+              "name": "vite-relay",
+              "port": {"number": 5173}
+            }
+          }
+        }
+      ]
+    }
+  ]' || echo "Warning: Could not configure ingress paths"
+  echo "Gateway ingress configured with all paths."
+fi
+
 # Deploy vite-relay for web UI development
 echo "Deploying vite-relay for local web UI development..."
 

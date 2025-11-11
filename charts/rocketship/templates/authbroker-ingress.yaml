@@ -4,7 +4,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ include "rocketship.fullname" . }}-gateway
   labels:
     {{- include "rocketship.labels" . | nindent 4 }}
   {{- with $broker.ingress.annotations }}
