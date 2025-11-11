@@ -49,6 +49,7 @@ scripts/install-minikube.sh
 ```
 
 This creates a minikube cluster with:
+
 - Temporal (workflow engine)
 - Rocketship Engine (gRPC server)
 - Rocketship Worker (test runner)
@@ -66,11 +67,13 @@ kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
 **For Auth (CLI + web app):**
 
 1. Add to `/etc/hosts`:
+
    ```bash
    echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
    ```
 
 2. Run minikube tunnel (separate terminal, keep running):
+
    ```bash
    sudo minikube tunnel -p rocketship
    ```
@@ -99,28 +102,38 @@ rocketship login
 
 ### Web App
 
-1. Update `web/.env.local`:
-   ```
-   VITE_API_URL=http://auth.minikube.local
-   ```
+The web UI is served through the same ingress as the auth broker (single-origin architecture) to enable cookie-based authentication.
 
-2. Start dev server:
+1. Start Vite dev server (must listen on all interfaces):
+
    ```bash
    cd web && npm run dev
    ```
 
-3. Visit `http://localhost:5173` and sign in
+   Vite is configured in `vite.config.ts` to:
+
+   - Listen on `0.0.0.0:5173` (reachable from minikube pods)
+   - Accept requests from `auth.minikube.local`
+   - Enable HMR through the ingress
+
+2. Visit `http://auth.minikube.local` and sign in with GitHub
+
+**How it works:**
+
+- The `vite-relay` deployment in the cluster proxies requests from the ingress to your local Vite server
+- Both UI (`/`) and API (`/api`, `/authorize`, etc.) are served from `auth.minikube.local`
+- Same-origin = cookies work automatically, HMR still functions
 
 ## Customization
 
 Override defaults via environment variables:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
-| `ROCKETSHIP_NAMESPACE` | `rocketship` | Kubernetes namespace |
-| `TEMPORAL_NAMESPACE` | `rocketship` | Temporal namespace |
-| `POSTGRES_PASSWORD` | `rocketship-dev-password` | Postgres password |
+| Variable               | Default                   | Description           |
+| ---------------------- | ------------------------- | --------------------- |
+| `MINIKUBE_PROFILE`     | `rocketship`              | Minikube profile name |
+| `ROCKETSHIP_NAMESPACE` | `rocketship`              | Kubernetes namespace  |
+| `TEMPORAL_NAMESPACE`   | `rocketship`              | Temporal namespace    |
+| `POSTGRES_PASSWORD`    | `rocketship-dev-password` | Postgres password     |
 
 Example:
 
@@ -135,6 +148,18 @@ ROCKETSHIP_NAMESPACE=testing scripts/install-minikube.sh
 **Auth broker fails**: Check `.env` has valid `GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
 
 **Can't connect to engine**: Ensure port-forward is running on port 7700.
+
+**Web UI not loading**:
+
+1. Verify Vite is running: `curl http://localhost:5173`
+2. Check vite-relay can reach host:
+   ```bash
+   kubectl run -n rocketship test-vite --rm -it --image=busybox:1.36 --restart=Never -- \
+     wget -qO- http://192.168.64.1:5173/ | head -n 5
+   ```
+   If this fails, check macOS firewall settings for Node/Vite on port 5173.
+
+**Cookies not working**: Ensure you're accessing the UI via `http://auth.minikube.local` (not `http://localhost:5173`). The single-origin architecture requires both UI and API to be served from the same host.
 
 **Auth broker unreachable from inside cluster**: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:
 

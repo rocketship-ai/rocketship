@@ -7,7 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import RunsPage from './pages/RunsPage'
 
 function RootRedirect() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, userData } = useAuth()
 
   if (isLoading) {
     return (
@@ -17,8 +17,18 @@ function RootRedirect() {
     )
   }
 
-  // Redirect to dashboard if authenticated, otherwise to login
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
+  // Redirect based on authentication and onboarding status
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  // If user needs onboarding, redirect to onboarding page
+  if (userData?.status === 'pending') {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  // User is authenticated and ready, go to dashboard
+  return <Navigate to="/dashboard" replace />
 }
 
 function AppRoutes() {

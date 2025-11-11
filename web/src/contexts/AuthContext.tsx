@@ -1,11 +1,32 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+interface User {
+  id: string
+  email: string
+  name: string
+  username: string
+}
+
+interface UserData {
+  user: User
+  roles: string[]
+  status: 'pending' | 'ready'
+  pending_registration?: {
+    registration_id: string
+    org_name: string
+    email: string
+    expires_at: string
+    resend_available_at: string
+    attempts: number
+    max_attempts: number
+  }
+}
 
 interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
-  login: () => void
+  userData: UserData | null
+  login: () => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
 }
@@ -15,12 +36,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [userData, setUserData] = useState<UserData | null>(null)
 
   // Check authentication status by calling the API
   const checkAuth = async () => {
     console.log('[AuthContext] Checking authentication status...')
     try {
-      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
+      const response = await fetch('/api/users/me', {
         method: 'GET',
         credentials: 'include', // Send cookies with request
         headers: {
@@ -31,14 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] Check auth response:', response.status, response.ok)
 
       if (response.ok) {
-        console.log('[AuthContext] User is authenticated')
+        const data: UserData = await response.json()
+        console.log('[AuthContext] User is authenticated, status:', data.status)
+        setUserData(data)
         setIsAuthenticated(true)
       } else {
         console.log('[AuthContext] User is not authenticated')
+        setUserData(null)
         setIsAuthenticated(false)
       }
     } catch (error) {
       console.error('[AuthContext] Auth check failed:', error)
+      setUserData(null)
       setIsAuthenticated(false)
     } finally {
       setIsLoading(false)
@@ -50,17 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [])
 
-  const login = () => {
+  const login = async () => {
     // After successful login, the cookies are already set by the server
-    // Just update the auth state
-    setIsAuthenticated(true)
+    // Fetch user data to get status (pending/ready) for routing
+    await checkAuth()
   }
 
   const logout = async () => {
     console.log('[AuthContext] Logging out...')
     try {
       // Call logout endpoint to clear cookies on server
-      const response = await fetch(`${API_BASE_URL}/logout`, {
+      const response = await fetch('/logout', {
         method: 'POST',
         credentials: 'include', // Send cookies
       })
@@ -80,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, userData, login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   )

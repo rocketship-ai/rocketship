@@ -208,6 +208,66 @@ else
   helm install "$ROCKETSHIP_RELEASE" "$ROCKETSHIP_CHART_PATH" "${HELM_ARGS[@]}" --wait
 fi
 
+# Deploy vite-relay for web UI development
+echo "Deploying vite-relay for local web UI development..."
+
+# Detect the host IP that pods can reach (typically 192.168.64.1 on Docker driver, 192.168.49.1 on others)
+# Test connectivity to common host gateway IPs
+HOST_IP=""
+for ip in "192.168.64.1" "192.168.49.1" "host.minikube.internal"; do
+  echo "Testing connectivity to $ip from cluster..."
+  if kubectl run -n "$ROCKETSHIP_NAMESPACE" test-host-ip-${ip//\./-} --rm -it --restart=Never --image=busybox:1.36 -- sh -c "wget -qO- --timeout=2 http://$ip:5173/ 2>&1 | head -n 1" >/dev/null 2>&1; then
+    HOST_IP=$ip
+    echo "Detected reachable host IP: $HOST_IP"
+    break
+  fi
+done
+
+if [ -z "$HOST_IP" ]; then
+  echo "WARNING: Could not detect reachable host IP. Using 192.168.64.1 as default."
+  echo "  If web UI doesn't work, check:"
+  echo "  1. Vite is running: 'cd web && npm run dev'"
+  echo "  2. Vite is listening on 0.0.0.0 (check vite.config.ts has 'host: true')"
+  echo "  3. macOS firewall allows Node on port 5173"
+  HOST_IP="192.168.64.1"
+fi
+
+# Create vite-relay deployment and service
+kubectl apply -n "$ROCKETSHIP_NAMESPACE" -f - <<VITE_RELAY
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vite-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vite-relay
+  template:
+    metadata:
+      labels:
+        app: vite-relay
+    spec:
+      containers:
+        - name: socat
+          image: alpine/socat
+          args: ["-d","-d","TCP4-LISTEN:5173,fork,reuseaddr","TCP4:${HOST_IP}:5173"]
+          ports:
+            - containerPort: 5173
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vite-relay
+spec:
+  selector:
+    app: vite-relay
+  ports:
+    - name: http
+      port: 5173
+      targetPort: 5173
+VITE_RELAY
+
 echo "Deployment complete!"
 echo
 cat <<SUMMARY
@@ -218,36 +278,38 @@ Temporal workflow namespace: $TEMPORAL_WORKFLOW_NAMESPACE
 Engine image:                ${ENGINE_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}
 Worker image:                ${WORKER_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}
 Auth Broker image:           ${AUTHBROKER_IMAGE_LOCAL}:${LOCAL_IMAGE_TAG}
+Host IP for vite-relay:      $HOST_IP
 
 Services deployed:
 - Rocketship Engine (gRPC on 7700, HTTP on 7701)
 - Rocketship Worker
 - Rocketship Auth Broker (HTTP on 8080)
 - PostgreSQL database
+- Vite Relay (proxies to host Vite on ${HOST_IP}:5173)
 
 To port-forward for local development:
   # Engine gRPC (for CLI)
   kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-engine 7700:7700
-
-  # Auth Broker (for web app OAuth)
-  kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-auth-broker 8080:8080
-
-  # Both ports at once
-  kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-engine 7700:7700 7701:7701 &
-  kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-auth-broker 8080:8080 &
 
 To connect CLI (without auth):
   kubectl port-forward -n $ROCKETSHIP_NAMESPACE svc/${ROCKETSHIP_RELEASE}-engine 7700:7700 &
   rocketship profile create minikube grpc://localhost:7700
   rocketship profile use minikube
 
-To enable auth (for 'rocketship login' and web app):
+To enable auth and web UI:
   1. Add to /etc/hosts:
      echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
+
   2. Run minikube tunnel (keep running in separate terminal):
      sudo minikube tunnel -p $MINIKUBE_PROFILE
+
+  3. Start Vite dev server (must listen on all interfaces):
+     cd web && npm run dev
+
+  4. Visit http://auth.minikube.local and sign in with GitHub
 
 To view logs:
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=engine --tail=50 -f
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=auth-broker --tail=50 -f
+  kubectl logs -n $ROCKETSHIP_NAMESPACE -l app=vite-relay --tail=50 -f
 SUMMARY

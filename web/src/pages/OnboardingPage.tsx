@@ -3,37 +3,80 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState<'org' | 'email'>('org')
+  const { checkAuth } = useAuth()
+  const [step, setStep] = useState<'org' | 'verification'>('org')
   const [orgName, setOrgName] = useState('')
   const [email, setEmail] = useState('')
+  const [verificationCode, setVerificationCode] = useState('')
+  const [registrationId, setRegistrationId] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleCreateOrg = async (e: React.FormEvent) => {
+  const handleStartRegistration = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
     try {
-      // TODO: Call API to create org
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setStep('email')
+      const response = await fetch('/api/orgs/registration/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: orgName,
+          email: email,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start registration')
+      }
+
+      const data = await response.json()
+      setRegistrationId(data.registration_id)
+      setStep('verification')
     } catch (error) {
-      console.error('Failed to create org:', error)
+      console.error('Failed to start registration:', error)
+      setError(error instanceof Error ? error.message : 'Failed to start registration')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleVerifyEmail = async (e: React.FormEvent) => {
+  const handleCompleteRegistration = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
     try {
-      // TODO: Call API to verify email
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      navigate('/dashboard')
+      const response = await fetch('/api/orgs/registration/complete', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registration_id: registrationId,
+          code: verificationCode,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to complete registration')
+      }
+
+      // Registration complete! Refresh auth state and navigate to dashboard
+      await checkAuth()
+      navigate('/dashboard', { replace: true })
     } catch (error) {
-      console.error('Failed to verify email:', error)
+      console.error('Failed to complete registration:', error)
+      setError(error instanceof Error ? error.message : 'Failed to complete registration')
     } finally {
       setIsLoading(false)
     }
@@ -54,18 +97,25 @@ export default function OnboardingPage() {
         <div className="flex items-center justify-center mb-8">
           <div className="flex items-center gap-2">
             <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
-              step === 'email' ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
+              step === 'verification' ? 'bg-primary text-primary-foreground' : 'bg-primary text-primary-foreground'
             }`}>
-              {step === 'email' ? '✓' : '1'}
+              {step === 'verification' ? '✓' : '1'}
             </div>
             <div className="w-16 h-px bg-border"></div>
             <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium ${
-              step === 'email' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              step === 'verification' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}>
               2
             </div>
           </div>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 p-3 bg-red-950/50 border border-red-900 rounded-md">
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
 
         {step === 'org' ? (
           <Card>
@@ -76,7 +126,7 @@ export default function OnboardingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleCreateOrg} className="space-y-4">
+              <form onSubmit={handleStartRegistration} className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="orgName" className="text-sm font-medium">
                     Organization name
@@ -91,27 +141,6 @@ export default function OnboardingPage() {
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={isLoading || !orgName.trim()}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isLoading ? 'Creating...' : 'Continue'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl">Verify email</CardTitle>
-              <CardDescription>
-                Confirm your email address to continue
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleVerifyEmail} className="space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium">
                     Email address
@@ -127,16 +156,56 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                  We'll send a verification link to your email address
+                  We'll send a verification code to your email address
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={isLoading || !email.trim()}
+                  disabled={isLoading || !orgName.trim() || !email.trim()}
                   className="w-full"
                   size="lg"
                 >
-                  {isLoading ? 'Sending...' : 'Send verification email'}
+                  {isLoading ? 'Sending...' : 'Continue'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl">Verify email</CardTitle>
+              <CardDescription>
+                Enter the verification code sent to {email}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCompleteRegistration} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="code" className="text-sm font-medium">
+                    Verification code
+                  </label>
+                  <Input
+                    id="code"
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    placeholder="Enter 6-digit code"
+                    required
+                    maxLength={6}
+                  />
+                </div>
+
+                <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                  Check your email for the verification code
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading || !verificationCode.trim()}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isLoading ? 'Verifying...' : 'Verify and continue'}
                 </Button>
               </form>
             </CardContent>

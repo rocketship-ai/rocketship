@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, userData } = useAuth()
 
   if (isLoading) {
     // Show loading spinner while checking auth status
@@ -18,6 +18,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />
   }
 
-  // User is authenticated, render the protected content
+  // If user needs onboarding, redirect to onboarding page
+  if (userData?.status === 'pending') {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  // User is authenticated and ready, render the protected content
   return <>{children}</>
 }
