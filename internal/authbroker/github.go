@@ -179,9 +179,6 @@ func (g *GitHubClient) ExchangeAuthorizationCode(ctx context.Context, code, redi
 		return TokenResponse{}, fmt.Errorf("github authorization code exchange failed (status %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
-	// Log the response for debugging
-	fmt.Printf("DEBUG: GitHub token response: %s\n", string(body))
-
 	var token TokenResponse
 	if err := json.Unmarshal(body, &token); err != nil {
 		return TokenResponse{}, fmt.Errorf("failed to parse token response: %w", err)

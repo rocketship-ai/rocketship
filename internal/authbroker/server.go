@@ -1648,6 +1648,14 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "redirect_uri required")
 		return
 	}
+
+	// Validate redirect_uri - must match ${ISSUER}/login
+	expectedRedirectURI := s.cfg.Issuer + "/login"
+	if redirectURI != expectedRedirectURI {
+		writeError(w, http.StatusBadRequest, "redirect_uri not allowed")
+		return
+	}
+
 	if state == "" {
 		writeError(w, http.StatusBadRequest, "state required for CSRF protection")
 		return
