@@ -14,39 +14,32 @@ import { createClient } from '@connectrpc/connect'
 import { createGrpcWebTransport } from '@connectrpc/connect-web'
 import { Engine } from '@/generated/engine_pb'
 import type { RunSummary, ListRunsRequest } from '@/generated/engine_pb'
-import { useAuth } from '@/contexts/AuthContext'
+import { TokenManager } from '@/auth/tokenManager'
+import { authInterceptor } from '@/auth/interceptors'
+
+// Create singleton TokenManager instance
+const tokenManager = new TokenManager()
+
+// Create gRPC client with auth interceptor (reuse across component renders)
+const transport = createGrpcWebTransport({
+  baseUrl: '/engine',
+  useBinaryFormat: true, // MUST use protobuf (server doesn't support JSON)
+  credentials: 'include', // Send cookies
+  interceptors: [authInterceptor(tokenManager)],
+})
+
+const client = createClient(Engine, transport)
 
 export default function RunsPage() {
   const [runs, setRuns] = useState<RunSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { accessToken } = useAuth()
 
   useEffect(() => {
     const fetchRuns = async () => {
       try {
         setLoading(true)
         setError(null)
-
-        if (!accessToken) {
-          setError('No access token available')
-          return
-        }
-
-        // Create gRPC-Web transport (same-origin path through ingress)
-        const transport = createGrpcWebTransport({
-          baseUrl: '/engine',
-          useBinaryFormat: true, // MUST use protobuf (server doesn't support JSON)
-          // Add Authorization header with Bearer token
-          interceptors: [
-            (next) => async (req) => {
-              req.header.set('Authorization', `Bearer ${accessToken}`)
-              return await next(req)
-            },
-          ],
-        })
-
-        const client = createClient(Engine, transport)
 
         const req: ListRunsRequest = {
           limit: 50,
@@ -64,7 +57,7 @@ export default function RunsPage() {
     }
 
     fetchRuns()
-  }, [accessToken])
+  }, [])
 
   const formatDuration = (durationMs: bigint) => {
     if (durationMs === 0n) return '-'

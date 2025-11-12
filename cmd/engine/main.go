@@ -17,6 +17,8 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/cli"
 	"github.com/rocketship-ai/rocketship/internal/orchestrator"
 	"go.temporal.io/sdk/client"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
 )
 
@@ -135,29 +137,33 @@ func startGRPCServer(engine *orchestrator.Engine) {
 	logger.Debug("starting grpc server with grpc-web support", "port", ":7700")
 	wrappedServer := grpcweb.WrapServer(grpcServer,
 		grpcweb.WithOriginFunc(isAllowedOrigin),
-		grpcweb.WithWebsockets(true),              // Enable WebSocket for streaming
+		grpcweb.WithWebsockets(true), // Enable WebSocket for streaming
 		grpcweb.WithWebsocketOriginFunc(func(req *http.Request) bool {
 			return isAllowedOrigin(req.Header.Get("Origin"))
 		}),
 	)
 
-	// Create HTTP server that handles both native gRPC and grpc-web
+	// Create HTTP handler that routes based on request type
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if wrappedServer.IsGrpcWebRequest(r) ||
+			wrappedServer.IsAcceptableGrpcCorsRequest(r) ||
+			wrappedServer.IsGrpcWebSocketRequest(r) {
+			// Handle browser requests (grpc-web over HTTP/1.1)
+			wrappedServer.ServeHTTP(w, r)
+		} else {
+			// Handle native gRPC requests (CLI over HTTP/2)
+			grpcServer.ServeHTTP(w, r)
+		}
+	})
+
+	// Wrap with h2c to support both HTTP/1.1 (gRPC-Web) and HTTP/2 (native gRPC)
+	h2s := &http2.Server{}
 	httpServer := &http.Server{
-		Addr: ":7700",
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if wrappedServer.IsGrpcWebRequest(r) ||
-				wrappedServer.IsAcceptableGrpcCorsRequest(r) ||
-				wrappedServer.IsGrpcWebSocketRequest(r) {
-				// Handle browser requests (grpc-web)
-				wrappedServer.ServeHTTP(w, r)
-			} else {
-				// Handle native gRPC requests (CLI)
-				grpcServer.ServeHTTP(w, r)
-			}
-		}),
+		Addr:    ":7700",
+		Handler: h2c.NewHandler(handler, h2s),
 	}
 
-	logger.Info("grpc server listening (native gRPC + grpc-web)", "port", ":7700")
+	logger.Info("grpc server listening (native gRPC over h2c + grpc-web)", "port", ":7700")
 	if err := httpServer.Serve(lis); err != nil {
 		logger.Error("failed to serve", "error", err)
 		os.Exit(1)

@@ -282,6 +282,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/token", s.handleToken)
 	s.mux.HandleFunc("/refresh", s.handleRefreshEndpoint)
 	s.mux.HandleFunc("/logout", s.handleLogout)
+	s.mux.HandleFunc("/api/token", s.handleGetToken)
 
 	// JWKS and health
 	s.mux.HandleFunc("/.well-known/jwks.json", s.handleJWKS)
@@ -1904,4 +1905,133 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	})
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logged out successfully"})
+}
+
+// handleGetToken returns a fresh access token, auto-refreshing from the refresh_token cookie if needed.
+// This endpoint allows the web UI to get JWTs for gRPC Authorization headers without storing tokens in localStorage.
+func (s *Server) handleGetToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// CSRF hardening: allow only same-origin requests
+	origin := r.Header.Get("Origin")
+	if origin != "" && !strings.EqualFold(origin, s.cfg.Issuer) {
+		writeError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	referer := r.Header.Get("Referer")
+	if referer != "" && !strings.HasPrefix(referer, s.cfg.Issuer) {
+		writeError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+
+	// Never cache this endpoint
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
+
+	// Try to read access token cookie
+	accessCookie, err := r.Cookie("access_token")
+	if err != nil || accessCookie.Value == "" {
+		s.respondTokenFromRefresh(w, r)
+		return
+	}
+
+	// Parse and validate the access token
+	claims, err := s.parseToken(accessCookie.Value)
+	if err != nil {
+		s.respondTokenFromRefresh(w, r)
+		return
+	}
+
+	// Check expiry with 2-minute skew (refresh if expiring soon)
+	const skew = 120 // seconds
+	now := time.Now().Unix()
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		s.respondTokenFromRefresh(w, r)
+		return
+	}
+
+	if int64(exp) <= now+skew {
+		// Token expired or expiring soon - refresh
+		s.respondTokenFromRefresh(w, r)
+		return
+	}
+
+	// Token still valid - return it with expiry
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"access_token": accessCookie.Value,
+		"expires_at":   int64(exp),
+	})
+}
+
+// respondTokenFromRefresh attempts to refresh tokens using the refresh_token cookie
+func (s *Server) respondTokenFromRefresh(w http.ResponseWriter, r *http.Request) {
+	refreshCookie, err := r.Cookie("refresh_token")
+	if err != nil || refreshCookie.Value == "" {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	// Get refresh token record from database
+	record, err := s.store.GetRefreshToken(r.Context(), refreshCookie.Value)
+	if err != nil {
+		if errors.Is(err, persistence.ErrRefreshTokenNotFound) {
+			writeError(w, http.StatusUnauthorized, "refresh token invalid or expired")
+			return
+		}
+		log.Printf("failed to load refresh token: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to validate refresh token")
+		return
+	}
+
+	// Check if refresh token is expired
+	now := time.Now().UTC()
+	if now.After(record.ExpiresAt) {
+		_ = s.store.DeleteRefreshToken(r.Context(), refreshCookie.Value)
+		writeError(w, http.StatusUnauthorized, "refresh token expired")
+		return
+	}
+
+	// Get current roles
+	summary, err := s.store.RoleSummary(r.Context(), record.User.ID)
+	if err != nil {
+		log.Printf("failed to load roles during refresh: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to resolve roles")
+		return
+	}
+	roles := summary.AggregatedRoles()
+	if len(roles) == 1 && containsRole(roles, "pending") {
+		_ = s.store.DeleteRefreshToken(r.Context(), refreshCookie.Value)
+		writeError(w, http.StatusUnauthorized, "user has no active organization")
+		return
+	}
+	primaryOrg := selectPrimaryOrg(summary)
+
+	// Delete old refresh token (token rotation)
+	if err := s.store.DeleteRefreshToken(r.Context(), refreshCookie.Value); err != nil {
+		log.Printf("failed to remove old refresh token: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to rotate refresh token")
+		return
+	}
+
+	// Mint new tokens
+	tokens, err := s.mintTokens(r.Context(), record.User, roles, primaryOrg, record.Scopes)
+	if err != nil {
+		log.Printf("failed to mint refreshed tokens: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to issue refreshed tokens")
+		return
+	}
+
+	// Set new cookies
+	s.setAuthCookies(w, r, tokens)
+
+	// Return fresh access token with expiry
+	expiresAt := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second).Unix()
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"access_token": tokens.AccessToken,
+		"expires_at":   expiresAt,
+	})
 }

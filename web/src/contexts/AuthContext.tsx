@@ -26,8 +26,6 @@ interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
   userData: UserData | null
-  accessToken: string | null
-  setAccessToken: (token: string | null) => void
   login: () => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
@@ -39,20 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState<UserData | null>(null)
-  const [accessToken, setAccessTokenState] = useState<string | null>(() => {
-    // Initialize from localStorage if available
-    return localStorage.getItem('access_token')
-  })
-
-  // Wrapper to sync with localStorage
-  const setAccessToken = (token: string | null) => {
-    setAccessTokenState(token)
-    if (token) {
-      localStorage.setItem('access_token', token)
-    } else {
-      localStorage.removeItem('access_token')
-    }
-  }
 
   // Check authentication status by calling the API
   const checkAuth = async () => {
@@ -116,7 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('[AuthContext] Setting isAuthenticated to false')
     setIsAuthenticated(false)
     setUserData(null)
-    setAccessToken(null)
 
     // Redirect to login page (clear query params)
     console.log('[AuthContext] Redirecting to /login')
@@ -124,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, userData, accessToken, setAccessToken, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, userData, login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   )
