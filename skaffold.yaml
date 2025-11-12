@@ -79,6 +79,14 @@ deploy:
         wait: true
         upgradeOnChange: true
 
+# Port forwarding - automatically forward engine port for CLI access
+portForward:
+  - resourceType: service
+    resourceName: rocketship-engine
+    namespace: rocketship
+    port: 7700
+    localPort: 7700
+
 # Profiles for different environments
 profiles:
   # Development profile with debug logging
