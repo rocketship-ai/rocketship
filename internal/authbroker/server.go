@@ -170,11 +170,11 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 func (s *Server) isAllowedOrigin(origin string) bool {
 	// Allow localhost for local development
 	allowedOrigins := []string{
-		"http://localhost:5173",    // Vite dev server
-		"http://localhost:5174",    // Vite dev server (alt)
-		"http://localhost:5175",    // Vite dev server (alt 2)
-		"http://localhost:4173",    // Vite preview
-		"http://localhost:3000",    // Common React dev port
+		"http://localhost:5173",     // Vite dev server
+		"http://localhost:5174",     // Vite dev server (alt)
+		"http://localhost:5175",     // Vite dev server (alt 2)
+		"http://localhost:4173",     // Vite preview
+		"http://localhost:3000",     // Common React dev port
 		"https://app.rocketship.sh", // Production (future)
 	}
 
@@ -186,13 +186,6 @@ func (s *Server) isAllowedOrigin(origin string) bool {
 
 	return false
 }
-
-
-
-
-
-
-
 
 func (s *Server) requireAuth(next func(http.ResponseWriter, *http.Request, brokerPrincipal)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -234,17 +227,3 @@ func (s *Server) requireAuth(next func(http.ResponseWriter, *http.Request, broke
 		next(w, r, principal)
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -112,3 +112,42 @@ func detectTrigger() string {
 	}
 	return "manual"
 }
+
+func determineInitiator(principal *Principal) string {
+	if principal == nil {
+		return "unknown"
+	}
+	if email := strings.TrimSpace(principal.Email); email != "" {
+		return email
+	}
+	if subject := strings.TrimSpace(principal.Subject); subject != "" {
+		return subject
+	}
+	return "unknown"
+}
+
+func detectConfigSource(ctx *RunContext) string {
+	if ctx == nil {
+		return "repo_commit"
+	}
+	if strings.TrimSpace(ctx.CommitSHA) == "" {
+		return "uncommitted"
+	}
+	return "repo_commit"
+}
+
+func detectEnvironment(ctx *RunContext) string {
+	if ctx == nil {
+		return ""
+	}
+	if ctx.Metadata == nil {
+		return ""
+	}
+	keys := []string{"environment", "env", "rs_environment"}
+	for _, key := range keys {
+		if val, ok := ctx.Metadata[key]; ok {
+			return strings.TrimSpace(val)
+		}
+	}
+	return ""
+}
