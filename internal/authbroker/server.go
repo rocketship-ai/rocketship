@@ -170,6 +170,7 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 func (s *Server) isAllowedOrigin(origin string) bool {
 	// Allow localhost for local development
 	allowedOrigins := []string{
+		s.cfg.Issuer,                // Self-hosted/staging: allow same-origin deployments
 		"http://localhost:5173",     // Vite dev server
 		"http://localhost:5174",     // Vite dev server (alt)
 		"http://localhost:5175",     // Vite dev server (alt 2)

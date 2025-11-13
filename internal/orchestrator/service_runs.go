@@ -547,30 +547,6 @@ func (e *Engine) CancelRun(ctx context.Context, req *generated.CancelRunRequest)
 	}, nil
 }
 
-func (e *Engine) resolvePrincipalAndOrg(ctx context.Context) (*Principal, uuid.UUID, error) {
-	principal, ok := PrincipalFromContext(ctx)
-	if e.authConfig.mode == authModeNone {
-		return principal, uuid.Nil, nil
-	}
-	if !ok {
-		return nil, uuid.Nil, fmt.Errorf("missing authentication context")
-	}
-
-	orgIDStr := strings.TrimSpace(principal.OrgID)
-	if orgIDStr == "" {
-		if !e.requireOrgScope {
-			return principal, uuid.Nil, nil
-		}
-		return nil, uuid.Nil, fmt.Errorf("token missing organization scope")
-	}
-
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		return nil, uuid.Nil, fmt.Errorf("invalid organization identifier: %w", err)
-	}
-	return principal, orgID, nil
-}
-
 func (e *Engine) listRunsInMemory(req *generated.ListRunsRequest) (*generated.ListRunsResponse, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()

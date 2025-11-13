@@ -1,6 +1,7 @@
 package authbroker
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -50,6 +51,49 @@ func (s *Server) handleRefreshEndpoint(w http.ResponseWriter, r *http.Request) {
 	s.handleRefreshGrant(w, r)
 }
 
+// validateAndRotateRefreshToken validates a refresh token and issues new tokens (DRY helper)
+func (s *Server) validateAndRotateRefreshToken(ctx context.Context, refreshToken string) (oauthTokenResponse, error) {
+	record, err := s.store.GetRefreshToken(ctx, refreshToken)
+	if err != nil {
+		if errors.Is(err, persistence.ErrRefreshTokenNotFound) {
+			return oauthTokenResponse{}, fmt.Errorf("refresh token invalid or expired")
+		}
+		log.Printf("failed to load refresh token: %v", err)
+		return oauthTokenResponse{}, fmt.Errorf("failed to validate refresh token: %w", err)
+	}
+
+	now := time.Now().UTC()
+	if now.After(record.ExpiresAt) {
+		_ = s.store.DeleteRefreshToken(ctx, refreshToken)
+		return oauthTokenResponse{}, fmt.Errorf("refresh token expired")
+	}
+
+	summary, err := s.store.RoleSummary(ctx, record.User.ID)
+	if err != nil {
+		log.Printf("failed to load roles during refresh: %v", err)
+		return oauthTokenResponse{}, fmt.Errorf("failed to resolve roles: %w", err)
+	}
+	roles := summary.AggregatedRoles()
+	if len(roles) == 1 && containsRole(roles, "pending") {
+		_ = s.store.DeleteRefreshToken(ctx, refreshToken)
+		return oauthTokenResponse{}, fmt.Errorf("user has no active organization")
+	}
+	primaryOrg := selectPrimaryOrg(summary)
+
+	if err := s.store.DeleteRefreshToken(ctx, refreshToken); err != nil {
+		log.Printf("failed to remove old refresh token: %v", err)
+		return oauthTokenResponse{}, fmt.Errorf("failed to rotate refresh token: %w", err)
+	}
+
+	tokens, err := s.mintTokens(ctx, record.User, roles, primaryOrg, record.Scopes)
+	if err != nil {
+		log.Printf("failed to rotate tokens: %v", err)
+		return oauthTokenResponse{}, fmt.Errorf("failed to issue refreshed tokens: %w", err)
+	}
+
+	return tokens, nil
+}
+
 // handleRefreshGrant exchanges a refresh token for new access and refresh tokens
 func (s *Server) handleRefreshGrant(w http.ResponseWriter, r *http.Request) {
 	refreshToken := strings.TrimSpace(r.Form.Get("refresh_token"))
@@ -63,48 +107,9 @@ func (s *Server) handleRefreshGrant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record, err := s.store.GetRefreshToken(r.Context(), refreshToken)
+	tokens, err := s.validateAndRotateRefreshToken(r.Context(), refreshToken)
 	if err != nil {
-		if errors.Is(err, persistence.ErrRefreshTokenNotFound) {
-			writeOAuthError(w, "invalid_grant", "refresh token invalid or expired")
-			return
-		}
-		log.Printf("failed to load refresh token: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to validate refresh token")
-		return
-	}
-
-	now := time.Now().UTC()
-	if now.After(record.ExpiresAt) {
-		_ = s.store.DeleteRefreshToken(r.Context(), refreshToken)
-		writeOAuthError(w, "invalid_grant", "refresh token expired")
-		return
-	}
-
-	summary, err := s.store.RoleSummary(r.Context(), record.User.ID)
-	if err != nil {
-		log.Printf("failed to load roles during refresh: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to resolve roles")
-		return
-	}
-	roles := summary.AggregatedRoles()
-	if len(roles) == 1 && containsRole(roles, "pending") {
-		_ = s.store.DeleteRefreshToken(r.Context(), refreshToken)
-		writeOAuthError(w, "invalid_grant", "user has no active organization")
-		return
-	}
-	primaryOrg := selectPrimaryOrg(summary)
-
-	if err := s.store.DeleteRefreshToken(r.Context(), refreshToken); err != nil {
-		log.Printf("failed to remove old refresh token: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to rotate refresh token")
-		return
-	}
-
-	tokens, err := s.mintTokens(r.Context(), record.User, roles, primaryOrg, record.Scopes)
-	if err != nil {
-		log.Printf("failed to rotate tokens: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to issue refreshed tokens")
+		writeOAuthError(w, "invalid_grant", err.Error())
 		return
 	}
 
@@ -433,53 +438,9 @@ func (s *Server) respondTokenFromRefresh(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get refresh token record from database
-	record, err := s.store.GetRefreshToken(r.Context(), refreshCookie.Value)
+	tokens, err := s.validateAndRotateRefreshToken(r.Context(), refreshCookie.Value)
 	if err != nil {
-		if errors.Is(err, persistence.ErrRefreshTokenNotFound) {
-			writeError(w, http.StatusUnauthorized, "refresh token invalid or expired")
-			return
-		}
-		log.Printf("failed to load refresh token: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to validate refresh token")
-		return
-	}
-
-	// Check if refresh token is expired
-	now := time.Now().UTC()
-	if now.After(record.ExpiresAt) {
-		_ = s.store.DeleteRefreshToken(r.Context(), refreshCookie.Value)
-		writeError(w, http.StatusUnauthorized, "refresh token expired")
-		return
-	}
-
-	// Get current roles
-	summary, err := s.store.RoleSummary(r.Context(), record.User.ID)
-	if err != nil {
-		log.Printf("failed to load roles during refresh: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to resolve roles")
-		return
-	}
-	roles := summary.AggregatedRoles()
-	if len(roles) == 1 && containsRole(roles, "pending") {
-		_ = s.store.DeleteRefreshToken(r.Context(), refreshCookie.Value)
-		writeError(w, http.StatusUnauthorized, "user has no active organization")
-		return
-	}
-	primaryOrg := selectPrimaryOrg(summary)
-
-	// Delete old refresh token (token rotation)
-	if err := s.store.DeleteRefreshToken(r.Context(), refreshCookie.Value); err != nil {
-		log.Printf("failed to remove old refresh token: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to rotate refresh token")
-		return
-	}
-
-	// Mint new tokens
-	tokens, err := s.mintTokens(r.Context(), record.User, roles, primaryOrg, record.Scopes)
-	if err != nil {
-		log.Printf("failed to mint refreshed tokens: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to issue refreshed tokens")
+		writeError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
