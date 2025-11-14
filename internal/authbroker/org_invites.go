@@ -74,6 +74,15 @@ func (s *Server) handleOrgInviteAccept(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
+	// Rotate tokens immediately to update roles and org_id in access token
+	if refreshCookie, err := r.Cookie("refresh_token"); err == nil && refreshCookie.Value != "" {
+		if tokens, err := s.validateAndRotateRefreshToken(ctx, refreshCookie.Value); err == nil {
+			s.setAuthCookies(w, r, tokens)
+		} else {
+			log.Printf("failed to rotate tokens after invite acceptance: %v", err)
+		}
+	}
+
 	response := map[string]interface{}{
 		"organization": map[string]interface{}{
 			"id":   matched.OrganizationID.String(),

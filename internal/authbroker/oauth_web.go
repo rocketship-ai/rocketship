@@ -394,6 +394,12 @@ func (s *Server) handleGetToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 
+	// Support force=true query param to always rotate tokens
+	if r.URL.Query().Get("force") == "true" {
+		s.respondTokenFromRefresh(w, r)
+		return
+	}
+
 	// Try to read access token cookie
 	accessCookie, err := r.Cookie("access_token")
 	if err != nil || accessCookie.Value == "" {

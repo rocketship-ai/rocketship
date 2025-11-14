@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// DeleteOrgRegistrationsForUser removes all pending registrations for a user
+// DeleteOrgRegistrationsForUser removes all registrations for a user
 func (s *Store) DeleteOrgRegistrationsForUser(ctx context.Context, userID uuid.UUID) error {
-	const query = `DELETE FROM organization_registrations WHERE user_id = $1 AND accepted_at IS NULL`
+	const query = `DELETE FROM organization_registrations WHERE user_id = $1`
 	if _, err := s.db.ExecContext(ctx, query, userID); err != nil {
 		return fmt.Errorf("failed to delete previous registrations: %w", err)
 	}
@@ -90,13 +90,13 @@ func (s *Store) DeleteOrgRegistration(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// LatestOrgRegistrationForUser returns the most recent pending registration for a user
+// LatestOrgRegistrationForUser returns the most recent registration for a user
 func (s *Store) LatestOrgRegistrationForUser(ctx context.Context, userID uuid.UUID) (OrganizationRegistration, error) {
 	const query = `
         SELECT id, user_id, email, org_name, code_hash, code_salt,
                attempts, max_attempts, expires_at, resend_available_at, created_at, updated_at
         FROM organization_registrations
-        WHERE user_id = $1 AND accepted_at IS NULL
+        WHERE user_id = $1
         ORDER BY created_at DESC
         LIMIT 1
     `
