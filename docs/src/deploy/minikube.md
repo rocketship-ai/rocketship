@@ -1,131 +1,279 @@
 # Run Rocketship on Minikube
 
-Use this guide when you want a fully isolated Rocketship stack on your laptop for development, demos, or CI automation. The repository ships with `scripts/install-minikube.sh`, which provisions Temporal plus the Rocketship engine and worker in a single namespace.
+Local Kubernetes cluster for development with full auth, database support, and hot-reloading via Skaffold.
+
+## Quick Start
+
+```bash
+# 1. Create .env file with secrets (see "Configure Secrets" below)
+echo "GITHUB_CLIENT_SECRET=..." > .env
+echo "ROCKETSHIP_EMAIL_FROM=..." >> .env
+echo "ROCKETSHIP_POSTMARK_SERVER_TOKEN=..." >> .env
+
+# 2. Run setup script (one-time infrastructure setup)
+scripts/setup-local-dev.sh
+
+# 3. Configure local DNS
+echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
+
+# 4. Start everything with one command
+scripts/start-dev.sh
+
+# 5. Visit http://auth.minikube.local and sign in with GitHub
+```
+
+The `start-dev.sh` script automatically:
+- Starts minikube tunnel
+- Starts Vite dev server for the web UI
+- Runs Skaffold in dev mode for hot-reloading backend services
+
+Make code changes and watch them automatically rebuild and redeploy!
 
 ## Prerequisites
 
-- macOS or Linux host with at least 4 vCPUs and 8 GB RAM free
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/) `v1.36+`
-- [Kubectl](https://kubernetes.io/docs/tasks/tools/) pointed to your Minikube context
+- macOS or Linux with **6+ vCPUs, 12+ GB RAM** (for Temporal + Go builds)
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) v1.36+
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [Helm 3](https://helm.sh/docs/intro/install/)
-- Docker (Minikube uses the local Docker daemon to build images)
+- [Skaffold](https://skaffold.dev/docs/install/) v2.0+
+- Docker (required for Minikube driver)
+- [Node.js](https://nodejs.org/) v20+ and npm (for web UI development)
 
-## 1. Launch the Stack
+## Setup
 
-From the repository root:
+### 1. Configure Secrets
 
-```bash
-scripts/install-minikube.sh
-```
-
-The script performs the following steps:
-
-1. Starts/ensures a Minikube profile (defaults to `rocketship`).
-2. Switches the Docker context to Minikube and builds the engine and worker images as `rocketship-engine-local:dev` and `rocketship-worker-local:dev`.
-3. Installs Temporal via the official Helm chart in the `rocketship` namespace using a minimal configuration (single replica services, Cassandra + Elasticsearch, no Prometheus/Grafana).
-4. Registers the Temporal logical namespace `rocketship` using the Temporal CLI.
-5. Installs the Rocketship Helm chart, pointing at the Temporal frontend service, and exposes ClusterIP services with named `grpc`/`http` ports.
-6. Prints summary information and port-forward helper commands.
-
-Typical output ends with:
-
-```
-Engine endpoint (gRPC): service rocketship-engine.rocketship:7700
-Health endpoint: service rocketship-engine.rocketship:7701
-Temporal host configured as: temporal-frontend.rocketship:7233
-```
-
-## 2. Customise the Install (Optional)
-
-Environment variables let you adjust namespaces, release names, and Temporal workflow namespace without editing the script:
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `MINIKUBE_PROFILE` | `rocketship` | Minikube profile name |
-| `ROCKETSHIP_NAMESPACE` | `rocketship` | Kubernetes namespace for Rocketship services |
-| `TEMPORAL_NAMESPACE` | `rocketship` | Namespace for Temporal Helm release |
-| `TEMPORAL_WORKFLOW_NAMESPACE` | `rocketship` | Temporal logical namespace registered via CLI |
-| `TEMPORAL_RELEASE` | `temporal` | Helm release name for Temporal |
-| `ROCKETSHIP_RELEASE` | `rocketship` | Helm release name for Rocketship |
-| `ROCKETSHIP_CHART_PATH` | `charts/rocketship` | Path to the chart (override when packaging) |
-
-Example: run everything inside a namespace called `testing`:
+Create a `.env` file in the repository root with the following secrets:
 
 ```bash
-ROCKETSHIP_NAMESPACE=testing \
-TEMPORAL_NAMESPACE=testing \
-TEMPORAL_WORKFLOW_NAMESPACE=testing \
-scripts/install-minikube.sh
+GITHUB_CLIENT_SECRET=<github-oauth-client-secret>
+ROCKETSHIP_EMAIL_FROM=<email-sender-address>
+ROCKETSHIP_POSTMARK_SERVER_TOKEN=<postmark-api-token>
 ```
 
-## 3. Verify the Deployment
+**Option A: Extract from production cluster** (requires kubectl access to `do-nyc1-rs-test-project`):
 
 ```bash
-kubectl get pods -n rocketship
-kubectl get svc -n rocketship
+kubectl config use-context do-nyc1-rs-test-project
+kubectl get secret rocketship-github-oauth -n rocketship -o jsonpath='{.data.ROCKETSHIP_GITHUB_CLIENT_SECRET}' | base64 -d
+kubectl get secret rocketship-postmark-secret -n rocketship -o jsonpath='{.data.ROCKETSHIP_EMAIL_FROM}' | base64 -d
+kubectl get secret rocketship-postmark-secret -n rocketship -o jsonpath='{.data.ROCKETSHIP_POSTMARK_SERVER_TOKEN}' | base64 -d
+kubectl config use-context rocketship
 ```
 
-You should see Temporal pods (frontend, history, matching, worker, cassandra, elasticsearch) and two Rocketship deployments (`rocketship-engine`, `rocketship-worker`).
+**Option B: Get from team member** (if you don't have cluster access):
 
-To exercise the stack locally:
+Ask a team member with cluster access to share their `.env` file or provide the three required values.
+
+**GitHub OAuth App Setup:**
+
+The `GITHUB_CLIENT_SECRET` corresponds to a GitHub OAuth App with these settings:
+
+- **Client ID**: `Ov23li2GoXfR7bC7fR0y` (configured in `charts/rocketship/values-minikube-local.yaml`)
+- **Authorization callback URL**: `http://auth.minikube.local/callback`
+
+If you need to create your own OAuth app for testing:
+
+1. Go to GitHub Settings → Developer settings → OAuth Apps → New OAuth App
+2. Set **Homepage URL**: `http://auth.minikube.local`
+3. Set **Authorization callback URL**: `http://auth.minikube.local/callback`
+4. Copy the Client Secret to your `.env` file
+5. Update `charts/rocketship/values-minikube-local.yaml` with your Client ID
+
+### 2. Run Setup Script
 
 ```bash
-kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+scripts/setup-local-dev.sh
+```
+
+This sets up the minikube infrastructure (one-time setup):
+
+- Minikube cluster with ingress enabled
+- Temporal (workflow engine)
+- PostgreSQL (database)
+- All required secrets
+- Vite relay for web UI development
+
+**Note:** This script does NOT deploy Rocketship services. Skaffold handles that for hot-reloading.
+
+### 3. Configure Local DNS
+
+Add to `/etc/hosts`:
+
+```bash
+echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
+```
+
+**Why needed:** This ensures:
+- Your browser sends `Host: auth.minikube.local` header (matches ingress rule)
+- Stable origin for cookies (`auth.minikube.local` instead of `localhost`)
+- OAuth callback URLs and JWT issuer URLs are consistent
+
+## Usage
+
+### Quick Start - All-in-One Script
+
+```bash
+scripts/start-dev.sh
+```
+
+This automatically starts:
+1. Minikube tunnel (binds ingress to `127.0.0.1`)
+2. Vite dev server for web UI
+3. Skaffold in development mode (watches code, rebuilds on changes)
+
+Visit `http://auth.minikube.local` and sign in with GitHub!
+
+**Hot Reloading:** Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/authbroker/`, or `internal/`, save, and Skaffold will automatically:
+- Rebuild the Docker image
+- Redeploy to Kubernetes
+- Stream logs to your terminal
+
+Press `Ctrl+C` to stop all processes.
+
+### Manual Development Workflow
+
+If you prefer to run components separately:
+
+1. Start minikube tunnel (separate terminal):
+   ```bash
+   sudo minikube tunnel -p rocketship
+   ```
+
+2. Start Vite dev server (separate terminal):
+   ```bash
+   cd web && npm run dev
+   ```
+
+3. Run Skaffold (watches for changes and rebuilds):
+   ```bash
+   # Standard mode (all traffic through minikube tunnel)
+   skaffold dev
+
+   # Debug mode (with verbose logging)
+   skaffold dev -p debug
+   ```
+
+### CLI Without Auth
+
+If you just need CLI access without web UI:
+
+```bash
+# Port-forward the engine
+kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700 &
+
+# Configure CLI
 rocketship profile create minikube grpc://localhost:7700
 rocketship profile use minikube
+
+# Run tests
 rocketship run -af examples/simple-http/rocketship.yaml
 ```
 
-## 4. Manual Helm Flow (Optional)
-
-If you prefer to perform the steps yourself:
-
-1. Install Temporal:
-   ```bash
-   helm repo add temporal https://go.temporal.io/helm-charts
-   helm repo update
-   helm install temporal temporal/temporal \
-     --version 0.66.0 \
-     --namespace rocketship --create-namespace \
-     --set server.replicaCount=1 \
-     --set cassandra.config.cluster_size=1 \
-     --set elasticsearch.replicas=1 \
-     --set prometheus.enabled=false \
-     --set grafana.enabled=false \
-     --wait --timeout 15m
-   ```
-2. Register the Temporal namespace (default `rocketship`):
-   ```bash
-   kubectl exec -n rocketship deploy/temporal-admintools -- \
-     temporal operator namespace create --namespace rocketship
-   ```
-3. Build local images and load them into Minikube:
-   ```bash
-   eval "$(minikube docker-env)"
-   docker build -f .docker/Dockerfile.engine -t rocketship-engine-local:dev .
-   docker build -f .docker/Dockerfile.worker -t rocketship-worker-local:dev .
-   ```
-4. Install Rocketship using overrides:
-   ```bash
-   helm install rocketship charts/rocketship \
-     --namespace rocketship \
-     --set temporal.host=temporal-frontend.rocketship:7233 \
-     --set temporal.namespace=rocketship \
-     --set engine.image.repository=rocketship-engine-local \
-     --set engine.image.tag=dev \
-     --set worker.image.repository=rocketship-worker-local \
-     --set worker.image.tag=dev \
-     --values charts/rocketship/values-minikube.yaml \
-     --wait
-   ```
-
-## 5. Cleanup
+### CLI With Auth
 
 ```bash
-helm uninstall rocketship -n rocketship
-helm uninstall temporal -n rocketship
+rocketship login
+# Follow GitHub device flow prompts
+```
+
+### Web App
+
+The web UI is served through the same ingress as the auth broker (single-origin architecture):
+
+- UI: `http://auth.minikube.local/`
+- Auth API: `http://auth.minikube.local/api`, `/authorize`, `/token`, `/callback`
+- Engine API: `http://auth.minikube.local/engine`
+
+**How it works:**
+- The `vite-relay` deployment proxies requests to your local Vite server
+- All services share the same origin for cookie-based auth
+- Hot Module Replacement (HMR) still works through the ingress
+
+## Customization
+
+Override defaults via environment variables:
+
+| Variable               | Default                   | Description           |
+| ---------------------- | ------------------------- | --------------------- |
+| `MINIKUBE_PROFILE`     | `rocketship`              | Minikube profile name |
+| `ROCKETSHIP_NAMESPACE` | `rocketship`              | Kubernetes namespace  |
+| `TEMPORAL_NAMESPACE`   | `rocketship`              | Temporal namespace    |
+| `POSTGRES_PASSWORD`    | `rocketship-dev-password` | Postgres password     |
+
+Example:
+
+```bash
+ROCKETSHIP_NAMESPACE=testing scripts/setup-local-dev.sh
+```
+
+### Skaffold Configuration
+
+The `skaffold.yaml` file defines what gets built and deployed:
+
+- **Artifacts**: Three Docker images (engine, worker, authbroker)
+- **Deploy**: Helm-based deployment with values from `charts/rocketship/values-minikube-local.yaml`
+- **Profiles**:
+  - `debug`: Enables debug logging for all services
+  - `no-port-forward`: Disables port forwarding (use with minikube tunnel)
+
+Edit `skaffold.yaml` to customize build or deployment behavior.
+
+## Troubleshooting
+
+**Skaffold build fails**: Ensure Docker is using minikube's daemon:
+```bash
+eval "$(minikube -p rocketship docker-env)"
+```
+
+**Pods not ready**: Wait 2-3 minutes for Temporal and Postgres to initialize.
+
+**Auth broker fails**: Check `.env` has valid `GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
+
+**Skaffold not watching files**: Ensure you're in the repository root when running `skaffold dev`.
+
+**Changes not deploying**: Check Skaffold output for build errors. Press `Ctrl+C` and restart if needed.
+
+**Web UI not loading**:
+
+1. Ensure web dependencies are installed: `cd web && npm install`
+2. Verify Vite is running: `curl http://localhost:5173`
+3. Check vite-relay can reach host:
+   ```bash
+   kubectl run -n rocketship test-vite --rm -it --image=busybox:1.36 --restart=Never -- \
+     wget -qO- http://192.168.64.1:5173/ | head -n 5
+   ```
+   If this fails, check macOS firewall settings for Node/Vite on port 5173.
+
+**Install script warnings about host connectivity**: The install script tests connectivity to your host's Vite server to auto-detect the correct IP. If Vite isn't running yet, you'll see warnings like "Could not detect reachable host IP" - this is expected and the script will use a sensible default (192.168.64.1). Start Vite after installation completes.
+
+**Cookies not working**: Ensure you're accessing the UI via `http://auth.minikube.local` (not `http://localhost:5173`). The single-origin architecture requires UI, auth broker, and engine to be served from the same host for cookies to work.
+
+**Engine API not accessible**: Verify the ingress includes the `/engine` path:
+
+```bash
+kubectl get ingress rocketship-gateway -n rocketship -o jsonpath='{.spec.rules[0].http.paths[*].path}'
+```
+
+Should show: `/api /authorize /token /callback /logout /engine /`
+
+**Auth broker unreachable from inside cluster**: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:
+
+```bash
+kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
+helm upgrade rocketship charts/rocketship --namespace rocketship \
+  --values charts/rocketship/values-minikube-local.yaml \
+  --set temporal.host=temporal-frontend.rocketship:7233 \
+  --set temporal.namespace=rocketship \
+  --set "engine.hostAliases[0].ip=<YOUR-IP>" --wait
+```
+
+**Auth broker unreachable from local machine**: Ensure `/etc/hosts` entry exists and `sudo minikube tunnel` is running.
+
+## Cleanup
+
+```bash
+helm uninstall rocketship temporal -n rocketship
 kubectl delete namespace rocketship
 minikube delete -p rocketship
 ```
-
-You now have a repeatable local environment for building new features, running integration tests, or debugging plugin behaviour before deploying to a managed cluster.

@@ -144,6 +144,53 @@ func (g *GitHubClient) ExchangeDeviceCode(ctx context.Context, deviceCode string
 	return TokenResponse{}, terr, nil
 }
 
+// ExchangeAuthorizationCode exchanges an authorization code for an access token (Web Application Flow).
+// This is used for browser-based OAuth flows where the user is redirected back to the application.
+func (g *GitHubClient) ExchangeAuthorizationCode(ctx context.Context, code, redirectURI, codeVerifier string) (TokenResponse, error) {
+	form := url.Values{}
+	form.Set("client_id", g.cfg.ClientID)
+	form.Set("client_secret", g.cfg.ClientSecret)
+	form.Set("code", code)
+	form.Set("redirect_uri", redirectURI)
+	// GitHub OAuth Apps support PKCE alongside client_secret - both are required
+	if codeVerifier != "" {
+		form.Set("code_verifier", codeVerifier)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, g.cfg.TokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return TokenResponse{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := g.client.Do(req)
+	if err != nil {
+		return TokenResponse{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return TokenResponse{}, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return TokenResponse{}, fmt.Errorf("github authorization code exchange failed (status %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var token TokenResponse
+	if err := json.Unmarshal(body, &token); err != nil {
+		return TokenResponse{}, fmt.Errorf("failed to parse token response: %w", err)
+	}
+
+	if strings.TrimSpace(token.AccessToken) == "" {
+		return TokenResponse{}, fmt.Errorf("github did not return an access token (response: %s)", string(body))
+	}
+
+	return token, nil
+}
+
 func (g *GitHubClient) FetchUser(ctx context.Context, accessToken string) (GitHubUser, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, g.cfg.UserURL, nil)
 	if err != nil {

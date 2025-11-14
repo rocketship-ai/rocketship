@@ -20,7 +20,7 @@ Rocketship is an open-source testing framework for browser and API testing that 
 
 There are 3 "server" components that make up the Rocketship system: Temporal, Engine, and Worker. The CLI is meant to communicate with the engine. There are three ways to run Rocketship:
 
-1. **Minikube stack** (RECOMMENDED FOR AGENTS): `scripts/install-minikube.sh` provisions Temporal + Rocketship inside an isolated cluster per branch.
+1. **Minikube stack with Skaffold** (RECOMMENDED FOR AGENTS): `scripts/setup-local-dev.sh` + `scripts/start-dev.sh` provisions Temporal + Rocketship inside an isolated cluster with hot-reloading via Skaffold. Make code changes and watch them automatically rebuild and redeploy.
 2. **Self-hosted cluster**: Deploy the Helm charts to your own Kubernetes environment and connect the CLI remotely.
 3. **Local processes**: Use `rocketship start server` / `rocketship run -af` for quick experiments without Kubernetes.
 
@@ -234,42 +234,88 @@ All three plugins support persistent browser sessions. The `playwright` and `bro
 
 All Python-based browser plugins have their scripts embedded into the binary using `go:embed`.
 
-## 🚀 Minikube Environment (RECOMMENDED)
+## 🚀 Minikube Environment with Skaffold (RECOMMENDED)
 
-Agents should use the maintained Minikube workflow instead of the deprecated `.docker/rocketship` scripts. The helper script provisions Temporal, the Rocketship engine/worker, and sane defaults for local development.
+The Minikube workflow uses Skaffold for automatic hot-reloading of backend services. This enables rapid iterative development - make code changes and watch them automatically rebuild and redeploy to Kubernetes.
 
 ### Quick Start
 
 ```bash
 # From the repository root
-scripts/install-minikube.sh
+
+# 1. One-time infrastructure setup
+scripts/setup-local-dev.sh
+
+# 2. Configure local DNS
+echo "127.0.0.1 auth.minikube.local" | sudo tee -a /etc/hosts
+
+# 3. Start everything with auto hot-reloading
+scripts/start-dev.sh
 ```
 
-The script will:
+The `start-dev.sh` script automatically:
+- Starts minikube tunnel
+- Starts Vite dev server for the web UI
+- Runs Skaffold in dev mode watching for code changes
+
+**Hot Reloading**: Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/authbroker/`, or `internal/` and save. Skaffold will automatically rebuild the Docker image and redeploy to Kubernetes. Logs stream to your terminal.
+
+Press `Ctrl+C` to stop all processes.
+
+### Infrastructure Setup (One-Time)
+
+The `scripts/setup-local-dev.sh` script sets up infrastructure but does NOT deploy Rocketship services (Skaffold handles deployment for hot-reloading):
 
 1. Start (or reuse) a Minikube profile named `rocketship`.
-2. Build local engine/worker images inside the cluster’s Docker runtime.
-3. Install the Temporal Helm chart with a single-replica, batteries-included stack.
-4. Register the Temporal namespace used by Rocketship.
-5. Deploy the Rocketship Helm chart and print port-forward helpers.
+2. Install the Temporal Helm chart with a single-replica, batteries-included stack.
+3. Register the Temporal namespace used by Rocketship.
+4. Create all required Kubernetes secrets (GitHub OAuth, Postgres, JWT signing keys).
+5. Deploy vite-relay for web UI development.
+
+**Note**: You only need to run this once per environment, or when secrets change.
+
+### Skaffold Configuration
+
+The `skaffold.yaml` file in the repository root configures:
+
+- **Build**: Three Docker images (engine, worker, authbroker) built inside minikube
+- **Deploy**: Helm-based deployment using `charts/rocketship/values-minikube-local.yaml`
+- **Watch**: File watching for automatic rebuilds on Go source changes
+- **Access**: All traffic goes through minikube tunnel → ingress (single consistent path)
+- **Profiles**:
+  - `debug`: Enables debug logging for all services
+
+### Manual Development Workflow
+
+If you prefer to run components separately:
+
+```bash
+# 1. Start minikube tunnel (separate terminal)
+sudo minikube tunnel -p rocketship
+
+# 2. Start Vite dev server (separate terminal)
+cd web && npm run dev
+
+# 3. Run Skaffold (watches for changes and rebuilds)
+skaffold dev
+```
 
 ### Customisation
 
-Environment variables let you change resource names without editing the script:
+Environment variables let you change resource names without editing scripts:
 
 | Variable                      | Default      | Description                                   |
 | ----------------------------- | ------------ | --------------------------------------------- |
 | `MINIKUBE_PROFILE`            | `rocketship` | Minikube profile name                         |
 | `ROCKETSHIP_NAMESPACE`        | `rocketship` | Namespace for Rocketship resources            |
 | `TEMPORAL_NAMESPACE`          | `rocketship` | Namespace for the Temporal Helm release       |
-| `TEMPORAL_WORKFLOW_NAMESPACE` | `rocketship` | Temporal logical namespace registered via CLI |
-| `ROCKETSHIP_RELEASE`          | `rocketship` | Helm release name for Rocketship              |
-| `TEMPORAL_RELEASE`            | `temporal`   | Helm release name for Temporal                |
+| `TEMPORAL_WORKFLOW_NAMESPACE` | `default`    | Temporal logical namespace registered via CLI |
+| `POSTGRES_PASSWORD`           | `rocketship-dev-password` | Postgres password            |
 
-Example (single shared namespace):
+Example:
 
 ```bash
-ROCKETSHIP_NAMESPACE=testing TEMPORAL_NAMESPACE=testing TEMPORAL_WORKFLOW_NAMESPACE=testing scripts/install-minikube.sh
+ROCKETSHIP_NAMESPACE=testing scripts/setup-local-dev.sh
 ```
 
 ### Verifying the Stack
@@ -279,8 +325,11 @@ kubectl get pods -n rocketship
 kubectl get svc -n rocketship
 ```
 
-Port-forward the engine when you want to run the CLI directly:
+### Accessing Services
 
+**Web UI**: `http://auth.minikube.local` (after running `start-dev.sh`)
+
+**CLI access** (if needed):
 ```bash
 kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
 rocketship profile create minikube grpc://localhost:7700
@@ -290,8 +339,15 @@ rocketship profile use minikube
 ### Cleanup
 
 ```bash
+# Stop Skaffold (Ctrl+C if running)
+
+# Uninstall Helm releases
 helm uninstall rocketship temporal -n rocketship
+
+# Delete namespace
 kubectl delete namespace rocketship
+
+# Delete cluster
 minikube delete -p rocketship
 ```
 

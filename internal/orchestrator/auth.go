@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -314,4 +315,30 @@ func containsString(values []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+// resolvePrincipalAndOrg extracts the principal and organization ID from context
+// This is used by multiple service handlers (runs, streams, health) for consistent auth handling
+func (e *Engine) resolvePrincipalAndOrg(ctx context.Context) (*Principal, uuid.UUID, error) {
+	principal, ok := PrincipalFromContext(ctx)
+	if e.authConfig.mode == authModeNone {
+		return principal, uuid.Nil, nil
+	}
+	if !ok {
+		return nil, uuid.Nil, fmt.Errorf("missing authentication context")
+	}
+
+	orgIDStr := strings.TrimSpace(principal.OrgID)
+	if orgIDStr == "" {
+		if !e.requireOrgScope {
+			return principal, uuid.Nil, nil
+		}
+		return nil, uuid.Nil, fmt.Errorf("token missing organization scope")
+	}
+
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		return nil, uuid.Nil, fmt.Errorf("invalid organization identifier: %w", err)
+	}
+	return principal, orgID, nil
 }

@@ -1,0 +1,100 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: rocketship
+
+# Build configuration - watches Go source and rebuilds images on change
+# NOTE: Uses ko builder for fast local dev. Production builds (DigitalOcean) use Dockerfiles in .docker/
+build:
+  artifacts:
+    # Engine service
+    - image: rocketship-engine-local
+      ko:
+        main: ./cmd/engine
+        flags:
+          - "-p"
+          - "1"  # Limit parallel compilation to reduce memory pressure
+        ldflags:
+          - "-w"  # Strip DWARF debug info
+          - "-s"  # Strip symbol table
+
+    # Worker service
+    - image: rocketship-worker-local
+      ko:
+        main: ./cmd/worker
+        flags:
+          - "-p"
+          - "1"
+        ldflags:
+          - "-w"
+          - "-s"
+
+    # Auth Broker service
+    - image: rocketship-authbroker-local
+      ko:
+        main: ./cmd/authbroker
+        flags:
+          - "-p"
+          - "1"
+        ldflags:
+          - "-w"
+          - "-s"
+
+  # Use minikube's Docker daemon
+  local:
+    push: false
+    concurrency: 1  # Build one image at a time to avoid overwhelming the system
+
+# Deploy configuration - uses Helm
+deploy:
+  helm:
+    releases:
+      - name: rocketship
+        chartPath: charts/rocketship
+        namespace: rocketship
+        createNamespace: true
+        valuesFiles:
+          - charts/rocketship/values-minikube-local.yaml
+        setValueTemplates:
+          # Temporal configuration
+          temporal.host: "temporal-frontend.rocketship:7233"
+          temporal.namespace: "default"
+          # Engine image
+          engine.image.repository: "rocketship-engine-local"
+          engine.image.tag: "dev"
+          engine.image.pullPolicy: "IfNotPresent"
+          # Worker image
+          worker.image.repository: "rocketship-worker-local"
+          worker.image.tag: "dev"
+          worker.image.pullPolicy: "IfNotPresent"
+          # Auth broker image
+          auth.broker.image.repository: "rocketship-authbroker-local"
+          auth.broker.image.tag: "dev"
+          auth.broker.image.pullPolicy: "IfNotPresent"
+          # CRITICAL: Engine must resolve auth.minikube.local to ingress controller
+          # This IP is detected dynamically by start-dev.sh
+          # NOTE: Must set BOTH ip and hostnames because Helm --set replaces entire array element
+          engine.hostAliases[0].ip: "{{.ROCKETSHIP_INGRESS_IP}}"
+          engine.hostAliases[0].hostnames[0]: "auth.minikube.local"
+        wait: true
+        upgradeOnChange: true
+
+# Port forwarding - automatically forward engine port for CLI access
+portForward:
+  - resourceType: service
+    resourceName: rocketship-engine
+    namespace: rocketship
+    port: 7700
+    localPort: 7700
+
+# Profiles for different environments
+profiles:
+  # Development profile with debug logging
+  - name: debug
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/setValues
+        value:
+          engine.env.ROCKETSHIP_LOG: "DEBUG"
+          worker.env.ROCKETSHIP_LOG: "DEBUG"
+          auth.broker.env.LOG_LEVEL: "debug"
