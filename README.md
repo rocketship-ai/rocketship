@@ -31,7 +31,24 @@
 - **Plugin Ecosystem** Add the APIs and protocols that matter to you.
 - **Deploy-Ready Images** Need to save history or run tests on a schedule? Host Rocketship on your own infra.
 
-## Getting Started
+## Agent Quickstart
+
+Paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your coding agent's context window, so that it understands how to build and run tests.
+
+## Human Quickstart
+
+### Prerequisites
+
+```bash
+# the testing orchestration engine
+brew install temporal
+# required if you want browser testing
+pip install playwright
+playwright install chromium
+# required if you use the agent plugin
+pip install claude-agent-sdk
+export ANTHROPIC_API_KEY=your-key
+```
 
 ### Install
 
@@ -105,10 +122,6 @@ tests:
 ```bash
 rocketship run -ad .rocketship # starts the local engine, runs the tests, shuts the engine down
 ```
-
-## Give Your Coding Agent Context on Rocketship
-
-Paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your coding agent's context window, so that it understands how to build and run tests.
 
 ## Documentation
 

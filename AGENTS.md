@@ -149,7 +149,7 @@ rocketship run --debug -af examples/simple-http/rocketship.yaml
 
 # Background server for iterative testing
 rocketship --debug start server --background
-rocketship run --f test.yaml
+rocketship run -f test.yaml
 rocketship stop server
 
 # Validate YAML changes
@@ -175,7 +175,7 @@ Plugins implement the `Plugin` interface in `internal/plugins/plugin.go`. Each p
 - `Parse()`: Configuration parsing
 - Plugin-specific types in separate files
 
-Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, playwright, browser_use, supabase, etc.
+Plugins include: HTTP, delay, AWS (S3, SQS, DynamoDB), SQL, log, script, agent, playwright, supabase, etc.
 
 ### Variable Replacement in Plugins
 
@@ -219,20 +219,12 @@ This ensures all plugins handle variables identically and support all documented
 
 ### Browser Testing Plugins
 
-Rocketship provides three browser testing plugins:
+Rocketship provides browser testing plugins:
 
 - **`playwright`**: For low-level browser control and scripted actions (Python-based, uses Playwright library)
-- **`browser_use`**: For AI-driven web automation using natural language tasks (Python-based, uses `browser-use` library)
-- **`agent`**: For AI-driven testing using Claude with MCP servers (Python-based, uses Claude Agent SDK)
+- **`agent`**: For AI-driven testing using Claude (Python-based, uses the Claude Agent SDK)
 
-All three plugins support persistent browser sessions. The `playwright` and `browser_use` plugins manage browser instances directly, while the `agent` plugin can connect to browser sessions via Chrome DevTools Protocol (CDP) when using the Playwright MCP server (`@playwright/mcp`). This allows the agent to control browsers launched by the playwright plugin, enabling powerful multi-step workflows where low-level browser setup can be combined with high-level AI-driven interactions.
-
-**Key Differences:**
-- **`playwright`**: Direct Python Playwright API control - best for deterministic, scripted browser actions
-- **`browser_use`**: AI agent with browser control - best for complex navigation with natural language
-- **`agent`**: Claude-powered agent with MCP tool access - best for test verification, analysis, and workflows requiring multiple tool types (browser via Playwright MCP, filesystem, APIs, etc.)
-
-All Python-based browser plugins have their scripts embedded into the binary using `go:embed`.
+Both plugins support persistent browser sessions and have their Python scripts embedded into the binary using `go:embed`.
 
 ## 🚀 Minikube Environment (RECOMMENDED)
 
@@ -344,7 +336,7 @@ rocketship run -af examples/browser-testing/rocketship.yaml
 For manual local setups, install the dependencies once:
 
 ```bash
-pip install browser-use playwright langchain-openai langchain-anthropic
+pip install playwright
 playwright install chromium
 rocketship run -af examples/browser-automation/rocketship.yaml
 ```
