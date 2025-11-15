@@ -3,7 +3,7 @@
   <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
 <h3 align="center">A testing framework for your coding agent.</h3>
-<p align="center">Let your coding agent write and run e2e tests for your customer journeys.</p>
+<p align="center">Let your coding agent write and run E2E tests for your web app.</p>
 
 <p align="center">
   <a href="https://github.com/rocketship-ai/rocketship/releases"><img src="https://img.shields.io/github/v/release/rocketship-ai/rocketship.svg" alt="Github release"></a>
@@ -17,16 +17,17 @@
 
 **add gif here**<br>
 
-🚀 Rocketship is an open‑source testing framework that your coding agent can use to QA test and verify complex, user-driven scenarios by using community-owned plugins like [Supabase](https://docs.rocketship.sh/plugins/supabase/), [Playwright](https://docs.rocketship.sh/plugins/playwright/), [Agent](https://docs.rocketship.sh/plugins/agent/), and others. **Here's how it works:**
+🚀 Rocketship is an open‑source testing framework that your coding agent can use to QA test customer journeys by using community-owned plugins like [Supabase](https://docs.rocketship.sh/plugins/supabase/), [Playwright](https://docs.rocketship.sh/plugins/playwright/), [Agent](https://docs.rocketship.sh/plugins/agent/), etc. It gives your coding agent a test harness so it can ship changes without silently breaking critical flows like login, checkout, you name it. **Here's how it works:**
 
 1. You install the Rocketship CLI and add a `.rocketship` directory to your repository. Any `.yaml` files in this directory will be picked up and run by Rocketship.
-2. Your coding agent builds out a new feature, customer journey, or other user-driven scenario. It creates a new rocketship test validating that the scenario works as expected. Iterating on code until the test case passes.
-3. You check-in this new test alongside your other rocketship tests. Ensuring your coding agent never causes a code regression and breaks a critical flow in your app again.
+2. Your coding agent builds out a new feature, customer journey, or other user-driven scenario and writes a Rocketship test that asserts the flow works end-to-end.
+3. You run this test locally (and in CI) before merging. Once it’s checked in, it guards that flow against regressions every time your agent edits the code.
 
 ## Core Features
 
 - **Rocketship CLI** Run the engine locally or connect to a remote address.
 - **Declarative YAML** Define your test scenarios as declarative YAML specs.
+- **Durable Execution** Backed by Temporal for retries and long‑running tests.
 - **Built-in Features** Variable passing, retryability, lifecycle hooks, and more.
 - **Plugin Ecosystem** Add the APIs and protocols that matter to you.
 - **Deploy-Ready Images** Need to save history or run tests on a schedule? Host Rocketship on your own infra.
@@ -34,6 +35,11 @@
 ## Agent Quickstart
 
 Paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your coding agent's context window, so that it understands how to build and run tests.
+
+Once it has that context, you can:
+
+- Ask it to propose `.rocketship/*.yaml` tests for your critical flows (login, signup, checkout, etc.).
+- Have it update the matching Rocketship test whenever it edits those flows, and run `rocketship run -ad .rocketship` before committing or opening a PR.
 
 ## Human Quickstart
 
