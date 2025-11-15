@@ -2,8 +2,8 @@
   <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
   <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
-<h3 align="center">E2E Testing for Coding Agents to Write, Run, and Maintain</h3>
-<p align="center">Validate Any Data Resource, API, or Customer Journey With Declarative Tests</p>
+<h3 align="center">A testing framework for your coding agent.</h3>
+<p align="center">Let your coding agent write and run e2e tests for your customer journeys.</p>
 
 <p align="center">
   <a href="https://github.com/rocketship-ai/rocketship/releases"><img src="https://img.shields.io/github/v/release/rocketship-ai/rocketship.svg" alt="Github release"></a>
@@ -12,48 +12,52 @@
 </p>
 <p align="center">
     <a href="https://github.com/rocketship-ai/rocketship/releases">Download</a> ·
-    <a href="https://docs.rocketship.sh">Documentation</a> ·
+    <a href="https://docs.rocketship.sh">Documentation</a>
 </p>
 
-<br>
+**add gif here**<br>
 
-🚀 Rocketship is an **open‑source testing framework** that can verify complex, user-driven scenarios that are made by your customers— or your systems. Rocketship brings durable execution backed by **Temporal** to your testing infra, and offers extensible [plugins](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) so you can add the APIs and protocols that matter to you.
+🚀 Rocketship is an open‑source testing framework that your coding agent can use to QA test and verify complex, user-driven scenarios by using community-owned plugins like [Supabase](https://docs.rocketship.sh/plugins/supabase/), [Playwright](https://docs.rocketship.sh/plugins/playwright/), [Agent](https://docs.rocketship.sh/plugins/agent/), and others. **Here's how it works:**
 
-Define your test scenarios as **declarative YAML specs** -> and have Rocketship run them locally or in your cloud environment as deterministic workflows.
+1. You install the Rocketship CLI and add a `.rocketship` directory to your repository. Any `.yaml` files in this directory will be picked up and run by Rocketship.
+2. Your coding agent builds out a new feature, customer journey, or other user-driven scenario. It creates a new rocketship test validating that the scenario works as expected. Iterating on code until the test case passes.
+3. You check-in this new test alongside your other rocketship tests. Ensuring your coding agent never causes a code regression and breaks a critical flow in your app again.
 
-Core features:
+## Under The Hood
 
 - **Rocketship CLI** Run the engine locally or connect to a remote address.
-- **Deploy-Ready Images** Need long-running, highly-scalable tests? Or just want to save test history? Host Rocketship on your own infra.
 - **Declarative YAML** Define your test scenarios as declarative YAML specs.
-- **Durable Execution** Need a test step to retry? Or a test to run for 10 hours? No problem!
+- **Built-in Features** Variable passing, retryability, lifecycle hooks, and more.
 - **Plugin Ecosystem** Add the APIs and protocols that matter to you.
+- **Deploy-Ready Images** Need to save history or run tests on a schedule? Host Rocketship on your own infra.
 
 ## Getting Started
 
-#### Install
+### Install
 
-Install the CLI with Homebrew on macOS, or use the install script on for other platforms. Detailed steps live in the [Installation Guide](https://docs.rocketship.sh/installation).
+**Mac users:**
 
 ```bash
-# macOS
 brew tap rocketship-ai/tap
 brew install rocketship
+```
 
-# Linux / fallback
+**Linux bros:**
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
 ```
 
-#### Save a test spec
+### Save a test spec
 
 ```bash
-cat > rocketship.yaml << 'EOF'
-name: "Simple Test Suite"
-description: "API + Browser Testing"
-vars:
-  base_url: "https://tryme.rocketship.sh"
+mkdir -p .rocketship/auth_flows.yaml
+```
+
+```yaml
+name: "Auth Flows"
 tests:
-  - name: "User Registration and Login"
+  - name: "Existing User Login"
     steps:
       - name: "Create a new user via API"
         plugin: http
@@ -86,28 +90,17 @@ tests:
             expect(page.locator("h1")).to_contain_text("Nick Martin")
 
             result = {"verified": True}
-EOF
 ```
 
-#### Run it
+### Run it
 
 ```bash
-rocketship run -af rocketship.yaml # starts the local engine, runs the tests, shuts the engine down
+rocketship run -ad .rocketship # starts the local engine, runs the tests, shuts the engine down
 ```
 
-## For Coding Agents
+## Give Your Coding Agent Context on Rocketship
 
-If you're using a coding agent (Claude Code, Cursor, Windsurf, etc.), copy and paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your context window for a comprehensive reference guide.
-
-This quickstart covers:
-
-- Installation and setup
-- All core plugins (HTTP, Supabase, Agent, Playwright, SQL)
-- Variables and lifecycle hooks
-- Retry policies and assertions
-- Real-world examples
-
-**Direct link:** [https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md)
+Paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your coding agent's context window, so that it understands how to build and run tests.
 
 ## Documentation
 
@@ -115,7 +108,7 @@ This quickstart covers:
 
 ## Contribute!!!
 
-I would love to build this with you! I'm looking to start a community for 🚀. Reach out to me on [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [Contributing to Rocketship](https://docs.rocketship.sh/contributing).
+I would love to build this with you! Reach out to me on [LinkedIn](https://www.linkedin.com/in/magiusdarrigo) and let's chat. A great first contribution is building a [plugin](https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins) for your favorite API. If you want to contribute to Rocketship, start by reading [Contributing to Rocketship](https://docs.rocketship.sh/contributing).
 
 ## License
 
