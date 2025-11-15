@@ -122,7 +122,8 @@ func TestFindYamlTestFilesInRocketshipDir(t *testing.T) {
 	// Create tmp directory with YAML that should be excluded
 	tmpSubdir := filepath.Join(rocketDir, "tmp")
 	require.NoError(t, os.MkdirAll(tmpSubdir, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpSubdir, "scratch.yaml"), []byte("scratch"), 0644))
+	scratchPath := filepath.Join(tmpSubdir, "scratch.yaml")
+	require.NoError(t, os.WriteFile(scratchPath, []byte("scratch"), 0644))
 
 	// Find YAML test files
 	found, err := findYamlTestFiles(rocketDir)
@@ -144,7 +145,7 @@ func TestFindYamlTestFilesInRocketshipDir(t *testing.T) {
 
 	// Ensure tmp YAML is not included
 	for _, actual := range found {
-		assert.NotContains(t, actual, string(filepath.Separator)+"tmp"+string(filepath.Separator), "tmp directory files should be excluded")
+		assert.NotEqual(t, filepath.Clean(scratchPath), filepath.Clean(actual), "tmp directory files should be excluded")
 	}
 }
 
