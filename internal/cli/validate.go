@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/spf13/cobra"
@@ -16,12 +17,15 @@ func NewValidateCmd() *cobra.Command {
 		Long: `Validate one or more Rocketship test files against the JSON schema.
 This command checks test file syntax, structure, and configuration without executing tests.
 
-When validating a directory, only files named "rocketship.yaml" are validated (matching run command behavior).
+When validating a directory, Rocketship uses the same discovery logic as the run command:
+- For a .rocketship directory, all *.yaml test files are validated (excluding .rocketship/tmp/)
+- For other directories, only files named "rocketship.yaml" are validated
 
 Examples:
   rocketship validate rocketship.yaml              # Validate a single file
+  rocketship validate .rocketship                  # Validate all YAML test files in .rocketship
   rocketship validate ./tests/                     # Validate all rocketship.yaml files in directory
-  rocketship validate test1.yaml test2.yaml       # Validate multiple files`,
+  rocketship validate test1.yaml test2.yaml        # Validate multiple files`,
 		RunE: runValidate,
 	}
 }
@@ -45,8 +49,15 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		}
 
 		if stat.IsDir() {
-			// Find all rocketship.yaml files in directory (same logic as run command)
-			dirFiles, err := findRocketshipFiles(arg)
+			// Match run command behavior:
+			// - For .rocketship directories, validate all YAML test files (excluding .rocketship/tmp/)
+			// - For other directories, only validate rocketship.yaml files
+			var dirFiles []string
+			if filepath.Base(arg) == ".rocketship" {
+				dirFiles, err = findYamlTestFiles(arg)
+			} else {
+				dirFiles, err = findRocketshipFiles(arg)
+			}
 			if err != nil {
 				Logger.Error("failed to scan directory", "path", arg, "error", err)
 				totalInvalid++
@@ -59,7 +70,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(files) == 0 {
-		return fmt.Errorf("no rocketship.yaml files found to validate")
+		return fmt.Errorf("no Rocketship test files found to validate")
 	}
 
 	Logger.Info("validating files", "count", len(files))

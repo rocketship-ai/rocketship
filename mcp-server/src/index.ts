@@ -83,7 +83,7 @@ function generateToolDescriptions(knowledgeLoader: RocketshipKnowledgeLoader) {
 
   // Extract dynamic information
   const filePattern =
-    cliData?.usage?.file_structure?.pattern || "rocketship.yaml";
+    cliData?.usage?.file_structure?.pattern || ".rocketship/**/*.yaml";
   const varExamples = cliData?.usage?.syntax_patterns?.variables || {};
   const commonCommands = cliData?.usage?.common_patterns || [];
 
@@ -788,7 +788,7 @@ export class RocketshipMCPServer {
     // Use extracted CLI commands for next steps
     response += `## Next Steps\n`;
     response += `1. YOU create the directory structure shown above\n`;
-    response += `2. YOU write the rocketship.yaml files based on these examples\n`;
+    response += `2. YOU write YAML test files (e.g. auth_login.yaml, checkout.yaml) based on these examples\n`;
 
     // Use actual CLI commands from introspection
     if (cliData?.usage?.common_patterns) {
@@ -1393,7 +1393,7 @@ export class RocketshipMCPServer {
           .replace(/[^a-z0-9-]/g, "");
 
         response += `### ${i + 1}. ${flow}\n\n`;
-        response += `**Directory:** \`.rocketship/${dirName}/rocketship.yaml\`\n\n`;
+        response += `**File:** \`.rocketship/${dirName}.yaml\`\n\n`;
         response += `**Test Strategy:**\n`;
         response += `- Use the browser plugin for E2E testing\n`;
         response += `- Define natural language tasks for the AI agent\n`;
@@ -1429,27 +1429,23 @@ export class RocketshipMCPServer {
             )
           : this.extractUserFlows(codebase_info);
       for (const flow of flows.slice(0, 5)) {
-        const dirName = flow
+        const fileName = flow
           .toLowerCase()
           .replace(/\s+/g, "-")
           .replace(/[^a-z0-9-]/g, "");
-        response += `├── ${dirName}/\n`;
-        response += `│   └── rocketship.yaml    # Browser-based E2E test\n`;
+        response += `├── ${fileName}.yaml    # Browser-based E2E test\n`;
       }
     } else {
-      response += `├── health-checks/\n`;
-      response += `│   └── rocketship.yaml    # API health validation\n`;
-      response += `├── authentication/\n`;
-      response += `│   └── rocketship.yaml    # Auth flows\n`;
-      response += `├── core-workflows/\n`;
-      response += `│   └── rocketship.yaml    # Main business logic\n`;
+      response += `├── health-checks.yaml    # API health validation\n`;
+      response += `├── authentication.yaml   # Auth flows\n`;
+      response += `├── core-workflows.yaml   # Main business logic\n`;
     }
 
     response += `\`\`\`\n\n`;
 
     response += `## Next Steps\n\n`;
     response += `1. **YOU create the directory structure above**\n`;
-    response += `2. **YOU write the rocketship.yaml files**\n`;
+    response += `2. **YOU write YAML test files**\n`;
     response += `3. Run: \`rocketship validate .rocketship\`\n`;
     response += `4. Run: \`rocketship run -ad .rocketship\`\n\n`;
 

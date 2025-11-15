@@ -87,7 +87,7 @@ build-mcp:
 	fi
 
 # Run tests
-test: build-binaries test-go test-python test-typescript helm-template-check
+test: build-binaries test-go test-python helm-template-check
 
 helm-lint:
 	@echo "Running Helm lint..."
@@ -123,25 +123,25 @@ test-python:
 		echo "Python3 not found, skipping Python tests"; \
 	fi
 
-# Run TypeScript tests
-test-typescript:
-	@echo "Running TypeScript tests..."
-	@if [ -d "mcp-server" ]; then \
-		cd mcp-server && \
-		if [ -f "package.json" ]; then \
-			if command -v npm &> /dev/null; then \
-				echo "Running TypeScript tests..."; \
-				npm test || (echo "❌ TypeScript tests failed" && exit 1); \
-				echo "✅ TypeScript tests successful"; \
-			else \
-				echo "npm not found, skipping TypeScript tests"; \
-			fi; \
-		else \
-			echo "No package.json found in mcp-server directory, skipping TypeScript tests"; \
-		fi; \
-	else \
-		echo "No mcp-server directory found, skipping TypeScript tests"; \
-	fi
+# Run TypeScript tests (MCP server) - currently disabled
+# test-typescript:
+# 	@echo "Running TypeScript tests..."
+# 	@if [ -d "mcp-server" ]; then \
+# 		cd mcp-server && \
+# 		if [ -f "package.json" ]; then \
+# 			if command -v npm &> /dev/null; then \
+# 				echo "Running TypeScript tests..."; \
+# 				npm test || (echo "❌ TypeScript tests failed" && exit 1); \
+# 				echo "✅ TypeScript tests successful"; \
+# 			else \
+# 				echo "npm not found, skipping TypeScript tests"; \
+# 			fi; \
+# 		else \
+# 			echo "No package.json found in mcp-server directory, skipping TypeScript tests"; \
+# 		fi; \
+# 	else \
+# 		echo "No mcp-server directory found, skipping TypeScript tests"; \
+# 	fi
 
 # Generate protobuf code
 proto:

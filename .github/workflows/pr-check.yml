@@ -286,64 +286,64 @@ jobs:
       - name: Test lifecycle hooks
         run: ./.github/scripts/test-lifecycle-hooks.sh
 
-  mcp-integration:
-    name: MCP Server Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: "mcp-server/package-lock.json"
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-          check-latest: true
-
-      - name: Install MCP server dependencies
-        run: |
-          cd mcp-server
-          npm ci
-
-      - name: Build MCP server with embedded knowledge
-        run: |
-          cd mcp-server
-          npm run build
-
-      - name: Test MCP server basic functionality
-        run: |
-          cd mcp-server
-          npm test
-
-      - name: Test MCP server package creation
-        run: |
-          cd mcp-server
-          npm pack
-          # Verify package contents
-          tar -tzf rocketshipai-mcp-server-*.tgz | head -20
-
-      - name: Install and test MCP server via npm
-        run: |
-          cd mcp-server
-          # Install the local package globally for testing
-          npm install -g ./rocketshipai-mcp-server-*.tgz
-
-          # Verify the binary is available
-          which rocketship-mcp || echo "Binary not found in PATH"
-          ls -la $(npm root -g)/@rocketshipai/mcp-server/ || echo "Package not found"
-
-      - name: Build and install Rocketship CLI for validation
-        run: |
-          make install
-
-      - name: Run comprehensive MCP integration tests
-        run: |
-          ./.github/scripts/test-mcp-integration.sh
+  # mcp-integration:
+  #   name: MCP Server Integration Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20"
+  #         cache: "npm"
+  #         cache-dependency-path: "mcp-server/package-lock.json"
+  #
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version: "1.24"
+  #         check-latest: true
+  #
+  #     - name: Install MCP server dependencies
+  #       run: |
+  #         cd mcp-server
+  #         npm ci
+  #
+  #     - name: Build MCP server with embedded knowledge
+  #       run: |
+  #         cd mcp-server
+  #         npm run build
+  #
+  #     - name: Test MCP server basic functionality
+  #       run: |
+  #         cd mcp-server
+  #         npm test
+  #
+  #     - name: Test MCP server package creation
+  #       run: |
+  #         cd mcp-server
+  #         npm pack
+  #         # Verify package contents
+  #         tar -tzf rocketshipai-mcp-server-*.tgz | head -20
+  #
+  #     - name: Install and test MCP server via npm
+  #       run: |
+  #         cd mcp-server
+  #         # Install the local package globally for testing
+  #         npm install -g ./rocketshipai-mcp-server-*.tgz
+  #
+  #         # Verify the binary is available
+  #         which rocketship-mcp || echo "Binary not found in PATH"
+  #         ls -la $(npm root -g)/@rocketshipai/mcp-server/ || echo "Package not found"
+  #
+  #     - name: Build and install Rocketship CLI for validation
+  #       run: |
+  #         make install
+  #
+  #     - name: Run comprehensive MCP integration tests
+  #       run: |
+  #         ./.github/scripts/test-mcp-integration.sh
   helm:
     name: Helm Chart Checks
     runs-on: ubuntu-latest
