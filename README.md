@@ -23,7 +23,7 @@
 2. Your coding agent builds out a new feature, customer journey, or other user-driven scenario. It creates a new rocketship test validating that the scenario works as expected. Iterating on code until the test case passes.
 3. You check-in this new test alongside your other rocketship tests. Ensuring your coding agent never causes a code regression and breaks a critical flow in your app again.
 
-## Under The Hood
+## Core Features
 
 - **Rocketship CLI** Run the engine locally or connect to a remote address.
 - **Declarative YAML** Define your test scenarios as declarative YAML specs.
