@@ -23,12 +23,12 @@ func TestNewRunCmd(t *testing.T) {
 	fileFlag := cmd.Flags().Lookup("file")
 	assert.NotNil(t, fileFlag, "file flag should exist")
 	assert.Equal(t, "file", fileFlag.Name)
-	assert.Equal(t, "Path to a rocketship.yaml file (must be named 'rocketship.yaml')", fileFlag.Usage)
+	assert.Equal(t, "Path to a Rocketship test file (YAML)", fileFlag.Usage)
 
 	dirFlag := cmd.Flags().Lookup("dir")
 	assert.NotNil(t, dirFlag, "dir flag should exist")
 	assert.Equal(t, "dir", dirFlag.Name)
-	assert.Equal(t, "Path to directory containing test files (will run all rocketship.yaml files recursively)", dirFlag.Usage)
+	assert.Equal(t, "Path to directory containing test files (for .rocketship, runs all YAML test files recursively)", dirFlag.Usage)
 }
 
 func TestFindRocketshipFiles(t *testing.T) {
@@ -97,6 +97,55 @@ func TestFindRocketshipFiles(t *testing.T) {
 	// Test with non-existent directory
 	_, err = findRocketshipFiles(filepath.Join(tmpDir, "nonexistent"))
 	assert.Error(t, err, "Should return error for non-existent directory")
+}
+
+func TestFindYamlTestFilesInRocketshipDir(t *testing.T) {
+	// Create a temporary .rocketship directory structure for testing
+	tmpDir, err := os.MkdirTemp("", "rocketship-yaml-test-*")
+	require.NoError(t, err)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	rocketDir := filepath.Join(tmpDir, ".rocketship")
+	require.NoError(t, os.MkdirAll(rocketDir, 0755))
+
+	// Create test YAML files that should be included
+	includeFiles := []string{
+		filepath.Join(rocketDir, "auth_login.yaml"),
+		filepath.Join(rocketDir, "payments.yaml"),
+		filepath.Join(rocketDir, "nested", "flow.yaml"),
+	}
+	for _, path := range includeFiles {
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+		require.NoError(t, os.WriteFile(path, []byte("test"), 0644))
+	}
+
+	// Create tmp directory with YAML that should be excluded
+	tmpSubdir := filepath.Join(rocketDir, "tmp")
+	require.NoError(t, os.MkdirAll(tmpSubdir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpSubdir, "scratch.yaml"), []byte("scratch"), 0644))
+
+	// Find YAML test files
+	found, err := findYamlTestFiles(rocketDir)
+	require.NoError(t, err)
+
+	// Should find exactly the non-tmp YAML files
+	assert.Equal(t, len(includeFiles), len(found), "Should find only YAML files outside tmp/")
+
+	for _, expected := range includeFiles {
+		wasFound := false
+		for _, actual := range found {
+			if filepath.Clean(actual) == filepath.Clean(expected) {
+				wasFound = true
+				break
+			}
+		}
+		assert.True(t, wasFound, "Should find %s", expected)
+	}
+
+	// Ensure tmp YAML is not included
+	for _, actual := range found {
+		assert.NotContains(t, actual, string(filepath.Separator)+"tmp"+string(filepath.Separator), "tmp directory files should be excluded")
+	}
 }
 
 func TestAutoModeCleanupOnCancellation(t *testing.T) {

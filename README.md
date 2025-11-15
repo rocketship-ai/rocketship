@@ -51,45 +51,53 @@ curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scrip
 ### Save a test spec
 
 ```bash
-mkdir -p .rocketship/auth_flows.yaml
+mkdir -p .rocketship
 ```
 
 ```yaml
+# .rocketship/auth_flows.yaml
 name: "Auth Flows"
 tests:
-  - name: "Existing User Login"
+  - name: "Existing user can log in"
     steps:
-      - name: "Create a new user via API"
-        plugin: http
+      - name: "Create user in Supabase"
+        plugin: supabase
         config:
-          method: POST
-          url: "{{ .vars.base_url }}/users"
-          body: |
-            {
-              "name": "Nick Martin",
-              "email": "nick@rocketship.sh"
-            }
-        assertions:
-          - type: status_code
-            expected: 200
+          url: "{{ .env.SUPABASE_URL }}"
+          key: "{{ .env.SUPABASE_KEY }}"
+          operation: "auth_sign_up"
+          auth:
+            email: "test-{{ .run.id }}@example.com"
+            password: "password123"
         save:
-          - json_path: ".id"
-            as: "user_id"
+          - json_path: ".user.email"
+            as: "login_email"
+          - json_path: ".user.id"
+            as: "supabase_user_id"
 
-      - name: "Verify user in browser"
+      - name: "Log in via browser"
         plugin: playwright
         config:
           role: script
           script: |
             from playwright.sync_api import expect
 
-            # Navigate to user profile
-            page.goto("{{ .vars.base_url }}/users/{{ user_id }}")
+            page.goto("{{ .env.FRONTEND_URL }}/login")
+            page.locator("input[type='email']").fill("{{ login_email }}")
+            page.locator("input[type='password']").fill("password123")
+            page.locator("button[type='submit']").click()
 
-            # Verify user details are displayed
-            expect(page.locator("h1")).to_contain_text("Nick Martin")
+            expect(page).to_have_url("{{ .env.FRONTEND_URL }}/dashboard")
 
-            result = {"verified": True}
+      - name: "AI checks dashboard"
+        plugin: agent
+        config:
+          prompt: |
+            In the current browser session, verify:
+            - The dashboard loaded for the logged-in user
+            - The page greets the user with their email: "Hello {{ login_email }}" (or similar)
+            - A "New Project" or similar CTA is visible
+          capabilities: ["browser"]
 ```
 
 ### Run it
