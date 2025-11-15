@@ -64,6 +64,7 @@ nav:
           - Supabase: plugins/supabase.md
           - Agent: plugins/agent.md
           - Playwright: plugins/playwright.md
+          - Browser Use: plugins/browser-use.md
           - Script: plugins/script.md
           - Delay: plugins/delay.md
           - Log: plugins/log.md

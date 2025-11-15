@@ -52,7 +52,6 @@ tests:
 ```bash
 rocketship run -af test.yaml      # Run a test file with auto start/stop of local server
 rocketship run -ad .rocketship    # starts the local engine, runs the tests, shuts the engine down
-
 ```
 
 ## Variables
@@ -134,6 +133,15 @@ rocketship run -ad .rocketship    # starts the local engine, runs the tests, shu
 
 More operations: `select`, `insert`, `update`, `delete`, `rpc`, `auth_sign_in`, `auth_create_user`, `auth_delete_user`, `storage_*`. See docs for full examples.
 
+### Log Plugin
+
+```yaml
+- plugin: log
+  config:
+    message: "Starting auth flow for run {{ .run.id }}"
+    level: "INFO"
+```
+
 ### Playwright Plugin (Scripted Browser)
 
 ```yaml
@@ -166,20 +174,32 @@ More operations: `select`, `insert`, `update`, `delete`, `rpc`, `auth_sign_in`, 
 
 **Capabilities**: `["browser"]` lets the agent hook into a browser session created by Rocketship (e.g., via the Playwright plugin).
 
+### Script Plugin
+
+```yaml
+- plugin: script
+  config:
+    language: javascript
+    script: |
+      const email = state.user_email || "test@example.com";
+      save("normalized_email", email.toLowerCase());
+```
+
 ## Plugin Docs
 
-| Plugin       | Description                          | Docs URL                                       |
-| ------------ | ------------------------------------ | ---------------------------------------------- |
-| `http`       | HTTP/API testing                     | https://docs.rocketship.sh/plugins/http/       |
-| `supabase`   | Supabase DB/auth/storage             | https://docs.rocketship.sh/plugins/supabase/   |
-| `sql`        | SQL databases                        | https://docs.rocketship.sh/plugins/sql/        |
-| `agent`      | AI-driven testing with browser tools | https://docs.rocketship.sh/plugins/agent/      |
-| `playwright` | Scripted browser automation          | https://docs.rocketship.sh/plugins/playwright/ |
-| `script`     | JS/shell scripting                   | https://docs.rocketship.sh/plugins/script/     |
-| `log`        | Logging within tests                 | https://docs.rocketship.sh/plugins/log/        |
-| `delay`      | Fixed delays between steps           | https://docs.rocketship.sh/plugins/delay/      |
+| Plugin        | Description                                                            | Docs URL                                        |
+| ------------- | ---------------------------------------------------------------------- | ----------------------------------------------- |
+| `http`        | HTTP/API testing                                                       | https://docs.rocketship.sh/plugins/http/        |
+| `supabase`    | Supabase DB/auth/storage                                               | https://docs.rocketship.sh/plugins/supabase/    |
+| `sql`         | SQL databases                                                          | https://docs.rocketship.sh/plugins/sql/         |
+| `agent`       | AI-driven testing with browser tools                                   | https://docs.rocketship.sh/plugins/agent/       |
+| `playwright`  | Scripted browser automation                                            | https://docs.rocketship.sh/plugins/playwright/  |
+| `browser_use` | Cheaper AI for browser automation but way less performant than `agent` | https://docs.rocketship.sh/plugins/browser-use/ |
+| `script`      | JS/shell scripting                                                     | https://docs.rocketship.sh/plugins/script/      |
+| `log`         | Logging within tests                                                   | https://docs.rocketship.sh/plugins/log/         |
+| `delay`       | Fixed delays between steps                                             | https://docs.rocketship.sh/plugins/delay/       |
 
-## Advanced Features (Pointers Only)
+## Advanced Features
 
 - **Lifecycle Hooks**: `init`, `cleanup.always`, `cleanup.on_failure` for setup/teardown.
   Docs: https://docs.rocketship.sh/features/lifecycle-hooks/
