@@ -378,9 +378,9 @@ func displayRecentRuns(client *EngineClient) error {
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "Run rocketship tests",
-		Long:  `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
+		Use:          "run",
+		Short:        "Run rocketship tests",
+		Long:         `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
 		SilenceUsage: true, // Don't print usage on test failures
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create a context that we can cancel
@@ -426,7 +426,7 @@ func NewRunCmd() *cobra.Command {
 					for i, c := range components {
 						componentNames[i] = c.String()
 					}
-					return fmt.Errorf("cannot start in auto mode - server components already running: %s", strings.Join(componentNames, ", "))
+					return fmt.Errorf("cannot start in auto mode - server components already running: %s\nRun `rocketship stop server` to stop the server and try again", strings.Join(componentNames, ", "))
 				}
 
 				if err := setupLocalServerBackground(); err != nil {

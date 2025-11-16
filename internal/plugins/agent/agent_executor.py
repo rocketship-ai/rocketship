@@ -86,6 +86,47 @@ def _extract_text_content(message: Any) -> str:
     return ""  # Skip system messages and metadata
 
 
+def _parse_timeout_duration(timeout_str: str) -> float:
+    """
+    Parse timeout string into seconds.
+    Supports: "90s", "2m", "1h", "1h30m", or bare seconds "60".
+    Returns timeout in seconds as a float.
+    Raises ValueError if format is invalid.
+    """
+    if not timeout_str:
+        raise ValueError("Empty timeout string")
+
+    timeout_str = timeout_str.strip()
+
+    # Try bare number first (assumed to be seconds)
+    try:
+        return float(timeout_str)
+    except ValueError:
+        pass
+
+    # Parse duration with units: 1h30m45s, 90s, 2m, etc.
+    import re
+
+    total_seconds = 0.0
+    # Pattern: number followed by unit (h, m, s)
+    pattern = r'(\d+(?:\.\d+)?)(h|m|s)'
+    matches = re.findall(pattern, timeout_str.lower())
+
+    if not matches:
+        raise ValueError(f"Invalid timeout format: {timeout_str}. Use formats like '90s', '2m', '1h30m', or bare seconds '60'")
+
+    for value, unit in matches:
+        num = float(value)
+        if unit == 'h':
+            total_seconds += num * 3600
+        elif unit == 'm':
+            total_seconds += num * 60
+        elif unit == 's':
+            total_seconds += num
+
+    return total_seconds
+
+
 def _parse_agent_result(response_text: str) -> dict:
     """
     Parse agent response to check if it contains test assertion results.
@@ -131,13 +172,21 @@ def _parse_agent_result(response_text: str) -> dict:
     }
 
 
-async def _execute_agent(config: Dict[str, Any]) -> None:
-    """Execute Claude agent with the given configuration"""
+async def _execute_agent_impl(config: Dict[str, Any]) -> None:
+    """
+    Execute Claude agent with the given configuration.
+    This is the core implementation that will be wrapped with timeout handling.
+    """
     logger.info(f"Executing agent with mode: {config.get('mode', 'single')}")
 
     # Parse MCP servers configuration
     mcp_servers = {}
-    for name, server_config in config.get("mcp_servers", {}).items():
+    mcp_server_configs = config.get("mcp_servers", {})
+
+    if mcp_server_configs:
+        logger.info(f"Configuring {len(mcp_server_configs)} MCP server(s)")
+
+    for name, server_config in mcp_server_configs.items():
         server_type = server_config.get("type", "stdio")
 
         if server_type == "stdio":
@@ -147,7 +196,7 @@ async def _execute_agent(config: Dict[str, Any]) -> None:
                 "args": server_config.get("args", []),
                 "env": server_config.get("env", {})
             }
-            logger.info(f"Configured stdio MCP server: {name} -> {server_config['command']}")
+            logger.info(f"MCP server '{name}': stdio command={server_config['command']} args={server_config.get('args', [])}")
 
         elif server_type == "sse":
             mcp_servers[name] = {
@@ -155,7 +204,7 @@ async def _execute_agent(config: Dict[str, Any]) -> None:
                 "url": server_config["url"],
                 "headers": server_config.get("headers", {})
             }
-            logger.info(f"Configured SSE MCP server: {name} -> {server_config['url']}")
+            logger.info(f"MCP server '{name}': SSE url={server_config['url']}")
 
         else:
             _write({"ok": False, "error": f"Unsupported MCP server type: {server_type}"})
@@ -176,6 +225,7 @@ async def _execute_agent(config: Dict[str, Any]) -> None:
     # Build ClaudeAgentOptions
     options_kwargs = {
         "mcp_servers": mcp_servers if mcp_servers else None,
+        "max_buffer_size": 8 * 1024 * 1024,  # 8MB buffer to prevent overflow with large MCP responses
     }
 
     if allowed_tools is not None:
@@ -275,6 +325,56 @@ async def _execute_agent(config: Dict[str, Any]) -> None:
             "ok": False,
             "error": str(exc),
             "traceback": tb
+        })
+
+
+async def _execute_agent(config: Dict[str, Any]) -> None:
+    """
+    Execute Claude agent with timeout handling.
+    Wraps _execute_agent_impl with asyncio.wait_for for robust timeout enforcement.
+    """
+    # Parse timeout from config
+    timeout_str = config.get("timeout", "")
+    timeout_seconds = None
+
+    if timeout_str:
+        try:
+            timeout_seconds = _parse_timeout_duration(timeout_str)
+            logger.info(f"Agent execution timeout set to {timeout_seconds}s (from config: '{timeout_str}')")
+        except ValueError as e:
+            _write({
+                "ok": False,
+                "error": f"Invalid timeout format: {e}"
+            })
+            return
+
+    # Execute with timeout if specified
+    try:
+        if timeout_seconds is not None:
+            await asyncio.wait_for(_execute_agent_impl(config), timeout=timeout_seconds)
+        else:
+            # No timeout - run without limit
+            await _execute_agent_impl(config)
+
+    except asyncio.TimeoutError:
+        error_msg = f"Agent execution timed out after {timeout_seconds}s"
+        logger.error(error_msg)
+        _write({
+            "ok": False,
+            "error": error_msg,
+            "mode": config.get("mode", "single")
+        })
+    except Exception as exc:
+        # Catch any exceptions that escaped _execute_agent_impl
+        # (e.g., from async generators that crash before exception handlers)
+        logger.error(f"Fatal error in agent execution: {exc}")
+        tb = traceback.format_exc()
+        logger.error(f"Traceback:\n{tb}")
+        _write({
+            "ok": False,
+            "error": f"Fatal error: {exc}",
+            "traceback": tb,
+            "mode": config.get("mode", "single")
         })
 
 
