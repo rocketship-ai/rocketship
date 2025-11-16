@@ -88,6 +88,17 @@ func processConfigTemplates(yamlData []byte, vars map[string]interface{}) ([]byt
 	return processedYaml, nil
 }
 
+// isReservedTestDir returns true if a directory name is reserved for internal use
+// within the .rocketship tree (e.g. tmp scratch space).
+func isReservedTestDir(name string) bool {
+	switch name {
+	case "tmp":
+		return true
+	default:
+		return false
+	}
+}
+
 // findRocketshipFiles recursively finds all rocketship.yaml files in the given directory
 func findRocketshipFiles(dir string) ([]string, error) {
 	var files []string
@@ -96,6 +107,27 @@ func findRocketshipFiles(dir string) ([]string, error) {
 			return err
 		}
 		if !info.IsDir() && (info.Name() == "rocketship.yaml") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	return files, err
+}
+
+// findYamlTestFiles recursively finds all YAML test files in the given directory.
+// Used for the .rocketship directory, where any *.yaml file is considered a test suite,
+// except for files under a tmp/ directory (e.g. .rocketship/tmp/).
+func findYamlTestFiles(dir string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && isReservedTestDir(info.Name()) {
+			// Skip reserved directories like .rocketship/tmp/
+			return filepath.SkipDir
+		}
+		if !info.IsDir() && strings.HasSuffix(info.Name(), ".yaml") {
 			files = append(files, path)
 		}
 		return nil
@@ -346,9 +378,9 @@ func displayRecentRuns(client *EngineClient) error {
 // NewRunCmd creates a new run command
 func NewRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "Run rocketship tests",
-		Long:  `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
+		Use:          "run",
+		Short:        "Run rocketship tests",
+		Long:         `Run rocketship tests from YAML files. Can run a single file or all tests in a directory.`,
 		SilenceUsage: true, // Don't print usage on test failures
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Create a context that we can cancel
@@ -394,7 +426,7 @@ func NewRunCmd() *cobra.Command {
 					for i, c := range components {
 						componentNames[i] = c.String()
 					}
-					return fmt.Errorf("cannot start in auto mode - server components already running: %s", strings.Join(componentNames, ", "))
+					return fmt.Errorf("cannot start in auto mode - server components already running: %s\nRun `rocketship stop server` to stop the server and try again", strings.Join(componentNames, ", "))
 				}
 
 				if err := setupLocalServerBackground(); err != nil {
@@ -510,19 +542,27 @@ func NewRunCmd() *cobra.Command {
 			var testFiles []string
 
 			if dirPath != "" {
-				// Find all rocketship.yaml files in the directory
-				testFiles, err = findRocketshipFiles(dirPath)
-				if err != nil {
-					return fmt.Errorf("failed to find test files: %w", err)
-				}
-				if len(testFiles) == 0 {
-					return fmt.Errorf("no rocketship.yaml files found in directory: %s", dirPath)
+				// When pointing at a .rocketship directory, treat any *.yaml file as a test suite
+				// (excluding scratch files under .rocketship/tmp). For other directories, preserve
+				// the existing behavior of only running rocketship.yaml files.
+				if filepath.Base(dirPath) == ".rocketship" {
+					testFiles, err = findYamlTestFiles(dirPath)
+					if err != nil {
+						return fmt.Errorf("failed to find test files: %w", err)
+					}
+					if len(testFiles) == 0 {
+						return fmt.Errorf("no YAML test files found in directory: %s", dirPath)
+					}
+				} else {
+					testFiles, err = findRocketshipFiles(dirPath)
+					if err != nil {
+						return fmt.Errorf("failed to find test files: %w", err)
+					}
+					if len(testFiles) == 0 {
+						return fmt.Errorf("no rocketship.yaml files found in directory: %s", dirPath)
+					}
 				}
 			} else if testFile != "" {
-				// Validate that the file is named rocketship.yaml
-				if filepath.Base(testFile) != "rocketship.yaml" {
-					return fmt.Errorf("file must be named 'rocketship.yaml', got: %s", filepath.Base(testFile))
-				}
 				testFiles = []string{testFile}
 			} else {
 				// Look for rocketship.yaml in current directory
@@ -613,8 +653,8 @@ func NewRunCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringP("file", "f", "", "Path to a rocketship.yaml file (must be named 'rocketship.yaml')")
-	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (will run all rocketship.yaml files recursively)")
+	cmd.Flags().StringP("file", "f", "", "Path to a Rocketship test file (YAML)")
+	cmd.Flags().StringP("dir", "d", "", "Path to directory containing test files (for .rocketship, runs all YAML test files recursively)")
 	cmd.Flags().StringP("engine", "e", "", "Address of the rocketship engine (defaults to active profile)")
 	cmd.Flags().BoolP("auto", "a", false, "Automatically start and stop the local server for test execution")
 	cmd.Flags().StringToStringP("var", "v", nil, "Set variables (can be used multiple times: --var key=value --var nested.key=value)")

@@ -4,15 +4,22 @@ import (
 	"crypto/rand"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/oklog/ulid/v2"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
 )
 
-var ulidEntropy = ulid.Monotonic(rand.Reader, 0)
+var (
+	ulidEntropy = ulid.Monotonic(rand.Reader, 0)
+	ulidMutex   sync.Mutex
+)
 
 func generateID() (string, error) {
+	ulidMutex.Lock()
+	defer ulidMutex.Unlock()
+
 	id, err := ulid.New(ulid.Timestamp(time.Now()), ulidEntropy)
 	if err != nil {
 		return "", err

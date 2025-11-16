@@ -56,7 +56,6 @@ nav:
       - Installation: installation.md
       - Quick Start: quickstart.md
   - Features:
-      - Overview: features/index.md
       - Plugins:
           - Overview: plugins/index.md
           - Reference: yaml-reference/plugin-reference.md
@@ -72,7 +71,6 @@ nav:
       - Variables: features/variables.md
       - Lifecycle Hooks: features/lifecycle-hooks.md
       - Retry Policies: features/retry-policies.md
-      - MCP Server: mcp-server.md
   - Deploy On Your Cloud:
       - Overview: deploy-on-your-cloud.md
       - Minikube (Local): deploy/minikube.md

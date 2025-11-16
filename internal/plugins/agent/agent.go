@@ -58,6 +58,13 @@ func (ap *AgentPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 		return nil, fmt.Errorf("failed to parse agent config: %w", err)
 	}
 
+	logger.Debug("Agent config resolved",
+		"mode", config.Mode,
+		"session_id", config.SessionID,
+		"capabilities", config.Capabilities,
+		"timeout", config.Timeout,
+	)
+
 	// Validate required fields
 	if config.Prompt == "" {
 		return nil, fmt.Errorf("prompt is required")
@@ -83,7 +90,7 @@ Example: "save the heading as 'page_heading'" → {"ok": true, "result": "Found 
 No code changing. No awaiting user input. If you need file writing as a scratchpad, write to .rocketship/tmp/agent-scratch/ directory.
 Clean up ONLY your own scratch files after you are done with the task.`
 
-	// Default to wildcard tools - if you're using MCP servers, you want to use them
+	// Configure default allowed tools
 	if len(config.AllowedTools) == 0 {
 		config.AllowedTools = []string{"*"}
 	}
@@ -188,6 +195,9 @@ Clean up ONLY your own scratch files after you are done with the task.`
 func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[string]interface{}) (*ExecutorResult, error) {
 	startTime := time.Now()
 
+	log.Printf("[DEBUG] Agent execute: starting Python executor (mode=%s, session_id=%s, capabilities=%v, timeout=%s)",
+		cfg.Mode, cfg.SessionID, cfg.Capabilities, cfg.Timeout)
+
 	// Prepare executor script
 	executorPath, cleanup, err := prepareExecutorScript()
 	if err != nil {
@@ -206,6 +216,9 @@ func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[strin
 	// Check if agent needs Playwright MCP with CDP connection
 	if cfg.MCPServers != nil {
 		if playwrightServer, ok := cfg.MCPServers["playwright"]; ok {
+			log.Printf("[DEBUG] Agent execute: found Playwright MCP server config (command=%s, args=%v)",
+				playwrightServer.Command, playwrightServer.Args)
+
 			// Ensure the server config has args array
 			if playwrightServer.Args == nil {
 				playwrightServer.Args = []string{}
@@ -228,8 +241,14 @@ func (ap *AgentPlugin) execute(ctx context.Context, cfg *Config, state map[strin
 					playwrightServer.Args = append(playwrightServer.Args, "--cdp-endpoint", wsEndpoint)
 				} else if err != nil {
 					log.Printf("[WARN] Failed to read session file for CDP connection: %v", err)
+				} else {
+					log.Printf("[WARN] Session file for session_id=%s did not contain a valid wsEndpoint", cfg.SessionID)
 				}
+			} else {
+				log.Printf("[DEBUG] Agent execute: no session_id provided; Playwright MCP will not use CDP endpoint")
 			}
+
+			log.Printf("[DEBUG] Agent execute: final Playwright MCP args: %v", playwrightServer.Args)
 
 			// Update the config
 			cfg.MCPServers["playwright"] = playwrightServer
@@ -463,6 +482,7 @@ func parseConfig(configData map[string]interface{}, templateContext dsl.Template
 		// Support single string (e.g., "*")
 		config.AllowedTools = []string{allowedToolsStr}
 	}
+
 
 	// Parse api_key with template processing, auto-detect from ANTHROPIC_API_KEY if not provided
 	if apiKey, ok := configData["api_key"].(string); ok {

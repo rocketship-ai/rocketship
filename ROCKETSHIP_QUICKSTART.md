@@ -1,12 +1,12 @@
 # Rocketship Agent Quickstart
 
-Comprehensive reference for coding agents, like you, to write Rocketship tests.
+Short reference for coding agents (Cursor, Claude Code, Windsurf, etc.) to write and run Rocketship tests.
 
 ## What is Rocketship?
 
-Testing framework for browser and API testing. A rocketship.yaml file is a test suite for Rocketship. Made up of 1 or more tests. Each test is made up of 1 or more steps. Each step is a plugin that is executed. You can run a single file with the -f flag, or an entire .rocketship directory with the -d flag.
+Rocketship is a testing framework for browser and API testing. A Rocketship test suite is a YAML file (typically kept in a `.rocketship` directory) made up of one or more tests. Each test has steps, and each step calls a plugin (http, supabase, playwright, agent, etc.).
 
-If you are wanting to run tests locally, use the -a flag to automatically start and stop the local server.
+You can run a single file with `-f` or an entire `.rocketship` directory with `-d`. Use `-a` to automatically start and stop the local server.
 
 ## Installation
 
@@ -17,8 +17,14 @@ brew tap rocketship-ai/tap && brew install rocketship
 # Linux/macOS (portable)
 curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
 
-# Prerequisites (if you want to run tests locally)
+# ----- PREREQS -----
+# required for local runs
 brew install temporal
+# required for browser testing
+pip install playwright
+playwright install chromium
+# required for agent plugin steps
+pip install claude-agent-sdk
 ```
 
 ## Basic Test Structure
@@ -44,8 +50,8 @@ tests:
 ## Running Tests
 
 ```bash
-rocketship run -af test.yaml      # Run a test file with auto start and stop the local server
-rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST name all test files as rocketship.yaml in the directory recursively)
+rocketship run -af test.yaml      # Run a test file with auto start/stop of local server
+rocketship run -ad .rocketship    # starts the local engine, runs the tests, shuts the engine down
 ```
 
 ## Variables
@@ -68,13 +74,13 @@ rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST na
 
 ### Passing Variables and Environment
 
-**Environment variables** (3 ways):
+**Environment variables**:
 
-1. From system: `export API_KEY=abc && rocketship run -af test.yaml`
-2. From .env file: `rocketship run -af test.yaml --env-file .env`
-3. From .env file with custom path: `rocketship run -af test.yaml --env-file config/.env.staging`
+1. System: `export API_KEY=abc && rocketship run -af test.yaml`
+2. .env file: `rocketship run -af test.yaml --env-file .env`
+3. Custom .env path: `rocketship run -af test.yaml --env-file config/.env.staging`
 
-**Config variables** (3 ways):
+**Config variables**:
 
 1. In YAML: `vars: { base_url: "https://api.example.com" }`
 2. Override via CLI: `rocketship run -af test.yaml --var base_url=https://staging.api.example.com`
@@ -85,7 +91,7 @@ rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST na
 - Environment: System env > `--env-file`
 - Config: `--var` CLI flags > `--var-file` > YAML `vars`
 
-## Core Plugins
+## Core Plugins (Quick Examples)
 
 ### HTTP Plugin
 
@@ -104,14 +110,9 @@ rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST na
   assertions:
     - type: "status_code"
       expected: 201
-    - type: "json_path"
-      path: ".email"
-      expected: "test-{{ .run.id }}@example.com"
   save:
     - json_path: ".id"
       as: "user_id"
-    - header: "X-Request-ID"
-      as: "request_id"
 ```
 
 ### Supabase Plugin
@@ -121,37 +122,25 @@ rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST na
   config:
     url: "{{ .env.SUPABASE_URL }}"
     key: "{{ .env.SUPABASE_KEY }}"
-    operation: "insert"
-    table: "users"
-    insert:
-      data:
-        email: "test@example.com"
-        name: "Test User"
+    operation: "auth_sign_up"
+    auth:
+      email: "test-{{ .run.id }}@example.com"
+      password: "password123"
   save:
-    - json_path: ".data[0].id"
+    - json_path: ".user.id"
       as: "user_id"
 ```
 
-**Supported operations**: `select`, `insert`, `update`, `delete`, `rpc`, `auth_sign_up`, `auth_sign_in`, `auth_create_user`, `auth_delete_user`, `storage_upload`, `storage_download`, `storage_delete`, `storage_create_bucket`, `storage_delete_bucket`
+More operations: `select`, `insert`, `update`, `delete`, `rpc`, `auth_sign_in`, `auth_create_user`, `auth_delete_user`, `storage_*`. See docs for full examples.
 
-[Full docs with examples](https://docs.rocketship.sh/plugins/supabase/)
-
-### Agent Plugin (AI-Driven)
+### Log Plugin
 
 ```yaml
-- plugin: agent
+- plugin: log
   config:
-    prompt: |
-      Navigate to {{ .env.FRONTEND_URL }}/login and verify:
-      - Login form is visible with email and password fields
-      - Submit button is present
-      - Form validation works correctly
-    max_turns: 10
-    timeout: "5m"
-    capabilities: ["browser"]
+    message: "Starting auth flow for run {{ .run.id }}"
+    level: "INFO"
 ```
-
-**Capabilities**: Agent can use tools based on configured capabilities. Browser capability (`browser`) is the only one currently available in the agent plugin config. Browser capability allows the agent to hook into a browser session that rocketship makes.
 
 ### Playwright Plugin (Scripted Browser)
 
@@ -170,141 +159,56 @@ rocketship run -ad .rocketship    # Run an entire .rocketship directory (MUST na
       expect(page).to_have_url("{{ .env.FRONTEND_URL }}/dashboard")
 ```
 
-### Other Plugins
-
-For full examples, curl the docs at https://docs.rocketship.sh/plugins/
-
-- **SQL**: Database operations (PostgreSQL, MySQL, SQLite, SQL Server) - [docs](https://docs.rocketship.sh/plugins/sql/)
-- **Script**: JavaScript/shell execution - [docs](https://docs.rocketship.sh/plugins/script/)
-- **Delay**: Fixed delays between steps - [docs](https://docs.rocketship.sh/plugins/delay/)
-- **Log**: Output messages during execution - [docs](https://docs.rocketship.sh/plugins/log/)
-- **Browser Use**: AI-driven browser (poor performance, use Agent instead) - [docs](https://docs.rocketship.sh/plugins/browser-use/)
-
-## Lifecycle Hooks
+### Agent Plugin (AI-Driven)
 
 ```yaml
-name: "API Test Suite"
-
-init:
-  - name: "Get auth token"
-    plugin: http
-    config:
-      method: POST
-      url: "{{ .env.API_URL }}/auth/token"
-    save:
-      - json_path: ".token"
-        as: "api_token"
-
-tests:
-  - name: "Test with token"
-    steps:
-      - plugin: http
-        config:
-          headers:
-            Authorization: "Bearer {{ api_token }}"
-
-cleanup:
-  always:
-    - name: "Cleanup test data"
-      plugin: http
-      config:
-        method: DELETE
-        url: "{{ .env.API_URL }}/test-data/{{ .run.id }}"
-
-  on_failure:
-    - name: "Collect logs"
-      plugin: log
-      config:
-        message: "Test failed for run {{ .run.id }}"
-```
-
-**Execution order**: `init` → `tests` → `cleanup.on_failure` (if failed) → `cleanup.always`
-
-Test-level hooks work the same way. [Full docs](https://docs.rocketship.sh/features/lifecycle-hooks/)
-
-## Retry Policies
-
-```yaml
-- plugin: http
+- plugin: agent
   config:
-    url: "{{ .vars.api_url }}/endpoint"
-  retry:
-    maximum_attempts: 5
-    initial_interval: "1s"
-    backoff_coefficient: 2.0 # 1s → 2s → 4s → 8s
-    non_retryable_errors: ["ValidationError"]
+    prompt: |
+      In the current browser session, verify:
+      - Login form has email and password fields
+      - Submit button is present and enabled
+      - Successful login shows "Hello {{ login_email }}" somewhere on the page
+    capabilities: ["browser"]
 ```
 
-[Full docs](https://docs.rocketship.sh/features/retry-policies/)
+**Capabilities**: `["browser"]` lets the agent hook into a browser session created by Rocketship (e.g., via the Playwright plugin).
 
-## Assertions
-
-| Type                 | Example                                                                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `status_code`        | `type: "status_code"`, `expected: 200`                                                                      |
-| `json_path`          | `type: "json_path"`, `path: ".user.email"`, `expected: "test@example.com"`                                  |
-| `header`             | `type: "header"`, `name: "Content-Type"`, `expected: "application/json"`                                    |
-| `row_count` (SQL)    | `type: "row_count"`, `query_index: 0`, `expected: 5`                                                        |
-| `column_value` (SQL) | `type: "column_value"`, `query_index: 0`, `row_index: 0`, `column: "email"`, `expected: "test@example.com"` |
-| `supabase_count`     | `type: "supabase_count"`, `expected: 1`                                                                     |
-
-## Save Fields
-
-| Type         | Example                                               |
-| ------------ | ----------------------------------------------------- |
-| `json_path`  | `json_path: ".id"`, `as: "user_id"`                   |
-| `header`     | `header: "X-Request-ID"`, `as: "request_id"`          |
-| `sql_result` | `sql_result: ".queries[0].rows[0].id"`, `as: "db_id"` |
-
-## Example: E2E User Flow
+### Script Plugin
 
 ```yaml
-tests:
-  - name: "User registration flow"
-    steps:
-      - name: "Register user"
-        plugin: http
-        config:
-          method: POST
-          url: "{{ .env.API_URL }}/auth/register"
-          body: |
-            {"email": "test-{{ .run.id }}@example.com", "password": "Test123!"}
-        save:
-          - json_path: ".user_id"
-            as: "user_id"
-
-      - name: "Login"
-        plugin: http
-        config:
-          method: POST
-          url: "{{ .env.API_URL }}/auth/login"
-          body: |
-            {"email": "test-{{ .run.id }}@example.com", "password": "Test123!"}
-        save:
-          - json_path: ".access_token"
-            as: "token"
-
-      - name: "Access protected resource"
-        plugin: http
-        config:
-          method: GET
-          url: "{{ .env.API_URL }}/users/{{ user_id }}"
-          headers:
-            Authorization: "Bearer {{ token }}"
-        assertions:
-          - type: "status_code"
-            expected: 200
+- plugin: script
+  config:
+    language: javascript
+    script: |
+      const email = state.user_email || "test@example.com";
+      save("normalized_email", email.toLowerCase());
 ```
 
-## Best Practices
+## Plugin Docs
 
-1. Use `{{ .run.id }}` in test data for uniqueness
-2. Clean up resources with `cleanup.always` hooks
-3. Keep tests isolated and independent
-4. Store secrets in `.env` files (never commit)
-5. Add retry policies to flaky network operations
-6. Use descriptive step names for debugging
-7. Prefer Agent plugin over Browser Use for performance
+| Plugin        | Description                                                            | Docs URL                                        |
+| ------------- | ---------------------------------------------------------------------- | ----------------------------------------------- |
+| `http`        | HTTP/API testing                                                       | https://docs.rocketship.sh/plugins/http/        |
+| `supabase`    | Supabase DB/auth/storage                                               | https://docs.rocketship.sh/plugins/supabase/    |
+| `sql`         | SQL databases                                                          | https://docs.rocketship.sh/plugins/sql/         |
+| `agent`       | AI-driven testing with browser tools                                   | https://docs.rocketship.sh/plugins/agent/       |
+| `playwright`  | Scripted browser automation                                            | https://docs.rocketship.sh/plugins/playwright/  |
+| `browser_use` | Cheaper AI for browser automation but way less performant than `agent` | https://docs.rocketship.sh/plugins/browser-use/ |
+| `script`      | JS/shell scripting                                                     | https://docs.rocketship.sh/plugins/script/      |
+| `log`         | Logging within tests                                                   | https://docs.rocketship.sh/plugins/log/         |
+| `delay`       | Fixed delays between steps                                             | https://docs.rocketship.sh/plugins/delay/       |
+
+## Advanced Features
+
+- **Lifecycle Hooks**: `init`, `cleanup.always`, `cleanup.on_failure` for setup/teardown.
+  Docs: https://docs.rocketship.sh/features/lifecycle-hooks/
+- **Retry Policies**: `retry` block on steps for backoff and retries.
+  Docs: https://docs.rocketship.sh/features/retry-policies/
+- **Variable Passing**: Built-in, Environment, Config, and Runtime.
+  Docs: https://docs.rocketship.sh/features/variables/
+- **Assertions & Save**: Multiple assertion types (`status_code`, `json_path`, `supabase_count`, etc.) and save targets (`json_path`, `header`, `sql_result`, etc.).
+  Docs: https://docs.rocketship.sh/yaml-reference/plugin-reference
 
 ## Reference
 
