@@ -54,6 +54,16 @@ rocketship run -af test.yaml      # Run a test file with auto start/stop of loca
 rocketship run -ad .rocketship    # starts the local engine, runs the tests, shuts the engine down
 ```
 
+The -a flag is an extremely important flag to use if you're running tests locally (not connecting to the remote cloud). It will automatically start and stop the local server for you after the tests run, so you don't have to manually start and stop the server. If you really wanted to start and stop the server manually, do:
+
+```bash
+rocketship start server -b # starts the local server in the background
+rocketship run test.yaml # runs the tests against the local server
+rocketship stop server # stops the local server
+```
+
+I highly recommend you just use the -a flag and let Rocketship handle the server for you.
+
 ## Variables
 
 ```yaml
