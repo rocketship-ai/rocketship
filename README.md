@@ -15,7 +15,7 @@
     <a href="https://docs.rocketship.sh">Documentation</a>
 </p>
 
-[rocketship demo gif](docs/src/assets/demo.gif)
+![rocketship demo gif](docs/src/assets/demo.gif)
 
 🚀 Rocketship is an open‑source testing framework that your coding agent can use to QA test customer journeys by using community-owned plugins like [Supabase](https://docs.rocketship.sh/plugins/supabase/), [Playwright](https://docs.rocketship.sh/plugins/playwright/), [Agent](https://docs.rocketship.sh/plugins/agent/), etc. It gives your coding agent a test harness so it can ship changes without silently breaking critical user flows like logins, signups, checkouts, you name it. **Here's how it works:**
 
