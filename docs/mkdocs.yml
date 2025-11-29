@@ -7,8 +7,8 @@ site_dir: site
 
 theme:
   name: material
-  logo: assets/transparent-reverse.png
-  favicon: assets/transparent.png
+  logo: assets/white-logo-with-name-transparent.png
+  favicon: assets/black-logo-transparent.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

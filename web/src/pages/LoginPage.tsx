@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import logoImage from "@/assets/no-name-transparent.png";
+import logoImage from "@/assets/black-logo-transparent.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { sha256 } from "js-sha256";
 
@@ -281,7 +281,10 @@ export default function LoginPage() {
             <div className="mt-8 pt-6 border-t border-gray-100">
               <p className="text-center text-sm text-gray-500">
                 Don't have an account?{" "}
-                <Link to="/signup" className="text-gray-900 font-medium hover:underline">
+                <Link
+                  to="/signup"
+                  className="text-gray-900 font-medium hover:underline"
+                >
                   Sign up
                 </Link>
               </p>

@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/src/assets/transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
-  <img src="docs/src/assets/transparent-reverse.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
+  <img src="docs/src/assets/black-logo-with-name-transparent.png#gh-light-mode-only" alt="Rocketship black logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
+  <img src="docs/src/assets/white-logo-with-name-transparent.png#gh-dark-mode-only" alt="Rocketship white logo" width="210" style="display: block; margin: 0 auto; padding: 20px;">
 </p>
 <h3 align="center">A testing framework for your coding agent.</h3>
 <p align="center">Let your coding agent write and run E2E tests for your web app.</p>
