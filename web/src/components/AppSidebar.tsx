@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { Home, Activity, User, LogOut } from "lucide-react";
-import logoImage from "@/assets/black-logo-transparent.png";
+import logoImage from "@/assets/white-logo-transparent.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,41 +35,45 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-gray-200">
+    <Sidebar collapsible="icon" className="border-r-0 bg-black">
       {/* Logo Section */}
-      <SidebarHeader className="border-b border-gray-100 px-4 py-4">
-        <div className="flex items-center gap-3">
+      <SidebarHeader className="border-b border-gray-800 px-4 py-4">
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
           <img
             src={logoImage}
             alt="Rocketship"
-            className="h-8 w-8 flex-shrink-0"
+            className="h-6 w-6 flex-shrink-0 object-contain"
           />
           {!isCollapsed && (
-            <span className="font-semibold text-base text-gray-900">
-              Rocketship
+            <span className="font-semibold text-lg text-white whitespace-nowrap">
+              Rocketship Cloud
             </span>
           )}
         </div>
       </SidebarHeader>
 
       {/* Navigation */}
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent className="pt-4">
+        <SidebarGroup className={isCollapsed ? "px-0" : "px-3"}>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className={`gap-2 ${isCollapsed ? "items-center" : ""}`}>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                       to={item.url}
                       className={({ isActive }) =>
-                        isActive
-                          ? "bg-gray-100 text-gray-900"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        `flex items-center ${isCollapsed ? "justify-center" : "gap-4"} rounded-lg px-3 py-3 transition-colors ${
+                          isActive
+                            ? "bg-gray-800/80 text-white"
+                            : "text-gray-400 hover:bg-gray-800/50 hover:text-white"
+                        }`
                       }
                     >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
+                      <item.icon className="h-6 w-6 flex-shrink-0" />
+                      {!isCollapsed && (
+                        <span className="text-lg font-medium">{item.title}</span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -80,17 +84,17 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Section */}
-      <SidebarFooter className="border-t border-gray-100 p-3">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <User className="h-4 w-4 text-gray-500" />
+      <SidebarFooter className="border-t border-gray-800 p-3">
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} mb-2`}>
+          <div className="h-8 w-8 rounded-full bg-gray-800 flex items-center justify-center flex-shrink-0">
+            <User className="h-5 w-5 text-gray-400" />
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-sm font-medium text-white truncate">
                 {userData?.user?.name || "User"}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-gray-400 truncate">
                 {userData?.user?.email || "user@example.com"}
               </p>
             </div>
@@ -101,7 +105,7 @@ export function AppSidebar() {
             onClick={logout}
             variant="outline"
             size="sm"
-            className="w-full justify-start text-gray-600 hover:text-gray-900 border-gray-200"
+            className="w-full justify-start text-gray-400 hover:text-white border-gray-700 bg-transparent hover:bg-gray-800"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Log out
@@ -111,10 +115,10 @@ export function AppSidebar() {
             onClick={logout}
             variant="ghost"
             size="icon"
-            className="w-full text-gray-600 hover:text-gray-900"
+            className="w-full h-10 text-gray-400 hover:text-white hover:bg-gray-800"
             title="Log out"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-5 w-5" />
           </Button>
         )}
       </SidebarFooter>

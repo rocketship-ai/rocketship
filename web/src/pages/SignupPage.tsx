@@ -210,7 +210,7 @@ export default function SignupPage() {
           <CardContent className="pt-16 pb-16 px-10">
             {/* Logo */}
             <div className="flex justify-center mb-10">
-              <img src={logoImage} alt="Rocketship" className="h-14 w-auto" />
+              <img src={logoImage} alt="Rocketship" className="h-20 w-auto" />
             </div>
 
             {/* Title */}
