@@ -37,12 +37,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-black">
       {/* Logo Section */}
-      <SidebarHeader className="border-b border-gray-800 px-4 py-4">
+      <SidebarHeader className={`border-b border-gray-800 py-4 ${isCollapsed ? "px-2" : "px-4"}`}>
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
           <img
             src={logoImage}
             alt="Rocketship"
-            className="h-6 w-6 flex-shrink-0 object-contain"
+            className="h-10 w-10 flex-shrink-0 object-contain"
           />
           {!isCollapsed && (
             <span className="font-semibold text-lg text-white whitespace-nowrap">
