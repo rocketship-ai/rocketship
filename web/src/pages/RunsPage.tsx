@@ -24,8 +24,8 @@ const tokenManager = new TokenManager()
 const transport = createGrpcWebTransport({
   baseUrl: '/engine',
   useBinaryFormat: true, // MUST use protobuf (server doesn't support JSON)
-  credentials: 'include', // Send cookies
   interceptors: [authInterceptor(tokenManager)],
+  // Note: cookies are sent automatically via fetch credentials
 })
 
 const client = createClient(Engine, transport)

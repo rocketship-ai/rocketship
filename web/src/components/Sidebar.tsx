@@ -1,11 +1,11 @@
-import { NavLink } from 'react-router-dom'
-import { Home, Activity, User, LogOut } from 'lucide-react'
-import logoImage from '@/assets/no-name-transparent.png'
-import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/button'
+import { NavLink } from "react-router-dom";
+import { Home, Activity, User, LogOut } from "lucide-react";
+import logoImage from "@/assets/black-logo-transparent.png";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 export function Sidebar() {
-  const { logout } = useAuth()
+  const { logout } = useAuth();
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-white">
@@ -28,8 +28,8 @@ export function Sidebar() {
           className={({ isActive }) =>
             `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               isActive
-                ? 'bg-secondary text-foreground'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             }`
           }
         >
@@ -42,8 +42,8 @@ export function Sidebar() {
           className={({ isActive }) =>
             `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               isActive
-                ? 'bg-secondary text-foreground'
-                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                ? "bg-secondary text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             }`
           }
         >
@@ -60,7 +60,9 @@ export function Sidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">User</p>
-            <p className="text-xs text-muted-foreground truncate">user@example.com</p>
+            <p className="text-xs text-muted-foreground truncate">
+              user@example.com
+            </p>
           </div>
         </div>
         <Button
@@ -74,5 +76,5 @@ export function Sidebar() {
         </Button>
       </div>
     </div>
-  )
+  );
 }

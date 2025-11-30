@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react'
+import { TokenManager } from '@/auth/tokenManager'
 
 interface User {
   id: string
@@ -37,31 +38,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState<UserData | null>(null)
+  const tokenManager = useMemo(() => new TokenManager(), [])
 
-  // Check authentication status by calling the API
+  // Check authentication status by calling the API (with refresh on expiry)
   const checkAuth = async () => {
     console.log('[AuthContext] Checking authentication status...')
-    try {
+    setIsLoading(true)
+
+    const loadProfile = async (forceRefresh: boolean) => {
+      const token = forceRefresh ? await tokenManager.forceRefresh() : await tokenManager.get()
+      if (!token) {
+        console.log('[AuthContext] No token available')
+        setUserData(null)
+        setIsAuthenticated(false)
+        return
+      }
+
       const response = await fetch('/api/users/me', {
         method: 'GET',
         credentials: 'include', // Send cookies with request
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
       })
 
       console.log('[AuthContext] Check auth response:', response.status, response.ok)
 
-      if (response.ok) {
-        const data: UserData = await response.json()
-        console.log('[AuthContext] User is authenticated, status:', data.status)
-        setUserData(data)
-        setIsAuthenticated(true)
-      } else {
+      // If access token expired mid-request, force a refresh and retry once
+      if (response.status === 401 && !forceRefresh) {
+        console.log('[AuthContext] Access token expired, forcing refresh...')
+        return loadProfile(true)
+      }
+
+      if (!response.ok) {
         console.log('[AuthContext] User is not authenticated')
         setUserData(null)
         setIsAuthenticated(false)
+        return
       }
+
+      const data: UserData = await response.json()
+      console.log('[AuthContext] User is authenticated, status:', data.status)
+      setUserData(data)
+      setIsAuthenticated(true)
+    }
+
+    try {
+      await loadProfile(false)
     } catch (error) {
       console.error('[AuthContext] Auth check failed:', error)
       setUserData(null)
@@ -75,6 +99,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     checkAuth()
   }, [])
+
+  // Keep tokens warm to avoid idle expiry kicking users back to login
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      tokenManager.get().catch(() => tokenManager.clear())
+    }, 5 * 60 * 1000) // every 5 minutes
+    return () => window.clearInterval(id)
+  }, [tokenManager])
 
   const login = async () => {
     // After successful login, the cookies are already set by the server

@@ -35,7 +35,7 @@ async function generateCodeChallenge(codeVerifier: string): Promise<string> {
   return base64UrlEncode(hashed);
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { login, isAuthenticated } = useAuth();
@@ -55,7 +55,7 @@ export default function LoginPage() {
       // Prevent double execution in React StrictMode
       if (hasProcessedCallback.current) {
         console.log(
-          "[LoginPage] Callback already processed, skipping duplicate execution"
+          "[SignupPage] Callback already processed, skipping duplicate execution"
         );
         return;
       }
@@ -64,14 +64,14 @@ export default function LoginPage() {
       const state = params.get("state");
       const errorParam = params.get("error");
 
-      console.log("[LoginPage] Checking for OAuth callback params:", {
+      console.log("[SignupPage] Checking for OAuth callback params:", {
         code: code?.substring(0, 10) + "...",
         state: state?.substring(0, 10) + "...",
         error: errorParam,
       });
 
       if (errorParam) {
-        console.log("[LoginPage] OAuth error detected:", errorParam);
+        console.log("[SignupPage] OAuth error detected:", errorParam);
         setError(
           `Authorization failed: ${
             params.get("error_description") || errorParam
@@ -82,7 +82,7 @@ export default function LoginPage() {
 
       if (code && state) {
         console.log(
-          "[LoginPage] OAuth callback detected, starting token exchange..."
+          "[SignupPage] OAuth callback detected, starting token exchange..."
         );
         hasProcessedCallback.current = true;
         setIsLoading(true);
@@ -162,8 +162,8 @@ export default function LoginPage() {
     handleCallback();
   }, []);
 
-  const handleLogin = async () => {
-    console.log("[LoginPage] Login button clicked, starting OAuth flow...");
+  const handleSignup = async () => {
+    console.log("[SignupPage] Signup button clicked, starting OAuth flow...");
     setIsLoading(true);
     setError(null);
     try {
@@ -173,10 +173,11 @@ export default function LoginPage() {
       const state = generateRandomString(32);
 
       console.log(
-        "[LoginPage] Generated PKCE parameters, redirecting to GitHub..."
+        "[SignupPage] Generated PKCE parameters, redirecting to GitHub..."
       );
 
       // Construct redirect URI (where auth broker will redirect back to after GitHub)
+      // Both signup and login share /login as the OAuth callback endpoint
       const redirectUri = `${window.location.origin}/login`;
 
       // Store PKCE parameters and state in session storage
@@ -196,7 +197,7 @@ export default function LoginPage() {
       // Redirect to auth broker's /authorize endpoint
       window.location.href = `/authorize?${params.toString()}`;
     } catch (err) {
-      console.error("Login failed:", err);
+      console.error("Signup failed:", err);
       setError("Failed to start authentication. Please try again.");
       setIsLoading(false);
     }
@@ -215,7 +216,7 @@ export default function LoginPage() {
             {/* Title */}
             <div className="text-center mb-10">
               <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-                Log in to Rocketship Cloud
+                Sign up for Rocketship Cloud
               </h1>
               <p className="text-sm text-gray-500">
                 The testing platform for your coding agent
@@ -229,9 +230,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Log in button */}
+            {/* Sign up button */}
             <Button
-              onClick={handleLogin}
+              onClick={handleSignup}
               disabled={isLoading}
               className="w-full bg-black text-white hover:bg-gray-800"
               size="lg"
@@ -258,7 +259,7 @@ export default function LoginPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     ></path>
                   </svg>
-                  Logging in...
+                  Signing up...
                 </>
               ) : (
                 <>
@@ -273,19 +274,23 @@ export default function LoginPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Log in with GitHub
+                  Sign up with GitHub
                 </>
               )}
             </Button>
 
-            <div className="mt-8 pt-6 border-t border-gray-100">
+            <p className="text-center mt-6 text-xs text-gray-400">
+              By signing up, you agree to our Terms of Service
+            </p>
+
+            <div className="mt-6 pt-6 border-t border-gray-100">
               <p className="text-center text-sm text-gray-500">
-                Don't have an account?{" "}
+                Already have an account?{" "}
                 <Link
-                  to="/signup"
+                  to="/login"
                   className="text-gray-900 font-medium hover:underline"
                 >
-                  Sign up
+                  Log in
                 </Link>
               </p>
             </div>
