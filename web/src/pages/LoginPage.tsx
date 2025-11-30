@@ -19,7 +19,7 @@ function base64UrlEncode(hex: string): string {
   // Convert hex string to bytes
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
   }
   // Convert bytes to base64url
   let binary = "";

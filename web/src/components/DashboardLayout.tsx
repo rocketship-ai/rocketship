@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useRef, useCallback, useEffect } from 'react'
 import { AppSidebar } from './AppSidebar'
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -75,6 +75,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <AppSidebar />
       </div>
       <SidebarInset className="bg-[#fafafa]">
+        {/* Mobile header with menu trigger */}
+        <div className="flex items-center gap-2 p-4 md:hidden border-b border-gray-200">
+          <SidebarTrigger className="h-8 w-8" />
+          <span className="font-semibold text-gray-900">Rocketship Cloud</span>
+        </div>
         {children}
       </SidebarInset>
     </SidebarProvider>
