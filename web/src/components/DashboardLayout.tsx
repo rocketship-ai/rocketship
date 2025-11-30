@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef } from 'react'
+import { type ReactNode, useState, useRef, useCallback, useEffect } from 'react'
 import { AppSidebar } from './AppSidebar'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 
@@ -6,29 +6,68 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
+// Track mouse position globally to persist across re-renders
+let globalMouseX = 0
+document.addEventListener('mousemove', (e) => {
+  globalMouseX = e.clientX
+})
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = useState(() => {
+    // Initialize based on current mouse position
+    // Sidebar collapsed width is ~56px, expanded is ~256px
+    return globalMouseX < 256
+  })
+  const isHoveringRef = useRef(globalMouseX < 256)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleMouseEnter = () => {
-    // Clear any pending close timeout
+  // Check if mouse is over sidebar on mount (handles navigation case)
+  useEffect(() => {
+    const checkMousePosition = () => {
+      if (sidebarRef.current) {
+        const rect = sidebarRef.current.getBoundingClientRect()
+        const isOver = globalMouseX >= rect.left && globalMouseX <= rect.right
+        if (isOver && !isOpen) {
+          isHoveringRef.current = true
+          setIsOpen(true)
+        }
+      }
+    }
+    // Small delay to let the DOM settle after navigation
+    const timer = setTimeout(checkMousePosition, 50)
+    return () => clearTimeout(timer)
+  }, [children]) // Re-check when children change (navigation)
+
+  const handleMouseEnter = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
       timeoutRef.current = null
     }
+    isHoveringRef.current = true
     setIsOpen(true)
-  }
+  }, [])
 
-  const handleMouseLeave = () => {
-    // Add a small delay before closing to prevent flicker
+  const handleMouseLeave = useCallback(() => {
+    isHoveringRef.current = false
     timeoutRef.current = setTimeout(() => {
-      setIsOpen(false)
+      if (!isHoveringRef.current) {
+        setIsOpen(false)
+      }
     }, 150)
-  }
+  }, [])
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open && isHoveringRef.current) {
+      return
+    }
+    setIsOpen(open)
+  }, [])
 
   return (
-    <SidebarProvider open={isOpen} onOpenChange={setIsOpen}>
+    <SidebarProvider open={isOpen} onOpenChange={handleOpenChange}>
       <div
+        ref={sidebarRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="h-full"
