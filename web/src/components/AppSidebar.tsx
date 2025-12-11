@@ -72,7 +72,7 @@ export function AppSidebar() {
                     >
                       <item.icon className="h-6 w-6 flex-shrink-0" />
                       {!isCollapsed && (
-                        <span className="text-lg font-medium">{item.title}</span>
+                        <span className="text-lg">{item.title}</span>
                       )}
                     </NavLink>
                   </SidebarMenuButton>

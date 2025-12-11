@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useRef, useCallback, useEffect } from 'react'
+import { type ReactNode, useRef, useCallback, useSyncExternalStore } from 'react'
 import { AppSidebar } from './AppSidebar'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
 
@@ -6,62 +6,65 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
-// Track mouse position globally to persist across re-renders
-let globalMouseX = 0
-document.addEventListener('mousemove', (e) => {
-  globalMouseX = e.clientX
-})
+// Global sidebar state that persists across React re-renders and navigation
+const sidebarState = {
+  isOpen: false,
+  isHovering: false,
+  listeners: new Set<() => void>(),
+
+  setOpen(open: boolean) {
+    if (this.isOpen !== open) {
+      this.isOpen = open
+      this.listeners.forEach(listener => listener())
+    }
+  },
+
+  subscribe(listener: () => void) {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  },
+
+  getSnapshot() {
+    return sidebarState.isOpen
+  }
+}
+
+// Track hover state globally
+let hoverTimeout: ReturnType<typeof setTimeout> | null = null
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const [isOpen, setIsOpen] = useState(() => {
-    // Initialize based on current mouse position
-    // Sidebar collapsed width is ~56px, expanded is ~256px
-    return globalMouseX < 256
-  })
-  const isHoveringRef = useRef(globalMouseX < 256)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Check if mouse is over sidebar on mount (handles navigation case)
-  useEffect(() => {
-    const checkMousePosition = () => {
-      if (sidebarRef.current) {
-        const rect = sidebarRef.current.getBoundingClientRect()
-        const isOver = globalMouseX >= rect.left && globalMouseX <= rect.right
-        if (isOver && !isOpen) {
-          isHoveringRef.current = true
-          setIsOpen(true)
-        }
-      }
-    }
-    // Small delay to let the DOM settle after navigation
-    const timer = setTimeout(checkMousePosition, 50)
-    return () => clearTimeout(timer)
-  }, [children]) // Re-check when children change (navigation)
+  // Use external store so state persists across navigation
+  const isOpen = useSyncExternalStore(
+    sidebarState.subscribe.bind(sidebarState),
+    sidebarState.getSnapshot
+  )
 
   const handleMouseEnter = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout)
+      hoverTimeout = null
     }
-    isHoveringRef.current = true
-    setIsOpen(true)
+    sidebarState.isHovering = true
+    sidebarState.setOpen(true)
   }, [])
 
   const handleMouseLeave = useCallback(() => {
-    isHoveringRef.current = false
-    timeoutRef.current = setTimeout(() => {
-      if (!isHoveringRef.current) {
-        setIsOpen(false)
+    sidebarState.isHovering = false
+    hoverTimeout = setTimeout(() => {
+      if (!sidebarState.isHovering) {
+        sidebarState.setOpen(false)
       }
     }, 150)
   }, [])
 
   const handleOpenChange = useCallback((open: boolean) => {
-    if (!open && isHoveringRef.current) {
+    // Prevent closing if mouse is still hovering
+    if (!open && sidebarState.isHovering) {
       return
     }
-    setIsOpen(open)
+    sidebarState.setOpen(open)
   }, [])
 
   return (
