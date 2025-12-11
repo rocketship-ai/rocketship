@@ -17,7 +17,7 @@
 
 ![rocketship demo gif](docs/src/assets/demo.gif)
 
-🚀 Rocketship is an open‑source testing framework that your coding agent can use to QA test customer journeys by using community-owned plugins like [Supabase](https://docs.rocketship.sh/plugins/supabase/), [Playwright](https://docs.rocketship.sh/plugins/playwright/), [Agent](https://docs.rocketship.sh/plugins/agent/), etc. It gives your coding agent a test harness so it can ship changes without silently breaking critical user flows like logins, signups, checkouts, you name it. **Here's how it works:**
+🚀 Rocketship is an open‑source QA testing framework that your coding agent can use to e2e test customer journeys by using community-owned plugins like [Supabase](https://docs.rocketship.sh/plugins/supabase/), [Playwright](https://docs.rocketship.sh/plugins/playwright/), [Agent](https://docs.rocketship.sh/plugins/agent/), etc. It gives your coding agent a test harness so it can ship changes without silently breaking critical user flows like logins, signups, checkouts, you name it. **Here's how it works:**
 
 1. You install the Rocketship CLI and add a `.rocketship` directory to your repository. Any `.yaml` files in this directory will be picked up and run by Rocketship.
 2. Your coding agent builds out a new feature, customer journey, or other user-driven scenario and writes a Rocketship test that asserts the flow works end-to-end.
