@@ -1,6 +1,6 @@
 # Browser Testing - AI-Powered Web Automation
 
-> ℹ️ **Alternative Available**: The `agent` plugin provides browser testing via Playwright MCP and can combine browser automation with other tools (filesystem, APIs, database). See [Agent Plugin Examples](../agent/agent-testing.md) for the MCP-based approach.
+> ℹ️ **Alternative Available**: The `agent` plugin provides browser testing via Playwright MCP and can combine browser automation with other tools (filesystem, APIs, database). See [Agent Plugin Examples](agent-testing.md) for the MCP-based approach.
 
 Test web applications using persistent browser sessions that combine deterministic scripting (Playwright) with AI-driven automation (browser_use).
 

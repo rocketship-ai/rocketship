@@ -252,7 +252,7 @@ tests:
 
 ### Option 1 – Use the Minikube stack
 
-`scripts/install-minikube.sh` brings up Temporal and Rocketship inside the cluster. After it finishes, port-forward the engine and execute the SQL example:
+Run `scripts/setup-local-dev.sh` (one-time setup) then `scripts/start-dev.sh` to bring up Temporal and Rocketship inside the cluster. After it finishes, port-forward the engine and execute the SQL example:
 
 ```bash
 kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700

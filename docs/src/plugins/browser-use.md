@@ -8,9 +8,16 @@ AI-driven browser automation using natural language tasks with GPT-4o or Claude.
 ## Quick Start
 
 ```yaml
+- name: "Start browser"
+  plugin: playwright
+  config:
+    role: start
+    session_id: "test-{{ .run.id }}"
+
 - name: "Verify page content"
   plugin: browser_use
   config:
+    session_id: "test-{{ .run.id }}"
     task: "Verify the page has a heading 'Example Domain'"
     max_steps: 3
     use_vision: true
@@ -38,18 +45,20 @@ export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 | Field          | Description           | Example                                    |
 | -------------- | --------------------- | ------------------------------------------ |
+| `session_id`   | Browser session ID    | `"test-{{ .run.id }}"` (must match Playwright session) |
 | `task`         | Natural language task | `"Click login button and verify redirect"` |
 | `llm.provider` | LLM provider          | `"openai"` or `"anthropic"`                |
 
 ### Optional Fields
 
-| Field        | Description                  | Default                |
-| ------------ | ---------------------------- | ---------------------- |
-| `max_steps`  | Maximum agent steps          | `10`                   |
-| `use_vision` | Enable vision capabilities   | `false`                |
-| `timeout`    | Task execution timeout       | `5m`                   |
-| `llm.model`  | LLM model name               | `gpt-4o` (OpenAI)      |
-| `llm.config` | LLM configuration (API keys) | Auto-detected from env |
+| Field         | Description                  | Default                |
+| ------------- | ---------------------------- | ---------------------- |
+| `max_steps`   | Maximum agent steps          | `10`                   |
+| `use_vision`  | Enable vision capabilities   | `false`                |
+| `temperature` | LLM temperature (0.0-2.0)    | Not set (model default)|
+| `timeout`     | Task execution timeout       | `5m`                   |
+| `llm.model`   | LLM model name               | `gpt-4o` (OpenAI)      |
+| `llm.config`  | LLM configuration (API keys) | Auto-detected from env |
 
 ## LLM Configuration
 
@@ -88,9 +97,16 @@ llm:
 ### Login Flow
 
 ```yaml
+- name: "Start browser"
+  plugin: playwright
+  config:
+    role: start
+    session_id: "test-{{ .run.id }}"
+
 - name: "Complete login"
   plugin: browser_use
   config:
+    session_id: "test-{{ .run.id }}"
     task: |
       Navigate to {{ .env.FRONTEND_URL }}/login and:
       - Fill email: {{ .env.TEST_EMAIL }}
@@ -105,9 +121,16 @@ llm:
 ### Data Extraction
 
 ```yaml
+- name: "Start browser"
+  plugin: playwright
+  config:
+    role: start
+    session_id: "test-{{ .run.id }}"
+
 - name: "Extract pricing"
   plugin: browser_use
   config:
+    session_id: "test-{{ .run.id }}"
     task: "Extract all plan names and monthly prices"
     use_vision: true
     max_steps: 3
@@ -122,9 +145,16 @@ llm:
 ### Form Validation
 
 ```yaml
+- name: "Start browser"
+  plugin: playwright
+  config:
+    role: start
+    session_id: "test-{{ .run.id }}"
+
 - name: "Verify success message"
   plugin: browser_use
   config:
+    session_id: "test-{{ .run.id }}"
     task: "Check if success message appears after form submission"
     max_steps: 2
     llm:
@@ -146,8 +176,10 @@ llm:
 - name: "Verify with AI"
   plugin: browser_use
   config:
+    session_id: "test-{{ .run.id }}"
     task: "Verify the API key field shows 'test-key-123'"
-```
+    llm:
+      provider: "openai"
 
 ### With HTTP
 

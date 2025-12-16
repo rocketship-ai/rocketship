@@ -32,10 +32,10 @@ export ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 ### Optional Fields
 
-| Field       | Description               | Default   |
-| ----------- | ------------------------- | --------- |
-| `max_turns` | Max agent loop iterations | unlimited |
-| `timeout`   | Max execution time        | `5m`      |
+| Field       | Description               | Default     |
+| ----------- | ------------------------- | ----------- |
+| `max_turns` | Max agent loop iterations | unlimited   |
+| `timeout`   | Max execution time        | unlimited   |
 
 ## Common Use Cases
 

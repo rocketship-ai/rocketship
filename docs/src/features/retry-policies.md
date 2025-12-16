@@ -1,6 +1,17 @@
 # Retry Policies
 
-Configure automatic retries for test steps with configurable backoff strategies.
+Sometimes tests fail not because something is broken, but because of temporary issues like network hiccups or services being briefly unavailable. Retry policies tell Rocketship to **automatically try again** if a step fails, making your tests more reliable.
+
+**When to use retries:**
+- Network requests that might timeout
+- APIs that occasionally return errors
+- Services that need a moment to process data
+- Any step that might fail due to timing issues
+
+**When NOT to use retries:**
+- Validation errors (like wrong data format)
+- Authentication failures (like wrong password)
+- Permanent errors (like 404 Not Found)
 
 ## Quick Start
 
@@ -28,7 +39,11 @@ Configure automatic retries for test steps with configurable backoff strategies.
 
 ## Backoff Strategies
 
+Backoff means "wait before trying again." Different strategies control how long to wait:
+
 ### Exponential Backoff
+
+Wait longer each time - good for rate-limited APIs or services that need time to recover:
 
 ```yaml
 retry:
@@ -40,6 +55,8 @@ retry:
 
 ### Linear Backoff
 
+Wait the same amount of time each retry - good for services that recover quickly:
+
 ```yaml
 retry:
   maximum_attempts: 3
@@ -49,6 +66,8 @@ retry:
 ```
 
 ### Capped Exponential
+
+Same as exponential, but never wait longer than a maximum time - prevents extremely long waits:
 
 ```yaml
 retry:

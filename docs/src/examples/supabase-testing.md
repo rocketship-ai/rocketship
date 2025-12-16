@@ -352,4 +352,4 @@ ROCKETSHIP_LOG=DEBUG rocketship run -af your-test.yaml
 - **Table not found**: Verify table exists and you have proper permissions
 - **Email already registered**: Use unique emails with timestamps for each test run
 
-See the [full example](../../examples/supabase-testing/rocketship.yaml) for comprehensive test coverage.
+See the [full example](https://github.com/rocketship-ai/rocketship/blob/main/examples/supabase-testing/rocketship.yaml) for comprehensive test coverage.

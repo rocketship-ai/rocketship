@@ -228,7 +228,8 @@ steps:
 ### Minikube Stack (Recommended)
 
 ```bash
-scripts/install-minikube.sh
+scripts/setup-local-dev.sh  # One-time infrastructure setup
+scripts/start-dev.sh         # Start services
 kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
 rocketship run -af examples/sql-testing/rocketship.yaml
 ```

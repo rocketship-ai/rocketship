@@ -1,6 +1,11 @@
 # HTTP Plugin
 
-Test HTTP APIs with full request/response validation and OpenAPI contract support.
+Test web APIs (like REST services) by sending HTTP requests and checking the responses. The HTTP plugin lets you:
+- Send requests (GET, POST, PUT, DELETE, etc.)
+- Include headers and request bodies
+- Validate responses automatically
+- Chain requests together (use data from one request in the next)
+- Validate against OpenAPI specifications
 
 ## Quick Start
 
@@ -48,7 +53,14 @@ tests:
 
 ## Request Chaining
 
-Save values from one request and use them in subsequent requests:
+One of the most powerful features: **pass data between requests**. 
+
+**Example scenario:** 
+1. Create a new user (the API returns a user ID)
+2. Use that ID to fetch the user's details
+3. Update the user's information
+
+Each step can save values from the response and use them in the next step:
 
 ```yaml
 steps:
@@ -79,7 +91,9 @@ steps:
 
 ## Assertions
 
-Validate responses with multiple assertion types:
+Assertions let you **automatically check if the response is correct**. Instead of manually reading the response, you tell Rocketship what to look for, and it fails the test if expectations aren't met.
+
+**Types of assertions:**
 
 ### Status Code
 

@@ -1,25 +1,92 @@
 # Deploy Rocketship on Your Cloud
 
-Rocketship can run anywhere Kubernetes is available. The CLI embeds the engine and worker binaries for local auto mode, but real deployments separate the components and connect them to a Temporal cluster.
+Rocketship supports three deployment modes. Choose based on your needs:
 
-This section outlines the supported deployment paths and what each delivers so you can pick the right starting point.
+1. **Local Processes** – Quick experiments without Kubernetes
+2. **Minikube Stack** – Isolated local Kubernetes cluster for development
+3. **Cloud Kubernetes** – Production deployments on any Kubernetes cluster
+
+## Deployment Modes
+
+### 1. Local Processes (Quick Start)
+
+Best for: Quick testing, development, learning
+
+The CLI embeds engine and worker binaries for standalone operation:
+
+```bash
+# Auto-start engine, run tests, auto-stop
+rocketship run -af test.yaml
+
+# Or manually manage the engine
+rocketship start server -b      # Background engine
+rocketship run test.yaml        # Run tests
+rocketship stop server          # Stop engine
+```
+
+**Requirements:** Temporal installed locally (`brew install temporal`)
+
+### 2. Minikube Stack (Local Kubernetes)
+
+Best for: Development, CI testing, isolated environments
+
+Single script provisions everything in an isolated Minikube cluster:
+
+```bash
+scripts/setup-local-dev.sh  # One-time infrastructure setup
+scripts/start-dev.sh         # Start services with hot-reloading
+
+# Or for non-development deployments, use Helm directly:
+# helm install rocketship charts/rocketship -n rocketship
+# kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
+rocketship profile create minikube grpc://localhost:7700
+rocketship profile use minikube
+rocketship run -f test.yaml
+```
+
+**Guide:** [Run on Minikube](deploy/minikube.md)
+
+### 3. Cloud Kubernetes (Production)
+
+Best for: Production deployments, team collaboration, test history
+
+Deploy to any Kubernetes cluster (EKS, GKE, AKS, DigitalOcean, on-prem):
+
+- Full Temporal stack with persistence
+- OIDC authentication for CLI and web UI
+- Persistent test run history
+- Scalable worker pools
+
+**Guides:**
+- [Deploy on DigitalOcean](deploy/digitalocean.md) – Step-by-step production guide
+- [DigitalOcean with Web UI](deploy/digitalocean.md#7-enable-auth-for-the-web-ui-optional) – Add OIDC authentication
+
+Adapt the DigitalOcean pattern for other clouds by swapping provider-specific commands.
 
 ## Core Components
 
-Every deployment provisions:
+Cloud deployments provision:
 
-1. **Temporal** – Durable workflow orchestration. The Helm chart from Temporal provides a ready-made stack with Cassandra, Elasticsearch, and UI components for development and staging clusters.
-2. **Rocketship Engine** – gRPC API that accepts suite executions, manages profiles, and streams results.
-3. **Rocketship Worker** – Executes plugin steps inside Temporal workflows.
+1. **Temporal** – Durable workflow orchestration (Helm chart)
+2. **Rocketship Engine** – gRPC API accepting test executions
+3. **Rocketship Worker** – Executes plugin steps in Temporal workflows
+4. **Auth Broker** (optional) – OIDC authentication for CLI/web UI
+5. **PostgreSQL** (optional) – Test run history and auth persistence
 
-Both Rocketship services require the Temporal frontend host and namespace; everything else (ingress, TLS, auth) is layered on top through Kubernetes objects.
+## Using Cloud Deployments
 
-## Deployment Paths
+After deploying, create a profile and authenticate:
 
-| Scenario                          | Guide                                                                                             | Highlights                                                                                                                                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Local iteration                   | [Run on Minikube](deploy/minikube.md)                                                             | Single script (`scripts/install-minikube.sh`) that starts Minikube, installs Temporal, builds local engine/worker images, and deploys the Rocketship chart. Great for fast feedback and integration testing inside CI. |
-| Production-ready proof of concept | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md)                                       | Walks through preparing a managed cluster, wiring an NGINX ingress with TLS, publishing custom images to DigitalOcean Container Registry, and installing the Rocketship + Temporal Helm releases.                      |
-| Web UI with OIDC front-door       | [Deploy on DigitalOcean Kubernetes](deploy/digitalocean.md#7-enable-auth-for-the-web-ui-optional) | Layer oauth2-proxy + NGINX annotations. Use `values-github-selfhost.yaml` + `values-github-web.yaml` for GitHub device-flow reuse, or `values-oidc-web.yaml` to integrate with an external IdP.                        |
+```bash
+# Create profile
+rocketship profile create production https://rocketship.company.com
 
-> Looking for another cloud? The DigitalOcean flow covers all building blocks: registry authentication, TLS secrets, ingress, and chart overrides. Adapt the same pattern for EKS, GKE, AKS, or on-prem clusters by swapping provider-specific commands. If you do not already operate Postgres, enable the bundled Bitnami dependency with `--set postgres.enabled=true` and provide a password via `postgres.auth.password`.
+# Authenticate via OIDC device flow
+rocketship login --profile production
+
+# Use the profile
+rocketship profile use production
+
+# Run tests
+rocketship run -f test.yaml
+```

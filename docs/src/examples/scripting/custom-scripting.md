@@ -286,4 +286,4 @@ save("total", (price * count).toString());
 rocketship run -af examples/custom-scripting/rocketship.yaml
 ```
 
-See the [full example](../../examples/custom-scripting/rocketship.yaml) for comprehensive script integration patterns.
+See the [full example](https://github.com/rocketship-ai/rocketship/blob/main/examples/custom-scripting/rocketship.yaml) for comprehensive script integration patterns.

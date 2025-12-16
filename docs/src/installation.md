@@ -1,16 +1,30 @@
 # Installation
 
-Rocketship ships prebuilt binaries for macOS and Linux. Use the Homebrew tap on macOS for the smoothest experience, or the portable installer script everywhere else. This page walks through the supported options, prerequisites, and post-install checks.
+This guide will help you install Rocketship on your computer. We provide ready-to-use versions for macOS and Linux.
+
+**What you'll need:**
+- A macOS or Linux computer (Windows users can use Docker or WSL)
+- Internet connection to download the software
+- Terminal/command line access
 
 ## Prerequisites
 
-To run the Rocketship engine locally you need Temporal:
+**Do you need Temporal?**
+
+- **Yes, if** you'll run tests on your own computer using the local engine
+- **No, if** you'll connect to a remote Rocketship server (cloud or team server)
+
+**To install Temporal (if needed):**
 
 ```bash
+# macOS
 brew install temporal
+
+# Linux
+# Follow Temporal's installation guide: https://docs.temporal.io/cli#install
 ```
 
-On Linux follow Temporal's [official installation guide](https://docs.temporal.io/cli#install). If you only connect to a remote Rocketship deployment, Temporal is optional.
+Temporal is a tool that helps Rocketship manage long-running tests reliably.
 
 ## macOS (recommended via Homebrew)
 
@@ -19,7 +33,10 @@ brew tap rocketship-ai/tap
 brew install rocketship
 ```
 
-The formula installs the latest tagged CLI, handles upgrades with `brew upgrade rocketship`, and keeps the binary inside your Homebrew prefix.
+**Benefits of Homebrew:**
+- Easy updates: run `brew upgrade rocketship` to get new versions
+- Automatic dependency management
+- Keeps everything organized in one place
 
 ## Linux and macOS (portable installer)
 
@@ -29,15 +46,15 @@ For environments without Homebrew run the installer script:
 curl -fsSL https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh | bash
 ```
 
-The script:
+**What the installer does:**
+- Detects your operating system and downloads the right version
+- Verifies the download is safe (checksums)
+- Installs Rocketship to `~/.local/bin/rocketship`
+- Sets up your PATH so you can run `rocketship` from anywhere
 
-- Detects your OS/architecture and downloads the matching release asset
-- Verifies the binary against the published `checksums.txt`
-- Installs to `~/.local/bin/rocketship` (override via `ROCKETSHIP_BIN_DIR`)
-- Removes macOS quarantine attributes when needed
-- Appends `~/.local/bin` to your shell `PATH` if it isn't already there
+**To update later:** Just run the installer script again - it will download the latest version.
 
-Re-run the script to pick up future releases. To pin a version, set `ROCKETSHIP_VERSION=v0.5.23` (for example) before invoking the script.
+**To install a specific version:** Set `ROCKETSHIP_VERSION=v0.5.23` (for example) before running the script.
 
 ## Docker
 
@@ -60,4 +77,4 @@ rocketship --version
 
 - [Quickstart](quickstart.md) to run your first suite
 - [Examples](examples.md) for ready-made specs
-- [Test specification reference](yaml-reference/index.md) when you need exact syntax
+- [Test specification reference](yaml-reference/plugin-reference.md) when you need exact syntax
