@@ -219,44 +219,6 @@ Note: If both `form` and `body` are provided, `form` takes precedence.
 
 ## Common Patterns
 
-### CRUD Operations
-
-```yaml
-steps:
-  # Create
-  - name: "Create"
-    plugin: http
-    config:
-      method: POST
-      url: "{{ .vars.base_url }}/users"
-      body: '{"name": "Test"}'
-    save:
-      - json_path: ".id"
-        as: "user_id"
-
-  # Read
-  - name: "Read"
-    plugin: http
-    config:
-      method: GET
-      url: "{{ .vars.base_url }}/users/{{ user_id }}"
-
-  # Update
-  - name: "Update"
-    plugin: http
-    config:
-      method: PUT
-      url: "{{ .vars.base_url }}/users/{{ user_id }}"
-      body: '{"name": "Updated"}'
-
-  # Delete
-  - name: "Delete"
-    plugin: http
-    config:
-      method: DELETE
-      url: "{{ .vars.base_url }}/users/{{ user_id }}"
-```
-
 ### Authentication
 
 ```yaml

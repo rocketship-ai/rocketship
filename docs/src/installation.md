@@ -1,11 +1,6 @@
 # Installation
 
-This guide will help you install Rocketship on your computer. We provide ready-to-use versions for macOS and Linux.
-
-**What you'll need:**
-- A macOS or Linux computer (Windows users can use Docker or WSL)
-- Internet connection to download the software
-- Terminal/command line access
+Rocketship ships prebuilt binaries for macOS and Linux. Use the Homebrew tap on macOS for the smoothest experience, or the portable installer script everywhere else. This page walks through the supported options, prerequisites, and post-install checks.
 
 ## Prerequisites
 
@@ -24,7 +19,7 @@ brew install temporal
 # Follow Temporal's installation guide: https://docs.temporal.io/cli#install
 ```
 
-Temporal is a tool that helps Rocketship manage long-running tests reliably.
+On Linux follow Temporal's [official installation guide](https://docs.temporal.io/cli#install). If you only connect to a remote Rocketship deployment, Temporal is optional.
 
 ## macOS (recommended via Homebrew)
 
@@ -33,10 +28,7 @@ brew tap rocketship-ai/tap
 brew install rocketship
 ```
 
-**Benefits of Homebrew:**
-- Easy updates: run `brew upgrade rocketship` to get new versions
-- Automatic dependency management
-- Keeps everything organized in one place
+The formula installs the latest tagged CLI, handles upgrades with `brew upgrade rocketship`, and keeps the binary inside your Homebrew prefix.
 
 ## Linux and macOS (portable installer)
 
@@ -76,5 +68,4 @@ rocketship --version
 ## Next steps
 
 - [Quickstart](quickstart.md) to run your first suite
-- [Examples](examples.md) for ready-made specs
 - [Test specification reference](yaml-reference/plugin-reference.md) when you need exact syntax

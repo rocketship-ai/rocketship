@@ -223,42 +223,6 @@ steps:
         - "SELECT * FROM {{ .vars.table_name }} WHERE age >= {{ .vars.min_age }};"
 ```
 
-## Local Development
-
-### Minikube Stack (Recommended)
-
-```bash
-scripts/setup-local-dev.sh  # One-time infrastructure setup
-scripts/start-dev.sh         # Start services
-kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
-rocketship run -af examples/sql-testing/rocketship.yaml
-```
-
-### Docker Containers
-
-Quick database setup for testing:
-
-```bash
-# PostgreSQL
-docker run --rm -d \
-  --name rocketship-postgres \
-  -e POSTGRES_PASSWORD=testpass \
-  -e POSTGRES_DB=testdb \
-  -p 5433:5432 \
-  postgres:13
-
-# MySQL
-docker run --rm -d \
-  --name rocketship-mysql \
-  -e MYSQL_ROOT_PASSWORD=testpass \
-  -e MYSQL_DATABASE=testdb \
-  -p 3306:3306 \
-  mysql:8.0
-
-# Cleanup
-docker stop rocketship-postgres rocketship-mysql
-```
-
 ## Best Practices
 
 - **Security**: Store DSN in environment variables, never commit credentials
