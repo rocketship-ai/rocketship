@@ -1048,6 +1048,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
       
@@ -1108,6 +1116,27 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_doctor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    doctor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1132,10 +1161,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
         
           
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1146,8 +1175,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             profile
           </label>
@@ -1294,6 +1323,69 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/rocketship_login/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    login
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_logout/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    logout
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_status/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    status
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
@@ -1372,10 +1464,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1386,8 +1478,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
             <span class="md-nav__icon md-icon"></span>
             start
           </label>
@@ -1465,10 +1557,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1479,8 +1571,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
             <span class="md-nav__icon md-icon"></span>
             stop
           </label>
@@ -1737,7 +1829,16 @@
 
 
 <h1 id="retry-policies">Retry Policies</h1>
-<p>Configure automatic retries for test steps with configurable backoff strategies.</p>
+<p>Sometimes tests fail not because something is broken, but because of temporary issues like network hiccups or services being briefly unavailable. Retry policies tell Rocketship to <strong>automatically try again</strong> if a step fails, making your tests more reliable.</p>
+<p><strong>When to use retries:</strong>
+- Network requests that might timeout
+- APIs that occasionally return errors
+- Services that need a moment to process data
+- Any step that might fail due to timing issues</p>
+<p><strong>When NOT to use retries:</strong>
+- Validation errors (like wrong data format)
+- Authentication failures (like wrong password)
+- Permanent errors (like 404 Not Found)</p>
 <h2 id="quick-start">Quick Start</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API</span><span class="nv"> </span><span class="s">request</span><span class="nv"> </span><span class="s">with</span><span class="nv"> </span><span class="s">retry&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">plugin</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
@@ -1787,7 +1888,9 @@
 </tbody>
 </table>
 <h2 id="backoff-strategies">Backoff Strategies</h2>
+<p>Backoff means "wait before trying again." Different strategies control how long to wait:</p>
 <h3 id="exponential-backoff">Exponential Backoff</h3>
+<p>Wait longer each time - good for rate-limited APIs or services that need time to recover:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">retry</span><span class="p">:</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>
@@ -1795,6 +1898,7 @@
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Retry delays: 1s → 2s → 4s → 8s</span>
 </code></pre></div>
 <h3 id="linear-backoff">Linear Backoff</h3>
+<p>Wait the same amount of time each retry - good for services that recover quickly:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">retry</span><span class="p">:</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;5s&quot;</span>
@@ -1802,6 +1906,7 @@
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Retry delays: 5s → 5s → 5s</span>
 </code></pre></div>
 <h3 id="capped-exponential">Capped Exponential</h3>
+<p>Same as exponential, but never wait longer than a maximum time - prevents extremely long waits:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">retry</span><span class="p">:</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">maximum_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">initial_interval</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1s&quot;</span>

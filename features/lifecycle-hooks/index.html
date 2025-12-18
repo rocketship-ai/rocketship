@@ -798,9 +798,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#variable-scoping" class="md-nav__link">
+  <a href="#where-variables-are-available" class="md-nav__link">
     <span class="md-ellipsis">
-      Variable Scoping
+      Where Variables Are Available
     </span>
   </a>
   
@@ -1006,6 +1006,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
       
@@ -1066,6 +1074,27 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_doctor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    doctor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1090,10 +1119,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
         
           
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1104,8 +1133,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             profile
           </label>
@@ -1252,6 +1281,69 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/rocketship_login/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    login
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_logout/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    logout
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/rocketship_status/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    status
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/rocketship_run/" class="md-nav__link">
         
   
@@ -1330,10 +1422,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1344,8 +1436,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
             <span class="md-nav__icon md-icon"></span>
             start
           </label>
@@ -1423,10 +1515,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1437,8 +1529,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
             <span class="md-nav__icon md-icon"></span>
             stop
           </label>
@@ -1608,9 +1700,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#variable-scoping" class="md-nav__link">
+  <a href="#where-variables-are-available" class="md-nav__link">
     <span class="md-ellipsis">
-      Variable Scoping
+      Where Variables Are Available
     </span>
   </a>
   
@@ -1653,7 +1745,14 @@
 
 
 <h1 id="lifecycle-hooks">Lifecycle Hooks</h1>
-<p>Run setup and teardown steps at suite and test levels.</p>
+<p>Lifecycle hooks let you <strong>automatically run setup and cleanup tasks</strong> before and after your tests. This is perfect for:
+- Creating test data before tests run
+- Cleaning up test data after tests complete
+- Setting up authentication or connections
+- Collecting logs or debugging info when tests fail</p>
+<p><strong>Two levels of hooks:</strong>
+- <strong>Suite-level</strong>: Run once for all tests in a file
+- <strong>Test-level</strong>: Run for each individual test</p>
 <h2 id="suite-lifecycle">Suite Lifecycle</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;API</span><span class="nv"> </span><span class="s">Test</span><span class="nv"> </span><span class="s">Suite&quot;</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">init</span><span class="p">:</span>
@@ -1690,7 +1789,11 @@
 <a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="w">        </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GET</span>
 <a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="w">        </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.OPS_URL</span><span class="nv"> </span><span class="s">}}/logs?run={{</span><span class="nv"> </span><span class="s">.run.id</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<p><strong>Execution</strong>: <code>init</code> → <code>tests</code> → <code>cleanup.on_failure</code> (if failed) → <code>cleanup.always</code></p>
+<p><strong>Execution order:</strong>
+1. <code>init</code> steps run first (setup for all tests)
+2. All <code>tests</code> run
+3. If any test failed, <code>cleanup.on_failure</code> steps run
+4. <code>cleanup.always</code> steps always run (cleanup guaranteed)</p>
 <h2 id="test-lifecycle">Test Lifecycle</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">tests</span><span class="p">:</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;User</span><span class="nv"> </span><span class="s">CRUD</span><span class="nv"> </span><span class="s">test&quot;</span>
@@ -1719,13 +1822,18 @@
 <a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">            </span><span class="nt">method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DELETE</span>
 <a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">            </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">.env.API_URL</span><span class="nv"> </span><span class="s">}}/users/{{</span><span class="nv"> </span><span class="s">user_id</span><span class="nv"> </span><span class="s">}}&quot;</span>
 </code></pre></div>
-<p><strong>Execution</strong>: <code>init</code> → <code>steps</code> → <code>cleanup.on_failure</code> (if failed) → <code>cleanup.always</code></p>
-<h2 id="variable-scoping">Variable Scoping</h2>
+<p><strong>Execution order:</strong>
+1. Test <code>init</code> steps run first (setup for this test)
+2. Test <code>steps</code> run
+3. If the test failed, <code>cleanup.on_failure</code> steps run
+4. <code>cleanup.always</code> steps always run (cleanup guaranteed)</p>
+<h2 id="where-variables-are-available">Where Variables Are Available</h2>
+<p>When you save a variable, where can you use it?</p>
 <table>
 <thead>
 <tr>
-<th>Source</th>
-<th>Available In</th>
+<th>Where Variable is Saved</th>
+<th>Can Use It In</th>
 </tr>
 </thead>
 <tbody>
@@ -1734,12 +1842,12 @@
 <td>All tests and suite cleanup</td>
 </tr>
 <tr>
-<td>Test <code>init/steps</code></td>
-<td>Remaining steps and cleanup in that test</td>
+<td>Test <code>init</code> or <code>steps</code></td>
+<td>Remaining steps in that test and the test's cleanup</td>
 </tr>
 <tr>
-<td>Cleanup saves</td>
-<td>Later cleanup steps in same cleanup block</td>
+<td><code>cleanup.always</code> or <code>on_failure</code></td>
+<td>Later cleanup steps in the same cleanup block</td>
 </tr>
 </tbody>
 </table>

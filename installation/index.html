@@ -1015,6 +1015,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
       
@@ -1075,6 +1083,27 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_doctor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    doctor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1099,10 +1128,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
         
           
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1113,8 +1142,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             profile
           </label>
@@ -1261,6 +1290,69 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/rocketship_login/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    login
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_logout/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    logout
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/rocketship_status/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    status
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/rocketship_run/" class="md-nav__link">
         
   
@@ -1339,10 +1431,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1353,8 +1445,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
             <span class="md-nav__icon md-icon"></span>
             start
           </label>
@@ -1432,10 +1524,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1446,8 +1538,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
             <span class="md-nav__icon md-icon"></span>
             stop
           </label>
@@ -1673,8 +1765,17 @@
 <h1 id="installation">Installation</h1>
 <p>Rocketship ships prebuilt binaries for macOS and Linux. Use the Homebrew tap on macOS for the smoothest experience, or the portable installer script everywhere else. This page walks through the supported options, prerequisites, and post-install checks.</p>
 <h2 id="prerequisites">Prerequisites</h2>
-<p>To run the Rocketship engine locally you need Temporal:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>brew<span class="w"> </span>install<span class="w"> </span>temporal
+<p><strong>Do you need Temporal?</strong></p>
+<ul>
+<li><strong>Yes, if</strong> you'll run tests on your own computer using the local engine</li>
+<li><strong>No, if</strong> you'll connect to a remote Rocketship server (cloud or team server)</li>
+</ul>
+<p><strong>To install Temporal (if needed):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># macOS</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>brew<span class="w"> </span>install<span class="w"> </span>temporal
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Linux</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Follow Temporal&#39;s installation guide: https://docs.temporal.io/cli#install</span>
 </code></pre></div>
 <p>On Linux follow Temporal's <a href="https://docs.temporal.io/cli#install">official installation guide</a>. If you only connect to a remote Rocketship deployment, Temporal is optional.</p>
 <h2 id="macos-recommended-via-homebrew">macOS (recommended via Homebrew)</h2>
@@ -1686,15 +1787,13 @@
 <p>For environments without Homebrew run the installer script:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://raw.githubusercontent.com/rocketship-ai/rocketship/main/scripts/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
 </code></pre></div>
-<p>The script:</p>
-<ul>
-<li>Detects your OS/architecture and downloads the matching release asset</li>
-<li>Verifies the binary against the published <code>checksums.txt</code></li>
-<li>Installs to <code>~/.local/bin/rocketship</code> (override via <code>ROCKETSHIP_BIN_DIR</code>)</li>
-<li>Removes macOS quarantine attributes when needed</li>
-<li>Appends <code>~/.local/bin</code> to your shell <code>PATH</code> if it isn't already there</li>
-</ul>
-<p>Re-run the script to pick up future releases. To pin a version, set <code>ROCKETSHIP_VERSION=v0.5.23</code> (for example) before invoking the script.</p>
+<p><strong>What the installer does:</strong>
+- Detects your operating system and downloads the right version
+- Verifies the download is safe (checksums)
+- Installs Rocketship to <code>~/.local/bin/rocketship</code>
+- Sets up your PATH so you can run <code>rocketship</code> from anywhere</p>
+<p><strong>To update later:</strong> Just run the installer script again - it will download the latest version.</p>
+<p><strong>To install a specific version:</strong> Set <code>ROCKETSHIP_VERSION=v0.5.23</code> (for example) before running the script.</p>
 <h2 id="docker">Docker</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>pull<span class="w"> </span>rocketshipai/rocketship:latest
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>rocketshipai/rocketship:latest<span class="w"> </span>--help
@@ -1707,8 +1806,7 @@
 <h2 id="next-steps">Next steps</h2>
 <ul>
 <li><a href="../quickstart/">Quickstart</a> to run your first suite</li>
-<li><a href="../examples/">Examples</a> for ready-made specs</li>
-<li><a href="yaml-reference/index.md">Test specification reference</a> when you need exact syntax</li>
+<li><a href="../yaml-reference/plugin-reference/">Test specification reference</a> when you need exact syntax</li>
 </ul>
 
 

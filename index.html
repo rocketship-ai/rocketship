@@ -984,6 +984,14 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
     
     
       
@@ -1044,6 +1052,27 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="reference/rocketship_doctor/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    doctor
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1068,10 +1097,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
         
           
-          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1082,8 +1111,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_2">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
             <span class="md-nav__icon md-icon"></span>
             profile
           </label>
@@ -1230,6 +1259,69 @@
   
   
     <li class="md-nav__item">
+      <a href="reference/rocketship_login/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    login
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/rocketship_logout/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    logout
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reference/rocketship_status/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    status
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="reference/rocketship_run/" class="md-nav__link">
         
   
@@ -1308,10 +1400,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_10" >
         
           
-          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_10" id="__nav_5_10_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1322,8 +1414,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_6">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_10">
             <span class="md-nav__icon md-icon"></span>
             start
           </label>
@@ -1401,10 +1493,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_11" >
         
           
-          <label class="md-nav__link" for="__nav_5_7" id="__nav_5_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_5_11" id="__nav_5_11_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -1415,8 +1507,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5_7">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_11">
             <span class="md-nav__icon md-icon"></span>
             stop
           </label>
@@ -1613,23 +1705,31 @@
 
 
 <h1 id="rocketship-documentation">Rocketship Documentation</h1>
-<p>Welcome to the Rocketship documentation! Rocketship is an open-source API testing framework designed for humans and agents.</p>
+<p>Welcome to the Rocketship documentation! Rocketship is an open-source testing framework for APIs and browsers, designed for both humans and coding agents.</p>
 <h2 id="what-is-rocketship">What is Rocketship?</h2>
 <p>🚀 Rocketship is an <strong>open‑source testing framework</strong> that can verify complex, API-driven scenarios that are made by your customers— or your systems. Rocketship brings durable execution backed by <strong>Temporal</strong> to your testing infra, and offers extensible <a href="https://github.com/rocketship-ai/rocketship/tree/main/internal/plugins">plugins</a> so you can add the APIs and protocols that matter to you.</p>
-<p>Define your test scenarios as <strong>declarative YAML specs</strong> -&gt; and have Rocketship run them locally or in your cloud environment as deterministic workflows.</p>
+<p><strong>What can it test?</strong>
+- <strong>APIs</strong> - Check if your web services respond correctly to requests
+- <strong>Websites</strong> - Automate browser actions like clicking buttons and filling forms
+- <strong>Databases</strong> - Verify data is stored and retrieved correctly
+- <strong>Complete workflows</strong> - Test entire user journeys across multiple services</p>
+<p><strong>How it works:</strong> You write simple instructions in a YAML file (a human-readable format), and Rocketship executes them. You can run tests on your computer or in the cloud. The tool automatically handles retries, error recovery, and complex scenarios so your tests are reliable.</p>
 <h2 id="key-features">Key Features</h2>
 <ul>
-<li><strong>Rocketship CLI</strong> - Run the engine locally or connect to a remote address</li>
-<li><strong>Deploy-Ready Images</strong> - Need long-running, highly-scalable tests? Or just want to save test history? Host Rocketship on your own infra</li>
-<li><strong>Declarative YAML</strong> - Define your test scenarios as declarative YAML specs</li>
-<li><strong>Durable Execution</strong> - Need a test step to retry? Or a test to run for 10 hours? No problem!</li>
-<li><strong>Plugin Ecosystem</strong> - Add the APIs and protocols that matter to you</li>
+<li><strong>Works Everywhere</strong>: Run tests on your computer, in Kubernetes, or in the cloud</li>
+<li><strong>Easy Setup</strong>: Switch between different environments with profiles</li>
+<li><strong>Secure Access</strong>: Built-in authentication for cloud deployments</li>
+<li><strong>Many Test Types</strong>: Test APIs, databases, websites, and more with specialized plugins</li>
+<li><strong>Reliable</strong>: Automatically retries failed tests and handles long-running scenarios</li>
+<li><strong>Flexible</strong>: Use variables to make tests reusable across different environments</li>
 </ul>
 <h2 id="quick-links">Quick Links</h2>
 <ul>
-<li><a href="quickstart/">Quick Start Guide</a></li>
-<li><a href="reference/rocketship/">Command Reference</a></li>
-<li><a href="contributing/">Contributing Guide</a></li>
+<li><a href="quickstart/">Quick Start Guide</a> - Get running in minutes</li>
+<li><a href="plugins/">Plugins</a> - Available plugins and capabilities</li>
+<li><a href="deploy-on-your-cloud/">Deploy On Your Cloud</a> - Production deployment options</li>
+<li><a href="reference/rocketship/">Command Reference</a> - All CLI commands</li>
+<li><a href="contributing/">Contributing Guide</a> - Build with us</li>
 </ul>
 
 
