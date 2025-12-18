@@ -77,6 +77,7 @@ nav:
       - Production (DigitalOcean): deploy/digitalocean.md
   - Command Reference:
       - Overview: reference/rocketship.md
+      - doctor: reference/rocketship_doctor.md
       - profile:
           - Overview: reference/rocketship_profile.md
           - create: reference/rocketship_profile_create.md
@@ -84,6 +85,9 @@ nav:
           - list: reference/rocketship_profile_list.md
           - show: reference/rocketship_profile_show.md
           - use: reference/rocketship_profile_use.md
+      - login: reference/rocketship_login.md
+      - logout: reference/rocketship_logout.md
+      - status: reference/rocketship_status.md
       - run: reference/rocketship_run.md
       - list: reference/rocketship_list.md
       - get: reference/rocketship_get.md
