@@ -40,14 +40,26 @@ func (s *Store) InsertRun(ctx context.Context, run RunRecord) (RunRecord, error)
 		endedAt = run.EndedAt.Time
 	}
 
+	var environmentID, scheduleID, commitMessage interface{}
+	if run.EnvironmentID.Valid {
+		environmentID = run.EnvironmentID.UUID
+	}
+	if run.ScheduleID.Valid {
+		scheduleID = run.ScheduleID.UUID
+	}
+	if run.CommitMessage.Valid {
+		commitMessage = run.CommitMessage.String
+	}
+
 	const query = `
         INSERT INTO runs (
             id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
             config_source, source, branch, environment, commit_sha, bundle_sha,
-            total_tests, passed_tests, failed_tests, timeout_tests,
+            total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
+            environment_id, schedule_id, commit_message,
             created_at, updated_at, started_at, ended_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW(), NOW(), $19, $20)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW(), $23, $24)
         RETURNING created_at, updated_at
     `
 
@@ -60,7 +72,8 @@ func (s *Store) InsertRun(ctx context.Context, run RunRecord) (RunRecord, error)
 		run.ID, run.OrganizationID, projectID, run.Status, run.SuiteName,
 		run.Initiator, run.Trigger, run.ScheduleName, run.ConfigSource,
 		run.Source, run.Branch, run.Environment, commitSHA, bundleSHA,
-		run.TotalTests, run.PassedTests, run.FailedTests, run.TimeoutTests,
+		run.TotalTests, run.PassedTests, run.FailedTests, run.TimeoutTests, run.SkippedTests,
+		environmentID, scheduleID, commitMessage,
 		startedAt, endedAt); err != nil {
 		return RunRecord{}, fmt.Errorf("failed to insert run: %w", err)
 	}
@@ -133,7 +146,8 @@ func (s *Store) UpdateRun(ctx context.Context, update RunUpdate) (RunRecord, err
         WHERE id = $1 AND organization_id = $2
         RETURNING id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
                   config_source, source, branch, environment, commit_sha, bundle_sha,
-                  total_tests, passed_tests, failed_tests, timeout_tests,
+                  total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
+                  environment_id, schedule_id, commit_message,
                   created_at, updated_at, started_at, ended_at
     `, setsStr)
 
@@ -152,7 +166,8 @@ func (s *Store) GetRun(ctx context.Context, orgID uuid.UUID, runID string) (RunR
 	const query = `
         SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
                config_source, source, branch, environment, commit_sha, bundle_sha,
-               total_tests, passed_tests, failed_tests, timeout_tests,
+               total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
+               environment_id, schedule_id, commit_message,
                created_at, updated_at, started_at, ended_at
         FROM runs
         WHERE organization_id = $1 AND id = $2
@@ -179,7 +194,8 @@ func (s *Store) ListRuns(ctx context.Context, orgID uuid.UUID, limit int) ([]Run
 	const query = `
         SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
                config_source, source, branch, environment, commit_sha, bundle_sha,
-               total_tests, passed_tests, failed_tests, timeout_tests,
+               total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
+               environment_id, schedule_id, commit_message,
                created_at, updated_at, started_at, ended_at
         FROM runs
         WHERE organization_id = $1
@@ -189,6 +205,36 @@ func (s *Store) ListRuns(ctx context.Context, orgID uuid.UUID, limit int) ([]Run
 	var runs []RunRecord
 	if err := s.db.SelectContext(ctx, &runs, query, orgID, limit); err != nil {
 		return nil, fmt.Errorf("failed to list runs: %w", err)
+	}
+	if runs == nil {
+		runs = []RunRecord{}
+	}
+	return runs, nil
+}
+
+// ListRunsByProject returns recent test runs for a specific project
+func (s *Store) ListRunsByProject(ctx context.Context, projectID uuid.UUID, limit int) ([]RunRecord, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	const query = `
+        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
+               config_source, source, branch, environment, commit_sha, bundle_sha,
+               total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
+               environment_id, schedule_id, commit_message,
+               created_at, updated_at, started_at, ended_at
+        FROM runs
+        WHERE project_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2
+    `
+	var runs []RunRecord
+	if err := s.db.SelectContext(ctx, &runs, query, projectID, limit); err != nil {
+		return nil, fmt.Errorf("failed to list runs by project: %w", err)
 	}
 	if runs == nil {
 		runs = []RunRecord{}
