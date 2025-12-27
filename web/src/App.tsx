@@ -5,7 +5,6 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import OnboardingPage from './pages/OnboardingPage'
 import DashboardPage from './pages/DashboardPage'
-import RunsPage from './pages/RunsPage'
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, userData } = useAuth()
@@ -46,11 +45,12 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      {/* Redirect /runs to the new console UI (Suite Activity) */}
       <Route
         path="/runs"
         element={
           <ProtectedRoute>
-            <RunsPage />
+            <Navigate to="/dashboard?view=suite-activity" replace />
           </ProtectedRoute>
         }
       />

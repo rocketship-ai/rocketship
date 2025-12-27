@@ -2,6 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base typography - matches Rocketshipcloudconsoledesign */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0;
+}
+
+p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+button, input, select, textarea {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Console layout utilities - ensure these are always available */
+.ml-16 {
+  margin-left: 4rem;
+}
+
+.w-16 {
+  width: 4rem;
+}
+
+.w-64 {
+  width: 16rem;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.inset-y-0 {
+  top: 0;
+  bottom: 0;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
