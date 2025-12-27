@@ -3,19 +3,12 @@ name: Pull Request Check
 on:
   pull_request:
     branches: ["main"]
-    paths:
-      - "**.go"
-      - "go.mod"
-      - "go.sum"
-      - ".github/workflows/**"
-      - ".github/scripts/**"
-      - ".docker/**"
-      - "examples/**"
-      - "internal/dsl/schema.json"
-      - "docs/src/yaml-reference/**"
-      - "mcp-server/**"
-      - "package*.json"
-      - "proto/**"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "!docs/src/yaml-reference/**"
+      - "LICENSE"
+      - ".gitignore"
 
 jobs:
   test-build:
