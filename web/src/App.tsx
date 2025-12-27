@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { ProtectedRoute } from './components/ProtectedRoute'
-import LoginPage from './pages/LoginPage'
-import SignupPage from './pages/SignupPage'
-import OnboardingPage from './pages/OnboardingPage'
-import DashboardPage from './pages/DashboardPage'
+import { AuthProvider, useAuth } from '@/features/auth/AuthContext'
+import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
+import LoginPage from '@/features/auth/LoginPage'
+import SignupPage from '@/features/auth/SignupPage'
+import OnboardingPage from '@/features/auth/OnboardingPage'
+import { ConsoleApp } from '@/features/console/ConsoleApp'
 
 function RootRedirect() {
   const { isAuthenticated, isLoading, userData } = useAuth()
@@ -41,7 +41,7 @@ function AppRoutes() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <ConsoleApp />
           </ProtectedRoute>
         }
       />

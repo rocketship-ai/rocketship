@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import { Sidebar } from './components/sidebar';
 import { Header } from './components/header';
 import { Overview } from './pages/overview';

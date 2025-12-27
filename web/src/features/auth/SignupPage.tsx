@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoImage from "@/assets/black-logo-transparent.png";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "./AuthContext";
 import { sha256 } from "js-sha256";
 
 // PKCE helper functions
