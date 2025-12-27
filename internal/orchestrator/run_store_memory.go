@@ -113,3 +113,32 @@ func (s *memoryRunStore) ListRuns(ctx context.Context, orgID uuid.UUID, limit in
 
 	return runs, nil
 }
+
+// Run details methods - no-op for memory store (tests are tracked in-memory via Engine.runs)
+
+func (s *memoryRunStore) InsertRunTest(_ context.Context, rt persistence.RunTest) (persistence.RunTest, error) {
+	// No-op for memory store - tests are tracked via Engine.runs
+	rt.CreatedAt = time.Now().UTC()
+	return rt, nil
+}
+
+func (s *memoryRunStore) UpdateRunTestByWorkflowID(_ context.Context, _, _ string, _ *string, _ time.Time, _ int64) error {
+	// No-op for memory store - tests are tracked via Engine.runs
+	return nil
+}
+
+func (s *memoryRunStore) ListRunTests(_ context.Context, _ string) ([]persistence.RunTest, error) {
+	// No-op for memory store - tests are tracked via Engine.runs
+	return []persistence.RunTest{}, nil
+}
+
+func (s *memoryRunStore) InsertRunLog(_ context.Context, log persistence.RunLog) (persistence.RunLog, error) {
+	// No-op for memory store - logs are tracked via Engine.runs
+	log.LoggedAt = time.Now().UTC()
+	return log, nil
+}
+
+func (s *memoryRunStore) ListRunLogs(_ context.Context, _ string, _ int) ([]persistence.RunLog, error) {
+	// No-op for memory store - logs are tracked via Engine.runs
+	return []persistence.RunLog{}, nil
+}

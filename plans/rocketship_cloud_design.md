@@ -22,18 +22,32 @@ Below is the full v1 design—DB, JWTs, enforcement, flows, and guardrails.
 
 **Core tables (minimal):**
 
+Note: the repo already ships an auth-broker Postgres schema (see `internal/authbroker/persistence/migrations`). The table names/columns below are aligned to that implementation where possible, and call out the additional v1 tables/columns we still need for the web UI.
+
 ```
-orgs(id, name, created_at, plan)
-users(id, email, github_user_id, created_at)
-org_admins(org_id, user_id)                        -- org admins have Write on every project
-projects(id, org_id, name, repo_url, default_branch, path_scope, created_at)
-project_members(project_id, user_id, role)         -- role ∈ {read, write}
-ci_tokens(id, project_id, name, scopes_json, never_expires, expires_at, revoked_at, created_at, hashed_secret)
-environments(id, project_id, name, created_at)     -- lightweight index of discovered env ids (no policy)
-workers(id, project_id, env_id, status, last_heartbeat_at, capabilities_json)  -- v2 placeholder
+organizations(id, name, slug, created_at)
+users(id, email, github_user_id, name, username, created_at, updated_at)
+organization_admins(organization_id, user_id, created_at)                   -- org admins have Write on every project
+projects(id, organization_id, name, repo_url, default_branch, path_scope, created_at, updated_at*)  (* add for UI)
+project_members(project_id, user_id, role, created_at, updated_at)          -- role ∈ {read, write}
+ci_tokens(id, project_id, name, scopes TEXT[], never_expires, expires_at, revoked_at, created_at, updated_at, token_hash)
+project_environments*(id, project_id, name, created_at, updated_at)         (* add for UI; lightweight index, no policy)
+workers(id, project_id, environment_id, status, last_heartbeat_at, capabilities_json)              -- v2 placeholder
+runs(id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, config_source, source, branch, environment, commit_sha, bundle_sha, totals..., timestamps...)
 ```
 
 - `path_scope`: directory or glob patterns (e.g., `frontend/.rocketship/**`). Multiple → JSON array.
+- `project_environments`: in v1 we treat environments as *labels* for runs + schedules; we do not add environment-specific policy/guardrails.
+
+### MVP UI hydration (what must be persistable in v1)
+
+The v1 web UI mock needs real data for:
+
+- **Projects list**: repo URL, path scope, default branch, last updated (add `projects.updated_at`).
+- **Environments & Access**: environment list per project + “last run” per environment (add `project_environments`, and persist `runs.environment` consistently).
+- **CI tokens**: name, scopes, expires/never, status (active vs revoked vs expired), last used (add `ci_tokens.last_used_at`), revoke.
+- **Suite activity / suite run history**: list runs per org/project with status + duration + totals + context (already covered by `runs`, but `runs.project_id` must be populated).
+- **Run details**: for v1 we only need suite-level summary + per-test statuses + logs. Persisting per-step request/response editing is explicitly out of scope for v1.
 
 ## 2) Identity & membership
 
@@ -108,7 +122,8 @@ gh:{id,login}
 **Run labels (stamped on every run)**
 
 ```
-environment: <id>                 # e.g., local/dev/stage/prod
+project_id: <uuid>                # required when the run maps to a registered project
+environment: <name>               # e.g., local/development/staging/production (v1 = label)
 initiator: user | ci | agent | schedule
 config_source: uncommitted | repo_commit
 commit_sha: <sha>                 # when repo_commit
@@ -142,11 +157,19 @@ submitted_by: <user_id|token_id>
    - **List/View:** Read.
 5. Attach context `{actor, project_id, environment, initiator, config_source, commit_sha|bundle_sha}` and start Temporal workflow.
 
+### Persistence expectations (v1)
+
+- Engine persists a `runs` row for every run.
+- For v1 UI, Engine should also persist:
+  - `run_tests` (one row per test workflow, with status + timings + error_message)
+  - `run_logs` (streamed log lines)
+
+This enables historical run pages to hydrate after engine restarts. Persisting step request/response payloads and artifacts is v2.
+
 **Ephemeral Runs (unregistered dirs)**
 
-- Allowed: CLI uploads bundle; Engine runs just as a **scratch project** in user’s org with just shorter retention. UI banner: “Ephemeral run — Register Project to persist”.
-- Maybe introduce and enforce --scratch for users who might not be allowed to trigger a run for a project in the CLI, but want to run the test in the cloud.
-- In the future, I assume we will have a web ui sidebar tab for these kinds of runs. But idk.
+- Optional (can be deferred): CLI uploads bundle; Engine runs as an **ephemeral run** in the user’s org with shorter retention. UI banner: “Ephemeral run — Register Project to persist”.
+- This is not required to ship the MVP UI for a single organization with registered projects.
 
 ## 7) Guardrails (v1, user-friendly)
 
