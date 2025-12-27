@@ -262,8 +262,9 @@ jobs:
       - name: Test CLI commands
         run: ./.github/scripts/test-cli-commands.sh
 
-      - name: Test profile system
-        run: ./.github/scripts/test-profile-system.sh
+      # TODO: uncomment once cloud is running again
+      # - name: Test profile system
+      #   run: ./.github/scripts/test-profile-system.sh
 
       - name: Test run persistence and management
         run: |
