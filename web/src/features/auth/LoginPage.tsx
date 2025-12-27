@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoImage from "@/assets/black-logo-transparent.png";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "./AuthContext";
 import { sha256 } from "js-sha256";
 
 // PKCE helper functions
@@ -42,10 +42,10 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const hasProcessedCallback = useRef(false);
 
-  // Redirect to dashboard if already authenticated
+  // Redirect to overview if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
+      navigate({ to: "/overview", replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -140,7 +140,7 @@ export default function LoginPage() {
 
             // Navigate to root - let RootRedirect check status and route appropriately
             // (either to /onboarding if pending, or /dashboard if ready)
-            navigate("/", { replace: true });
+            navigate({ to: "/", replace: true });
           } else {
             throw new Error("No access token received");
           }

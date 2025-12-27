@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from './AuthContext'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -71,9 +71,9 @@ export default function OnboardingPage() {
         throw new Error(errorData.error || 'Failed to complete registration')
       }
 
-      // Registration complete! Refresh auth state and navigate to dashboard
+      // Registration complete! Refresh auth state and navigate to overview
       await checkAuth()
-      navigate('/dashboard', { replace: true })
+      navigate({ to: '/overview', replace: true })
     } catch (error) {
       console.error('Failed to complete registration:', error)
       setError(error instanceof Error ? error.message : 'Failed to complete registration')

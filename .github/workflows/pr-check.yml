@@ -3,19 +3,12 @@ name: Pull Request Check
 on:
   pull_request:
     branches: ["main"]
-    paths:
-      - "**.go"
-      - "go.mod"
-      - "go.sum"
-      - ".github/workflows/**"
-      - ".github/scripts/**"
-      - ".docker/**"
-      - "examples/**"
-      - "internal/dsl/schema.json"
-      - "docs/src/yaml-reference/**"
-      - "mcp-server/**"
-      - "package*.json"
-      - "proto/**"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "!docs/src/yaml-reference/**"
+      - "LICENSE"
+      - ".gitignore"
 
 jobs:
   test-build:
@@ -269,8 +262,9 @@ jobs:
       - name: Test CLI commands
         run: ./.github/scripts/test-cli-commands.sh
 
-      - name: Test profile system
-        run: ./.github/scripts/test-profile-system.sh
+      # TODO: uncomment once cloud is running again
+      # - name: Test profile system
+      #   run: ./.github/scripts/test-profile-system.sh
 
       - name: Test run persistence and management
         run: |

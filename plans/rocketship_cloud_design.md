@@ -39,7 +39,7 @@ workers(id, project_id, env_id, status, last_heartbeat_at, capabilities_json)  -
 
 - **Org Admins:** create projects, assign/remove project members, manage billing, rotate secrets, delete projects; promote/demote admins. Implicit **Write** to all projects.
 - **Project Members**
-  - **Write:** run (any env), edit tests in UI and run edited tests, edit schedules, ask Rocketship to create PR or commit (if Git allows), mint tokens; includes Read.
+  - **Write:** run tests in any env, edit tests in UI and run edited tests, edit schedules, ask Rocketship to create PR or commit (if Git allows), mint tokens; includes Read.
   - **Read:** view runs, artifacts, logs, configs at ref; cannot run/modify; cannot view tokens.
 
 If a user has no project role, they see nothing in that project (optionally just minimal metadata to request access).

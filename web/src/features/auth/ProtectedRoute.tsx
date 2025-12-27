@@ -1,5 +1,5 @@
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Navigate } from '@tanstack/react-router'
+import { useAuth } from './AuthContext'
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, userData } = useAuth()

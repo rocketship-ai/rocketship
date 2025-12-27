@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react'
-import { TokenManager } from '@/auth/tokenManager'
+import { TokenManager } from './tokenManager'
 
 interface User {
   id: string
