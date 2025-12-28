@@ -2042,8 +2042,53 @@
 <li>Copy the Client Secret to your <code>.env</code> file</li>
 <li>Update <code>charts/rocketship/values-minikube-local.yaml</code> with your Client ID</li>
 </ol>
+<p><strong>GitHub App Setup (Repository Access):</strong></p>
+<p>Rocketship Cloud uses a <strong>GitHub App</strong> (not OAuth scopes) for repository access so users can grant access to <strong>specific repositories</strong>.</p>
+<ol>
+<li>Create a GitHub App (GitHub Settings → Developer settings → GitHub Apps → New GitHub App)</li>
+<li>Set <strong>Setup URL</strong>: <code>http://auth.minikube.local/github-app/callback</code></li>
+<li>Recommended repository permissions:</li>
+<li><strong>Contents</strong>: Read-only (v1)</li>
+<li><strong>Pull requests</strong>: Read &amp; write (optional now; needed for v2 “open PR from UI”)</li>
+<li>After creating the app, generate and download a private key (<code>.pem</code>).</li>
+</ol>
+<p>Store the <code>.pem</code> somewhere local (it must never be committed). For convenience you can keep it in the repo root; it is gitignored.</p>
+<p>Add these to your local <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">ROCKETSHIP_GITHUB_APP_ID</span><span class="o">=</span><span class="s2">&quot;YOUR_APP_ID&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">ROCKETSHIP_GITHUB_APP_SLUG</span><span class="o">=</span><span class="s2">&quot;YOUR_APP_SLUG&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE</span><span class="o">=</span><span class="s2">&quot;./path/to/your/private-key.pem&quot;</span>
+</code></pre></div>
+<p>Then re-run setup so the Kubernetes secret is created:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>scripts/setup-local-dev.sh
+</code></pre></div>
+<p>If you change GitHub App permissions or installed repositories, re-run the app installation and then restart the auth broker.</p>
+<p><strong>GitHub App Webhooks (Auto-sync via Smee):</strong></p>
+<p>For local development, GitHub cannot reach <code>http://auth.minikube.local</code> directly. Rocketship uses a Smee relay pod inside the cluster to forward GitHub App webhooks into the auth-broker.</p>
+<ol>
+<li>Create a Smee channel: <code>https://smee.io/new</code></li>
+<li>In your GitHub App settings, set:</li>
+<li><strong>Webhook URL</strong>: your Smee URL (e.g. <code>https://smee.io/abcd1234</code>)</li>
+<li><strong>Webhook secret</strong>: generate a secret and save it locally</li>
+<li>Enable events: <code>push</code>, <code>pull_request</code>, <code>installation</code>, <code>installation_repositories</code></li>
+<li>Add these to your local <code>.env</code>:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL</span><span class="o">=</span><span class="s2">&quot;https://smee.io/your-channel&quot;</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">ROCKETSHIP_GITHUB_WEBHOOK_SECRET</span><span class="o">=</span><span class="s2">&quot;your-webhook-secret&quot;</span>
+</code></pre></div>
+<ol>
+<li>Re-run setup so the secret and relay deployment are created:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>scripts/setup-local-dev.sh
+</code></pre></div>
+<ol>
+<li>Verify webhook ingestion:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>logs<span class="w"> </span>deploy/rocketship-github-webhook-relay<span class="w"> </span>--tail<span class="o">=</span><span class="m">50</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>logs<span class="w"> </span>deploy/rocketship-auth-broker<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>rg<span class="w"> </span><span class="s2">&quot;webhook received&quot;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>rocketship-postgresql-0<span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>-lc<span class="w"> </span><span class="s1">&#39;PGPASSWORD=rocketship-dev-password /opt/bitnami/postgresql/bin/psql -U rocketship -d rocketship -c &quot;select event, repository_full_name, ref, action, received_at from github_webhook_deliveries order by received_at desc limit 10;&quot;&#39;</span>
+</code></pre></div>
 <h3 id="2-run-setup-script">2. Run Setup Script</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>scripts/setup-local-dev.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>scripts/setup-local-dev.sh
 </code></pre></div>
 <p>This sets up the minikube infrastructure (one-time setup):</p>
 <ul>
@@ -2056,7 +2101,7 @@
 <p><strong>Note:</strong> This script does NOT deploy Rocketship services. Skaffold handles that for hot-reloading.</p>
 <h3 id="3-configure-local-dns">3. Configure Local DNS</h3>
 <p>Add to <code>/etc/hosts</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;127.0.0.1 auth.minikube.local&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/hosts
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;127.0.0.1 auth.minikube.local&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/hosts
 </code></pre></div>
 <p><strong>Why needed:</strong> This ensures:
 - Your browser sends <code>Host: auth.minikube.local</code> header (matches ingress rule)
@@ -2064,7 +2109,7 @@
 - OAuth callback URLs and JWT issuer URLs are consistent</p>
 <h2 id="usage">Usage</h2>
 <h3 id="quick-start-all-in-one-script">Quick Start - All-in-One Script</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>scripts/start-dev.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>scripts/start-dev.sh
 </code></pre></div>
 <p>This automatically starts:
 1. Minikube tunnel (binds ingress to <code>127.0.0.1</code>)
@@ -2081,39 +2126,39 @@
 <ol>
 <li>
 <p>Start minikube tunnel (separate terminal):
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>sudo<span class="w"> </span>minikube<span class="w"> </span>tunnel<span class="w"> </span>-p<span class="w"> </span>rocketship
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>sudo<span class="w"> </span>minikube<span class="w"> </span>tunnel<span class="w"> </span>-p<span class="w"> </span>rocketship
 </code></pre></div></p>
 </li>
 <li>
 <p>Start Vite dev server (separate terminal):
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>web<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>dev
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">cd</span><span class="w"> </span>web<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>dev
 </code></pre></div></p>
 </li>
 <li>
 <p>Run Skaffold (watches for changes and rebuilds):
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Standard mode (all traffic through minikube tunnel)</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>skaffold<span class="w"> </span>dev
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Debug mode (with verbose logging)</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>skaffold<span class="w"> </span>dev<span class="w"> </span>-p<span class="w"> </span>debug
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Standard mode (all traffic through minikube tunnel)</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>skaffold<span class="w"> </span>dev
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Debug mode (with verbose logging)</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>skaffold<span class="w"> </span>dev<span class="w"> </span>-p<span class="w"> </span>debug
 </code></pre></div></p>
 </li>
 </ol>
 <h3 id="cli-without-auth">CLI Without Auth</h3>
 <p>If you just need CLI access without web UI:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Port-forward the engine</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>svc/rocketship-engine<span class="w"> </span><span class="m">7700</span>:7700<span class="w"> </span><span class="p">&amp;</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Configure CLI</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>minikube<span class="w"> </span>grpc://localhost:7700
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>minikube
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1"># Run tests</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-http/rocketship.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Port-forward the engine</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>kubectl<span class="w"> </span>port-forward<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>svc/rocketship-engine<span class="w"> </span><span class="m">7700</span>:7700<span class="w"> </span><span class="p">&amp;</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Configure CLI</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>create<span class="w"> </span>minikube<span class="w"> </span>grpc://localhost:7700
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>use<span class="w"> </span>minikube
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="c1"># Run tests</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-af<span class="w"> </span>examples/simple-http/rocketship.yaml
 </code></pre></div>
 <h3 id="cli-with-auth">CLI With Auth</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>rocketship<span class="w"> </span>login
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Follow GitHub device flow prompts</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>rocketship<span class="w"> </span>login
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Follow GitHub device flow prompts</span>
 </code></pre></div>
 <h3 id="web-app">Web App</h3>
 <p>The web UI is served through the same ingress as the auth broker (single-origin architecture):</p>
@@ -2160,7 +2205,7 @@
 </tbody>
 </table>
 <p>Example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">ROCKETSHIP_NAMESPACE</span><span class="o">=</span>testing<span class="w"> </span>scripts/setup-local-dev.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">ROCKETSHIP_NAMESPACE</span><span class="o">=</span>testing<span class="w"> </span>scripts/setup-local-dev.sh
 </code></pre></div>
 <h3 id="skaffold-configuration">Skaffold Configuration</h3>
 <p>The <code>skaffold.yaml</code> file defines what gets built and deployed:</p>
@@ -2174,7 +2219,7 @@
 <p>Edit <code>skaffold.yaml</code> to customize build or deployment behavior.</p>
 <h2 id="troubleshooting">Troubleshooting</h2>
 <p><strong>Skaffold build fails</strong>: Ensure Docker is using minikube's daemon:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>minikube<span class="w"> </span>-p<span class="w"> </span>rocketship<span class="w"> </span>docker-env<span class="k">)</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>minikube<span class="w"> </span>-p<span class="w"> </span>rocketship<span class="w"> </span>docker-env<span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div></p>
 <p><strong>Pods not ready</strong>: Wait 2-3 minutes for Temporal and Postgres to initialize.</p>
 <p><strong>Auth broker fails</strong>: Check <code>.env</code> has valid <code>GITHUB_CLIENT_SECRET</code> and <code>ROCKETSHIP_POSTMARK_SERVER_TOKEN</code>.</p>
@@ -2185,30 +2230,30 @@
 <li>Ensure web dependencies are installed: <code>cd web &amp;&amp; npm install</code></li>
 <li>Verify Vite is running: <code>curl http://localhost:5173</code></li>
 <li>Check vite-relay can reach host:
-   <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>test-vite<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--image<span class="o">=</span>busybox:1.36<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>wget<span class="w"> </span>-qO-<span class="w"> </span>http://192.168.64.1:5173/<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span>
+   <div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>test-vite<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>--image<span class="o">=</span>busybox:1.36<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>wget<span class="w"> </span>-qO-<span class="w"> </span>http://192.168.64.1:5173/<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span>
 </code></pre></div>
    If this fails, check macOS firewall settings for Node/Vite on port 5173.</li>
 </ol>
 <p><strong>Install script warnings about host connectivity</strong>: The install script tests connectivity to your host's Vite server to auto-detect the correct IP. If Vite isn't running yet, you'll see warnings like "Could not detect reachable host IP" - this is expected and the script will use a sensible default (192.168.64.1). Start Vite after installation completes.</p>
 <p><strong>Cookies not working</strong>: Ensure you're accessing the UI via <code>http://auth.minikube.local</code> (not <code>http://localhost:5173</code>). The single-origin architecture requires UI, auth broker, and engine to be served from the same host for cookies to work.</p>
 <p><strong>Engine API not accessible</strong>: Verify the ingress includes the <code>/engine</code> path:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>rocketship-gateway<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.rules[0].http.paths[*].path}&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>rocketship-gateway<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.rules[0].http.paths[*].path}&#39;</span>
 </code></pre></div>
 <p>Should show: <code>/api /authorize /token /callback /logout /engine /</code></p>
 <p><strong>Auth broker unreachable from inside cluster</strong>: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>ingress-nginx<span class="w"> </span>ingress-nginx-controller<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.clusterIP}&#39;</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>--values<span class="w"> </span>charts/rocketship/values-minikube-local.yaml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>--set<span class="w"> </span>temporal.host<span class="o">=</span>temporal-frontend.rocketship:7233<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>--set<span class="w"> </span><span class="s2">&quot;engine.hostAliases[0].ip=&lt;YOUR-IP&gt;&quot;</span><span class="w"> </span>--wait
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>ingress-nginx<span class="w"> </span>ingress-nginx-controller<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.clusterIP}&#39;</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span>--values<span class="w"> </span>charts/rocketship/values-minikube-local.yaml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">  </span>--set<span class="w"> </span>temporal.host<span class="o">=</span>temporal-frontend.rocketship:7233<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>rocketship<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">  </span>--set<span class="w"> </span><span class="s2">&quot;engine.hostAliases[0].ip=&lt;YOUR-IP&gt;&quot;</span><span class="w"> </span>--wait
 </code></pre></div>
 <p><strong>Auth broker unreachable from local machine</strong>: Ensure <code>/etc/hosts</code> entry exists and <code>sudo minikube tunnel</code> is running.</p>
 <h2 id="cleanup">Cleanup</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>rocketship<span class="w"> </span>temporal<span class="w"> </span>-n<span class="w"> </span>rocketship
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>rocketship
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>minikube<span class="w"> </span>delete<span class="w"> </span>-p<span class="w"> </span>rocketship
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>rocketship<span class="w"> </span>temporal<span class="w"> </span>-n<span class="w"> </span>rocketship
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>rocketship
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>minikube<span class="w"> </span>delete<span class="w"> </span>-p<span class="w"> </span>rocketship
 </code></pre></div>
 
 
