@@ -992,9 +992,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#option-a-github-broker-reuse-cli-device-flow" class="md-nav__link">
+  <a href="#option-a-github-controlplane-reuse-cli-device-flow" class="md-nav__link">
     <span class="md-ellipsis">
-      Option A — GitHub broker (reuse CLI device flow)
+      Option A — GitHub controlplane (reuse CLI device flow)
     </span>
   </a>
   
@@ -1875,9 +1875,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#option-a-github-broker-reuse-cli-device-flow" class="md-nav__link">
+  <a href="#option-a-github-controlplane-reuse-cli-device-flow" class="md-nav__link">
     <span class="md-ellipsis">
-      Option A — GitHub broker (reuse CLI device flow)
+      Option A — GitHub controlplane (reuse CLI device flow)
     </span>
   </a>
   
@@ -2074,31 +2074,31 @@
 <a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span>-t<span class="w"> </span><span class="nv">$REGISTRY</span>/rocketship-worker:<span class="nv">$TAG</span><span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">  </span>--push
 <a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
-<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1"># Auth broker</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1"># Controlplane</span>
 <a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>docker<span class="w"> </span>buildx<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span>--platform<span class="w"> </span>linux/amd64,linux/arm64<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">  </span>-f<span class="w"> </span>.docker/Dockerfile.authbroker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">  </span>-t<span class="w"> </span><span class="nv">$REGISTRY</span>/rocketship-auth-broker:<span class="nv">$TAG</span><span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">  </span>-f<span class="w"> </span>.docker/Dockerfile.controlplane<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">  </span>-t<span class="w"> </span><span class="nv">$REGISTRY</span>/rocketship-controlplane:<span class="nv">$TAG</span><span class="w"> </span>.<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">  </span>--push
 </code></pre></div>
 <blockquote>
 <p>Re-run these commands whenever you change code; keep the tag stable (for example <code>v0.1-test</code>) so the Helm release pulls the updated digest.</p>
 </blockquote>
 <h2 id="6-deploy-the-rocketship-helm-chart">6. Deploy the Rocketship Helm Chart</h2>
-<p>Before installing the chart, create the secrets that hold the auth broker’s configuration:</p>
+<p>Before installing the chart, create the secrets that hold the controlplane's configuration:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 1) Postgres connection string (replace with the managed database DSN)</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-database<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-database<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">DATABASE_URL</span><span class="o">=</span><span class="s1">&#39;postgres://rocketship:&lt;password&gt;@&lt;host&gt;:5432/rocketship?sslmode=require&#39;</span>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># 2) 32-byte refresh-token signing key (base64 encoded)</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-secrets<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-secrets<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_CONTROLPLANE_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div>
 <blockquote>
-<p>The Postgres database backs user/org membership and refresh tokens. The generated <code>ROCKETSHIP_BROKER_REFRESH_KEY</code> is used to HMAC refresh tokens before they are stored, so rotate it carefully (invalidate existing sessions as needed).
-Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code>) auto-generates the broker database secret, so you can skip the <code>globalbank-auth-broker-database</code> step and simply supply <code>postgres.auth.password</code> in the Helm command.</p>
+<p>The Postgres database backs user/org membership and refresh tokens. The generated <code>ROCKETSHIP_CONTROLPLANE_REFRESH_KEY</code> is used to HMAC refresh tokens before they are stored, so rotate it carefully (invalidate existing sessions as needed).
+Enabling the chart's bundled Postgres (<code>--set postgres.enabled=true</code>) auto-generates the controlplane database secret, so you can skip the <code>globalbank-controlplane-database</code> step and simply supply <code>postgres.auth.password</code> in the Helm command.</p>
 </blockquote>
 <p>Create a values override file (<code>deploy/do-values.yaml</code>) or inline the settings:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>install<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span><span class="se">\</span>
@@ -2128,16 +2128,16 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
 <p>Confirm the pods are healthy:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>rocketship
 </code></pre></div>
-<p><code>rocketship-engine</code>, <code>rocketship-worker</code>, <code>rocketship-auth-broker</code>, and <code>rocketship-web-oauth2-proxy</code> should report <code>READY 1/1</code>. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.</p>
+<p><code>rocketship-engine</code>, <code>rocketship-worker</code>, <code>rocketship-controlplane</code>, and <code>rocketship-web-oauth2-proxy</code> should report <code>READY 1/1</code>. Temporal services may restart once while Cassandra and Elasticsearch initialise—that is expected.</p>
 <h2 id="7-enable-auth-for-the-web-ui-optional">7. Enable Auth for the Web UI (optional)</h2>
 <p>After the gRPC ingress is live you can optionally front the engine’s HTTP port with oauth2-proxy. Choose the option that matches your organisation:</p>
-<h3 id="option-a-github-broker-reuse-cli-device-flow">Option A — GitHub broker (reuse CLI device flow)</h3>
+<h3 id="option-a-github-controlplane-reuse-cli-device-flow">Option A — GitHub controlplane (reuse CLI device flow)</h3>
 <ol>
 <li>
 <p><strong>Create or reuse a GitHub OAuth app:</strong> visit <a href="https://github.com/settings/developers">https://github.com/settings/developers</a> (or your organisation equivalent) and register an OAuth App for the CLI device flow. Record the generated Client ID and Client Secret – you will supply them via Kubernetes secrets. The Authorization callback can be any valid HTTPS URL because device flow does not redirect end users.</p>
 </li>
 <li>
-<p><strong>Create the broker secrets:</strong> use the client ID/secret captured in the previous step.
+<p><strong>Create the controlplane secrets:</strong> use the client ID/secret captured in the previous step.
    <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># GitHub OAuth app credentials</span>
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-github-oauth<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
@@ -2145,17 +2145,17 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
 <a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_GITHUB_CLIENT_SECRET</span><span class="o">=</span>YOUR_GITHUB_CLIENT_SECRET
 <a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
 <a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Database DSN (managed Postgres or self-hosted)</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-database<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-database<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">DATABASE_URL</span><span class="o">=</span><span class="s1">&#39;postgres://rocketship:&lt;password&gt;@&lt;host&gt;:5432/rocketship?sslmode=require&#39;</span>
 <a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
 <a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="c1"># Refresh-token HMAC key (32 bytes, base64 encoded)</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-secrets<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-secrets<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_CONTROLPLANE_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
 <a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
 <a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="c1"># JWKS signing material (PEM formatted private key + matching cert)</span>
-<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-signing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-signing<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">  </span>--from-file<span class="o">=</span>signing-key.pem<span class="o">=</span>./signing-key.pem
 <a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>
@@ -2174,7 +2174,7 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
 <li>Ensure the public hostnames (<code>cli/globalbank/app/globalbank</code>) match your ingress controller.</li>
 <li>Replace the placeholder <code>YOUR_GITHUB_CLIENT_ID</code> (and the corresponding secret) with the values from your OAuth app.</li>
 <li>
-<p>The oauth2-proxy preset points its issuer at <code>https://auth.globalbank.rocketship.sh</code>, which is served by the broker deployment.</p>
+<p>The oauth2-proxy preset points its issuer at <code>https://auth.globalbank.rocketship.sh</code>, which is served by the controlplane deployment.</p>
 </li>
 <li>
 <p><strong>Apply the presets alongside the base ingress values:</strong>
@@ -2198,17 +2198,17 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
 <li>
 <p><strong>Create the oauth2-proxy credentials secret:</strong>
    <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>openssl<span class="w"> </span>genrsa<span class="w"> </span>-out<span class="w"> </span>signing-key.pem<span class="w"> </span><span class="m">2048</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-signing<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-signing<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>--from-file<span class="o">=</span>signing-key.pem
 <a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-database<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-database<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">DATABASE_URL</span><span class="o">=</span><span class="s1">&#39;postgres://rocketship:&lt;password&gt;@&lt;host&gt;:5432/rocketship?sslmode=require&#39;</span>
 <a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-auth-broker-secrets<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>generic<span class="w"> </span>globalbank-controlplane-secrets<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">  </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_BROKER_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">  </span>--from-literal<span class="o">=</span><span class="nv">ROCKETSHIP_CONTROLPLANE_REFRESH_KEY</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div></p>
 </li>
 <li>
@@ -2278,8 +2278,8 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
 <a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-auth-broker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">  </span>--set<span class="w"> </span>controlplane.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-controlplane<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">  </span>--set<span class="w"> </span>controlplane.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">  </span>--wait
 </code></pre></div>
 <ol>
@@ -2292,7 +2292,7 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
    Browse to <code>https://app.rocketship.globalbank.com/</code> in a fresh session—you should be redirected through GitHub and land back on the proxied Rocketship UI after approval. The CLI command above walks you through device flow (<code>https://github.com/login/device</code>) and persists the refresh token locally.</li>
 </ol>
 <blockquote>
-<p>The broker stores only hashed refresh tokens in Postgres (keyed via <code>ROCKETSHIP_BROKER_REFRESH_KEY</code>). Rotate that secret—and the signing key—by updating the Kubernetes secrets and rerunning <code>helm upgrade</code>. If the CLI reports <code>permission denied (roles: pending)</code>, use the issued bearer token to call <code>POST https://auth.globalbank.rocketship.sh/api/orgs</code> and create the first organisation, or ask an administrator to invite you.</p>
+<p>The controlplane stores only hashed refresh tokens in Postgres (keyed via <code>ROCKETSHIP_CONTROLPLANE_REFRESH_KEY</code>). Rotate that secret—and the signing key—by updating the Kubernetes secrets and rerunning <code>helm upgrade</code>. If the CLI reports <code>permission denied (roles: pending)</code>, use the issued bearer token to call <code>POST https://auth.globalbank.rocketship.sh/api/orgs</code> and create the first organisation, or ask an administrator to invite you.</p>
 </blockquote>
 <h3 id="option-2-bring-your-own-idp-auth0-okta-azure-ad">Option 2 – Bring your own IdP (Auth0, Okta, Azure AD, …)</h3>
 <p>If you already manage an internal IdP, point the chart at it. Provision the necessary applications in your provider (typically a native app for the CLI device flow and a web app for oauth2-proxy), then update <code>charts/rocketship/values-oidc-web.yaml</code> with your issuer, client IDs, and scopes.</p>
@@ -2304,20 +2304,20 @@ Enabling the chart’s bundled Postgres (<code>--set postgres.enabled=true</code
 <a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">  </span>--set<span class="w"> </span>engine.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-worker<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">  </span>--set<span class="w"> </span>worker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-auth-broker<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">  </span>--set<span class="w"> </span>auth.broker.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">  </span>--set<span class="w"> </span>controlplane.image.repository<span class="o">=</span><span class="nv">$REGISTRY</span>/rocketship-controlplane<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="w">  </span>--set<span class="w"> </span>controlplane.image.tag<span class="o">=</span><span class="nv">$TAG</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="w">  </span>--wait
 </code></pre></div>
 <p>After rollout, point your CLI profile at the engine (<code>rocketship profile create &lt;name&gt; grpcs://cli.rocketship.globalbank.com</code>) and run <code>rocketship login</code>. The CLI follows the device flow your IdP exposes and automatically refreshes the issued token on subsequent commands.</p>
 <h3 id="rbac-considerations">RBAC considerations</h3>
 <p>Regardless of where Rocketship runs (cloud usage-based, dedicated enterprise, or self-hosted), the recommended RBAC model is the same:</p>
 <ol>
-<li><strong>Issue Rocketship JWTs that carry organisation/team roles.</strong> The broker (or customer IdP) mints access tokens with claims such as <code>org</code>, <code>project</code>, and <code>role</code> (<code>admin</code>, <code>editor</code>, <code>viewer</code>, <code>service-account</code>).</li>
+<li><strong>Issue Rocketship JWTs that carry organisation/team roles.</strong> The controlplane (or customer IdP) mints access tokens with claims such as <code>org</code>, <code>project</code>, and <code>role</code> (<code>admin</code>, <code>editor</code>, <code>viewer</code>, <code>service-account</code>).</li>
 <li><strong>Engine enforces on every RPC.</strong> When the CLI calls <code>CreateRun</code>, <code>ListRuns</code>, etc., the engine reads the claims and rejects calls from users without the required role. Tokens are short-lived and verified via JWKS, so enforcement is consistent across cloud and self-hosted clusters.</li>
-<li><strong>Role management lives in Rocketship.</strong> Maintain an RBAC table in Rocketship Cloud (or the broker) so you can invite users, sync GitHub teams if desired, or import roles from customer IdPs. The engine only consumes the resulting claims; it doesn’t need to know whether they originated from GitHub, Okta, or internal configuration.</li>
+<li><strong>Role management lives in Rocketship.</strong> Maintain an RBAC table in Rocketship Cloud (or the controlplane) so you can invite users, sync GitHub teams if desired, or import roles from customer IdPs. The engine only consumes the resulting claims; it doesn't need to know whether they originated from GitHub, Okta, or internal configuration.</li>
 <li><strong>Future enhancements</strong> (optional): provide an <code>rbac.yaml</code> or Terraform provider so self-hosted clusters can seed organisations/roles declaratively, and add UI to sync GitHub org/team membership if customers opt in.</li>
 </ol>
-<p>This approach lets you offer the same RBAC semantics in every environment. Usage-based customers rely on the GitHub-backed broker, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.</p>
+<p>This approach lets you offer the same RBAC semantics in every environment. Usage-based customers rely on the GitHub-backed controlplane, while enterprise tenants with their own IdP simply mint tokens that include the same claim set.</p>
 <h2 id="10-point-dns-at-the-load-balancer">10. Point DNS at the Load Balancer</h2>
 <p>Create A (or CNAME) records for <code>cli.rocketship.globalbank.com</code>, <code>app.rocketship.globalbank.com</code>, and <code>auth.rocketship.globalbank.com</code> pointing at the ingress load balancer IP (see step 6). DNS propagation usually completes within a minute on DigitalOcean DNS, but public resolvers may take longer.</p>
 <h2 id="11-smoke-test-the-endpoint">11. Smoke Test the Endpoint</h2>

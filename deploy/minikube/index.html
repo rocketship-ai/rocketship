@@ -1982,7 +1982,7 @@
 <p>Local Kubernetes cluster for development with full auth, database support, and hot-reloading via Skaffold.</p>
 <h2 id="quick-start">Quick Start</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># 1. Create .env file with secrets (see &quot;Configure Secrets&quot; below)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;GITHUB_CLIENT_SECRET=...&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>.env
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ROCKETSHIP_GITHUB_CLIENT_SECRET=...&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>.env
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ROCKETSHIP_EMAIL_FROM=...&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ROCKETSHIP_POSTMARK_SERVER_TOKEN=...&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
@@ -2015,7 +2015,7 @@
 <h2 id="setup">Setup</h2>
 <h3 id="1-configure-secrets">1. Configure Secrets</h3>
 <p>Create a <code>.env</code> file in the repository root with the following secrets:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">GITHUB_CLIENT_SECRET</span><span class="o">=</span>&lt;github-oauth-client-secret&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">ROCKETSHIP_GITHUB_CLIENT_SECRET</span><span class="o">=</span>&lt;github-oauth-client-secret&gt;
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">ROCKETSHIP_EMAIL_FROM</span><span class="o">=</span>&lt;email-sender-address&gt;
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">ROCKETSHIP_POSTMARK_SERVER_TOKEN</span><span class="o">=</span>&lt;postmark-api-token&gt;
 </code></pre></div>
@@ -2029,7 +2029,7 @@
 <p><strong>Option B: Get from team member</strong> (if you don't have cluster access):</p>
 <p>Ask a team member with cluster access to share their <code>.env</code> file or provide the three required values.</p>
 <p><strong>GitHub OAuth App Setup:</strong></p>
-<p>The <code>GITHUB_CLIENT_SECRET</code> corresponds to a GitHub OAuth App with these settings:</p>
+<p>The <code>ROCKETSHIP_GITHUB_CLIENT_SECRET</code> corresponds to a GitHub OAuth App with these settings:</p>
 <ul>
 <li><strong>Client ID</strong>: <code>Ov23li2GoXfR7bC7fR0y</code> (configured in <code>charts/rocketship/values-minikube-local.yaml</code>)</li>
 <li><strong>Authorization callback URL</strong>: <code>http://auth.minikube.local/callback</code></li>
@@ -2061,9 +2061,9 @@
 <p>Then re-run setup so the Kubernetes secret is created:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>scripts/setup-local-dev.sh
 </code></pre></div>
-<p>If you change GitHub App permissions or installed repositories, re-run the app installation and then restart the auth broker.</p>
+<p>If you change GitHub App permissions or installed repositories, re-run the app installation and then restart the controlplane.</p>
 <p><strong>GitHub App Webhooks (Auto-sync via Smee):</strong></p>
-<p>For local development, GitHub cannot reach <code>http://auth.minikube.local</code> directly. Rocketship uses a Smee relay pod inside the cluster to forward GitHub App webhooks into the auth-broker.</p>
+<p>For local development, GitHub cannot reach <code>http://auth.minikube.local</code> directly. Rocketship uses a Smee relay pod inside the cluster to forward GitHub App webhooks into the controlplane.</p>
 <ol>
 <li>Create a Smee channel: <code>https://smee.io/new</code></li>
 <li>In your GitHub App settings, set:</li>
@@ -2084,7 +2084,7 @@
 <li>Verify webhook ingestion:</li>
 </ol>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>logs<span class="w"> </span>deploy/rocketship-github-webhook-relay<span class="w"> </span>--tail<span class="o">=</span><span class="m">50</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>logs<span class="w"> </span>deploy/rocketship-auth-broker<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>rg<span class="w"> </span><span class="s2">&quot;webhook received&quot;</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>logs<span class="w"> </span>deploy/rocketship-controlplane<span class="w"> </span>--tail<span class="o">=</span><span class="m">200</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>rg<span class="w"> </span><span class="s2">&quot;webhook received&quot;</span>
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>kubectl<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>rocketship-postgresql-0<span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>-lc<span class="w"> </span><span class="s1">&#39;PGPASSWORD=rocketship-dev-password /opt/bitnami/postgresql/bin/psql -U rocketship -d rocketship -c &quot;select event, repository_full_name, ref, action, received_at from github_webhook_deliveries order by received_at desc limit 10;&quot;&#39;</span>
 </code></pre></div>
 <h3 id="2-run-setup-script">2. Run Setup Script</h3>
@@ -2116,7 +2116,7 @@
 2. Vite dev server for web UI
 3. Skaffold in development mode (watches code, rebuilds on changes)</p>
 <p>Visit <code>http://auth.minikube.local</code> and sign in with GitHub!</p>
-<p><strong>Hot Reloading:</strong> Edit any Go file in <code>cmd/engine/</code>, <code>cmd/worker/</code>, <code>cmd/authbroker/</code>, or <code>internal/</code>, save, and Skaffold will automatically:
+<p><strong>Hot Reloading:</strong> Edit any Go file in <code>cmd/engine/</code>, <code>cmd/worker/</code>, <code>cmd/controlplane/</code>, or <code>internal/</code>, save, and Skaffold will automatically:
 - Rebuild the Docker image
 - Redeploy to Kubernetes
 - Stream logs to your terminal</p>
@@ -2161,7 +2161,7 @@
 <a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Follow GitHub device flow prompts</span>
 </code></pre></div>
 <h3 id="web-app">Web App</h3>
-<p>The web UI is served through the same ingress as the auth broker (single-origin architecture):</p>
+<p>The web UI is served through the same ingress as the controlplane (single-origin architecture):</p>
 <ul>
 <li>UI: <code>http://auth.minikube.local/</code></li>
 <li>Auth API: <code>http://auth.minikube.local/api</code>, <code>/authorize</code>, <code>/token</code>, <code>/callback</code></li>
@@ -2210,7 +2210,7 @@
 <h3 id="skaffold-configuration">Skaffold Configuration</h3>
 <p>The <code>skaffold.yaml</code> file defines what gets built and deployed:</p>
 <ul>
-<li><strong>Artifacts</strong>: Three Docker images (engine, worker, authbroker)</li>
+<li><strong>Artifacts</strong>: Three Docker images (engine, worker, controlplane)</li>
 <li><strong>Deploy</strong>: Helm-based deployment with values from <code>charts/rocketship/values-minikube-local.yaml</code></li>
 <li><strong>Profiles</strong>:</li>
 <li><code>debug</code>: Enables debug logging for all services</li>
@@ -2222,7 +2222,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>minikube<span class="w"> </span>-p<span class="w"> </span>rocketship<span class="w"> </span>docker-env<span class="k">)</span><span class="s2">&quot;</span>
 </code></pre></div></p>
 <p><strong>Pods not ready</strong>: Wait 2-3 minutes for Temporal and Postgres to initialize.</p>
-<p><strong>Auth broker fails</strong>: Check <code>.env</code> has valid <code>GITHUB_CLIENT_SECRET</code> and <code>ROCKETSHIP_POSTMARK_SERVER_TOKEN</code>.</p>
+<p><strong>Controlplane fails</strong>: Check <code>.env</code> has valid <code>ROCKETSHIP_GITHUB_CLIENT_SECRET</code> and <code>ROCKETSHIP_POSTMARK_SERVER_TOKEN</code>.</p>
 <p><strong>Skaffold not watching files</strong>: Ensure you're in the repository root when running <code>skaffold dev</code>.</p>
 <p><strong>Changes not deploying</strong>: Check Skaffold output for build errors. Press <code>Ctrl+C</code> and restart if needed.</p>
 <p><strong>Web UI not loading</strong>:</p>
@@ -2236,12 +2236,12 @@
    If this fails, check macOS firewall settings for Node/Vite on port 5173.</li>
 </ol>
 <p><strong>Install script warnings about host connectivity</strong>: The install script tests connectivity to your host's Vite server to auto-detect the correct IP. If Vite isn't running yet, you'll see warnings like "Could not detect reachable host IP" - this is expected and the script will use a sensible default (192.168.64.1). Start Vite after installation completes.</p>
-<p><strong>Cookies not working</strong>: Ensure you're accessing the UI via <code>http://auth.minikube.local</code> (not <code>http://localhost:5173</code>). The single-origin architecture requires UI, auth broker, and engine to be served from the same host for cookies to work.</p>
+<p><strong>Cookies not working</strong>: Ensure you're accessing the UI via <code>http://auth.minikube.local</code> (not <code>http://localhost:5173</code>). The single-origin architecture requires UI, controlplane, and engine to be served from the same host for cookies to work.</p>
 <p><strong>Engine API not accessible</strong>: Verify the ingress includes the <code>/engine</code> path:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>ingress<span class="w"> </span>rocketship-gateway<span class="w"> </span>-n<span class="w"> </span>rocketship<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.rules[0].http.paths[*].path}&#39;</span>
 </code></pre></div>
 <p>Should show: <code>/api /authorize /token /callback /logout /engine /</code></p>
-<p><strong>Auth broker unreachable from inside cluster</strong>: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:</p>
+<p><strong>Controlplane unreachable from inside cluster</strong>: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>ingress-nginx<span class="w"> </span>ingress-nginx-controller<span class="w"> </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.spec.clusterIP}&#39;</span>
 <a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>rocketship<span class="w"> </span>charts/rocketship<span class="w"> </span>--namespace<span class="w"> </span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span>--values<span class="w"> </span>charts/rocketship/values-minikube-local.yaml<span class="w"> </span><span class="se">\</span>
@@ -2249,7 +2249,7 @@
 <a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span>--set<span class="w"> </span>temporal.namespace<span class="o">=</span>rocketship<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">  </span>--set<span class="w"> </span><span class="s2">&quot;engine.hostAliases[0].ip=&lt;YOUR-IP&gt;&quot;</span><span class="w"> </span>--wait
 </code></pre></div>
-<p><strong>Auth broker unreachable from local machine</strong>: Ensure <code>/etc/hosts</code> entry exists and <code>sudo minikube tunnel</code> is running.</p>
+<p><strong>Controlplane unreachable from local machine</strong>: Ensure <code>/etc/hosts</code> entry exists and <code>sudo minikube tunnel</code> is running.</p>
 <h2 id="cleanup">Cleanup</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>rocketship<span class="w"> </span>temporal<span class="w"> </span>-n<span class="w"> </span>rocketship
 <a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>namespace<span class="w"> </span>rocketship
