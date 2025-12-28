@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 )
 

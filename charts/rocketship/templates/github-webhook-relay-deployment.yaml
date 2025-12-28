@@ -34,7 +34,7 @@ spec:
                   name: {{ .Values.githubWebhookRelay.secretName }}
                   key: ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL
             - name: ROCKETSHIP_GITHUB_WEBHOOK_TARGET_URL
-              value: "http://rocketship-auth-broker:8080/github-app/webhook"
+              value: "http://rocketship-controlplane:8080/github-app/webhook"
           resources:
             requests:
               memory: "64Mi"

@@ -1,0 +1,23 @@
+{{- if .Values.controlplane.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rocketship.controlplane.fullname" . }}
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+  {{- with .Values.controlplane.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.controlplane.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "rocketship.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: controlplane
+  ports:
+    - name: http
+      port: {{ .Values.controlplane.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

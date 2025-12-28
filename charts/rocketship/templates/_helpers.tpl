@@ -45,12 +45,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s-web-oauth2-proxy" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "rocketship.authbroker.fullname" -}}
-{{- printf "%s-auth-broker" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- define "rocketship.controlplane.fullname" -}}
+{{- printf "%s-controlplane" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "rocketship.authbroker.databaseSecretName" -}}
-{{- printf "%s-auth-broker-db" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- define "rocketship.controlplane.databaseSecretName" -}}
+{{- printf "%s-controlplane-db" (include "rocketship.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{- define "rocketship.postgresql.host" -}}

@@ -22,7 +22,7 @@ Below is the full v1 design—DB, JWTs, enforcement, flows, and guardrails.
 
 **Core tables (minimal):**
 
-Note: the repo already ships an auth-broker Postgres schema (see `internal/authbroker/persistence/migrations`). The table names/columns below are aligned to that implementation where possible, and call out the additional v1 tables/columns we still need for the web UI.
+Note: the repo already ships a controlplane Postgres schema (see `internal/controlplane/persistence/migrations`). The table names/columns below are aligned to that implementation where possible, and call out the additional v1 tables/columns we still need for the web UI.
 
 ```
 organizations(id, name, slug, created_at)

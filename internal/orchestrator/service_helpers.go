@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
-	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 )
 
 // makeNullString creates a sql.NullString from a trimmed value
