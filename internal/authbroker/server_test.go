@@ -395,6 +395,93 @@ func (f *fakeStore) CreateOrganizationWithProject(context.Context, uuid.UUID, pe
 	return persistence.Organization{}, persistence.Project{}, nil
 }
 
+// GitHub App installation methods
+func (f *fakeStore) UpsertGitHubAppInstallation(_ context.Context, _ uuid.UUID, _ int64, _ uuid.UUID, _, _ string) error {
+	return nil
+}
+
+func (f *fakeStore) GetGitHubAppInstallation(_ context.Context, _ uuid.UUID) (int64, string, string, error) {
+	return 0, "", "", persistence.ErrGitHubAppNotInstalled
+}
+
+// Project methods
+func (f *fakeStore) CreateProject(_ context.Context, project persistence.Project) (persistence.Project, error) {
+	return project, nil
+}
+
+func (f *fakeStore) GetProject(_ context.Context, _ uuid.UUID) (persistence.Project, error) {
+	return persistence.Project{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) ListProjects(_ context.Context, _ uuid.UUID) ([]persistence.Project, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ProjectNameExists(_ context.Context, _ uuid.UUID, _, _ string) (bool, error) {
+	return false, nil
+}
+
+// Environment methods
+func (f *fakeStore) CreateEnvironment(_ context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error) {
+	return env, nil
+}
+
+func (f *fakeStore) ListEnvironments(_ context.Context, _ uuid.UUID) ([]persistence.ProjectEnvironment, error) {
+	return nil, nil
+}
+
+// Suite methods
+func (f *fakeStore) UpsertSuite(_ context.Context, suite persistence.Suite) (persistence.Suite, error) {
+	return suite, nil
+}
+
+func (f *fakeStore) GetSuiteByName(_ context.Context, _ uuid.UUID, _, _ string) (persistence.Suite, bool, error) {
+	return persistence.Suite{}, false, nil
+}
+
+func (f *fakeStore) ListSuites(_ context.Context, _ uuid.UUID) ([]persistence.Suite, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) UpsertTest(_ context.Context, test persistence.Test) (persistence.Test, error) {
+	return test, nil
+}
+
+// Schedule methods
+func (f *fakeStore) ListEnabledSchedulesByProject(_ context.Context, _ uuid.UUID) ([]persistence.SuiteSchedule, error) {
+	return nil, nil
+}
+
+// CI token methods
+func (f *fakeStore) ListActiveCITokens(_ context.Context, _ uuid.UUID) ([]persistence.CITokenRecord, error) {
+	return nil, nil
+}
+
+// Count methods for overview
+func (f *fakeStore) CountProjectsForOrg(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) CountSuitesForOrg(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) CountSuitesOnDefaultBranchForOrg(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) CountEnvsWithVarsForOrg(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) CountEnabledSchedulesForOrg(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) CountActiveCITokensForOrg(_ context.Context, _ uuid.UUID) (int, error) {
+	return 0, nil
+}
+
 func (f *fakeStore) ProjectOrganizationID(_ context.Context, projectID uuid.UUID) (uuid.UUID, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -463,6 +550,18 @@ func (f *fakeStore) RemoveProjectMember(_ context.Context, projectID, userID uui
 	return nil
 }
 
+func (f *fakeStore) InsertWebhookDelivery(_ context.Context, _, _, _, _, _ string) error {
+	return nil
+}
+
+func (f *fakeStore) ListOrgsByInstallationID(_ context.Context, _ int64) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) InsertScanAttempt(_ context.Context, _ persistence.ScanAttempt) error {
+	return nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -515,7 +614,7 @@ func TestServerDeviceFlowAndRefresh(t *testing.T) {
 
 	mailer := &stubMailer{}
 
-	srv, err := newServerWithComponents(cfg, signer, fake, fs, mailer)
+	srv, err := newServerWithComponents(cfg, signer, fake, nil, fs, mailer)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -657,7 +756,7 @@ func TestServerRejectsUnknownClient(t *testing.T) {
 	}
 
 	fake := &fakeGitHub{deviceResp: DeviceCodeResponse{}}
-	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore(), &stubMailer{})
+	srv, err := newServerWithComponents(cfg, signer, fake, nil, newFakeStore(), &stubMailer{})
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -686,7 +785,7 @@ func TestServerJWKS(t *testing.T) {
 
 	cfg := Config{}
 	fake := &fakeGitHub{}
-	srv, err := newServerWithComponents(cfg, signer, fake, newFakeStore(), &stubMailer{})
+	srv, err := newServerWithComponents(cfg, signer, fake, nil, newFakeStore(), &stubMailer{})
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -727,7 +826,7 @@ func TestOrgRegistrationLifecycle(t *testing.T) {
 	store.user.Email = "pending@example.com"
 	mail := &stubMailer{}
 
-	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, store, mail)
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, mail)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -805,7 +904,7 @@ func TestProjectMembersScopedToOrganization(t *testing.T) {
 
 	store := newFakeStore()
 
-	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, store, &stubMailer{})
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -99,4 +100,158 @@ func (s *Store) RemoveProjectMember(ctx context.Context, projectID, userID uuid.
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+// CreateProject creates a new project
+func (s *Store) CreateProject(ctx context.Context, project Project) (Project, error) {
+	if project.OrganizationID == uuid.Nil {
+		return Project{}, errors.New("organization id required")
+	}
+	if strings.TrimSpace(project.Name) == "" {
+		return Project{}, errors.New("project name required")
+	}
+	if strings.TrimSpace(project.RepoURL) == "" {
+		return Project{}, errors.New("repo url required")
+	}
+
+	if project.ID == uuid.Nil {
+		project.ID = uuid.New()
+	}
+	if project.DefaultBranch == "" {
+		project.DefaultBranch = "main"
+	}
+	// Default source_ref to default_branch if not specified
+	if project.SourceRef == "" {
+		project.SourceRef = project.DefaultBranch
+	}
+
+	// Ensure PathScope is never nil to avoid jsonb null
+	if project.PathScope == nil {
+		project.PathScope = []string{}
+	}
+
+	pathScopeJSON, err := json.Marshal(project.PathScope)
+	if err != nil {
+		return Project{}, fmt.Errorf("failed to encode path_scope: %w", err)
+	}
+
+	const query = `
+		INSERT INTO projects (id, organization_id, name, repo_url, default_branch, path_scope, source_ref, created_at, updated_at, last_synced_at)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, NOW(), NOW(), NOW())
+		RETURNING created_at
+	`
+
+	var createdAt time.Time
+	if err := s.db.GetContext(ctx, &createdAt, query,
+		project.ID, project.OrganizationID, project.Name, project.RepoURL,
+		project.DefaultBranch, string(pathScopeJSON), project.SourceRef); err != nil {
+		if isUniqueViolation(err, "projects_org_name_ref_idx") {
+			return Project{}, fmt.Errorf("project name already exists in organization for this ref")
+		}
+		return Project{}, fmt.Errorf("failed to create project: %w", err)
+	}
+
+	project.CreatedAt = createdAt
+	return project, nil
+}
+
+// GetProject retrieves a project by ID
+func (s *Store) GetProject(ctx context.Context, projectID uuid.UUID) (Project, error) {
+	const query = `
+		SELECT id, organization_id, name, repo_url, default_branch, path_scope, source_ref, created_at
+		FROM projects
+		WHERE id = $1
+	`
+
+	dest := struct {
+		ID             uuid.UUID `db:"id"`
+		OrganizationID uuid.UUID `db:"organization_id"`
+		Name           string    `db:"name"`
+		RepoURL        string    `db:"repo_url"`
+		DefaultBranch  string    `db:"default_branch"`
+		PathScope      string    `db:"path_scope"`
+		SourceRef      string    `db:"source_ref"`
+		CreatedAt      time.Time `db:"created_at"`
+	}{}
+
+	if err := s.db.GetContext(ctx, &dest, query, projectID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Project{}, sql.ErrNoRows
+		}
+		return Project{}, fmt.Errorf("failed to get project: %w", err)
+	}
+
+	project := Project{
+		ID:             dest.ID,
+		OrganizationID: dest.OrganizationID,
+		Name:           dest.Name,
+		RepoURL:        dest.RepoURL,
+		DefaultBranch:  dest.DefaultBranch,
+		SourceRef:      dest.SourceRef,
+		CreatedAt:      dest.CreatedAt,
+	}
+
+	if dest.PathScope != "" {
+		if err := json.Unmarshal([]byte(dest.PathScope), &project.PathScope); err != nil {
+			return Project{}, fmt.Errorf("failed to parse path_scope: %w", err)
+		}
+	}
+
+	return project, nil
+}
+
+// ListProjects returns all projects for an organization
+func (s *Store) ListProjects(ctx context.Context, orgID uuid.UUID) ([]Project, error) {
+	const query = `
+		SELECT id, organization_id, name, repo_url, default_branch, path_scope, source_ref, created_at
+		FROM projects
+		WHERE organization_id = $1
+		ORDER BY name ASC, source_ref ASC
+	`
+
+	rows := []struct {
+		ID             uuid.UUID `db:"id"`
+		OrganizationID uuid.UUID `db:"organization_id"`
+		Name           string    `db:"name"`
+		RepoURL        string    `db:"repo_url"`
+		DefaultBranch  string    `db:"default_branch"`
+		PathScope      string    `db:"path_scope"`
+		SourceRef      string    `db:"source_ref"`
+		CreatedAt      time.Time `db:"created_at"`
+	}{}
+
+	if err := s.db.SelectContext(ctx, &rows, query, orgID); err != nil {
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	projects := make([]Project, 0, len(rows))
+	for _, r := range rows {
+		p := Project{
+			ID:             r.ID,
+			OrganizationID: r.OrganizationID,
+			Name:           r.Name,
+			RepoURL:        r.RepoURL,
+			DefaultBranch:  r.DefaultBranch,
+			SourceRef:      r.SourceRef,
+			CreatedAt:      r.CreatedAt,
+		}
+		if r.PathScope != "" {
+			if err := json.Unmarshal([]byte(r.PathScope), &p.PathScope); err != nil {
+				return nil, fmt.Errorf("failed to parse path_scope: %w", err)
+			}
+		}
+		projects = append(projects, p)
+	}
+
+	return projects, nil
+}
+
+// ProjectNameExists checks if a project name already exists in an organization for a given source_ref
+func (s *Store) ProjectNameExists(ctx context.Context, orgID uuid.UUID, name, sourceRef string) (bool, error) {
+	const query = `SELECT EXISTS(SELECT 1 FROM projects WHERE organization_id = $1 AND lower(name) = lower($2) AND lower(source_ref) = lower($3))`
+	var exists bool
+	if err := s.db.GetContext(ctx, &exists, query, orgID, name, sourceRef); err != nil {
+		return false, fmt.Errorf("failed to check project name: %w", err)
+	}
+	return exists, nil
 }

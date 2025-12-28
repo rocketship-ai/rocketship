@@ -29,6 +29,10 @@ cli-introspection.json
 **/.env
 .rocketship/
 
+# GitHub App private keys (local dev only; never commit)
+*.private-key.pem
+*.private-key*.pem
+
 # MCP server temporary artifacts (screenshots, etc.)
 # MCP servers write to .rocketship/tmp/mcp-<server-name>/
 .rocketship/tmp/

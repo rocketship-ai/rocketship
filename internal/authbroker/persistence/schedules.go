@@ -268,3 +268,25 @@ func (s *Store) DeleteSchedule(ctx context.Context, scheduleID uuid.UUID) error 
 
 	return nil
 }
+
+// ListEnabledSchedulesByProject returns all enabled schedules for a project
+func (s *Store) ListEnabledSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]SuiteSchedule, error) {
+	const query = `
+		SELECT id, suite_id, project_id, name, description, cron_expression, timezone,
+		       enabled, environment_id, next_run_at, last_run_at, last_run_id, last_run_status,
+		       created_by, created_at, updated_at
+		FROM suite_schedules
+		WHERE project_id = $1 AND enabled = TRUE
+		ORDER BY name ASC
+	`
+
+	var schedules []SuiteSchedule
+	if err := s.db.SelectContext(ctx, &schedules, query, projectID); err != nil {
+		return nil, fmt.Errorf("failed to list enabled schedules: %w", err)
+	}
+	if schedules == nil {
+		schedules = []SuiteSchedule{}
+	}
+
+	return schedules, nil
+}

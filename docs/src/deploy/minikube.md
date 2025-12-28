@@ -80,6 +80,65 @@ If you need to create your own OAuth app for testing:
 4. Copy the Client Secret to your `.env` file
 5. Update `charts/rocketship/values-minikube-local.yaml` with your Client ID
 
+**GitHub App Setup (Repository Access):**
+
+Rocketship Cloud uses a **GitHub App** (not OAuth scopes) for repository access so users can grant access to **specific repositories**.
+
+1. Create a GitHub App (GitHub Settings → Developer settings → GitHub Apps → New GitHub App)
+2. Set **Setup URL**: `http://auth.minikube.local/github-app/callback`
+3. Recommended repository permissions:
+   - **Contents**: Read-only (v1)
+   - **Pull requests**: Read & write (optional now; needed for v2 “open PR from UI”)
+4. After creating the app, generate and download a private key (`.pem`).
+
+Store the `.pem` somewhere local (it must never be committed). For convenience you can keep it in the repo root; it is gitignored.
+
+Add these to your local `.env`:
+
+```bash
+ROCKETSHIP_GITHUB_APP_ID="YOUR_APP_ID"
+ROCKETSHIP_GITHUB_APP_SLUG="YOUR_APP_SLUG"
+ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE="./path/to/your/private-key.pem"
+```
+
+Then re-run setup so the Kubernetes secret is created:
+
+```bash
+scripts/setup-local-dev.sh
+```
+
+If you change GitHub App permissions or installed repositories, re-run the app installation and then restart the auth broker.
+
+**GitHub App Webhooks (Auto-sync via Smee):**
+
+For local development, GitHub cannot reach `http://auth.minikube.local` directly. Rocketship uses a Smee relay pod inside the cluster to forward GitHub App webhooks into the auth-broker.
+
+1. Create a Smee channel: `https://smee.io/new`
+2. In your GitHub App settings, set:
+   - **Webhook URL**: your Smee URL (e.g. `https://smee.io/abcd1234`)
+   - **Webhook secret**: generate a secret and save it locally
+   - Enable events: `push`, `pull_request`, `installation`, `installation_repositories`
+3. Add these to your local `.env`:
+
+```bash
+ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL="https://smee.io/your-channel"
+ROCKETSHIP_GITHUB_WEBHOOK_SECRET="your-webhook-secret"
+```
+
+4. Re-run setup so the secret and relay deployment are created:
+
+```bash
+scripts/setup-local-dev.sh
+```
+
+5. Verify webhook ingestion:
+
+```bash
+kubectl -n rocketship logs deploy/rocketship-github-webhook-relay --tail=50
+kubectl -n rocketship logs deploy/rocketship-auth-broker --tail=200 | rg "webhook received"
+kubectl -n rocketship exec rocketship-postgresql-0 -- bash -lc 'PGPASSWORD=rocketship-dev-password /opt/bitnami/postgresql/bin/psql -U rocketship -d rocketship -c "select event, repository_full_name, ref, action, received_at from github_webhook_deliveries order by received_at desc limit 10;"'
+```
+
 ### 2. Run Setup Script
 
 ```bash

@@ -35,6 +35,7 @@ auth:
     github:
       # Local development OAuth App: "Rocketship Cloud - Local"
       # Callback URL: http://auth.minikube.local/callback
+      # NOTE: OAuth is identity-only; repo access uses GitHub App installation
       clientID: Ov23li2GoXfR7bC7fR0y
       clientSecretSecret: rocketship-github-oauth
       clientSecretKey: ROCKETSHIP_GITHUB_CLIENT_SECRET
@@ -68,6 +69,11 @@ auth:
           name: rocketship-github-oauth
       - secretRef:
           name: rocketship-postmark-secret
+      - secretRef:
+          name: rocketship-github-app
+      - secretRef:
+          name: rocketship-github-webhook
+          optional: true
     resources:
       requests:
         memory: "128Mi"
@@ -167,6 +173,10 @@ gateway:
           pathType: Prefix
           serviceName: rocketship-auth-broker
           port: 8080
+        - path: /github-app
+          pathType: Prefix
+          serviceName: rocketship-auth-broker
+          port: 8080
         # Vite dev server (catch-all for web UI)
         - path: /
           pathType: Prefix
@@ -190,3 +200,9 @@ engineIngress:
           pathType: ImplementationSpecific
           serviceName: rocketship-engine
           port: 7700
+
+# GitHub webhook relay (smee.io -> auth-broker)
+# Enabled for local development; secret must be created by setup-local-dev.sh
+githubWebhookRelay:
+  enabled: true
+  secretName: rocketship-github-webhook

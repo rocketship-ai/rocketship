@@ -56,6 +56,7 @@ type Project struct {
 	RepoURL        string
 	DefaultBranch  string
 	PathScope      []string
+	SourceRef      string // Branch/ref this project was discovered from
 	CreatedAt      time.Time
 }
 
@@ -181,6 +182,7 @@ type Suite struct {
 	Name          string         `db:"name"`
 	Description   sql.NullString `db:"description"`
 	FilePath      sql.NullString `db:"file_path"`
+	SourceRef     string         `db:"source_ref"` // Branch/ref this suite was discovered from
 	TestCount     int            `db:"test_count"`
 	LastRunID     sql.NullString `db:"last_run_id"`
 	LastRunStatus sql.NullString `db:"last_run_status"`
@@ -196,6 +198,7 @@ type Test struct {
 	ProjectID     uuid.UUID       `db:"project_id"`
 	Name          string          `db:"name"`
 	Description   sql.NullString  `db:"description"`
+	SourceRef     string          `db:"source_ref"` // Branch/ref this test was discovered from
 	StepCount     int             `db:"step_count"`
 	LastRunID     sql.NullString  `db:"last_run_id"`
 	LastRunStatus sql.NullString  `db:"last_run_status"`

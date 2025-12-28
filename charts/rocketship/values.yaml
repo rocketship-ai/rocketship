@@ -169,3 +169,8 @@ web:
     nodeSelector: {}
     tolerations: []
     affinity: {}
+
+# GitHub webhook relay (smee.io -> auth-broker for local dev)
+githubWebhookRelay:
+  enabled: false
+  secretName: rocketship-github-webhook

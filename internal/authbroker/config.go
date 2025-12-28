@@ -4,24 +4,27 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Config struct {
-	ListenAddr      string
-	Issuer          string
-	Audience        string
-	ClientID        string
-	SigningKeyPath  string
-	SigningKeyID    string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
-	Scopes          []string
-	GitHub          GitHubConfig
-	DatabaseURL     string
-	RefreshTokenKey []byte
-	Email           EmailConfig
+	ListenAddr          string
+	Issuer              string
+	Audience            string
+	ClientID            string
+	SigningKeyPath      string
+	SigningKeyID        string
+	AccessTokenTTL      time.Duration
+	RefreshTokenTTL     time.Duration
+	Scopes              []string
+	GitHub              GitHubConfig
+	GitHubApp           GitHubAppConfig
+	GitHubWebhookSecret string
+	DatabaseURL         string
+	RefreshTokenKey     []byte
+	Email               EmailConfig
 }
 
 type GitHubConfig struct {
@@ -37,6 +40,12 @@ type GitHubConfig struct {
 type EmailConfig struct {
 	FromAddress   string
 	PostmarkToken string
+}
+
+type GitHubAppConfig struct {
+	AppID         int64
+	Slug          string
+	PrivateKeyPEM string
 }
 
 const (
@@ -146,6 +155,22 @@ func LoadConfigFromEnv() (Config, error) {
 	if cfg.Email.PostmarkToken == "" {
 		return Config{}, fmt.Errorf("ROCKETSHIP_POSTMARK_SERVER_TOKEN is required")
 	}
+
+	// GitHub App configuration (optional - only needed for repo access features)
+	cfg.GitHubApp = GitHubAppConfig{
+		Slug:          strings.TrimSpace(os.Getenv("ROCKETSHIP_GITHUB_APP_SLUG")),
+		PrivateKeyPEM: strings.TrimSpace(os.Getenv("ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_PEM")),
+	}
+	if appIDStr := strings.TrimSpace(os.Getenv("ROCKETSHIP_GITHUB_APP_ID")); appIDStr != "" {
+		appID, err := strconv.ParseInt(appIDStr, 10, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid ROCKETSHIP_GITHUB_APP_ID: %w", err)
+		}
+		cfg.GitHubApp.AppID = appID
+	}
+
+	// GitHub webhook secret (optional - only needed for webhook ingestion)
+	cfg.GitHubWebhookSecret = strings.TrimSpace(os.Getenv("ROCKETSHIP_GITHUB_WEBHOOK_SECRET"))
 
 	return cfg, nil
 }
