@@ -56,6 +56,7 @@ type Project struct {
 	RepoURL        string
 	DefaultBranch  string
 	PathScope      []string
+	SourceRef      string // Branch/ref this project was discovered from
 	CreatedAt      time.Time
 }
 
@@ -151,10 +152,160 @@ type RunRecord struct {
 	PassedTests    int            `db:"passed_tests"`
 	FailedTests    int            `db:"failed_tests"`
 	TimeoutTests   int            `db:"timeout_tests"`
+	SkippedTests   int            `db:"skipped_tests"`
+	EnvironmentID  uuid.NullUUID  `db:"environment_id"`
+	ScheduleID     uuid.NullUUID  `db:"schedule_id"`
+	CommitMessage  sql.NullString `db:"commit_message"`
 	CreatedAt      time.Time      `db:"created_at"`
 	UpdatedAt      time.Time      `db:"updated_at"`
 	StartedAt      sql.NullTime   `db:"started_at"`
 	EndedAt        sql.NullTime   `db:"ended_at"`
+}
+
+// ProjectEnvironment represents a deployment environment for a project
+type ProjectEnvironment struct {
+	ID          uuid.UUID         `db:"id"`
+	ProjectID   uuid.UUID         `db:"project_id"`
+	Name        string            `db:"name"`
+	Slug        string            `db:"slug"`
+	Description sql.NullString    `db:"description"`
+	IsDefault   bool              `db:"is_default"`
+	Variables   map[string]string `db:"-"` // Parsed from JSONB
+	CreatedAt   time.Time         `db:"created_at"`
+	UpdatedAt   time.Time         `db:"updated_at"`
+}
+
+// Suite represents a test suite definition
+type Suite struct {
+	ID            uuid.UUID      `db:"id"`
+	ProjectID     uuid.UUID      `db:"project_id"`
+	Name          string         `db:"name"`
+	Description   sql.NullString `db:"description"`
+	FilePath      sql.NullString `db:"file_path"`
+	SourceRef     string         `db:"source_ref"` // Branch/ref this suite was discovered from
+	TestCount     int            `db:"test_count"`
+	LastRunID     sql.NullString `db:"last_run_id"`
+	LastRunStatus sql.NullString `db:"last_run_status"`
+	LastRunAt     sql.NullTime   `db:"last_run_at"`
+	CreatedAt     time.Time      `db:"created_at"`
+	UpdatedAt     time.Time      `db:"updated_at"`
+}
+
+// Test represents an individual test definition
+type Test struct {
+	ID            uuid.UUID       `db:"id"`
+	SuiteID       uuid.UUID       `db:"suite_id"`
+	ProjectID     uuid.UUID       `db:"project_id"`
+	Name          string          `db:"name"`
+	Description   sql.NullString  `db:"description"`
+	SourceRef     string          `db:"source_ref"` // Branch/ref this test was discovered from
+	StepCount     int             `db:"step_count"`
+	LastRunID     sql.NullString  `db:"last_run_id"`
+	LastRunStatus sql.NullString  `db:"last_run_status"`
+	LastRunAt     sql.NullTime    `db:"last_run_at"`
+	PassRate      sql.NullFloat64 `db:"pass_rate"`
+	AvgDurationMs sql.NullInt64   `db:"avg_duration_ms"`
+	CreatedAt     time.Time       `db:"created_at"`
+	UpdatedAt     time.Time       `db:"updated_at"`
+}
+
+// SuiteSchedule represents a scheduled test run
+type SuiteSchedule struct {
+	ID             uuid.UUID      `db:"id"`
+	SuiteID        uuid.UUID      `db:"suite_id"`
+	ProjectID      uuid.UUID      `db:"project_id"`
+	Name           string         `db:"name"`
+	Description    sql.NullString `db:"description"`
+	CronExpression string         `db:"cron_expression"`
+	Timezone       string         `db:"timezone"`
+	Enabled        bool           `db:"enabled"`
+	EnvironmentID  uuid.NullUUID  `db:"environment_id"`
+	NextRunAt      sql.NullTime   `db:"next_run_at"`
+	LastRunAt      sql.NullTime   `db:"last_run_at"`
+	LastRunID      sql.NullString `db:"last_run_id"`
+	LastRunStatus  sql.NullString `db:"last_run_status"`
+	CreatedBy      uuid.NullUUID  `db:"created_by"`
+	CreatedAt      time.Time      `db:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at"`
+}
+
+// RunTest represents an individual test result within a run
+type RunTest struct {
+	ID           uuid.UUID      `db:"id"`
+	RunID        string         `db:"run_id"`
+	TestID       uuid.NullUUID  `db:"test_id"`
+	WorkflowID   string         `db:"workflow_id"`
+	Name         string         `db:"name"`
+	Status       string         `db:"status"`
+	ErrorMessage sql.NullString `db:"error_message"`
+	StartedAt    sql.NullTime   `db:"started_at"`
+	EndedAt      sql.NullTime   `db:"ended_at"`
+	DurationMs   sql.NullInt64  `db:"duration_ms"`
+	StepCount    int            `db:"step_count"`
+	PassedSteps  int            `db:"passed_steps"`
+	FailedSteps  int            `db:"failed_steps"`
+	CreatedAt    time.Time      `db:"created_at"`
+}
+
+// RunStep represents a step result within a test run
+type RunStep struct {
+	ID               uuid.UUID      `db:"id"`
+	RunTestID        uuid.UUID      `db:"run_test_id"`
+	StepIndex        int            `db:"step_index"`
+	Name             string         `db:"name"`
+	Plugin           string         `db:"plugin"`
+	Status           string         `db:"status"`
+	ErrorMessage     sql.NullString `db:"error_message"`
+	AssertionsPassed int            `db:"assertions_passed"`
+	AssertionsFailed int            `db:"assertions_failed"`
+	StartedAt        sql.NullTime   `db:"started_at"`
+	EndedAt          sql.NullTime   `db:"ended_at"`
+	DurationMs       sql.NullInt64  `db:"duration_ms"`
+	CreatedAt        time.Time      `db:"created_at"`
+}
+
+// RunLog represents an execution log entry
+type RunLog struct {
+	ID        uuid.UUID              `db:"id"`
+	RunID     string                 `db:"run_id"`
+	RunTestID uuid.NullUUID          `db:"run_test_id"`
+	RunStepID uuid.NullUUID          `db:"run_step_id"`
+	Level     string                 `db:"level"`
+	Message   string                 `db:"message"`
+	Metadata  map[string]interface{} `db:"-"` // Parsed from JSONB
+	LoggedAt  time.Time              `db:"logged_at"`
+}
+
+// RunArtifact represents a test artifact (screenshot, file, etc.)
+type RunArtifact struct {
+	ID           uuid.UUID      `db:"id"`
+	RunID        string         `db:"run_id"`
+	RunTestID    uuid.NullUUID  `db:"run_test_id"`
+	RunStepID    uuid.NullUUID  `db:"run_step_id"`
+	Name         string         `db:"name"`
+	ArtifactType string         `db:"artifact_type"`
+	MimeType     sql.NullString `db:"mime_type"`
+	SizeBytes    sql.NullInt64  `db:"size_bytes"`
+	StoragePath  string         `db:"storage_path"`
+	CreatedAt    time.Time      `db:"created_at"`
+}
+
+// CITokenRecord represents a CI token with audit fields
+type CITokenRecord struct {
+	ID           uuid.UUID      `db:"id"`
+	ProjectID    uuid.UUID      `db:"project_id"`
+	Name         string         `db:"name"`
+	TokenHash    string         `db:"token_hash"`
+	Scopes       []string       `db:"-"`
+	NeverExpires bool           `db:"never_expires"`
+	ExpiresAt    sql.NullTime   `db:"expires_at"`
+	RevokedAt    sql.NullTime   `db:"revoked_at"`
+	CreatedBy    uuid.NullUUID  `db:"created_by"`
+	LastUsedAt   sql.NullTime   `db:"last_used_at"`
+	RevokedBy    uuid.NullUUID  `db:"revoked_by"`
+	Description  sql.NullString `db:"description"`
+	CreatedAt    time.Time      `db:"created_at"`
+	UpdatedAt    time.Time      `db:"updated_at"`
 }
 
 type RunTotals struct {

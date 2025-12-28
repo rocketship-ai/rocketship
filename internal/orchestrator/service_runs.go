@@ -17,6 +17,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"go.temporal.io/sdk/client"
 )
+
 func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest) (*generated.CreateRunResponse, error) {
 	if req == nil {
 		return nil, fmt.Errorf("request cannot be nil")
@@ -74,6 +75,11 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			FailedTests:    0,
 			TimeoutTests:   0,
 			StartedAt:      sql.NullTime{Time: startTime, Valid: true},
+		}
+
+		// Parse project_id as UUID if it's a valid UUID
+		if projectID, err := uuid.Parse(runContext.ProjectID); err == nil && projectID != uuid.Nil {
+			record.ProjectID = uuid.NullUUID{UUID: projectID, Valid: true}
 		}
 
 		if _, err := e.runStore.InsertRun(ctx, record); err != nil {
@@ -146,12 +152,29 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			log.Printf("[ERROR] Failed to generate test ID: %v", err)
 			return nil, fmt.Errorf("failed to generate test ID: %w", err)
 		}
+		testStartTime := time.Now().UTC()
 		testInfo := &TestInfo{
 			WorkflowID: testID,
 			Name:       test.Name,
 			Status:     "PENDING",
-			StartedAt:  time.Now(),
+			StartedAt:  testStartTime,
 			RunID:      runID,
+		}
+
+		// Persist run_test record
+		if orgID != uuid.Nil && e.runStore != nil {
+			runTest := persistence.RunTest{
+				RunID:      runID,
+				WorkflowID: testID,
+				Name:       test.Name,
+				Status:     "PENDING",
+				StartedAt:  sql.NullTime{Time: testStartTime, Valid: true},
+				StepCount:  len(test.Steps),
+			}
+			if _, err := e.runStore.InsertRunTest(ctx, runTest); err != nil {
+				slog.Error("CreateRun: failed to persist run_test", "run_id", runID, "workflow_id", testID, "error", err)
+				// Don't fail the run, just log the error
+			}
 		}
 
 		workflowOptions := client.StartWorkflowOptions{
@@ -377,6 +400,11 @@ func (e *Engine) ListRuns(ctx context.Context, req *generated.ListRunsRequest) (
 		if req.Status != "" && !strings.EqualFold(rec.Status, req.Status) {
 			continue
 		}
+		if req.ProjectId != "" {
+			if !rec.ProjectID.Valid || rec.ProjectID.UUID.String() != req.ProjectId {
+				continue
+			}
+		}
 		if req.Source != "" && !strings.EqualFold(rec.Source, req.Source) {
 			continue
 		}
@@ -436,7 +464,17 @@ func (e *Engine) GetRun(ctx context.Context, req *generated.GetRunRequest) (*gen
 		return nil, fmt.Errorf("failed to load run: %w", err)
 	}
 
-	return mapRunRecordToRunDetails(rec), nil
+	resp := mapRunRecordToRunDetails(rec)
+
+	// Load persisted run_tests for this run
+	runTests, err := e.runStore.ListRunTests(ctx, req.RunId)
+	if err != nil {
+		slog.Warn("GetRun: failed to load run_tests, returning empty tests", "run_id", req.RunId, "error", err)
+	} else if len(runTests) > 0 {
+		resp.Run.Tests = mapRunTestsToTestDetails(runTests)
+	}
+
+	return resp, nil
 }
 
 // CancelRun cancels all workflows for a given run and marks it as cancelled

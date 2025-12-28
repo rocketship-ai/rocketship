@@ -155,3 +155,42 @@ func makeRunTotals(counts TestStatusCounts) *persistence.RunTotals {
 		Timeout: counts.TimedOut,
 	}
 }
+
+// mapRunTestsToTestDetails converts persistence.RunTest slice to generated.TestDetails slice
+func mapRunTestsToTestDetails(runTests []persistence.RunTest) []*generated.TestDetails {
+	tests := make([]*generated.TestDetails, 0, len(runTests))
+
+	for _, rt := range runTests {
+		startedAt := ""
+		if rt.StartedAt.Valid {
+			startedAt = rt.StartedAt.Time.Format(time.RFC3339)
+		}
+
+		endedAt := ""
+		if rt.EndedAt.Valid {
+			endedAt = rt.EndedAt.Time.Format(time.RFC3339)
+		}
+
+		durationMs := int64(0)
+		if rt.DurationMs.Valid {
+			durationMs = rt.DurationMs.Int64
+		}
+
+		errorMessage := ""
+		if rt.ErrorMessage.Valid {
+			errorMessage = rt.ErrorMessage.String
+		}
+
+		tests = append(tests, &generated.TestDetails{
+			TestId:       rt.WorkflowID,
+			Name:         rt.Name,
+			Status:       rt.Status,
+			StartedAt:    startedAt,
+			EndedAt:      endedAt,
+			DurationMs:   durationMs,
+			ErrorMessage: errorMessage,
+		})
+	}
+
+	return tests
+}

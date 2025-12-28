@@ -22,7 +22,53 @@ func (e *Engine) StreamLogs(req *generated.LogStreamRequest, stream generated.En
 	runInfo, exists := e.runs[runID]
 	if !exists {
 		e.mu.RUnlock()
-		return fmt.Errorf("run not found: %s", runID)
+		// Fallback to persisted logs (historical runs).
+		if orgID == uuid.Nil || e.runStore == nil {
+			return fmt.Errorf("run not found: %s", runID)
+		}
+
+		if _, err := e.runStore.GetRun(stream.Context(), orgID, runID); err != nil {
+			return fmt.Errorf("run not found: %s", runID)
+		}
+
+		logs, err := e.runStore.ListRunLogs(stream.Context(), runID, 10000)
+		if err != nil {
+			return fmt.Errorf("failed to load logs: %w", err)
+		}
+
+		for _, logMsg := range logs {
+			color := ""
+			bold := false
+			testName := ""
+			stepName := ""
+			if logMsg.Metadata != nil {
+				if v, ok := logMsg.Metadata["color"].(string); ok {
+					color = v
+				}
+				if v, ok := logMsg.Metadata["bold"].(bool); ok {
+					bold = v
+				}
+				if v, ok := logMsg.Metadata["test_name"].(string); ok {
+					testName = v
+				}
+				if v, ok := logMsg.Metadata["step_name"].(string); ok {
+					stepName = v
+				}
+			}
+
+			if err := stream.Send(&generated.LogLine{
+				Ts:       logMsg.LoggedAt.Format(time.RFC3339),
+				Msg:      logMsg.Message,
+				Color:    color,
+				Bold:     bold,
+				TestName: testName,
+				StepName: stepName,
+			}); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 	if orgID != uuid.Nil && runInfo.OrganizationID != uuid.Nil && runInfo.OrganizationID != orgID {
 		e.mu.RUnlock()

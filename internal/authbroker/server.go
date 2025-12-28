@@ -16,6 +16,7 @@ type Server struct {
 	cfg          Config
 	signer       *Signer
 	github       githubProvider
+	githubApp    *GitHubAppClient
 	store        dataStore
 	mailer       mailer
 	mux          *http.ServeMux
@@ -78,10 +79,15 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, err
 	}
 
-	return newServerWithComponents(cfg, signer, NewGitHubClient(cfg.GitHub, nil), store, mailer)
+	githubApp, err := NewGitHubAppClient(cfg.GitHubApp, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GitHub App client: %w", err)
+	}
+
+	return newServerWithComponents(cfg, signer, NewGitHubClient(cfg.GitHub, nil), githubApp, store, mailer)
 }
 
-func newServerWithComponents(cfg Config, signer *Signer, github githubProvider, dataStore dataStore, mail mailer) (*Server, error) {
+func newServerWithComponents(cfg Config, signer *Signer, github githubProvider, githubApp *GitHubAppClient, dataStore dataStore, mail mailer) (*Server, error) {
 	if signer == nil {
 		return nil, fmt.Errorf("signer is required")
 	}
@@ -99,6 +105,7 @@ func newServerWithComponents(cfg Config, signer *Signer, github githubProvider, 
 		cfg:          cfg,
 		signer:       signer,
 		github:       github,
+		githubApp:    githubApp,
 		store:        dataStore,
 		mailer:       mail,
 		mux:          http.NewServeMux(),
@@ -136,6 +143,16 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/orgs/invites/accept", s.requireAuth(s.handleOrgInviteAccept))
 	s.mux.HandleFunc("/api/orgs/", s.requireAuth(s.handleOrgRoutes))
 	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleProjectRoutes))
+
+	// Onboarding API
+	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))
+
+	// GitHub App routes (for repo access)
+	s.mux.HandleFunc("/api/github/app/status", s.requireAuth(s.handleGitHubAppStatus))
+	s.mux.HandleFunc("/api/github/app/repos", s.requireAuth(s.handleGitHubAppRepos))
+	s.mux.HandleFunc("/api/github/app/repos/connect", s.requireAuth(s.handleGitHubAppConnect))
+	s.mux.HandleFunc("/github-app/callback", s.handleGitHubAppCallback)
+	s.mux.HandleFunc("/github-app/webhook", s.handleGitHubAppWebhook)
 }
 
 // ServeHTTP satisfies http.Handler with CORS support.

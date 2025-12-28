@@ -70,8 +70,17 @@ func principalFromClaims(claims jwt.MapClaims) (brokerPrincipal, error) {
 		return brokerPrincipal{}, errors.New("token missing roles")
 	}
 
+	// Extract org_id if present
+	var orgID uuid.UUID
+	if orgIDStr := stringClaim(claims["org_id"]); orgIDStr != "" {
+		if parsed, err := uuid.Parse(orgIDStr); err == nil {
+			orgID = parsed
+		}
+	}
+
 	principal := brokerPrincipal{
 		UserID:   userID,
+		OrgID:    orgID,
 		Roles:    roles,
 		Email:    stringClaim(claims["email"]),
 		Name:     stringClaim(claims["name"]),

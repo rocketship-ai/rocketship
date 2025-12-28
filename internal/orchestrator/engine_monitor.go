@@ -58,26 +58,43 @@ func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
 		return
 	}
 
-	testInfo.EndedAt = time.Now()
+	endedAt := time.Now().UTC()
+	testInfo.EndedAt = endedAt
+	durationMs := endedAt.Sub(testInfo.StartedAt).Milliseconds()
+	orgID := runInfo.OrganizationID
+
+	var status string
+	var errMsg *string
 
 	if workflowErr != nil {
 		if workflowErr.Error() == "workflow monitoring timeout" {
-			testInfo.Status = "TIMEOUT"
+			status = "TIMEOUT"
+			testInfo.Status = status
 			e.mu.Unlock()
 			log.Printf("[WARN] Test timed out: %s", testInfo.Name)
 			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", testInfo.Name), "red", true)
 		} else {
-			testInfo.Status = "FAILED"
+			status = "FAILED"
+			testInfo.Status = status
 			e.mu.Unlock()
 			cleanErr := interpreter.ExtractCleanError(workflowErr)
+			errMsg = &cleanErr
 			log.Printf("[ERROR] Test failed: %s - %s", testInfo.Name, cleanErr)
 			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %s", testInfo.Name, cleanErr), "red", true)
 		}
 	} else {
-		testInfo.Status = "PASSED"
+		status = "PASSED"
+		testInfo.Status = status
 		e.mu.Unlock()
 		log.Printf("[INFO] Test passed: %s", testInfo.Name)
 		e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name), "green", true)
+	}
+
+	// Persist run_test status update
+	if orgID != uuid.Nil && e.runStore != nil {
+		if err := e.runStore.UpdateRunTestByWorkflowID(context.Background(), workflowID, status, errMsg, endedAt, durationMs); err != nil {
+			slog.Error("updateTestStatus: failed to persist run_test status", "workflow_id", workflowID, "error", err)
+		}
 	}
 
 	e.checkIfRunFinished(runID)
@@ -88,11 +105,12 @@ func (e *Engine) addLog(runID, message, color string, bold bool) {
 }
 
 func (e *Engine) addLogWithContext(runID, message, color string, bold bool, testName, stepName string) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	var orgID uuid.UUID
 
+	e.mu.Lock()
 	runInfo, exists := e.runs[runID]
 	if !exists {
+		e.mu.Unlock()
 		log.Printf("[WARN] Run %s not found when trying to add log", runID)
 		return
 	}
@@ -104,6 +122,28 @@ func (e *Engine) addLogWithContext(runID, message, color string, bold bool, test
 		TestName: testName,
 		StepName: stepName,
 	})
+	orgID = runInfo.OrganizationID
+	e.mu.Unlock()
+
+	if orgID == uuid.Nil || e.runStore == nil {
+		return
+	}
+
+	meta := map[string]interface{}{
+		"color":     color,
+		"bold":      bold,
+		"test_name": testName,
+		"step_name": stepName,
+	}
+	if _, err := e.runStore.InsertRunLog(context.Background(), persistence.RunLog{
+		RunID:    runID,
+		Level:    "INFO",
+		Message:  message,
+		Metadata: meta,
+		LoggedAt: time.Now().UTC(),
+	}); err != nil {
+		slog.Error("addLogWithContext: failed to persist run log", "run_id", runID, "error", err)
+	}
 }
 
 func (e *Engine) checkIfRunFinished(runID string) {

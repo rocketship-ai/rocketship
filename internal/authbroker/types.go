@@ -34,9 +34,52 @@ type dataStore interface {
 	CreateOrgInvite(ctx context.Context, invite persistence.OrganizationInvite) (persistence.OrganizationInvite, error)
 	FindPendingOrgInvites(ctx context.Context, email string) ([]persistence.OrganizationInvite, error)
 	MarkOrgInviteAccepted(ctx context.Context, inviteID, userID uuid.UUID) error
+
+	// GitHub App installation management
+	UpsertGitHubAppInstallation(ctx context.Context, orgID uuid.UUID, installationID int64, installedBy uuid.UUID, accountLogin, accountType string) error
+	GetGitHubAppInstallation(ctx context.Context, orgID uuid.UUID) (installationID int64, accountLogin, accountType string, err error)
+
+	// GitHub webhook delivery tracking
+	InsertWebhookDelivery(ctx context.Context, deliveryID, event, repoFullName, ref, action string) error
+
+	// GitHub App installation lookup for multi-tenant safety
+	ListOrgsByInstallationID(ctx context.Context, installationID int64) ([]uuid.UUID, error)
+
+	// Scan attempt tracking
+	InsertScanAttempt(ctx context.Context, attempt persistence.ScanAttempt) error
+
+	// Project management for onboarding
+	CreateProject(ctx context.Context, project persistence.Project) (persistence.Project, error)
+	GetProject(ctx context.Context, projectID uuid.UUID) (persistence.Project, error)
+	ListProjects(ctx context.Context, orgID uuid.UUID) ([]persistence.Project, error)
+	ProjectNameExists(ctx context.Context, orgID uuid.UUID, name, sourceRef string) (bool, error)
+
+	// Environment management
+	CreateEnvironment(ctx context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error)
+	ListEnvironments(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectEnvironment, error)
+
+	// Suite and test management
+	UpsertSuite(ctx context.Context, suite persistence.Suite) (persistence.Suite, error)
+	GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, sourceRef string) (persistence.Suite, bool, error)
+	ListSuites(ctx context.Context, projectID uuid.UUID) ([]persistence.Suite, error)
+	UpsertTest(ctx context.Context, test persistence.Test) (persistence.Test, error)
+
+	// Schedule management
+	ListEnabledSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.SuiteSchedule, error)
+
+	// CI Token management
+	ListActiveCITokens(ctx context.Context, projectID uuid.UUID) ([]persistence.CITokenRecord, error)
+
+	// Overview setup counts
+	CountProjectsForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
+	CountSuitesForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
+	CountSuitesOnDefaultBranchForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
+	CountEnvsWithVarsForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
+	CountEnabledSchedulesForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
+	CountActiveCITokensForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 }
 
-// githubProvider defines the interface for GitHub OAuth operations
+// githubProvider defines the interface for GitHub OAuth operations (identity only)
 type githubProvider interface {
 	RequestDeviceCode(ctx context.Context, scopes []string) (DeviceCodeResponse, error)
 	ExchangeDeviceCode(ctx context.Context, deviceCode string) (TokenResponse, tokenError, error)
@@ -49,6 +92,7 @@ type githubProvider interface {
 // brokerPrincipal represents an authenticated user with their roles and metadata
 type brokerPrincipal struct {
 	UserID   uuid.UUID
+	OrgID    uuid.UUID
 	Roles    []string
 	Email    string
 	Name     string
@@ -68,6 +112,19 @@ func (p brokerPrincipal) HasAnyRole(roles ...string) bool {
 		}
 	}
 	return false
+}
+
+// IsPending returns true if the user has only the "pending" role (no org membership)
+func (p brokerPrincipal) IsPending() bool {
+	if len(p.Roles) == 1 && containsRole(p.Roles, "pending") {
+		return true
+	}
+	return false
+}
+
+// RequiresOrgMembership returns true if the user needs an org to use console features
+func (p brokerPrincipal) RequiresOrgMembership() bool {
+	return p.IsPending() || p.OrgID == uuid.Nil
 }
 
 // deviceSession tracks a pending device flow authorization

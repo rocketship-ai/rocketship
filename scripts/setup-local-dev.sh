@@ -175,6 +175,41 @@ kubectl create secret generic rocketship-postmark-secret \
   --from-literal=ROCKETSHIP_POSTMARK_SERVER_TOKEN="$ROCKETSHIP_POSTMARK_SERVER_TOKEN" \
   --dry-run=client -o yaml | kubectl apply -f -
 
+# GitHub App secret (for repo access)
+ROCKETSHIP_GITHUB_APP_ID=${ROCKETSHIP_GITHUB_APP_ID:-}
+ROCKETSHIP_GITHUB_APP_SLUG=${ROCKETSHIP_GITHUB_APP_SLUG:-}
+ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE=${ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE:-}
+if [ -n "$ROCKETSHIP_GITHUB_APP_ID" ] && [ -n "$ROCKETSHIP_GITHUB_APP_SLUG" ] && [ -n "$ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE" ]; then
+  if [ ! -f "$ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE" ]; then
+    echo "ERROR: GitHub App private key file not found: $ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE"
+    exit 1
+  fi
+  GITHUB_APP_PRIVATE_KEY_PEM=$(cat "$ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE")
+  kubectl create secret generic rocketship-github-app \
+    --namespace "$ROCKETSHIP_NAMESPACE" \
+    --from-literal=ROCKETSHIP_GITHUB_APP_ID="$ROCKETSHIP_GITHUB_APP_ID" \
+    --from-literal=ROCKETSHIP_GITHUB_APP_SLUG="$ROCKETSHIP_GITHUB_APP_SLUG" \
+    --from-literal=ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_PEM="$GITHUB_APP_PRIVATE_KEY_PEM" \
+    --dry-run=client -o yaml | kubectl apply -f -
+  echo "GitHub App secret created."
+else
+  echo "WARNING: GitHub App not configured. Set ROCKETSHIP_GITHUB_APP_ID, ROCKETSHIP_GITHUB_APP_SLUG, and ROCKETSHIP_GITHUB_APP_PRIVATE_KEY_FILE to enable repo access."
+fi
+
+# GitHub webhook secret (for webhook ingestion via smee.io relay)
+ROCKETSHIP_GITHUB_WEBHOOK_SECRET=${ROCKETSHIP_GITHUB_WEBHOOK_SECRET:-}
+ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL=${ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL:-}
+if [ -n "$ROCKETSHIP_GITHUB_WEBHOOK_SECRET" ] && [ -n "$ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL" ]; then
+  kubectl create secret generic rocketship-github-webhook \
+    --namespace "$ROCKETSHIP_NAMESPACE" \
+    --from-literal=ROCKETSHIP_GITHUB_WEBHOOK_SECRET="$ROCKETSHIP_GITHUB_WEBHOOK_SECRET" \
+    --from-literal=ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL="$ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL" \
+    --dry-run=client -o yaml | kubectl apply -f -
+  echo "GitHub webhook secret created."
+else
+  echo "Skipping rocketship-github-webhook secret; set ROCKETSHIP_GITHUB_WEBHOOK_SECRET and ROCKETSHIP_GITHUB_WEBHOOK_SMEE_URL in .env"
+fi
+
 # Deploy vite-relay for web UI development
 echo "Deploying vite-relay for local web UI development..."
 

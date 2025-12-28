@@ -28,6 +28,12 @@ type RunStore interface {
 	UpdateRun(ctx context.Context, update persistence.RunUpdate) (persistence.RunRecord, error)
 	GetRun(ctx context.Context, orgID uuid.UUID, runID string) (persistence.RunRecord, error)
 	ListRuns(ctx context.Context, orgID uuid.UUID, limit int) ([]persistence.RunRecord, error)
+	// Run details
+	InsertRunTest(ctx context.Context, rt persistence.RunTest) (persistence.RunTest, error)
+	UpdateRunTestByWorkflowID(ctx context.Context, workflowID, status string, errorMsg *string, endedAt time.Time, durationMs int64) error
+	ListRunTests(ctx context.Context, runID string) ([]persistence.RunTest, error)
+	InsertRunLog(ctx context.Context, log persistence.RunLog) (persistence.RunLog, error)
+	ListRunLogs(ctx context.Context, runID string, limit int) ([]persistence.RunLog, error)
 }
 
 type RunInfo struct {
