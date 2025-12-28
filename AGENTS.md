@@ -6,12 +6,12 @@ This file provides guidance to AI coding agents (including this Codex CLI assist
 
 ## Rocketship Cloud v1 Snapshot
 
-- Product focus: hosted cloud with GitHub SSO (device flow for CLI, OAuth for web) backed by our auth-broker that mints Rocketship JWTs. Engine + worker still run tests via Temporal.
+- Product focus: hosted cloud with GitHub SSO (device flow for CLI, OAuth for web) backed by our controlplane that mints Rocketship JWTs. Engine + worker still run tests via Temporal.
 - Tenancy: **Org → Project**. Projects reference repo URL, default branch, and `path_scope` globs for mono-repo isolation. No “workspace” layer.
 - Roles: project-level **Read** (view only) and **Write** (run/edit). Org Admins inherit Write on all projects. Tokens must carry explicit roles; missing roles are rejected.
 - Git-as-SoT: UI/CLI can run uncommitted edits immediately (flagged as `config_source=uncommitted`). Approvals/merges happen in GitHub; Rocketship can optionally open PRs or commits if the user has push rights.
-- Tokens: user JWT + refresh issued by broker; CI tokens are opaque secrets scoped per project with explicit permissions + TTL. Engine tags runs with `initiator`, `environment`, `config_source`, `commit_sha`/`bundle_sha` for auditability.
-- Auth broker persists orgs/users/memberships in Postgres. Fresh logins return `pending` roles until the user creates or joins an org via `POST /api/orgs`.
+- Tokens: user JWT + refresh issued by controlplane; CI tokens are opaque secrets scoped per project with explicit permissions + TTL. Engine tags runs with `initiator`, `environment`, `config_source`, `commit_sha`/`bundle_sha` for auditability.
+- Controlplane persists orgs/users/memberships in Postgres. Fresh logins return `pending` roles until the user creates or joins an org via `POST /api/orgs`.
 - Guardrails: enforce path scopes, reject unknown RPCs in auth, clarify uncommitted runs, prefer minikube Helm flow for reproducible clusters.
 
 ## Architecture Overview

@@ -13,7 +13,7 @@ import (
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
-	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 	"github.com/rocketship-ai/rocketship/internal/cli"
 	"github.com/rocketship-ai/rocketship/internal/orchestrator"
 	"go.temporal.io/sdk/client"

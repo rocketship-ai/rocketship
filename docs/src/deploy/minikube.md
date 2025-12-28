@@ -6,7 +6,7 @@ Local Kubernetes cluster for development with full auth, database support, and h
 
 ```bash
 # 1. Create .env file with secrets (see "Configure Secrets" below)
-echo "GITHUB_CLIENT_SECRET=..." > .env
+echo "ROCKETSHIP_GITHUB_CLIENT_SECRET=..." > .env
 echo "ROCKETSHIP_EMAIL_FROM=..." >> .env
 echo "ROCKETSHIP_POSTMARK_SERVER_TOKEN=..." >> .env
 
@@ -46,7 +46,7 @@ Make code changes and watch them automatically rebuild and redeploy!
 Create a `.env` file in the repository root with the following secrets:
 
 ```bash
-GITHUB_CLIENT_SECRET=<github-oauth-client-secret>
+ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-oauth-client-secret>
 ROCKETSHIP_EMAIL_FROM=<email-sender-address>
 ROCKETSHIP_POSTMARK_SERVER_TOKEN=<postmark-api-token>
 ```
@@ -67,7 +67,7 @@ Ask a team member with cluster access to share their `.env` file or provide the 
 
 **GitHub OAuth App Setup:**
 
-The `GITHUB_CLIENT_SECRET` corresponds to a GitHub OAuth App with these settings:
+The `ROCKETSHIP_GITHUB_CLIENT_SECRET` corresponds to a GitHub OAuth App with these settings:
 
 - **Client ID**: `Ov23li2GoXfR7bC7fR0y` (configured in `charts/rocketship/values-minikube-local.yaml`)
 - **Authorization callback URL**: `http://auth.minikube.local/callback`
@@ -107,11 +107,11 @@ Then re-run setup so the Kubernetes secret is created:
 scripts/setup-local-dev.sh
 ```
 
-If you change GitHub App permissions or installed repositories, re-run the app installation and then restart the auth broker.
+If you change GitHub App permissions or installed repositories, re-run the app installation and then restart the controlplane.
 
 **GitHub App Webhooks (Auto-sync via Smee):**
 
-For local development, GitHub cannot reach `http://auth.minikube.local` directly. Rocketship uses a Smee relay pod inside the cluster to forward GitHub App webhooks into the auth-broker.
+For local development, GitHub cannot reach `http://auth.minikube.local` directly. Rocketship uses a Smee relay pod inside the cluster to forward GitHub App webhooks into the controlplane.
 
 1. Create a Smee channel: `https://smee.io/new`
 2. In your GitHub App settings, set:
@@ -135,7 +135,7 @@ scripts/setup-local-dev.sh
 
 ```bash
 kubectl -n rocketship logs deploy/rocketship-github-webhook-relay --tail=50
-kubectl -n rocketship logs deploy/rocketship-auth-broker --tail=200 | rg "webhook received"
+kubectl -n rocketship logs deploy/rocketship-controlplane --tail=200 | rg "webhook received"
 kubectl -n rocketship exec rocketship-postgresql-0 -- bash -lc 'PGPASSWORD=rocketship-dev-password /opt/bitnami/postgresql/bin/psql -U rocketship -d rocketship -c "select event, repository_full_name, ref, action, received_at from github_webhook_deliveries order by received_at desc limit 10;"'
 ```
 
@@ -183,7 +183,7 @@ This automatically starts:
 
 Visit `http://auth.minikube.local` and sign in with GitHub!
 
-**Hot Reloading:** Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/authbroker/`, or `internal/`, save, and Skaffold will automatically:
+**Hot Reloading:** Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/controlplane/`, or `internal/`, save, and Skaffold will automatically:
 - Rebuild the Docker image
 - Redeploy to Kubernetes
 - Stream logs to your terminal
@@ -238,7 +238,7 @@ rocketship login
 
 ### Web App
 
-The web UI is served through the same ingress as the auth broker (single-origin architecture):
+The web UI is served through the same ingress as the controlplane (single-origin architecture):
 
 - UI: `http://auth.minikube.local/`
 - Auth API: `http://auth.minikube.local/api`, `/authorize`, `/token`, `/callback`
@@ -270,7 +270,7 @@ ROCKETSHIP_NAMESPACE=testing scripts/setup-local-dev.sh
 
 The `skaffold.yaml` file defines what gets built and deployed:
 
-- **Artifacts**: Three Docker images (engine, worker, authbroker)
+- **Artifacts**: Three Docker images (engine, worker, controlplane)
 - **Deploy**: Helm-based deployment with values from `charts/rocketship/values-minikube-local.yaml`
 - **Profiles**:
   - `debug`: Enables debug logging for all services
@@ -287,7 +287,7 @@ eval "$(minikube -p rocketship docker-env)"
 
 **Pods not ready**: Wait 2-3 minutes for Temporal and Postgres to initialize.
 
-**Auth broker fails**: Check `.env` has valid `GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
+**Controlplane fails**: Check `.env` has valid `ROCKETSHIP_GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
 
 **Skaffold not watching files**: Ensure you're in the repository root when running `skaffold dev`.
 
@@ -306,7 +306,7 @@ eval "$(minikube -p rocketship docker-env)"
 
 **Install script warnings about host connectivity**: The install script tests connectivity to your host's Vite server to auto-detect the correct IP. If Vite isn't running yet, you'll see warnings like "Could not detect reachable host IP" - this is expected and the script will use a sensible default (192.168.64.1). Start Vite after installation completes.
 
-**Cookies not working**: Ensure you're accessing the UI via `http://auth.minikube.local` (not `http://localhost:5173`). The single-origin architecture requires UI, auth broker, and engine to be served from the same host for cookies to work.
+**Cookies not working**: Ensure you're accessing the UI via `http://auth.minikube.local` (not `http://localhost:5173`). The single-origin architecture requires UI, controlplane, and engine to be served from the same host for cookies to work.
 
 **Engine API not accessible**: Verify the ingress includes the `/engine` path:
 
@@ -316,7 +316,7 @@ kubectl get ingress rocketship-gateway -n rocketship -o jsonpath='{.spec.rules[0
 
 Should show: `/api /authorize /token /callback /logout /engine /`
 
-**Auth broker unreachable from inside cluster**: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:
+**Controlplane unreachable from inside cluster**: The install script automatically detects the ingress controller's ClusterIP and configures engine hostAliases. If this failed, manually get the IP and redeploy:
 
 ```bash
 kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
@@ -327,7 +327,7 @@ helm upgrade rocketship charts/rocketship --namespace rocketship \
   --set "engine.hostAliases[0].ip=<YOUR-IP>" --wait
 ```
 
-**Auth broker unreachable from local machine**: Ensure `/etc/hosts` entry exists and `sudo minikube tunnel` is running.
+**Controlplane unreachable from local machine**: Ensure `/etc/hosts` entry exists and `sudo minikube tunnel` is running.
 
 ## Cleanup
 

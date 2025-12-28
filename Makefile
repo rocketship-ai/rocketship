@@ -9,7 +9,7 @@ build-binaries: prepare-embed
 	@echo "Building embedded binaries..."
 	@go build -o internal/embedded/bin/worker cmd/worker/main.go
 	@go build -o internal/embedded/bin/engine cmd/engine/main.go
-	@go build -o internal/embedded/bin/auth-broker cmd/authbroker/main.go
+	@go build -o internal/embedded/bin/controlplane cmd/controlplane/main.go
 
 # Build the CLI with embedded binaries
 build: build-binaries

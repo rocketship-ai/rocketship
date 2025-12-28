@@ -1,0 +1,29 @@
+# Production Dockerfile for DigitalOcean cluster builds
+# NOTE: Local minikube development uses Skaffold's ko builder (see skaffold.yaml)
+FROM golang:1.24-alpine AS builder
+
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+ENV CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Build the controlplane binary
+# -p 1: Limit parallel compilation to reduce memory pressure
+# -ldflags="-w -s": Strip debug info to reduce memory during linking
+RUN go build -p 1 -ldflags="-w -s" -o /bin/controlplane ./cmd/controlplane
+
+FROM alpine:3.16
+
+WORKDIR /app
+
+COPY --from=builder /bin/controlplane /bin/controlplane
+
+EXPOSE 8080
+
+ENTRYPOINT ["/bin/controlplane"]

@@ -29,10 +29,10 @@ build:
           - "-w"
           - "-s"
 
-    # Auth Broker service
-    - image: rocketship-authbroker-local
+    # Controlplane service
+    - image: rocketship-controlplane-local
       ko:
-        main: ./cmd/authbroker
+        main: ./cmd/controlplane
         flags:
           - "-p"
           - "1"
@@ -67,10 +67,10 @@ deploy:
           worker.image.repository: "rocketship-worker-local"
           worker.image.tag: "dev"
           worker.image.pullPolicy: "IfNotPresent"
-          # Auth broker image
-          auth.broker.image.repository: "rocketship-authbroker-local"
-          auth.broker.image.tag: "dev"
-          auth.broker.image.pullPolicy: "IfNotPresent"
+          # Controlplane image
+          controlplane.image.repository: "rocketship-controlplane-local"
+          controlplane.image.tag: "dev"
+          controlplane.image.pullPolicy: "IfNotPresent"
           # CRITICAL: Engine must resolve auth.minikube.local to ingress controller
           # This IP is detected dynamically by start-dev.sh
           # NOTE: Must set BOTH ip and hostnames because Helm --set replaces entire array element
@@ -97,4 +97,4 @@ profiles:
         value:
           engine.env.ROCKETSHIP_LOG: "DEBUG"
           worker.env.ROCKETSHIP_LOG: "DEBUG"
-          auth.broker.env.LOG_LEVEL: "debug"
+          controlplane.env.LOG_LEVEL: "debug"

@@ -23,6 +23,16 @@ ROCKETSHIP_NAMESPACE=${ROCKETSHIP_NAMESPACE:-rocketship}
 TEMPORAL_RELEASE=${TEMPORAL_RELEASE:-temporal}
 TEMPORAL_WORKFLOW_NAMESPACE=${TEMPORAL_WORKFLOW_NAMESPACE:-default}
 
+# Helper to append a line to .env if not already present
+append_to_env() {
+  local key="$1"
+  local value="$2"
+  if ! grep -q "^${key}=" "$REPO_ROOT/.env" 2>/dev/null; then
+    echo "${key}=${value}" >> "$REPO_ROOT/.env"
+    echo "Added ${key} to .env"
+  fi
+}
+
 check_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "Error: $1 is required but not installed." >&2
@@ -35,6 +45,54 @@ check_command minikube
 check_command kubectl
 check_command helm
 check_command skaffold
+
+# =============================================================================
+# Validate required secrets from .env
+# =============================================================================
+
+ROCKETSHIP_GITHUB_CLIENT_SECRET=${ROCKETSHIP_GITHUB_CLIENT_SECRET:-}
+if [ -z "$ROCKETSHIP_GITHUB_CLIENT_SECRET" ]; then
+  echo "ERROR: ROCKETSHIP_GITHUB_CLIENT_SECRET not set. Create a .env file with secrets from production."
+  echo "  See .env.example for required variables."
+  exit 1
+fi
+
+ROCKETSHIP_EMAIL_FROM=${ROCKETSHIP_EMAIL_FROM:-}
+ROCKETSHIP_POSTMARK_SERVER_TOKEN=${ROCKETSHIP_POSTMARK_SERVER_TOKEN:-}
+if [ -z "$ROCKETSHIP_EMAIL_FROM" ] || [ -z "$ROCKETSHIP_POSTMARK_SERVER_TOKEN" ]; then
+  echo "ERROR: Email configuration missing. Create a .env file with ROCKETSHIP_EMAIL_FROM and ROCKETSHIP_POSTMARK_SERVER_TOKEN."
+  echo "  See .env.example for required variables."
+  exit 1
+fi
+
+# =============================================================================
+# Generate auto-managed secrets if not present
+# =============================================================================
+
+# Ensure .secrets directory exists
+mkdir -p "$REPO_ROOT/.secrets"
+
+# Generate refresh token key if not present
+ROCKETSHIP_CONTROLPLANE_REFRESH_KEY=${ROCKETSHIP_CONTROLPLANE_REFRESH_KEY:-}
+if [ -z "$ROCKETSHIP_CONTROLPLANE_REFRESH_KEY" ]; then
+  echo "Generating ROCKETSHIP_CONTROLPLANE_REFRESH_KEY..."
+  ROCKETSHIP_CONTROLPLANE_REFRESH_KEY=$(openssl rand -base64 32)
+  append_to_env "ROCKETSHIP_CONTROLPLANE_REFRESH_KEY" "$ROCKETSHIP_CONTROLPLANE_REFRESH_KEY"
+fi
+
+# Generate signing key if not present
+ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE=${ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE:-}
+if [ -z "$ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE" ]; then
+  ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE=".secrets/controlplane-signing-key.pem"
+  append_to_env "ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE" "$ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE"
+fi
+
+# Generate the signing key file if it doesn't exist
+SIGNING_KEY_PATH="$REPO_ROOT/$ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE"
+if [ ! -f "$SIGNING_KEY_PATH" ]; then
+  echo "Generating RSA signing key at $ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE..."
+  openssl genrsa -out "$SIGNING_KEY_PATH" 2048
+fi
 
 # Start or ensure minikube is running
 if ! minikube status -p "$MINIKUBE_PROFILE" >/dev/null 2>&1; then
@@ -53,7 +111,7 @@ kubectl config use-context "$MINIKUBE_PROFILE" >/dev/null 2>&1 || true
 # Point Docker CLI to minikube's Docker daemon for Skaffold
 eval "$(minikube -p "$MINIKUBE_PROFILE" docker-env)"
 
-# Enable ingress addon for auth broker hostname routing
+# Enable ingress addon for controlplane hostname routing
 echo "Enabling ingress addon..."
 minikube addons enable ingress -p "$MINIKUBE_PROFILE"
 
@@ -109,8 +167,10 @@ fi
 # Create namespace for Rocketship if it doesn't exist
 kubectl create namespace "$ROCKETSHIP_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-# Create secrets for auth broker and Postgres
-echo "Creating/updating secrets for auth broker and Postgres..."
+# =============================================================================
+# Create Kubernetes secrets
+# =============================================================================
+echo "Creating/updating secrets for controlplane and Postgres..."
 
 # Postgres password (use consistent password for local dev)
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rocketship-dev-password}
@@ -120,55 +180,31 @@ kubectl create secret generic rocketship-postgres-auth \
   --from-literal=postgres-password="$POSTGRES_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Auth broker database URL (points to the postgres service that will be created by Skaffold)
-kubectl create secret generic rocketship-auth-broker-database \
+# Controlplane database URL (points to the postgres service that will be created by Skaffold)
+kubectl create secret generic rocketship-controlplane-database \
   --namespace "$ROCKETSHIP_NAMESPACE" \
   --from-literal=DATABASE_URL="postgres://rocketship:${POSTGRES_PASSWORD}@rocketship-postgresql:5432/rocketship?sslmode=disable" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Refresh-token HMAC key (32 bytes, Base64 encoded)
-if ! kubectl get secret rocketship-auth-broker-secrets -n "$ROCKETSHIP_NAMESPACE" >/dev/null 2>&1; then
-  REFRESH_KEY=$(openssl rand -base64 32)
-  kubectl create secret generic rocketship-auth-broker-secrets \
-    --namespace "$ROCKETSHIP_NAMESPACE" \
-    --from-literal=ROCKETSHIP_BROKER_REFRESH_KEY="$REFRESH_KEY"
-else
-  echo "Secret rocketship-auth-broker-secrets already exists, skipping."
-fi
+# Controlplane refresh-token HMAC key
+kubectl create secret generic rocketship-controlplane-secrets \
+  --namespace "$ROCKETSHIP_NAMESPACE" \
+  --from-literal=ROCKETSHIP_CONTROLPLANE_REFRESH_KEY="$ROCKETSHIP_CONTROLPLANE_REFRESH_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-# RSA signing key for JWTs (generate if not exists)
-if ! kubectl get secret rocketship-auth-broker-signing -n "$ROCKETSHIP_NAMESPACE" >/dev/null 2>&1; then
-  echo "Generating RSA signing key for auth broker..."
-  TEMP_KEY=$(mktemp)
-  openssl genrsa -out "$TEMP_KEY" 2048
-  kubectl create secret generic rocketship-auth-broker-signing \
-    --namespace "$ROCKETSHIP_NAMESPACE" \
-    --from-file=signing-key.pem="$TEMP_KEY"
-  rm -f "$TEMP_KEY"
-else
-  echo "Secret rocketship-auth-broker-signing already exists, skipping."
-fi
+# Controlplane RSA signing key for JWTs
+kubectl create secret generic rocketship-controlplane-signing \
+  --namespace "$ROCKETSHIP_NAMESPACE" \
+  --from-file=signing-key.pem="$SIGNING_KEY_PATH" \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 # GitHub OAuth secret
-GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-if [ -z "$GITHUB_CLIENT_SECRET" ]; then
-  echo "ERROR: GITHUB_CLIENT_SECRET not set. Create a .env file with secrets from production."
-  echo "  See .env.example for required variables."
-  exit 1
-fi
 kubectl create secret generic rocketship-github-oauth \
   --namespace "$ROCKETSHIP_NAMESPACE" \
-  --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET="$GITHUB_CLIENT_SECRET" \
+  --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET="$ROCKETSHIP_GITHUB_CLIENT_SECRET" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Postmark email secret
-ROCKETSHIP_EMAIL_FROM=${ROCKETSHIP_EMAIL_FROM:-}
-ROCKETSHIP_POSTMARK_SERVER_TOKEN=${ROCKETSHIP_POSTMARK_SERVER_TOKEN:-}
-if [ -z "$ROCKETSHIP_EMAIL_FROM" ] || [ -z "$ROCKETSHIP_POSTMARK_SERVER_TOKEN" ]; then
-  echo "ERROR: Email configuration missing. Create a .env file with ROCKETSHIP_EMAIL_FROM and ROCKETSHIP_POSTMARK_SERVER_TOKEN."
-  echo "  See .env.example for required variables."
-  exit 1
-fi
 kubectl create secret generic rocketship-postmark-secret \
   --namespace "$ROCKETSHIP_NAMESPACE" \
   --from-literal=ROCKETSHIP_EMAIL_FROM="$ROCKETSHIP_EMAIL_FROM" \
@@ -306,6 +342,6 @@ Next Steps:
 
 To view logs:
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=engine --tail=50 -f
-  kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=auth-broker --tail=50 -f
+  kubectl logs -n $ROCKETSHIP_NAMESPACE -l app.kubernetes.io/component=controlplane --tail=50 -f
   kubectl logs -n $ROCKETSHIP_NAMESPACE -l app=vite-relay --tail=50 -f
 SUMMARY

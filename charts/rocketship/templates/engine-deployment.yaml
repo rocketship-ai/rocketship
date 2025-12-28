@@ -45,7 +45,7 @@ spec:
               value: {{ .Values.temporal.namespace | quote }}
             {{- $engineDBSecret := .Values.engine.database.secretName }}
             {{- if and .Values.postgres.enabled (eq $engineDBSecret "") }}
-            {{- $engineDBSecret = include "rocketship.authbroker.databaseSecretName" . -}}
+            {{- $engineDBSecret = include "rocketship.controlplane.databaseSecretName" . -}}
             {{- end }}
             {{- $engineDBKey := default "DATABASE_URL" .Values.engine.database.secretKey -}}
             {{- if ne $engineDBSecret "" }}
@@ -68,33 +68,33 @@ spec:
             {{- if $oidcEnabled }}
             - name: ROCKETSHIP_AUTH_MODE
               value: "oidc"
-            {{- $issuer := coalesce .Values.auth.oidc.issuer .Values.auth.broker.issuer }}
+            {{- $issuer := coalesce .Values.auth.oidc.issuer .Values.controlplane.issuer }}
             {{- if $issuer }}
             - name: ROCKETSHIP_OIDC_ISSUER
               value: {{ $issuer | quote }}
             {{- end }}
-            {{- $clientID := coalesce .Values.auth.oidc.clientID .Values.auth.broker.clientID }}
+            {{- $clientID := coalesce .Values.auth.oidc.clientID .Values.controlplane.clientID }}
             {{- if $clientID }}
             - name: ROCKETSHIP_OIDC_CLIENT_ID
               value: {{ $clientID | quote }}
             {{- end }}
-            {{- $audience := coalesce .Values.auth.oidc.audience .Values.auth.broker.audience }}
+            {{- $audience := coalesce .Values.auth.oidc.audience .Values.controlplane.audience }}
             {{- if $audience }}
             - name: ROCKETSHIP_OIDC_AUDIENCE
               value: {{ $audience | quote }}
             {{- end }}
-            {{- $brokerHost := printf "http://%s:%v" (include "rocketship.authbroker.fullname" .) .Values.auth.broker.service.port }}
-            {{- $deviceEndpoint := coalesce .Values.auth.oidc.deviceEndpoint (ternary (printf "%s/device/code" $brokerHost) "" (eq $modeLower "github")) }}
+            {{- $controlplaneHost := printf "http://%s:%v" (include "rocketship.controlplane.fullname" .) .Values.controlplane.service.port }}
+            {{- $deviceEndpoint := coalesce .Values.auth.oidc.deviceEndpoint (ternary (printf "%s/device/code" $controlplaneHost) "" (eq $modeLower "github")) }}
             {{- if $deviceEndpoint }}
             - name: ROCKETSHIP_OIDC_DEVICE_ENDPOINT
               value: {{ $deviceEndpoint | quote }}
             {{- end }}
-            {{- $tokenEndpoint := coalesce .Values.auth.oidc.tokenEndpoint (ternary (printf "%s/token" $brokerHost) "" (eq $modeLower "github")) }}
+            {{- $tokenEndpoint := coalesce .Values.auth.oidc.tokenEndpoint (ternary (printf "%s/token" $controlplaneHost) "" (eq $modeLower "github")) }}
             {{- if $tokenEndpoint }}
             - name: ROCKETSHIP_OIDC_TOKEN_ENDPOINT
               value: {{ $tokenEndpoint | quote }}
             {{- end }}
-            {{- $jwksEndpoint := coalesce .Values.auth.oidc.jwksURL (ternary (printf "%s/.well-known/jwks.json" $brokerHost) "" (eq $modeLower "github")) }}
+            {{- $jwksEndpoint := coalesce .Values.auth.oidc.jwksURL (ternary (printf "%s/.well-known/jwks.json" $controlplaneHost) "" (eq $modeLower "github")) }}
             {{- if $jwksEndpoint }}
             - name: ROCKETSHIP_OIDC_JWKS_URL
               value: {{ $jwksEndpoint | quote }}
@@ -102,9 +102,9 @@ spec:
             {{- if .Values.auth.oidc.scopes }}
             - name: ROCKETSHIP_OIDC_SCOPES
               value: {{ join " " .Values.auth.oidc.scopes | quote }}
-            {{- else if .Values.auth.broker.scopes }}
+            {{- else if .Values.controlplane.scopes }}
             - name: ROCKETSHIP_OIDC_SCOPES
-              value: {{ join " " .Values.auth.broker.scopes | quote }}
+              value: {{ join " " .Values.controlplane.scopes | quote }}
             {{- end }}
             {{- if .Values.auth.oidc.allowedAlgorithms }}
             - name: ROCKETSHIP_OIDC_ALLOWED_ALGS

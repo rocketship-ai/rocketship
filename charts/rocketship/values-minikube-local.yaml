@@ -1,10 +1,10 @@
 # Minikube local development values
 # This configuration enables all services needed for full e2e testing:
 # - Engine + Worker
-# - Auth Broker (GitHub OAuth device flow)
+# - Controlplane (GitHub OAuth device flow)
 # - Postgres (user/org storage)
 #
-# Secrets are created by the install-minikube.sh script.
+# Secrets are created by the setup-local-dev.sh script.
 # For local development, GitHub OAuth is configured but can use test credentials.
 
 auth:
@@ -23,64 +23,66 @@ auth:
       - read:org
       - read:user
       - user:email
-  broker:
-    enabled: true
-    issuer: http://auth.minikube.local
-    audience: rocketship-cli
-    clientID: rocketship-cli
+
+# Controlplane (Cloud API) configuration
+controlplane:
+  enabled: true
+  issuer: http://auth.minikube.local
+  audience: rocketship-cli
+  clientID: rocketship-cli
+  scopes:
+    - read:org
+    - read:user
+    - user:email
+  github:
+    # Local development OAuth App: "Rocketship Cloud - Local"
+    # Callback URL: http://auth.minikube.local/callback
+    # NOTE: OAuth is identity-only; repo access uses GitHub App installation
+    clientID: Ov23li2GoXfR7bC7fR0y
+    clientSecretSecret: rocketship-github-oauth
+    clientSecretKey: ROCKETSHIP_GITHUB_CLIENT_SECRET
     scopes:
       - read:org
       - read:user
       - user:email
-    github:
-      # Local development OAuth App: "Rocketship Cloud - Local"
-      # Callback URL: http://auth.minikube.local/callback
-      # NOTE: OAuth is identity-only; repo access uses GitHub App installation
-      clientID: Ov23li2GoXfR7bC7fR0y
-      clientSecretSecret: rocketship-github-oauth
-      clientSecretKey: ROCKETSHIP_GITHUB_CLIENT_SECRET
-      scopes:
-        - read:org
-        - read:user
-        - user:email
-    signingKey:
-      secretName: rocketship-auth-broker-signing
-      key: signing-key.pem
-      mountPath: /var/run/rocketship
-      fileName: signing-key.pem
-    database:
-      secretName: rocketship-auth-broker-database
-      secretKey: DATABASE_URL
-    refreshTokenKey:
-      secretName: rocketship-auth-broker-secrets
-      secretKey: ROCKETSHIP_BROKER_REFRESH_KEY
-    env:
-      - name: ROCKETSHIP_BROKER_ACCESS_TTL
-        value: 15m
-      - name: ROCKETSHIP_BROKER_REFRESH_TTL
-        value: 720h
-    service:
-      type: ClusterIP
-      port: 8080
-    ingress:
-      enabled: false  # Using gateway ingress instead
-    envFrom:
-      - secretRef:
-          name: rocketship-github-oauth
-      - secretRef:
-          name: rocketship-postmark-secret
-      - secretRef:
-          name: rocketship-github-app
-      - secretRef:
-          name: rocketship-github-webhook
-          optional: true
-    resources:
-      requests:
-        memory: "128Mi"
-        cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "200m"
+  signingKey:
+    secretName: rocketship-controlplane-signing
+    key: signing-key.pem
+    mountPath: /var/run/rocketship
+    fileName: signing-key.pem
+  database:
+    secretName: rocketship-controlplane-database
+    secretKey: DATABASE_URL
+  refreshTokenKey:
+    secretName: rocketship-controlplane-secrets
+    secretKey: ROCKETSHIP_CONTROLPLANE_REFRESH_KEY
+  env:
+    - name: ROCKETSHIP_CONTROLPLANE_ACCESS_TTL
+      value: 15m
+    - name: ROCKETSHIP_CONTROLPLANE_REFRESH_TTL
+      value: 720h
+  service:
+    type: ClusterIP
+    port: 8080
+  ingress:
+    enabled: false  # Using gateway ingress instead
+  envFrom:
+    - secretRef:
+        name: rocketship-github-oauth
+    - secretRef:
+        name: rocketship-postmark-secret
+    - secretRef:
+        name: rocketship-github-app
+    - secretRef:
+        name: rocketship-github-webhook
+        optional: true
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
 
 # Enable bundled Postgres for local development
 postgres:
@@ -107,7 +109,7 @@ engine:
   service:
     type: ClusterIP
   database:
-    secretName: rocketship-auth-broker-database
+    secretName: rocketship-controlplane-database
     secretKey: DATABASE_URL
   env:
     - name: ROCKETSHIP_DISABLE_GRPC_WEB
@@ -144,38 +146,38 @@ gateway:
   hosts:
     - host: auth.minikube.local
       paths:
-        # Auth broker endpoints
+        # Controlplane endpoints
         - path: /.well-known
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /api
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /authorize
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /token
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /callback
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /logout
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /device
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         - path: /github-app
           pathType: Prefix
-          serviceName: rocketship-auth-broker
+          serviceName: rocketship-controlplane
           port: 8080
         # Vite dev server (catch-all for web UI)
         - path: /
@@ -201,7 +203,7 @@ engineIngress:
           serviceName: rocketship-engine
           port: 7700
 
-# GitHub webhook relay (smee.io -> auth-broker)
+# GitHub webhook relay (smee.io -> controlplane)
 # Enabled for local development; secret must be created by setup-local-dev.sh
 githubWebhookRelay:
   enabled: true

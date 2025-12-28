@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
-	"github.com/rocketship-ai/rocketship/internal/authbroker/persistence"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 	"go.temporal.io/sdk/client"
 )
 

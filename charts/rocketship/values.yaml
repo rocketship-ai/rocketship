@@ -33,50 +33,52 @@ auth:
     jwksURL: ""
     scopes: []
     allowedAlgorithms: []
-  broker:
-    enabled: false
-    image:
-      repository: rocketshipai/rocketship-auth-broker
-      tag: latest
-      pullPolicy: IfNotPresent
-    service:
-      type: ClusterIP
-      port: 8080
-      annotations: {}
-    issuer: ""
-    audience: ""
+
+# Controlplane (Cloud API) configuration
+controlplane:
+  enabled: false
+  image:
+    repository: rocketshipai/rocketship-controlplane
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+  issuer: ""
+  audience: ""
+  clientID: ""
+  scopes: []
+  github:
     clientID: ""
+    clientSecretSecret: ""
+    clientSecretKey: github-client-secret
     scopes: []
-    github:
-      clientID: ""
-      clientSecretSecret: ""
-      clientSecretKey: github-client-secret
-      scopes: []
-    ingress:
-      enabled: false
-      className: ""
-      annotations: {}
-      hosts: []
-      tls: []
-    signingKey:
-      secretName: ""
-      key: signing-key.pem
-      mountPath: /var/run/rocketship
-      fileName: signing-key.pem
-    database:
-      url: ""
-      secretName: ""
-      secretKey: database-url
-    refreshTokenKey:
-      secretName: ""
-      secretKey: broker-refresh-key
-      value: ""
-    env: []
-    envFrom: []
-    resources: {}
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts: []
+    tls: []
+  signingKey:
+    secretName: ""
+    key: signing-key.pem
+    mountPath: /var/run/rocketship
+    fileName: signing-key.pem
+  database:
+    url: ""
+    secretName: ""
+    secretKey: database-url
+  refreshTokenKey:
+    secretName: ""
+    secretKey: controlplane-refresh-key
+    value: ""
+  env: []
+  envFrom: []
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 postgres:
   enabled: false
@@ -170,7 +172,7 @@ web:
     tolerations: []
     affinity: {}
 
-# GitHub webhook relay (smee.io -> auth-broker for local dev)
+# GitHub webhook relay (smee.io -> controlplane for local dev)
 githubWebhookRelay:
   enabled: false
   secretName: rocketship-github-webhook

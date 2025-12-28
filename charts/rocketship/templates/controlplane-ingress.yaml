@@ -1,0 +1,37 @@
+{{- $cp := .Values.controlplane -}}
+{{- if and $cp.enabled $cp.ingress $cp.ingress.enabled }}
+{{- $fullName := include "rocketship.controlplane.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "rocketship.fullname" . }}-gateway
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+  {{- with $cp.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $cp.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $cp.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $cp.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $cp.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

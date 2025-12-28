@@ -1,0 +1,134 @@
+{{- if .Values.controlplane.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rocketship.controlplane.fullname" . }}
+  labels:
+    {{- include "rocketship.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "rocketship.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: controlplane
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "rocketship.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: controlplane
+    spec:
+      containers:
+        - name: controlplane
+          image: "{{ .Values.controlplane.image.repository }}:{{ .Values.controlplane.image.tag }}"
+          imagePullPolicy: {{ .Values.controlplane.image.pullPolicy }}
+          env:
+            - name: ROCKETSHIP_CONTROLPLANE_LISTEN_ADDR
+              value: ":{{ .Values.controlplane.service.port }}"
+            {{- $issuer := default .Values.auth.oidc.issuer .Values.controlplane.issuer }}
+            {{- if $issuer }}
+            - name: ROCKETSHIP_CONTROLPLANE_ISSUER
+              value: {{ $issuer | quote }}
+            {{- end }}
+            {{- $aud := default .Values.auth.oidc.audience .Values.controlplane.audience }}
+            {{- if $aud }}
+            - name: ROCKETSHIP_CONTROLPLANE_AUDIENCE
+              value: {{ $aud | quote }}
+            {{- end }}
+            {{- $client := default .Values.auth.oidc.clientID .Values.controlplane.clientID }}
+            {{- if $client }}
+            - name: ROCKETSHIP_CONTROLPLANE_CLIENT_ID
+              value: {{ $client | quote }}
+            {{- end }}
+            - name: ROCKETSHIP_CONTROLPLANE_SIGNING_KEY_FILE
+              value: {{ printf "%s/%s" .Values.controlplane.signingKey.mountPath .Values.controlplane.signingKey.fileName | quote }}
+            {{- $dbSecret := .Values.controlplane.database.secretName }}
+            {{- if and .Values.postgres.enabled (eq $dbSecret "") }}
+            {{- $dbSecret = include "rocketship.controlplane.databaseSecretName" . -}}
+            {{- end }}
+            {{- $dbKey := default "DATABASE_URL" .Values.controlplane.database.secretKey -}}
+            {{- if ne $dbSecret "" }}
+            - name: ROCKETSHIP_CONTROLPLANE_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $dbSecret }}
+                  key: {{ $dbKey }}
+            {{- else if .Values.controlplane.database.url }}
+            - name: ROCKETSHIP_CONTROLPLANE_DATABASE_URL
+              value: {{ .Values.controlplane.database.url | quote }}
+            {{- end }}
+            {{- if .Values.controlplane.refreshTokenKey.secretName }}
+            - name: ROCKETSHIP_CONTROLPLANE_REFRESH_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.controlplane.refreshTokenKey.secretName }}
+                  key: {{ .Values.controlplane.refreshTokenKey.secretKey }}
+            {{- else if .Values.controlplane.refreshTokenKey.value }}
+            - name: ROCKETSHIP_CONTROLPLANE_REFRESH_KEY
+              value: {{ .Values.controlplane.refreshTokenKey.value | quote }}
+            {{- end }}
+            {{- $scopes := default .Values.auth.oidc.scopes .Values.controlplane.scopes }}
+            {{- if $scopes }}
+            - name: ROCKETSHIP_CONTROLPLANE_SCOPES
+              value: {{ join " " $scopes | quote }}
+            {{- end }}
+            {{- if .Values.controlplane.github.clientID }}
+            - name: ROCKETSHIP_GITHUB_CLIENT_ID
+              value: {{ .Values.controlplane.github.clientID | quote }}
+            {{- end }}
+            {{- if .Values.controlplane.github.scopes }}
+            - name: ROCKETSHIP_GITHUB_SCOPES
+              value: {{ join " " .Values.controlplane.github.scopes | quote }}
+            {{- end }}
+            {{- range .Values.controlplane.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+          {{- $hasSecrets := .Values.controlplane.github.clientSecretSecret }}
+         {{- if or (gt (len .Values.controlplane.envFrom) 0) $hasSecrets }}
+          envFrom:
+            {{- if .Values.controlplane.envFrom }}
+            {{ toYaml .Values.controlplane.envFrom | nindent 12 }}
+            {{- end }}
+            {{- if .Values.controlplane.github.clientSecretSecret }}
+            - secretRef:
+                name: {{ .Values.controlplane.github.clientSecretSecret }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.controlplane.service.port }}
+              protocol: TCP
+          volumeMounts:
+            {{- if .Values.controlplane.signingKey.secretName }}
+            - name: controlplane-signing-key
+              mountPath: {{ .Values.controlplane.signingKey.mountPath }}
+              readOnly: true
+            {{- end }}
+          {{- with .Values.controlplane.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        {{- if .Values.controlplane.signingKey.secretName }}
+        - name: controlplane-signing-key
+          secret:
+            secretName: {{ .Values.controlplane.signingKey.secretName }}
+            items:
+              - key: {{ .Values.controlplane.signingKey.key }}
+                path: {{ .Values.controlplane.signingKey.fileName }}
+        {{- end }}
+      {{- with .Values.controlplane.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controlplane.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controlplane.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

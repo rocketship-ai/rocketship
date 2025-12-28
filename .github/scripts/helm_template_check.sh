@@ -47,40 +47,40 @@ if ! grep -q "OAUTH2_PROXY_PROVIDER" <<<"$oidc_output"; then
   exit 1
 fi
 
-# GitHub broker preset should render auth-broker deployment and env wiring
+# GitHub controlplane preset should render controlplane deployment and env wiring
 github_output=$(render -f "$CHART_DIR/values-github-selfhost.yaml" -f "$CHART_DIR/values-github-web.yaml")
-if ! grep -q "auth-broker" <<<"$github_output"; then
-  echo "Expected auth-broker resources in values-github-selfhost.yaml render" >&2
+if ! grep -q "controlplane" <<<"$github_output"; then
+  echo "Expected controlplane resources in values-github-selfhost.yaml render" >&2
   exit 1
 fi
 if ! grep -q "ROCKETSHIP_GITHUB_CLIENT_ID" <<<"$github_output"; then
-  echo "Expected GitHub client configuration in auth-broker deployment" >&2
+  echo "Expected GitHub client configuration in controlplane deployment" >&2
   exit 1
 fi
-if ! grep -q "ROCKETSHIP_BROKER_DATABASE_URL" <<<"$github_output"; then
-  echo "Expected database configuration env var in auth-broker deployment" >&2
+if ! grep -q "ROCKETSHIP_CONTROLPLANE_DATABASE_URL" <<<"$github_output"; then
+  echo "Expected database configuration env var in controlplane deployment" >&2
   exit 1
 fi
-if ! grep -q "ROCKETSHIP_BROKER_REFRESH_KEY" <<<"$github_output"; then
-  echo "Expected refresh key env var in auth-broker deployment" >&2
+if ! grep -q "ROCKETSHIP_CONTROLPLANE_REFRESH_KEY" <<<"$github_output"; then
+  echo "Expected refresh key env var in controlplane deployment" >&2
   exit 1
 fi
 
 postgres_output=$(render \
-  --set auth.broker.enabled=true \
-  --set auth.broker.clientID=test-client \
-  --set auth.broker.issuer=https://example.com \
-  --set auth.broker.audience=test-audience \
-  --set auth.broker.signingKey.secretName=test-signing \
-  --set auth.broker.github.clientID=test-gh \
+  --set controlplane.enabled=true \
+  --set controlplane.clientID=test-client \
+  --set controlplane.issuer=https://example.com \
+  --set controlplane.audience=test-audience \
+  --set controlplane.signingKey.secretName=test-signing \
+  --set controlplane.github.clientID=test-gh \
   --set postgres.enabled=true \
   --set postgres.auth.password=changeme \
-  --set auth.broker.refreshTokenKey.value=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=)
-if ! grep -q "rocketship-test-rocketship-auth-broker-db" <<<"$postgres_output"; then
+  --set controlplane.refreshTokenKey.value=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=)
+if ! grep -q "rocketship-test-rocketship-controlplane-db" <<<"$postgres_output"; then
   echo "Expected generated database secret when postgres.enabled=true" >&2
   exit 1
 fi
-if ! grep -q "ROCKETSHIP_BROKER_DATABASE_URL" <<<"$postgres_output"; then
+if ! grep -q "ROCKETSHIP_CONTROLPLANE_DATABASE_URL" <<<"$postgres_output"; then
   echo "Expected database URL env var when postgres.enabled" >&2
   exit 1
 fi

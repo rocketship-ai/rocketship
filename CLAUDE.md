@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Rocketship Cloud v1 Snapshot (for agents)
 
-- Hosted experience uses GitHub device flow/OAuth via the auth-broker; broker issues Rocketship JWTs checked by the engine. Engine, worker, Temporal remain the execution core.
+- Hosted experience uses GitHub device flow/OAuth via the controlplane; controlplane issues Rocketship JWTs checked by the engine. Engine, worker, Temporal remain the execution core.
 - Tenancy model is **Org → Project** (no workspaces). Projects capture repo URL, default branch, and `path_scope` globs to stay mono-repo friendly.
 - RBAC: project roles are **Read** and **Write**; Org Admins implicitly have Write everywhere. Tokens without role claims must be rejected.
 - Git-as-Source-of-Truth: UI/CLI can run uncommitted edits (labelled `config_source=uncommitted`). Rocketship helps users open PRs/commits but does not host approval workflows—everything merges in GitHub.
 - Tokens: user access/refresh pair (JWT + opaque refresh) plus per-project CI tokens with scopes and TTL. Engine annotates runs with initiator/environment/config source metadata for auditing.
-- Auth broker persists users/orgs in Postgres. Initial logins return `pending` roles until an org is created (`POST /api/orgs`) or the user is invited by an admin.
+- Controlplane persists users/orgs in Postgres. Initial logins return `pending` roles until an org is created (`POST /api/orgs`) or the user is invited by an admin.
 - Guardrails & direction: enforce path scopes, deny unknown RPCs, keep minikube Helm flow as reference implementation.
 
 ## Architecture Overview
@@ -258,7 +258,7 @@ The `start-dev.sh` script automatically:
 - Starts Vite dev server for the web UI
 - Runs Skaffold in dev mode watching for code changes
 
-**Hot Reloading**: Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/authbroker/`, or `internal/` and save. Skaffold will automatically rebuild the Docker image and redeploy to Kubernetes. Logs stream to your terminal.
+**Hot Reloading**: Edit any Go file in `cmd/engine/`, `cmd/worker/`, `cmd/controlplane/`, or `internal/` and save. Skaffold will automatically rebuild the Docker image and redeploy to Kubernetes. Logs stream to your terminal.
 
 Press `Ctrl+C` to stop all processes.
 
@@ -278,7 +278,7 @@ The `scripts/setup-local-dev.sh` script sets up infrastructure but does NOT depl
 
 The `skaffold.yaml` file in the repository root configures:
 
-- **Build**: Three Docker images (engine, worker, authbroker) built inside minikube
+- **Build**: Three Docker images (engine, worker, controlplane) built inside minikube
 - **Deploy**: Helm-based deployment using `charts/rocketship/values-minikube-local.yaml`
 - **Watch**: File watching for automatic rebuilds on Go source changes
 - **Access**: All traffic goes through minikube tunnel → ingress (single consistent path)
