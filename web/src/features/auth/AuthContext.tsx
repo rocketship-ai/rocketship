@@ -8,10 +8,17 @@ interface User {
   username: string
 }
 
+interface Organization {
+  id: string
+  name: string
+  slug: string
+}
+
 interface UserData {
   user: User
   roles: string[]
   status: 'pending' | 'ready'
+  organization?: Organization
   pending_registration?: {
     registration_id: string
     org_name: string

@@ -84,6 +84,43 @@ export interface SuiteDetail {
   tests: TestSummary[]
 }
 
+// Profile types
+export interface ProfileUser {
+  id: string
+  email: string
+  name: string
+  username: string
+}
+
+export interface ProfileOrganization {
+  id: string
+  name: string
+  slug: string
+  role: 'admin' | 'member'
+}
+
+export interface ProfileGitHub {
+  username: string
+  avatar_url: string
+  app_installed: boolean
+  app_account_login: string
+  installation_id: number
+}
+
+export interface ProfileProjectPermission {
+  project_id: string
+  project_name: string
+  source_ref: string
+  permissions: string[]
+}
+
+export interface ProfileData {
+  user: ProfileUser
+  organization: ProfileOrganization
+  github: ProfileGitHub
+  project_permissions: ProfileProjectPermission[]
+}
+
 // Query key factories
 export const consoleKeys = {
   all: ['console'] as const,
@@ -92,6 +129,7 @@ export const consoleKeys = {
   projectSuites: (id: string) => [...consoleKeys.all, 'project', id, 'suites'] as const,
   suiteActivity: () => [...consoleKeys.all, 'suites', 'activity'] as const,
   suite: (id: string) => [...consoleKeys.all, 'suite', id] as const,
+  profile: () => [...consoleKeys.all, 'profile'] as const,
 }
 
 // Query hooks
@@ -131,5 +169,12 @@ export function useSuite(suiteId: string) {
     queryKey: consoleKeys.suite(suiteId),
     queryFn: () => apiGet<SuiteDetail>(`/api/suites/${suiteId}`),
     enabled: !!suiteId,
+  })
+}
+
+export function useProfile() {
+  return useQuery({
+    queryKey: consoleKeys.profile(),
+    queryFn: () => apiGet<ProfileData>('/api/profile'),
   })
 }

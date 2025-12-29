@@ -1,43 +1,56 @@
-import { useState } from 'react';
-import { User, Mail, Github, Shield, Check, X, Edit2, LogOut } from 'lucide-react';
+import { User, Mail, Github, Shield, Check, LogOut, GitBranch, AlertCircle, Loader2 } from 'lucide-react';
+import { useProfile } from '../hooks/use-console-queries';
+import { ApiError } from '@/lib/api';
 
 interface ProfileSettingsProps {
   onLogout?: () => void;
 }
 
 export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [name, setName] = useState('Austin Rath');
-  const [tempName, setTempName] = useState(name);
+  const { data: profile, isLoading, error } = useProfile();
 
-  const handleSaveName = () => {
-    setName(tempName);
-    setIsEditingName(false);
-  };
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Loading skeleton */}
+          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+              <span className="text-[#666666]">Loading profile...</span>
+            </div>
+            <div className="space-y-4">
+              <div className="h-4 bg-[#f5f5f5] rounded w-48 animate-pulse" />
+              <div className="h-4 bg-[#f5f5f5] rounded w-64 animate-pulse" />
+              <div className="h-4 bg-[#f5f5f5] rounded w-32 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const handleCancelEdit = () => {
-    setTempName(name);
-    setIsEditingName(false);
-  };
+  if (error) {
+    const errorMessage = error instanceof ApiError ? error.message : 'Failed to load profile';
+    return (
+      <div className="p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg border border-[#ef0000]/20 shadow-sm p-6">
+            <div className="flex items-center gap-3 text-[#ef0000]">
+              <AlertCircle className="w-5 h-5" />
+              <span>{errorMessage}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  // Mock user data
-  const userEmail = 'austin.rath@globalbank.com';
-  const githubUsername = 'arath36';
-  const organization = 'Global Bank';
+  if (!profile) {
+    return null;
+  }
 
-  // Mock TBAC permissions for projects
-  const projectPermissions = [
-    {
-      projectId: 'project-1',
-      projectName: 'Backend',
-      permissions: ['read', 'write']
-    },
-    {
-      projectId: 'project-2',
-      projectName: 'Frontend',
-      permissions: ['read', 'write']
-    },
-  ];
+  const { user, organization, github, project_permissions } = profile;
 
   return (
     <div className="p-8">
@@ -50,47 +63,10 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
           </h2>
 
           <div className="space-y-6">
-            {/* Name Field */}
+            {/* Name Field - Read-only for v1 */}
             <div>
               <label className="block text-sm text-[#666666] mb-2">Name</label>
-              {!isEditingName ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-[#000000]">{name}</span>
-                  <button
-                    onClick={() => {
-                      setTempName(name);
-                      setIsEditingName(true);
-                    }}
-                    className="text-[#666666] hover:text-black transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={tempName}
-                    onChange={(e) => setTempName(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleSaveName}
-                    className="p-2 text-[#4CBB17] hover:bg-[#4CBB17]/5 rounded-md transition-colors"
-                    title="Save"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="p-2 text-[#999999] hover:bg-black/5 rounded-md transition-colors"
-                    title="Cancel"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+              <span className="text-[#000000]">{user.name || 'Not set'}</span>
             </div>
 
             {/* Email */}
@@ -98,14 +74,19 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
               <label className="block text-sm text-[#666666] mb-2">Email</label>
               <div className="flex items-center gap-2 text-[#000000]">
                 <Mail className="w-4 h-4 text-[#666666]" />
-                <span>{userEmail}</span>
+                <span>{user.email || 'Not set'}</span>
               </div>
             </div>
 
             {/* Organization */}
             <div>
               <label className="block text-sm text-[#666666] mb-2">Organization</label>
-              <span className="text-[#000000]">{organization}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[#000000]">{organization.name}</span>
+                <span className="px-2 py-0.5 bg-[#fafafa] border border-[#e5e5e5] rounded text-xs font-mono text-[#666666]">
+                  {organization.role}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -119,26 +100,35 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
 
           <div className="flex items-start gap-4">
             <img
-              src={`https://github.com/${githubUsername}.png`}
+              src={github.avatar_url}
               alt="GitHub Avatar"
               className="w-16 h-16 rounded-full border border-[#e5e5e5]"
+              onError={(e) => {
+                // Fallback to a placeholder if avatar fails to load
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(github.username)}&background=random`;
+              }}
             />
             <div className="flex-1">
               <div className="mb-2">
                 <label className="block text-sm text-[#666666] mb-1">GitHub Username</label>
                 <a
-                  href={`https://github.com/${githubUsername}`}
+                  href={`https://github.com/${github.username}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#000000] hover:underline font-mono"
                 >
-                  @{githubUsername}
+                  @{github.username}
                 </a>
               </div>
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#4CBB17]/10 text-[#4CBB17] rounded-full text-sm border border-[#4CBB17]/20">
                 <Check className="w-3 h-3" />
                 Connected
               </div>
+              {github.app_installed && github.app_account_login && (
+                <div className="mt-2 text-sm text-[#666666]">
+                  App installed on: <span className="font-mono">{github.app_account_login}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -150,30 +140,40 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
             Project Permissions
           </h2>
 
-          <div className="space-y-4">
-            {projectPermissions.map((project) => (
-              <div
-                key={project.projectId}
-                className="border border-[#e5e5e5] rounded-lg p-4"
-              >
-                <h3 className="text-[#000000] mb-3">{project.projectName}</h3>
-                
-                <div>
-                  <label className="block text-sm text-[#666666] mb-2">Permissions</label>
-                  <div className="flex flex-wrap gap-2">
-                    {project.permissions.map((permission) => (
-                      <span
-                        key={permission}
-                        className="px-2 py-1 bg-[#fafafa] border border-[#e5e5e5] rounded text-xs font-mono text-[#666666]"
-                      >
-                        {permission}
-                      </span>
-                    ))}
+          {project_permissions.length === 0 ? (
+            <p className="text-[#666666] text-sm">No project permissions found.</p>
+          ) : (
+            <div className="space-y-4">
+              {project_permissions.map((project) => (
+                <div
+                  key={project.project_id}
+                  className="border border-[#e5e5e5] rounded-lg p-4"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-[#000000]">{project.project_name}</h3>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#f5f5f5] border border-[#e5e5e5] rounded text-xs font-mono text-[#666666]">
+                      <GitBranch className="w-3 h-3" />
+                      {project.source_ref}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-[#666666] mb-2">Permissions</label>
+                    <div className="flex flex-wrap gap-2">
+                      {project.permissions.map((permission) => (
+                        <span
+                          key={permission}
+                          className="px-2 py-1 bg-[#fafafa] border border-[#e5e5e5] rounded text-xs font-mono text-[#666666]"
+                        >
+                          {permission}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sign Out */}

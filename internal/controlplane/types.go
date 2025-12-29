@@ -85,6 +85,10 @@ type dataStore interface {
 	ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]persistence.SuiteActivityRow, error)
 	GetSuiteDetail(ctx context.Context, orgID, suiteID uuid.UUID) (persistence.SuiteDetail, error)
 	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
+
+	// Profile hydration queries
+	GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (persistence.Organization, error)
+	ListProjectPermissionsForUser(ctx context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectPermissionRow, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)

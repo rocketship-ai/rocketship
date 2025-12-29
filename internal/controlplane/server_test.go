@@ -587,6 +587,37 @@ func (f *fakeStore) ListTestsBySuite(_ context.Context, _ uuid.UUID) ([]persiste
 	return nil, nil
 }
 
+// Profile hydration methods
+func (f *fakeStore) GetOrganizationByID(_ context.Context, orgID uuid.UUID) (persistence.Organization, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if orgID == f.primaryOrg {
+		return persistence.Organization{
+			ID:   orgID,
+			Name: "Test Organization",
+			Slug: "test-org",
+		}, nil
+	}
+	return persistence.Organization{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) ListProjectPermissionsForUser(_ context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectPermissionRow, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if orgID != f.primaryOrg {
+		return nil, nil
+	}
+	// Return stub permissions for the primary project
+	return []persistence.ProjectPermissionRow{
+		{
+			ProjectID:   f.primaryProject,
+			ProjectName: "Test Project",
+			SourceRef:   "main",
+			Permissions: []string{"read", "write"},
+		},
+	}, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -1060,4 +1091,133 @@ func TestConsoleEndpointsOrgScoping(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 for /api/suites/activity, got %d: %s", rec.Code, rec.Body.String())
 	}
+}
+
+func TestProfileEndpoint(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	signer, err := buildSigner(key, "test-key")
+	if err != nil {
+		t.Fatalf("failed to build signer: %v", err)
+	}
+
+	cfg := Config{
+		Issuer:          "https://cli.test",
+		Audience:        "rocketship-cli",
+		ClientID:        "rocketship-cli",
+		AccessTokenTTL:  time.Minute,
+		RefreshTokenTTL: time.Hour,
+		GitHub:          GitHubConfig{ClientID: "gh", ClientSecret: "secret"},
+	}
+
+	t.Run("returns 403 when principal has no org", func(t *testing.T) {
+		store := newFakeStore()
+		store.summary.Organizations = nil // clear org memberships
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		// Pending user (no org membership)
+		pendingPrincipal := brokerPrincipal{
+			UserID: store.user.ID,
+			Roles:  []string{"pending"},
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
+		rec := httptest.NewRecorder()
+		srv.handleProfile(rec, req, pendingPrincipal)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("expected 403 for pending user on /api/profile, got %d", rec.Code)
+		}
+	})
+
+	t.Run("returns 200 with profile data when org present", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		// User with org membership
+		principal := brokerPrincipal{
+			UserID:   store.user.ID,
+			OrgID:    store.primaryOrg,
+			Email:    "test@example.com",
+			Name:     "Test User",
+			Username: "testuser",
+			Roles:    []string{"owner"},
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/api/profile", nil)
+		rec := httptest.NewRecorder()
+		srv.handleProfile(rec, req, principal)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200 for /api/profile, got %d: %s", rec.Code, rec.Body.String())
+		}
+
+		// Verify response shape
+		var resp map[string]interface{}
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to parse profile response: %v", err)
+		}
+
+		// Check required keys exist
+		if _, ok := resp["user"]; !ok {
+			t.Fatal("response missing 'user' key")
+		}
+		if _, ok := resp["organization"]; !ok {
+			t.Fatal("response missing 'organization' key")
+		}
+		if _, ok := resp["github"]; !ok {
+			t.Fatal("response missing 'github' key")
+		}
+		if _, ok := resp["project_permissions"]; !ok {
+			t.Fatal("response missing 'project_permissions' key")
+		}
+
+		// Check organization details
+		org, ok := resp["organization"].(map[string]interface{})
+		if !ok {
+			t.Fatal("organization is not a map")
+		}
+		if org["name"] != "Test Organization" {
+			t.Fatalf("expected org name 'Test Organization', got %v", org["name"])
+		}
+
+		// Check project permissions
+		perms, ok := resp["project_permissions"].([]interface{})
+		if !ok {
+			t.Fatal("project_permissions is not an array")
+		}
+		if len(perms) != 1 {
+			t.Fatalf("expected 1 project permission, got %d", len(perms))
+		}
+	})
+
+	t.Run("rejects non-GET methods", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		principal := brokerPrincipal{
+			UserID: store.user.ID,
+			OrgID:  store.primaryOrg,
+			Roles:  []string{"owner"},
+		}
+
+		req := httptest.NewRequest(http.MethodPost, "/api/profile", nil)
+		rec := httptest.NewRecorder()
+		srv.handleProfile(rec, req, principal)
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("expected 405 for POST /api/profile, got %d", rec.Code)
+		}
+	})
 }
