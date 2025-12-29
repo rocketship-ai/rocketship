@@ -1,0 +1,135 @@
+import { useQuery } from '@tanstack/react-query'
+import { apiGet } from '@/lib/api'
+
+// Types matching the API response shapes
+
+export interface LastScan {
+  status: string
+  created_at: string
+  head_sha: string
+  error_message: string
+  suites_found: number
+  tests_found: number
+}
+
+export interface ProjectSummary {
+  id: string
+  name: string
+  repo_url: string
+  default_branch: string
+  path_scope: string[]
+  source_ref: string
+  suite_count: number
+  test_count: number
+  last_scan: LastScan | null
+}
+
+export interface ProjectDetail extends ProjectSummary {}
+
+export interface SuiteSummary {
+  id: string
+  name: string
+  description?: string
+  file_path?: string
+  source_ref: string
+  test_count: number
+  last_run_status?: string
+  last_run_at?: string
+}
+
+export interface SuiteActivityItem {
+  suite_id: string
+  name: string
+  description?: string
+  file_path?: string
+  source_ref: string
+  test_count: number
+  project: {
+    id: string
+    name: string
+    repo_url: string
+  }
+  last_run: {
+    status: string | null
+    at: string | null
+  }
+}
+
+export interface TestSummary {
+  id: string
+  name: string
+  description?: string
+  source_ref: string
+  step_count: number
+  last_run_status?: string
+  last_run_at?: string
+  pass_rate?: number
+  avg_duration_ms?: number
+}
+
+export interface SuiteDetail {
+  id: string
+  name: string
+  description?: string
+  file_path?: string
+  source_ref: string
+  test_count: number
+  last_run_status?: string
+  last_run_at?: string
+  project: {
+    id: string
+    name: string
+    repo_url: string
+  }
+  tests: TestSummary[]
+}
+
+// Query key factories
+export const consoleKeys = {
+  all: ['console'] as const,
+  projects: () => [...consoleKeys.all, 'projects'] as const,
+  project: (id: string) => [...consoleKeys.all, 'project', id] as const,
+  projectSuites: (id: string) => [...consoleKeys.all, 'project', id, 'suites'] as const,
+  suiteActivity: () => [...consoleKeys.all, 'suites', 'activity'] as const,
+  suite: (id: string) => [...consoleKeys.all, 'suite', id] as const,
+}
+
+// Query hooks
+
+export function useProjects() {
+  return useQuery({
+    queryKey: consoleKeys.projects(),
+    queryFn: () => apiGet<ProjectSummary[]>('/api/projects'),
+  })
+}
+
+export function useProject(projectId: string) {
+  return useQuery({
+    queryKey: consoleKeys.project(projectId),
+    queryFn: () => apiGet<ProjectDetail>(`/api/projects/${projectId}`),
+    enabled: !!projectId,
+  })
+}
+
+export function useProjectSuites(projectId: string) {
+  return useQuery({
+    queryKey: consoleKeys.projectSuites(projectId),
+    queryFn: () => apiGet<SuiteSummary[]>(`/api/projects/${projectId}/suites`),
+    enabled: !!projectId,
+  })
+}
+
+export function useSuiteActivity() {
+  return useQuery({
+    queryKey: consoleKeys.suiteActivity(),
+    queryFn: () => apiGet<SuiteActivityItem[]>('/api/suites/activity'),
+  })
+}
+
+export function useSuite(suiteId: string) {
+  return useQuery({
+    queryKey: consoleKeys.suite(suiteId),
+    queryFn: () => apiGet<SuiteDetail>(`/api/suites/${suiteId}`),
+    enabled: !!suiteId,
+  })
+}

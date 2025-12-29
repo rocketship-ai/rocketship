@@ -1,4 +1,5 @@
-import { LayoutDashboard, Heart, Activity, Lock, Folder, User, Rocket } from 'lucide-react';
+import { LayoutDashboard, Heart, Activity, Lock, Folder, User } from 'lucide-react';
+import whiteLogo from '@/assets/white-logo-transparent.png';
 import { useState } from 'react';
 
 interface SidebarProps {
@@ -61,9 +62,9 @@ export function Sidebar({ activePage, onNavigate, userName = 'User', orgName = '
       onMouseLeave={() => setIsExpanded(false)}
     >
       {/* Logo */}
-      <div className="p-6 border-b border-white/10 h-[73px] flex items-center">
+      <div className={`border-b border-white/10 h-[73px] flex items-center ${isExpanded ? 'px-6' : 'px-3'}`}>
         <div className="flex items-center gap-3 min-w-0">
-          <Rocket className="w-6 h-6 flex-shrink-0" />
+          <img src={whiteLogo} alt="Rocketship" className="h-10 w-10 flex-shrink-0 object-contain" />
           <span className={`font-semibold whitespace-nowrap transition-opacity duration-300 ${
             isExpanded ? 'opacity-100' : 'opacity-0 w-0'
           }`}>

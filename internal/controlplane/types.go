@@ -77,6 +77,14 @@ type dataStore interface {
 	CountEnvsWithVarsForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 	CountEnabledSchedulesForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 	CountActiveCITokensForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
+
+	// Console hydration queries
+	ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.ProjectSummary, error)
+	GetProjectWithOrgCheck(ctx context.Context, orgID, projectID uuid.UUID) (persistence.Project, error)
+	GetLatestScanForProject(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef string) (*persistence.ScanSummary, error)
+	ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]persistence.SuiteActivityRow, error)
+	GetSuiteDetail(ctx context.Context, orgID, suiteID uuid.UUID) (persistence.SuiteDetail, error)
+	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)
