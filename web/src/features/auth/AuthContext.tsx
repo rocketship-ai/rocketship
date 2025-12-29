@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react'
-import { TokenManager } from './tokenManager'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { tokenManager } from './tokenManager'
 
 interface User {
   id: string
@@ -45,7 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [userData, setUserData] = useState<UserData | null>(null)
-  const tokenManager = useMemo(() => new TokenManager(), [])
 
   // Check authentication status by calling the API (with refresh on expiry)
   const checkAuth = async () => {
@@ -113,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tokenManager.get().catch(() => tokenManager.clear())
     }, 5 * 60 * 1000) // every 5 minutes
     return () => window.clearInterval(id)
-  }, [tokenManager])
+  }, [])
 
   const login = async () => {
     // After successful login, the cookies are already set by the server

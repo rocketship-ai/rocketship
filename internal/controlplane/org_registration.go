@@ -200,6 +200,8 @@ func (s *Server) handleOrgRegistrationComplete(w http.ResponseWriter, r *http.Re
 	var req struct {
 		RegistrationID string `json:"registration_id"`
 		Code           string `json:"code"`
+		FirstName      string `json:"first_name"`
+		LastName       string `json:"last_name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json payload")
@@ -207,6 +209,14 @@ func (s *Server) handleOrgRegistrationComplete(w http.ResponseWriter, r *http.Re
 	}
 	if strings.TrimSpace(req.Code) == "" {
 		writeError(w, http.StatusBadRequest, "verification code is required")
+		return
+	}
+	if strings.TrimSpace(req.FirstName) == "" {
+		writeError(w, http.StatusBadRequest, "first name is required")
+		return
+	}
+	if strings.TrimSpace(req.LastName) == "" {
+		writeError(w, http.StatusBadRequest, "last name is required")
 		return
 	}
 
@@ -287,6 +297,14 @@ func (s *Server) handleOrgRegistrationComplete(w http.ResponseWriter, r *http.Re
 
 	if err := s.store.DeleteOrgRegistration(ctx, reg.ID); err != nil {
 		log.Printf("failed to clear registration: %v", err)
+	}
+
+	// Persist user's full name before rotating tokens so it's included in the new token
+	fullName := strings.TrimSpace(req.FirstName) + " " + strings.TrimSpace(req.LastName)
+	if err := s.store.UpdateUserName(ctx, principal.UserID, fullName); err != nil {
+		log.Printf("failed to update user name: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to update user name")
+		return
 	}
 
 	// Rotate tokens immediately to update roles and org_id in access token

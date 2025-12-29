@@ -1,5 +1,6 @@
-import { User, Mail, Github, Shield, Check, LogOut, GitBranch, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Mail, Github, Shield, Check, LogOut, AlertCircle, Loader2 } from 'lucide-react';
 import { useProfile } from '../hooks/use-console-queries';
+import { SourceRefBadge } from '../components/SourceRefBadge';
 import { ApiError } from '@/lib/api';
 
 interface ProfileSettingsProps {
@@ -151,10 +152,7 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <h3 className="text-[#000000]">{project.project_name}</h3>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#f5f5f5] border border-[#e5e5e5] rounded text-xs font-mono text-[#666666]">
-                      <GitBranch className="w-3 h-3" />
-                      {project.source_ref}
-                    </span>
+                    <SourceRefBadge sourceRef={project.source_ref} />
                   </div>
 
                   <div>

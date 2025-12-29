@@ -12,6 +12,7 @@ import (
 type dataStore interface {
 	UpsertGitHubUser(ctx context.Context, input persistence.GitHubUserInput) (persistence.User, error)
 	UpdateUserEmail(ctx context.Context, userID uuid.UUID, email string) error
+	UpdateUserName(ctx context.Context, userID uuid.UUID, name string) error
 	RoleSummary(ctx context.Context, userID uuid.UUID) (persistence.RoleSummary, error)
 	SaveRefreshToken(ctx context.Context, token string, rec persistence.RefreshTokenRecord) error
 	GetRefreshToken(ctx context.Context, token string) (persistence.RefreshTokenRecord, error)

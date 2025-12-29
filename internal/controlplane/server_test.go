@@ -164,6 +164,17 @@ func (f *fakeStore) UpdateUserEmail(_ context.Context, userID uuid.UUID, email s
 	return nil
 }
 
+func (f *fakeStore) UpdateUserName(_ context.Context, userID uuid.UUID, name string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.user.ID != userID {
+		return sql.ErrNoRows
+	}
+	f.user.Name = name
+	f.user.UpdatedAt = time.Now()
+	return nil
+}
+
 func (f *fakeStore) RoleSummary(context.Context, uuid.UUID) (persistence.RoleSummary, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -912,7 +923,7 @@ func TestOrgRegistrationLifecycle(t *testing.T) {
 	}
 
 	// wrong code should fail
-	completeReq := httptest.NewRequest(http.MethodPost, "/api/orgs/registration/complete", strings.NewReader(fmt.Sprintf(`{"registration_id":"%s","code":"000000"}`, startResp.RegistrationID)))
+	completeReq := httptest.NewRequest(http.MethodPost, "/api/orgs/registration/complete", strings.NewReader(fmt.Sprintf(`{"registration_id":"%s","code":"000000","first_name":"John","last_name":"Doe"}`, startResp.RegistrationID)))
 	completeRec := httptest.NewRecorder()
 	srv.handleOrgRegistrationComplete(completeRec, completeReq, principal)
 	if completeRec.Code != http.StatusUnauthorized {
@@ -921,7 +932,7 @@ func TestOrgRegistrationLifecycle(t *testing.T) {
 
 	// correct code
 	correct := mail.verifications[0].code
-	completeReq = httptest.NewRequest(http.MethodPost, "/api/orgs/registration/complete", strings.NewReader(fmt.Sprintf(`{"registration_id":"%s","code":"%s"}`, startResp.RegistrationID, correct)))
+	completeReq = httptest.NewRequest(http.MethodPost, "/api/orgs/registration/complete", strings.NewReader(fmt.Sprintf(`{"registration_id":"%s","code":"%s","first_name":"John","last_name":"Doe"}`, startResp.RegistrationID, correct)))
 	completeRec = httptest.NewRecorder()
 	srv.handleOrgRegistrationComplete(completeRec, completeReq, principal)
 	if completeRec.Code != http.StatusOK {

@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from './AuthContext'
+import { tokenManager } from './tokenManager'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const { checkAuth } = useAuth()
   const [step, setStep] = useState<'org' | 'verification'>('org')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [orgName, setOrgName] = useState('')
   const [email, setEmail] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
@@ -63,6 +66,8 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           registration_id: registrationId,
           code: verificationCode,
+          first_name: firstName,
+          last_name: lastName,
         }),
       })
 
@@ -71,7 +76,15 @@ export default function OnboardingPage() {
         throw new Error(errorData.error || 'Failed to complete registration')
       }
 
-      // Registration complete! Refresh auth state and navigate to overview
+      const data = await response.json()
+
+      // Server rotated tokens - force refresh the cached token before checking auth
+      // This ensures we get the new JWT with updated org_id/name claims
+      if (data.needs_claim_refresh) {
+        await tokenManager.forceRefresh()
+      }
+
+      // Refresh auth state and navigate
       await checkAuth()
       navigate({ to: '/overview', replace: true })
     } catch (error) {
@@ -87,9 +100,9 @@ export default function OnboardingPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">Rocketship</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Rocketship Cloud</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Professional testing platform
+            Agentic coding QA testing platform
           </p>
         </div>
 
@@ -127,6 +140,35 @@ export default function OnboardingPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleStartRegistration} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="firstName" className="text-sm font-medium">
+                      First name
+                    </label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="John"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="lastName" className="text-sm font-medium">
+                      Last name
+                    </label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Doe"
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <label htmlFor="orgName" className="text-sm font-medium">
                     Organization name
@@ -161,7 +203,7 @@ export default function OnboardingPage() {
 
                 <Button
                   type="submit"
-                  disabled={isLoading || !orgName.trim() || !email.trim()}
+                  disabled={isLoading || !firstName.trim() || !lastName.trim() || !orgName.trim() || !email.trim()}
                   className="w-full"
                   size="lg"
                 >
