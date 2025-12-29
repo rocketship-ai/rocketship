@@ -84,6 +84,27 @@ export interface SuiteDetail {
   tests: TestSummary[]
 }
 
+// Suite run summary for activity tab
+export interface SuiteRunSummary {
+  id: string
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'PENDING'
+  branch: string
+  commit_sha?: string
+  commit_message?: string
+  environment: string
+  created_at: string
+  started_at?: string
+  ended_at?: string
+  duration_ms?: number
+  initiator_type: 'ci' | 'manual' | 'schedule'
+  initiator_name?: string
+  total_tests: number
+  passed_tests: number
+  failed_tests: number
+  timeout_tests: number
+  skipped_tests: number
+}
+
 // Profile types
 export interface ProfileUser {
   id: string
@@ -129,6 +150,7 @@ export const consoleKeys = {
   projectSuites: (id: string) => [...consoleKeys.all, 'project', id, 'suites'] as const,
   suiteActivity: () => [...consoleKeys.all, 'suites', 'activity'] as const,
   suite: (id: string) => [...consoleKeys.all, 'suite', id] as const,
+  suiteRuns: (id: string) => [...consoleKeys.all, 'suite', id, 'runs'] as const,
   profile: () => [...consoleKeys.all, 'profile'] as const,
 }
 
@@ -168,6 +190,14 @@ export function useSuite(suiteId: string) {
   return useQuery({
     queryKey: consoleKeys.suite(suiteId),
     queryFn: () => apiGet<SuiteDetail>(`/api/suites/${suiteId}`),
+    enabled: !!suiteId,
+  })
+}
+
+export function useSuiteRuns(suiteId: string) {
+  return useQuery({
+    queryKey: consoleKeys.suiteRuns(suiteId),
+    queryFn: () => apiGet<SuiteRunSummary[]>(`/api/suites/${suiteId}/runs`),
     enabled: !!suiteId,
   })
 }
