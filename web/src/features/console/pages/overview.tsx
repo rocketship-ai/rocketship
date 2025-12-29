@@ -312,17 +312,8 @@ export function Overview({ onNavigate }: OverviewProps) {
   return (
     <div className="flex-1 min-w-0 p-8">
       <div className="max-w-[1600px] mx-auto">
-        {/* Setup Banner */}
-        {setupLoading ? (
-          <div className="bg-[#fafafa] border border-[#e5e5e5] rounded-lg p-6 mb-6 flex items-center gap-3">
-            <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-            <span className="text-[#666666]">Loading setup status...</span>
-          </div>
-        ) : setupError ? (
-          <div className="bg-[#fafafa] border border-[#e5e5e5] rounded-lg p-6 mb-6">
-            <span className="text-[#666666]">Could not load setup status</span>
-          </div>
-        ) : !setupComplete && setupData ? (
+        {/* Setup Banner - only show when setup is incomplete, load silently */}
+        {!setupLoading && !setupError && !setupComplete && setupData ? (
           <div className="bg-[#f6a724]/10 border-2 border-[#f6a724] rounded-lg p-6 mb-6">
             <div className="flex items-start gap-4">
               <AlertCircle className="w-6 h-6 text-[#f6a724] flex-shrink-0 mt-1" />

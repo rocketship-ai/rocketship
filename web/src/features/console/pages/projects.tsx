@@ -129,12 +129,7 @@ export function Projects({ onSelectProject }: ProjectsProps) {
                   {project.last_scan ? (
                     <p className="text-xs text-[#999999]">
                       Last scanned {new Date(project.last_scan.created_at).toLocaleString()}
-                      {project.last_scan.status === 'success'
-                        ? ` - found ${project.last_scan.suites_found} suites, ${project.last_scan.tests_found} tests`
-                        : project.last_scan.status === 'error'
-                          ? ` - scan failed: ${project.last_scan.error_message}`
-                          : ` - ${project.last_scan.status}`
-                      }
+                      {project.last_scan.status === 'error' && ` - scan failed: ${project.last_scan.error_message}`}
                     </p>
                   ) : (
                     <p className="text-xs text-[#999999]">Not yet scanned</p>
