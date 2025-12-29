@@ -1,23 +1,10 @@
 import { Search, Loader2, AlertCircle, RefreshCw, FileCode } from 'lucide-react';
 import { useState } from 'react';
 import { useSuiteActivity } from '../hooks/use-console-queries';
+import { SourceRefBadge } from '../components/SourceRefBadge';
 
 interface SuiteActivityProps {
   onSelectSuite: (suiteId: string) => void;
-}
-
-function SourceRefBadge({ sourceRef }: { sourceRef: string }) {
-  const isPR = sourceRef.startsWith('pr/');
-  const displayText = isPR ? `#${sourceRef.slice(3)}` : sourceRef;
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded border ${
-      isPR
-        ? 'bg-amber-50 text-amber-700 border-amber-200'
-        : 'bg-gray-50 text-gray-700 border-gray-200'
-    }`}>
-      {displayText}
-    </span>
-  );
 }
 
 export function SuiteActivity({ onSelectSuite }: SuiteActivityProps) {

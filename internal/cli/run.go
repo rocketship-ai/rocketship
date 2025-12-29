@@ -513,6 +513,35 @@ func NewRunCmd() *cobra.Command {
 			scheduleName, _ := cmd.Flags().GetString("schedule-name")
 			metadata, _ := cmd.Flags().GetStringToString("metadata")
 
+			// Auto-populate from GitHub Actions environment variables if running in CI
+			// See: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
+			if os.Getenv("GITHUB_ACTIONS") == "true" {
+				// Branch: prefer GITHUB_HEAD_REF (PR head branch), else GITHUB_REF_NAME or parse GITHUB_REF
+				if branch == "" {
+					if headRef := os.Getenv("GITHUB_HEAD_REF"); headRef != "" {
+						// This is a PR - use the head branch name (not PR number)
+						branch = headRef
+					} else if refName := os.Getenv("GITHUB_REF_NAME"); refName != "" {
+						branch = refName
+					} else if ref := os.Getenv("GITHUB_REF"); strings.HasPrefix(ref, "refs/heads/") {
+						branch = strings.TrimPrefix(ref, "refs/heads/")
+					}
+				}
+				// Commit SHA
+				if commit == "" {
+					if sha := os.Getenv("GITHUB_SHA"); sha != "" {
+						commit = sha
+					}
+				}
+				// Auto-set source and trigger if not explicitly provided
+				if source == "" {
+					source = "ci-branch"
+				}
+				if trigger == "" {
+					trigger = "webhook"
+				}
+			}
+
 			// Build RunContext if any context flags are set
 			var runContext *generated.RunContext
 			if projectID != "" || source != "" || branch != "" || commit != "" ||

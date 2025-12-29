@@ -90,7 +90,7 @@ export function Projects({ onSelectProject }: ProjectsProps) {
                   <div className="flex items-center gap-3 mb-3">
                     <FolderOpen className="w-5 h-5 text-[#666666]" />
                     <h3>{project.name}</h3>
-                    <SourceRefBadge sourceRef={project.source_ref} />
+                    <SourceRefBadge sourceRef={project.source_ref} defaultBranch={project.default_branch} />
                   </div>
 
                   <div className="space-y-2 mb-4">

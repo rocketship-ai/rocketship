@@ -303,10 +303,15 @@ func (s *Server) handleGitHubAppConnect(w http.ResponseWriter, r *http.Request, 
 		)
 	} else {
 		for _, pr := range openPRs {
+			// Skip PRs without head branch info
+			if pr.HeadRef == "" {
+				continue
+			}
+			// Use the PR head branch name for source_ref (not PR number)
 			prRef := NormalizedRef{
-				Ref:  fmt.Sprintf("pr/%d", pr.Number),
-				Kind: RefKindPR,
-				Raw:  fmt.Sprintf("refs/pull/%d/head", pr.Number),
+				Ref:  pr.HeadRef,
+				Kind: RefKindBranch,
+				Raw:  "refs/heads/" + pr.HeadRef,
 			}
 			prInput := ScanInput{
 				OrgID:          p.OrgID,
@@ -319,13 +324,13 @@ func (s *Server) handleGitHubAppConnect(w http.ResponseWriter, r *http.Request, 
 			prResult, prErr := scanner.Scan(r.Context(), prInput)
 			if prErr != nil {
 				scanResults = append(scanResults, bootstrapScanResult{
-					SourceRef: prRef.Ref,
+					SourceRef: pr.HeadRef,
 					Status:    "error",
 					Error:     prErr.Error(),
 				})
 			} else {
 				scanResults = append(scanResults, bootstrapScanResult{
-					SourceRef:   prRef.Ref,
+					SourceRef:   pr.HeadRef,
 					Status:      "success",
 					SuitesFound: prResult.SuitesFound,
 					TestsFound:  prResult.TestsFound,

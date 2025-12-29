@@ -14,14 +14,12 @@ interface SuiteDetailProps {
   onViewTest?: (testId: string) => void;
 }
 
-// Helper to format branch as display text (pr/3 -> #3)
+// Helper to display branch name
 function BranchDisplay({ branch }: { branch: string }) {
-  const isPR = branch.startsWith('pr/');
-  const displayText = isPR ? `#${branch.slice(3)}` : branch;
   return (
     <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
       <GitBranch className="w-3 h-3" />
-      {displayText}
+      {branch}
     </span>
   );
 }
@@ -394,16 +392,12 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
 
                     if (filteredRuns.length === 0) return null;
 
-                    // Format branch for display (pr/3 -> #3)
-                    const isPR = branch.startsWith('pr/');
-                    const branchDisplay = isPR ? `#${branch.slice(3)}` : branch;
-
                     return (
                       <div key={branch}>
                         {/* Branch header */}
                         <div className="flex items-center gap-2 mb-3">
                           <GitBranch className="w-4 h-4 text-[#666666]" />
-                          <h3>{branchDisplay}</h3>
+                          <h3>{branch}</h3>
                           <span className="text-xs text-[#999999]">({filteredRuns.length} runs)</span>
                         </div>
 
