@@ -1,8 +1,8 @@
 import { CheckCircle2, Circle, AlertCircle, X, Loader2, ExternalLink } from 'lucide-react';
 import { Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import { TokenManager } from '@/features/auth/tokenManager';
+import { tokenManager } from '@/features/auth/tokenManager';
 
 interface OverviewProps {
   onNavigate: (page: string) => void;
@@ -59,9 +59,6 @@ export function Overview({ onNavigate }: OverviewProps) {
   const [connectResult, setConnectResult] = useState<ConnectResult | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
-  // Token manager for API calls
-  const tokenManager = useMemo(() => new TokenManager(), []);
-
   // Fetch setup data
   const fetchSetup = useCallback(async () => {
     setSetupLoading(true);
@@ -87,7 +84,7 @@ export function Overview({ onNavigate }: OverviewProps) {
     } finally {
       setSetupLoading(false);
     }
-  }, [tokenManager]);
+  }, []);
 
   // Fetch repos when modal opens (uses GitHub App API)
   const fetchRepos = useCallback(async () => {
@@ -116,7 +113,7 @@ export function Overview({ onNavigate }: OverviewProps) {
     } finally {
       setReposLoading(false);
     }
-  }, [tokenManager]);
+  }, []);
 
   // Connect repository
   const handleConnect = useCallback(async () => {
@@ -154,7 +151,7 @@ export function Overview({ onNavigate }: OverviewProps) {
     } finally {
       setConnecting(false);
     }
-  }, [selectedRepo, tokenManager, fetchSetup]);
+  }, [selectedRepo, fetchSetup]);
 
   // Load setup data on mount
   useEffect(() => {

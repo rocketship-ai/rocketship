@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // handleCurrentUser returns the current user's profile, roles, and pending registrations/invites
@@ -39,6 +41,21 @@ func (s *Server) handleCurrentUser(w http.ResponseWriter, r *http.Request, princ
 		},
 		"roles":  roles,
 		"status": status,
+	}
+
+	// Include organization info if user has one
+	if principal.OrgID != uuid.Nil {
+		org, err := s.store.GetOrganizationByID(ctx, principal.OrgID)
+		if err == nil {
+			resp["organization"] = map[string]string{
+				"id":   org.ID.String(),
+				"name": org.Name,
+				"slug": org.Slug,
+			}
+		} else {
+			log.Printf("failed to load organization for /api/users/me: %v", err)
+			// Non-fatal: continue without org info
+		}
 	}
 
 	if reg, err := s.store.LatestOrgRegistrationForUser(ctx, principal.UserID); err == nil {

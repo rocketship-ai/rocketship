@@ -15,7 +15,7 @@ function decodeExpMs(jwt: string): number {
   }
 }
 
-export class TokenManager {
+class TokenManager {
   private token: string | null = null
   private expMs = 0
   private inFlight: Promise<string | null> | null = null
@@ -52,3 +52,6 @@ export class TokenManager {
     this.expMs = 0
   }
 }
+
+// Shared singleton instance - use this instead of creating new TokenManager()
+export const tokenManager = new TokenManager()

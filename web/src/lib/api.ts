@@ -1,9 +1,6 @@
 // API helper for authenticated requests using TokenManager
 
-import { TokenManager } from '@/features/auth/tokenManager'
-
-// Create a singleton instance for use across the app
-const tokenManager = new TokenManager()
+import { tokenManager } from '@/features/auth/tokenManager'
 
 export class ApiError extends Error {
   constructor(

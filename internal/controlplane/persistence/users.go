@@ -69,6 +69,25 @@ func (s *Store) UpdateUserEmail(ctx context.Context, userID uuid.UUID, email str
 	return nil
 }
 
+// UpdateUserName changes the name for a user
+func (s *Store) UpdateUserName(ctx context.Context, userID uuid.UUID, name string) error {
+	const query = `
+        UPDATE users
+        SET name = $2,
+            updated_at = NOW()
+        WHERE id = $1
+    `
+
+	res, err := s.db.ExecContext(ctx, query, userID, name)
+	if err != nil {
+		return fmt.Errorf("failed to update user name: %w", err)
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 // RoleSummary returns aggregated user membership information
 func (s *Store) RoleSummary(ctx context.Context, userID uuid.UUID) (RoleSummary, error) {
 	summary := RoleSummary{}

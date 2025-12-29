@@ -114,9 +114,10 @@ export function ConsoleLayout() {
     }
   }
 
-  // User info for sidebar
-  const userName = userData?.user?.name || 'User'
-  const orgName = userData?.pending_registration?.org_name || 'Rocketship'
+  // User info for sidebar (no fallback to username - name is required from onboarding)
+  const userName = userData?.user?.name || '—'
+  // Prefer actual organization name, fall back to pending registration name, then default
+  const orgName = userData?.organization?.name || userData?.pending_registration?.org_name || 'Rocketship'
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
