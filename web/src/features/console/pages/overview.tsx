@@ -277,72 +277,40 @@ export function Overview({ onNavigate }: OverviewProps) {
   // Check if GitHub App is installed (step 2 complete)
   const isGitHubAppInstalled = getStep('install_github_app')?.complete ?? false;
 
-  // "Now" row data with sparklines
+  // "Now" row data - placeholder until run aggregation is implemented
   const nowMetrics = [
     {
       label: 'Failing Monitors',
-      value: 3,
-      sparkline: [1, 2, 1, 3, 2, 3, 3],
-      trend: 'up',
-      color: '#ef0000',
+      value: '—',
       link: 'test-health?status=failed'
     },
     {
       label: 'Failing Tests (24h)',
-      value: 12,
-      sparkline: [8, 10, 9, 12, 11, 13, 12],
-      trend: 'stable',
-      color: '#ef0000',
+      value: '—',
       link: 'suite-activity?status=failed&timeRange=24h'
     },
     {
       label: 'Runs in Progress',
-      value: 2,
-      sparkline: [3, 2, 4, 3, 2, 3, 2],
-      trend: 'down',
-      color: '#f6a724',
+      value: '—',
       link: 'suite-activity?status=running'
     },
     {
       label: 'Pass Rate (24h)',
-      value: '94.2%',
-      sparkline: [92, 93, 95, 94, 93, 94, 94.2],
-      trend: 'up',
-      color: '#4CBB17',
+      value: '—',
       link: 'suite-activity?timeRange=24h'
     },
     {
       label: 'Median Duration (24h)',
-      value: '3m 24s',
-      sparkline: [180, 195, 210, 204, 198, 205, 204],
-      trend: 'stable',
-      color: '#666666',
+      value: '—',
       link: 'suite-activity?timeRange=24h&sort=duration'
     }
   ];
 
-  // Pass rate over time with volume
-  const passRateData = [
-    { date: 'Dec 19', passRate: 92.3, volume: 145 },
-    { date: 'Dec 20', passRate: 93.1, volume: 167 },
-    { date: 'Dec 21', passRate: 94.8, volume: 189 },
-    { date: 'Dec 22', passRate: 93.5, volume: 201 },
-    { date: 'Dec 23', passRate: 92.9, volume: 178 },
-    { date: 'Dec 24', passRate: 94.6, volume: 156 },
-    { date: 'Dec 25', passRate: 94.2, volume: 142 },
-  ];
+  // Pass rate over time - empty until run data exists
+  const passRateData: Array<{ date: string; passRate: number; volume: number }> = [];
 
-  // Failures by suite (top 8)
-  const failuresBySuite = [
-    { suite: 'Auth Flow', passes: 142, failures: 8 },
-    { suite: 'Payment API', passes: 156, failures: 5 },
-    { suite: 'User Onboarding', passes: 178, failures: 4 },
-    { suite: 'Search Service', passes: 189, failures: 3 },
-    { suite: 'Notification System', passes: 164, failures: 3 },
-    { suite: 'Analytics Pipeline', passes: 145, failures: 2 },
-    { suite: 'Report Generation', passes: 167, failures: 2 },
-    { suite: 'Data Sync', passes: 201, failures: 1 },
-  ];
+  // Failures by suite - empty until run data exists
+  const failuresBySuite: Array<{ suite: string; passes: number; failures: number }> = [];
 
   return (
     <div className="flex-1 min-w-0 p-8">
@@ -476,86 +444,104 @@ export function Overview({ onNavigate }: OverviewProps) {
                 </button>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={280}>
-              <ComposedChart data={passRateData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: '#666666', fontSize: 12 }}
-                  stroke="#e5e5e5"
-                />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fill: '#666666', fontSize: 12 }}
-                  stroke="#e5e5e5"
-                  domain={[85, 100]}
-                  label={{ value: 'Pass Rate (%)', angle: -90, position: 'insideLeft', style: { fill: '#666666', fontSize: 12 } }}
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fill: '#999999', fontSize: 12 }}
-                  stroke="#e5e5e5"
-                  label={{ value: 'Volume', angle: 90, position: 'insideRight', style: { fill: '#999999', fontSize: 12 } }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e5e5',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Bar
-                  yAxisId="right"
-                  dataKey="volume"
-                  fill="#e5e5e5"
-                  opacity={0.3}
-                  name="Run Volume"
-                />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="passRate"
-                  stroke="#4CBB17"
-                  strokeWidth={3}
-                  dot={{ fill: '#4CBB17', r: 4 }}
-                  name="Pass Rate"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            {passRateData.length === 0 ? (
+              <div className="flex items-center justify-center h-[280px] text-[#999999]">
+                <div className="text-center">
+                  <p className="text-sm">No run data yet</p>
+                  <p className="text-xs mt-1">Charts will appear once tests are run</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={passRateData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                    stroke="#e5e5e5"
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                    stroke="#e5e5e5"
+                    domain={[85, 100]}
+                    label={{ value: 'Pass Rate (%)', angle: -90, position: 'insideLeft', style: { fill: '#666666', fontSize: 12 } }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fill: '#999999', fontSize: 12 }}
+                    stroke="#e5e5e5"
+                    label={{ value: 'Volume', angle: 90, position: 'insideRight', style: { fill: '#999999', fontSize: 12 } }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Bar
+                    yAxisId="right"
+                    dataKey="volume"
+                    fill="#e5e5e5"
+                    opacity={0.3}
+                    name="Run Volume"
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="passRate"
+                    stroke="#4CBB17"
+                    strokeWidth={3}
+                    dot={{ fill: '#4CBB17', r: 4 }}
+                    name="Pass Rate"
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {/* Failures by Suite - Takes 2 columns */}
           <div className="lg:col-span-2 bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
             <h3 className="mb-6">Recent Failures by Suite (24h)</h3>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={failuresBySuite} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-                <XAxis
-                  type="number"
-                  tick={{ fill: '#666666', fontSize: 12 }}
-                  stroke="#e5e5e5"
-                />
-                <YAxis
-                  type="category"
-                  dataKey="suite"
-                  tick={{ fill: '#666666', fontSize: 11 }}
-                  stroke="#e5e5e5"
-                  width={120}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e5e5',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Bar dataKey="passes" stackId="a" fill="#4CBB17" name="Passes" />
-                <Bar dataKey="failures" stackId="a" fill="#ef0000" name="Failures" />
-              </BarChart>
-            </ResponsiveContainer>
+            {failuresBySuite.length === 0 ? (
+              <div className="flex items-center justify-center h-[280px] text-[#999999]">
+                <div className="text-center">
+                  <p className="text-sm">No failure data yet</p>
+                  <p className="text-xs mt-1">Charts will appear once tests are run</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={failuresBySuite} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                  <XAxis
+                    type="number"
+                    tick={{ fill: '#666666', fontSize: 12 }}
+                    stroke="#e5e5e5"
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="suite"
+                    tick={{ fill: '#666666', fontSize: 11 }}
+                    stroke="#e5e5e5"
+                    width={120}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e5e5',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Bar dataKey="passes" stackId="a" fill="#4CBB17" name="Passes" />
+                  <Bar dataKey="failures" stackId="a" fill="#ef0000" name="Failures" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

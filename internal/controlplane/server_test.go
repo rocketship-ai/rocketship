@@ -562,6 +562,31 @@ func (f *fakeStore) InsertScanAttempt(_ context.Context, _ persistence.ScanAttem
 	return nil
 }
 
+// Console hydration methods
+func (f *fakeStore) ListProjectSummariesForOrg(_ context.Context, _ uuid.UUID) ([]persistence.ProjectSummary, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetProjectWithOrgCheck(_ context.Context, _, _ uuid.UUID) (persistence.Project, error) {
+	return persistence.Project{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) GetLatestScanForProject(_ context.Context, _ uuid.UUID, _, _ string) (*persistence.ScanSummary, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ListSuitesForOrg(_ context.Context, _ uuid.UUID, _ int) ([]persistence.SuiteActivityRow, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetSuiteDetail(_ context.Context, _, _ uuid.UUID) (persistence.SuiteDetail, error) {
+	return persistence.SuiteDetail{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) ListTestsBySuite(_ context.Context, _ uuid.UUID) ([]persistence.Test, error) {
+	return nil, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -933,5 +958,106 @@ func TestProjectMembersScopedToOrganization(t *testing.T) {
 	srv.handleProjectRoutes(rec, req, principal)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("expected forbidden for cross-org access, got %d", rec.Code)
+	}
+}
+
+func TestConsoleEndpointsPendingUserForbidden(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	signer, err := buildSigner(key, "test-key")
+	if err != nil {
+		t.Fatalf("failed to build signer: %v", err)
+	}
+
+	cfg := Config{
+		Issuer:          "https://cli.test",
+		Audience:        "rocketship-cli",
+		ClientID:        "rocketship-cli",
+		AccessTokenTTL:  time.Minute,
+		RefreshTokenTTL: time.Hour,
+		GitHub:          GitHubConfig{ClientID: "gh", ClientSecret: "secret"},
+	}
+
+	store := newFakeStore()
+	// Clear org memberships to simulate pending user
+	store.summary.Organizations = nil
+
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// Pending user (no org membership)
+	pendingPrincipal := brokerPrincipal{
+		UserID: store.user.ID,
+		Roles:  []string{"pending"},
+	}
+
+	// Test /api/projects returns 403 for pending user
+	req := httptest.NewRequest(http.MethodGet, "/api/projects", nil)
+	rec := httptest.NewRecorder()
+	srv.handleConsoleProjectRoutesDispatch(rec, req, pendingPrincipal)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for pending user on /api/projects, got %d", rec.Code)
+	}
+
+	// Test /api/suites/activity returns 403 for pending user
+	req = httptest.NewRequest(http.MethodGet, "/api/suites/activity", nil)
+	rec = httptest.NewRecorder()
+	srv.handleConsoleSuiteRoutesDispatch(rec, req, pendingPrincipal)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for pending user on /api/suites/activity, got %d", rec.Code)
+	}
+}
+
+func TestConsoleEndpointsOrgScoping(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	signer, err := buildSigner(key, "test-key")
+	if err != nil {
+		t.Fatalf("failed to build signer: %v", err)
+	}
+
+	cfg := Config{
+		Issuer:          "https://cli.test",
+		Audience:        "rocketship-cli",
+		ClientID:        "rocketship-cli",
+		AccessTokenTTL:  time.Minute,
+		RefreshTokenTTL: time.Hour,
+		GitHub:          GitHubConfig{ClientID: "gh", ClientSecret: "secret"},
+	}
+
+	store := newFakeStore()
+
+	srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// User with org membership
+	principal := brokerPrincipal{
+		UserID: store.user.ID,
+		OrgID:  store.primaryOrg,
+		Roles:  []string{"owner"},
+	}
+
+	// Test /api/projects returns 200 for user with org
+	req := httptest.NewRequest(http.MethodGet, "/api/projects", nil)
+	rec := httptest.NewRecorder()
+	srv.handleConsoleProjectRoutesDispatch(rec, req, principal)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /api/projects, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Test /api/suites/activity returns 200 for user with org
+	req = httptest.NewRequest(http.MethodGet, "/api/suites/activity", nil)
+	rec = httptest.NewRecorder()
+	srv.handleConsoleSuiteRoutesDispatch(rec, req, principal)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for /api/suites/activity, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

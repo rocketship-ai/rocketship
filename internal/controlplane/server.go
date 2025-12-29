@@ -142,7 +142,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/orgs/registration/complete", s.requireAuth(s.handleOrgRegistrationComplete))
 	s.mux.HandleFunc("/api/orgs/invites/accept", s.requireAuth(s.handleOrgInviteAccept))
 	s.mux.HandleFunc("/api/orgs/", s.requireAuth(s.handleOrgRoutes))
-	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleProjectRoutes))
+	s.mux.HandleFunc("/api/projects", s.requireAuth(s.handleConsoleProjectRoutesDispatch))
+	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleConsoleProjectRoutesDispatch))
+	s.mux.HandleFunc("/api/suites/", s.requireAuth(s.handleConsoleSuiteRoutesDispatch))
 
 	// Onboarding API
 	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))
