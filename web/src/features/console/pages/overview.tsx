@@ -41,7 +41,6 @@ export function Overview({ onNavigate }: OverviewProps) {
   const [_selectedProject, _setSelectedProject] = useState('all');
   const [_selectedEnv, _setSelectedEnv] = useState('all');
   const [_timeRange, _setTimeRange] = useState('7d');
-  const [passRateToggle, setPassRateToggle] = useState<'all' | 'scheduled' | 'ci'>('all');
 
   // Setup data from API
   const [setupData, setSetupData] = useState<SetupDataAPI | null>(null);
@@ -276,31 +275,11 @@ export function Overview({ onNavigate }: OverviewProps) {
 
   // "Now" row data - placeholder until run aggregation is implemented
   const nowMetrics = [
-    {
-      label: 'Failing Monitors',
-      value: '—',
-      link: 'test-health?status=failed'
-    },
-    {
-      label: 'Failing Tests (24h)',
-      value: '—',
-      link: 'suite-activity?status=failed&timeRange=24h'
-    },
-    {
-      label: 'Runs in Progress',
-      value: '—',
-      link: 'suite-activity?status=running'
-    },
-    {
-      label: 'Pass Rate (24h)',
-      value: '—',
-      link: 'suite-activity?timeRange=24h'
-    },
-    {
-      label: 'Median Duration (24h)',
-      value: '—',
-      link: 'suite-activity?timeRange=24h&sort=duration'
-    }
+    { label: 'Failing Monitors', value: '—' },
+    { label: 'Failing Tests (24h)', value: '—' },
+    { label: 'Runs in Progress', value: '—' },
+    { label: 'Pass Rate (24h)', value: '—' },
+    { label: 'Median Duration (24h)', value: '—' },
   ];
 
   // Pass rate over time - empty until run data exists
@@ -378,10 +357,9 @@ export function Overview({ onNavigate }: OverviewProps) {
         {/* "Now" Row - 5 Tiles */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {nowMetrics.map((metric, idx) => (
-            <button
+            <div
               key={idx}
-              onClick={() => onNavigate(metric.link.split('?')[0])}
-              className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-5 hover:border-[#999999] transition-colors text-left"
+              className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-5"
             >
               <div className="flex items-start justify-between mb-3">
                 <span className="text-sm text-[#666666]">{metric.label}</span>
@@ -389,7 +367,7 @@ export function Overview({ onNavigate }: OverviewProps) {
               <div className="text-3xl">
                 {metric.value}
               </div>
-            </button>
+            </div>
           ))}
         </div>
 
@@ -399,38 +377,6 @@ export function Overview({ onNavigate }: OverviewProps) {
           <div className="lg:col-span-3 bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <h3>Pass Rate Over Time</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPassRateToggle('all')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
-                    passRateToggle === 'all'
-                      ? 'bg-black text-white'
-                      : 'bg-[#fafafa] text-[#666666] hover:bg-[#e5e5e5]'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setPassRateToggle('scheduled')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
-                    passRateToggle === 'scheduled'
-                      ? 'bg-black text-white'
-                      : 'bg-[#fafafa] text-[#666666] hover:bg-[#e5e5e5]'
-                  }`}
-                >
-                  Scheduled
-                </button>
-                <button
-                  onClick={() => setPassRateToggle('ci')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
-                    passRateToggle === 'ci'
-                      ? 'bg-black text-white'
-                      : 'bg-[#fafafa] text-[#666666] hover:bg-[#e5e5e5]'
-                  }`}
-                >
-                  CI
-                </button>
-              </div>
             </div>
             {passRateData.length === 0 ? (
               <div className="flex items-center justify-center h-[280px] text-[#999999]">

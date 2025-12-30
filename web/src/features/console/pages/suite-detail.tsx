@@ -244,7 +244,11 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
               </p>
             </div>
 
-            <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors">
+            <button
+              disabled
+              className="flex items-center gap-2 px-4 py-2 bg-black/50 text-white rounded-md cursor-not-allowed"
+              title="Coming soon"
+            >
               <Play className="w-4 h-4" />
               <span>Run suite</span>
             </button>
@@ -310,7 +314,11 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                 <p className="text-[#666666] text-sm mb-4">
                   Run this suite to see activity here.
                 </p>
-                <button className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-black/50 text-white rounded-md cursor-not-allowed"
+                  title="Coming soon"
+                >
                   <Play className="w-4 h-4" />
                   Run suite
                 </button>
