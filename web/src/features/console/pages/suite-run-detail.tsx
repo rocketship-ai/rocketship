@@ -1,5 +1,5 @@
 import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
-import { EnvBadge, InitiatorBadge, ConfigSourceBadge } from '../components/status-badge';
+import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
@@ -123,7 +123,8 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     suiteName: runData.suite_name || 'Suite Run',
     status: mapRunStatus(runData.status),
     env: runData.environment || 'default',
-    initiator: runData.initiator_type as 'ci' | 'manual' | 'schedule',
+    trigger: runData.initiator_type as 'ci' | 'manual' | 'schedule',
+    initiatorName: runData.initiator_name || '',
     configSource: {
       type: (runData.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
       sha: runData.commit_sha || runData.bundle_sha || '',
@@ -175,8 +176,12 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                   )}
                 </div>
                 <EnvBadge env={suiteRun.env} />
-                <InitiatorBadge initiator={suiteRun.initiator} />
                 <ConfigSourceBadge type={suiteRun.configSource.type} sha={suiteRun.configSource.sha} />
+                <BadgeDot />
+                <TriggerBadge trigger={suiteRun.trigger} />
+                {suiteRun.initiatorName && (
+                  <UsernameBadge username={suiteRun.initiatorName} />
+                )}
               </div>
             </div>
 

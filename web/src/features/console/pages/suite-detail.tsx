@@ -1,5 +1,5 @@
 import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, AlertCircle, RefreshCw, FileCode } from 'lucide-react';
-import { EnvBadge, InitiatorBadge } from '../components/status-badge';
+import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
 import { useMemo, useState } from 'react';
@@ -449,10 +449,11 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                                             {run.commit_sha.slice(0, 7)}
                                           </span>
                                         )}
+                                        <BadgeDot />
                                         {run.environment && <EnvBadge env={run.environment} />}
-                                        <InitiatorBadge initiator={run.initiator_type} />
+                                        <TriggerBadge trigger={run.initiator_type} />
                                         {run.initiator_type === 'manual' && run.initiator_name && (
-                                          <span className="text-xs text-[#666666]">@{run.initiator_name}</span>
+                                          <UsernameBadge username={run.initiator_name} />
                                         )}
                                       </div>
                                     </div>

@@ -1,5 +1,5 @@
 import { ArrowLeft, Play, Edit3, AlertCircle } from 'lucide-react';
-import { StatusBadge, EnvBadge, InitiatorBadge } from '../components/status-badge';
+import { StatusBadge, EnvBadge, TriggerBadge } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestStepCardAdapter } from '../components/test-step-card';
 import { useState } from 'react';
@@ -413,7 +413,7 @@ export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetai
                   {/* Middle row: Badges */}
                   <div className="flex items-center gap-2 mb-2">
                     <EnvBadge env={run.env} />
-                    <InitiatorBadge initiator={run.initiator} />
+                    <TriggerBadge trigger={run.initiator} />
                   </div>
                   
                   {/* Bottom row: Author (optional) and duration */}

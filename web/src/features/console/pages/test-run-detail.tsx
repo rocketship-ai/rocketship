@@ -1,5 +1,5 @@
 import { ArrowLeft, Play, AlertCircle, Edit3, Loader2 } from 'lucide-react';
-import { StatusBadge, EnvBadge, InitiatorBadge, ConfigSourceBadge } from '../components/status-badge';
+import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { useState } from 'react';
 import { useTestRun, useTestRunLogs } from '../hooks/use-console-queries';
 
@@ -98,10 +98,8 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
     testName: test.name || 'Test Run',
     status: mapStatus(test.status),
     env: run.environment || 'default',
-    initiator: {
-      type: run.initiator_type as 'ci' | 'manual' | 'schedule',
-      name: run.initiator_name || run.initiator || ''
-    },
+    trigger: run.initiator_type as 'ci' | 'manual' | 'schedule',
+    initiatorName: run.initiator_name || '',
     configSource: {
       type: (run.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
       sha: run.commit_sha || run.bundle_sha || '',
@@ -149,8 +147,12 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={testRun.status} />
                 <EnvBadge env={testRun.env} />
-                <InitiatorBadge initiator={testRun.initiator.type} name={testRun.initiator.name} />
                 <ConfigSourceBadge type={testRun.configSource.type} sha={testRun.configSource.sha} />
+                <BadgeDot />
+                <TriggerBadge trigger={testRun.trigger} />
+                {testRun.initiatorName && (
+                  <UsernameBadge username={testRun.initiatorName} />
+                )}
               </div>
             </div>
 
