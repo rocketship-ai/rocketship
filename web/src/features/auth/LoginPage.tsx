@@ -94,7 +94,7 @@ export default function LoginPage() {
 
           // Verify state matches (CSRF protection)
           if (state !== storedState) {
-            throw new Error("Invalid state parameter - possible CSRF attack");
+            throw new Error("Invalid state parameter");
           }
 
           if (!codeVerifier || !redirectUri) {

@@ -3,13 +3,14 @@
 import { tokenManager } from '@/features/auth/tokenManager'
 
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public statusText: string,
-    message?: string
-  ) {
+  status: number
+  statusText: string
+
+  constructor(status: number, statusText: string, message?: string) {
     super(message || `${status} ${statusText}`)
     this.name = 'ApiError'
+    this.status = status
+    this.statusText = statusText
   }
 }
 

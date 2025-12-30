@@ -146,6 +146,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/projects", s.requireAuth(s.handleConsoleProjectRoutesDispatch))
 	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleConsoleProjectRoutesDispatch))
 	s.mux.HandleFunc("/api/suites/", s.requireAuth(s.handleConsoleSuiteRoutesDispatch))
+	s.mux.HandleFunc("/api/runs/", s.requireAuth(s.handleRunRoutesDispatch))
+	s.mux.HandleFunc("/api/test-runs/", s.requireAuth(s.handleTestRunRoutesDispatch))
 
 	// Onboarding API
 	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))
@@ -154,6 +156,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/github/app/status", s.requireAuth(s.handleGitHubAppStatus))
 	s.mux.HandleFunc("/api/github/app/repos", s.requireAuth(s.handleGitHubAppRepos))
 	s.mux.HandleFunc("/api/github/app/repos/connect", s.requireAuth(s.handleGitHubAppConnect))
+	s.mux.HandleFunc("/api/github/app/sync", s.requireAuth(s.handleGitHubAppSync))
 	s.mux.HandleFunc("/github-app/callback", s.handleGitHubAppCallback)
 	s.mux.HandleFunc("/github-app/webhook", s.handleGitHubAppWebhook)
 }

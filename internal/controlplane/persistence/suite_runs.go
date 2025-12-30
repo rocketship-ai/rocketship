@@ -63,20 +63,60 @@ func (s *Store) ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid
 }
 
 // ListRunsForSuiteGroup returns runs for a suite across all projects in a group
-// (projects that share the same repo/path_scope). Results are ordered by created_at DESC.
-func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName string, limit int) ([]SuiteRunRow, error) {
-	if limit <= 0 {
-		limit = 200
+// (projects that share the same repo/path_scope).
+//
+// Applies two filters for a clean UI:
+//  1. Limit to 5 most recent runs per branch
+//  2. Only show branches that have a run in the last 24 hours (default branch is always shown)
+//
+// Results are ordered by: default branch first, then by latest run time desc, then by created_at desc.
+func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int) ([]SuiteRunRow, error) {
+	if runsPerBranch <= 0 {
+		runsPerBranch = 5
 	}
-	if limit > 1000 {
-		limit = 1000
+	if runsPerBranch > 20 {
+		runsPerBranch = 20
 	}
 
 	if len(projectIDs) == 0 {
 		return []SuiteRunRow{}, nil
 	}
 
+	// Use a CTE with window functions to:
+	// 1. Rank runs within each branch by created_at DESC
+	// 2. Track the latest run time per branch for freshness filtering
+	// Then filter to keep:
+	// - At most runsPerBranch runs per branch
+	// - Only branches with a run in the last 24 hours (or the default branch)
 	const query = `
+		WITH ranked_runs AS (
+			SELECT
+				id,
+				status,
+				branch,
+				commit_sha,
+				commit_message,
+				environment,
+				initiator,
+				trigger,
+				schedule_name,
+				schedule_id,
+				source,
+				total_tests,
+				passed_tests,
+				failed_tests,
+				timeout_tests,
+				skipped_tests,
+				created_at,
+				started_at,
+				ended_at,
+				ROW_NUMBER() OVER (PARTITION BY branch ORDER BY created_at DESC) as row_num,
+				MAX(created_at) OVER (PARTITION BY branch) as branch_latest_run
+			FROM runs
+			WHERE organization_id = $1
+			  AND project_id = ANY($2)
+			  AND suite_name = $3
+		)
 		SELECT
 			id,
 			status,
@@ -97,16 +137,20 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			created_at,
 			started_at,
 			ended_at
-		FROM runs
-		WHERE organization_id = $1
-		  AND project_id = ANY($2)
-		  AND suite_name = $3
-		ORDER BY created_at DESC
-		LIMIT $4
+		FROM ranked_runs
+		WHERE row_num <= $4
+		  AND (
+		      branch = $5
+		      OR branch_latest_run > NOW() - INTERVAL '24 hours'
+		  )
+		ORDER BY
+			CASE WHEN branch = $5 THEN 0 ELSE 1 END,
+			branch_latest_run DESC,
+			created_at DESC
 	`
 
 	var runs []SuiteRunRow
-	if err := s.db.SelectContext(ctx, &runs, query, orgID, pq.Array(projectIDs), suiteName, limit); err != nil {
+	if err := s.db.SelectContext(ctx, &runs, query, orgID, pq.Array(projectIDs), suiteName, runsPerBranch, defaultBranch); err != nil {
 		return nil, fmt.Errorf("failed to list runs for suite group: %w", err)
 	}
 	if runs == nil {

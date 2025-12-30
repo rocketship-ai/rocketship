@@ -348,6 +348,103 @@ func (s *Server) handleGitHubAppConnect(w http.ResponseWriter, r *http.Request, 
 	})
 }
 
+// handleGitHubAppSync syncs existing GitHub App installations that may have been installed
+// before the user created their org. This is useful when the user already has the app
+// installed but our database doesn't have a record of it.
+func (s *Server) handleGitHubAppSync(w http.ResponseWriter, r *http.Request, p brokerPrincipal) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if p.OrgID == uuid.Nil {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	if !s.githubApp.Configured() {
+		writeError(w, http.StatusServiceUnavailable, "GitHub App not configured")
+		return
+	}
+
+	// Check if we already have an installation
+	existingID, _, _, err := s.store.GetGitHubAppInstallation(r.Context(), p.OrgID)
+	if err == nil && existingID > 0 {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"synced":          false,
+			"message":         "GitHub App already installed",
+			"installation_id": existingID,
+		})
+		return
+	}
+
+	// Get user's GitHub username to match against installations
+	user, err := s.store.GetUserByID(r.Context(), p.UserID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get user info")
+		return
+	}
+
+	if user.Username == "" {
+		writeError(w, http.StatusBadRequest, "user has no GitHub username")
+		return
+	}
+
+	// List all installations for the GitHub App
+	installations, err := s.githubApp.ListInstallations(r.Context())
+	if err != nil {
+		slog.Error("failed to list GitHub App installations", "error", err)
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("failed to list installations: %v", err))
+		return
+	}
+
+	// Find an installation that matches the user's GitHub username
+	// This handles both user installations (type=User) and org installations (type=Organization)
+	var matchedInstallation *GitHubAppInstallationInfo
+	for i := range installations {
+		inst := &installations[i]
+		// Match user accounts directly, or org accounts the user might own
+		if strings.EqualFold(inst.Account.Login, user.Username) {
+			matchedInstallation = inst
+			break
+		}
+	}
+
+	if matchedInstallation == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"synced":  false,
+			"message": fmt.Sprintf("No installation found for GitHub user %q. Please install the GitHub App first.", user.Username),
+		})
+		return
+	}
+
+	// Save the installation
+	if err := s.store.UpsertGitHubAppInstallation(
+		r.Context(),
+		p.OrgID,
+		matchedInstallation.ID,
+		p.UserID,
+		matchedInstallation.Account.Login,
+		matchedInstallation.Account.Type,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save installation")
+		return
+	}
+
+	slog.Info("synced existing GitHub App installation",
+		"org_id", p.OrgID,
+		"installation_id", matchedInstallation.ID,
+		"account_login", matchedInstallation.Account.Login,
+	)
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"synced":          true,
+		"message":         "GitHub App installation synced successfully",
+		"installation_id": matchedInstallation.ID,
+		"account_login":   matchedInstallation.Account.Login,
+	})
+}
+
 func (s *Server) handleGitHubAppCallback(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")

@@ -84,7 +84,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   const tabs = [
     { id: 'activity', label: 'Activity', enabled: true },
     { id: 'tests', label: 'Tests', enabled: true },
-    { id: 'schedules', label: 'Schedules', enabled: true },
+    { id: 'schedules', label: 'Schedules', enabled: false },
     { id: 'variables', label: 'Variables', enabled: false },
     { id: 'lifecycle-hooks', label: 'Lifecycle Hooks', enabled: false },
     { id: 'retry-policy', label: 'Retry Policy', enabled: false },

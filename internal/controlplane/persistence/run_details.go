@@ -487,3 +487,104 @@ func (s *Store) GetRunArtifact(ctx context.Context, id uuid.UUID) (RunArtifact, 
 
 	return artifact, nil
 }
+
+// RunTestWithRun contains a run test with its parent run summary
+type RunTestWithRun struct {
+	RunTest
+	Run RunRecord
+}
+
+// GetRunTestWithRun retrieves a run test by ID along with its parent run
+// Validates that the run belongs to the specified organization
+func (s *Store) GetRunTestWithRun(ctx context.Context, orgID uuid.UUID, runTestID uuid.UUID) (RunTestWithRun, error) {
+	const query = `
+        SELECT
+            rt.id, rt.run_id, rt.test_id, rt.workflow_id, rt.name, rt.status, rt.error_message,
+            rt.started_at, rt.ended_at, rt.duration_ms, rt.step_count, rt.passed_steps, rt.failed_steps, rt.created_at,
+            r.id AS "run.id", r.organization_id AS "run.organization_id", r.project_id AS "run.project_id",
+            r.status AS "run.status", r.suite_name AS "run.suite_name", r.initiator AS "run.initiator",
+            r.trigger AS "run.trigger", r.schedule_name AS "run.schedule_name", r.config_source AS "run.config_source",
+            r.source AS "run.source", r.branch AS "run.branch", r.environment AS "run.environment",
+            r.commit_sha AS "run.commit_sha", r.bundle_sha AS "run.bundle_sha",
+            r.total_tests AS "run.total_tests", r.passed_tests AS "run.passed_tests",
+            r.failed_tests AS "run.failed_tests", r.timeout_tests AS "run.timeout_tests",
+            r.skipped_tests AS "run.skipped_tests", r.environment_id AS "run.environment_id",
+            r.schedule_id AS "run.schedule_id", r.commit_message AS "run.commit_message",
+            r.created_at AS "run.created_at", r.updated_at AS "run.updated_at",
+            r.started_at AS "run.started_at", r.ended_at AS "run.ended_at"
+        FROM run_tests rt
+        JOIN runs r ON rt.run_id = r.id
+        WHERE rt.id = $1 AND r.organization_id = $2
+    `
+
+	// We need to scan into separate structs then combine
+	type row struct {
+		RunTest
+		RunID            string         `db:"run.id"`
+		RunOrgID         uuid.UUID      `db:"run.organization_id"`
+		RunProjectID     uuid.NullUUID  `db:"run.project_id"`
+		RunStatus        string         `db:"run.status"`
+		RunSuiteName     string         `db:"run.suite_name"`
+		RunInitiator     string         `db:"run.initiator"`
+		RunTrigger       string         `db:"run.trigger"`
+		RunScheduleName  string         `db:"run.schedule_name"`
+		RunConfigSource  string         `db:"run.config_source"`
+		RunSource        string         `db:"run.source"`
+		RunBranch        string         `db:"run.branch"`
+		RunEnvironment   string         `db:"run.environment"`
+		RunCommitSHA     sql.NullString `db:"run.commit_sha"`
+		RunBundleSHA     sql.NullString `db:"run.bundle_sha"`
+		RunTotalTests    int            `db:"run.total_tests"`
+		RunPassedTests   int            `db:"run.passed_tests"`
+		RunFailedTests   int            `db:"run.failed_tests"`
+		RunTimeoutTests  int            `db:"run.timeout_tests"`
+		RunSkippedTests  int            `db:"run.skipped_tests"`
+		RunEnvironmentID uuid.NullUUID  `db:"run.environment_id"`
+		RunScheduleID    uuid.NullUUID  `db:"run.schedule_id"`
+		RunCommitMessage sql.NullString `db:"run.commit_message"`
+		RunCreatedAt     time.Time      `db:"run.created_at"`
+		RunUpdatedAt     time.Time      `db:"run.updated_at"`
+		RunStartedAt     sql.NullTime   `db:"run.started_at"`
+		RunEndedAt       sql.NullTime   `db:"run.ended_at"`
+	}
+
+	var r row
+	if err := s.db.GetContext(ctx, &r, query, runTestID, orgID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return RunTestWithRun{}, sql.ErrNoRows
+		}
+		return RunTestWithRun{}, fmt.Errorf("failed to get run test with run: %w", err)
+	}
+
+	return RunTestWithRun{
+		RunTest: r.RunTest,
+		Run: RunRecord{
+			ID:             r.RunID,
+			OrganizationID: r.RunOrgID,
+			ProjectID:      r.RunProjectID,
+			Status:         r.RunStatus,
+			SuiteName:      r.RunSuiteName,
+			Initiator:      r.RunInitiator,
+			Trigger:        r.RunTrigger,
+			ScheduleName:   r.RunScheduleName,
+			ConfigSource:   r.RunConfigSource,
+			Source:         r.RunSource,
+			Branch:         r.RunBranch,
+			Environment:    r.RunEnvironment,
+			CommitSHA:      r.RunCommitSHA,
+			BundleSHA:      r.RunBundleSHA,
+			TotalTests:     r.RunTotalTests,
+			PassedTests:    r.RunPassedTests,
+			FailedTests:    r.RunFailedTests,
+			TimeoutTests:   r.RunTimeoutTests,
+			SkippedTests:   r.RunSkippedTests,
+			EnvironmentID:  r.RunEnvironmentID,
+			ScheduleID:     r.RunScheduleID,
+			CommitMessage:  r.RunCommitMessage,
+			CreatedAt:      r.RunCreatedAt,
+			UpdatedAt:      r.RunUpdatedAt,
+			StartedAt:      r.RunStartedAt,
+			EndedAt:        r.RunEndedAt,
+		},
+	}, nil
+}

@@ -198,6 +198,21 @@ kubectl create secret generic rocketship-controlplane-signing \
   --from-file=signing-key.pem="$SIGNING_KEY_PATH" \
   --dry-run=client -o yaml | kubectl apply -f -
 
+# Worker service account token (for worker -> engine log forwarding)
+# Generate a long-lived JWT using the same signing key as the controlplane
+echo "Generating worker service account token..."
+WORKER_TOKEN=$(go run "$REPO_ROOT/scripts/gen-worker-token/main.go" \
+  -key "$SIGNING_KEY_PATH" \
+  -issuer "http://auth.minikube.local" \
+  -audience "rocketship-cli" \
+  -ttl "720h")  # 30 days
+
+kubectl create secret generic rocketship-worker-token \
+  --namespace "$ROCKETSHIP_NAMESPACE" \
+  --from-literal=token="$WORKER_TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+echo "Worker token secret created."
+
 # GitHub OAuth secret
 kubectl create secret generic rocketship-github-oauth \
   --namespace "$ROCKETSHIP_NAMESPACE" \

@@ -131,6 +131,12 @@ engine:
 
 worker:
   replicaCount: 1
+  # Engine address for log forwarding (in-cluster)
+  engineAddress: "rocketship-engine:7700"
+  # Service account token secret for worker -> engine auth
+  tokenSecret:
+    secretName: rocketship-worker-token
+    secretKey: token
   resources:
     requests:
       memory: "512Mi"

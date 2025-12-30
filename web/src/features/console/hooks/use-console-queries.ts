@@ -105,6 +105,74 @@ export interface SuiteRunSummary {
   skipped_tests: number
 }
 
+// Run detail from /api/runs/{runId}
+export interface RunDetail {
+  id: string
+  project_id?: string
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'PENDING'
+  suite_name: string
+  initiator: string
+  trigger: string
+  schedule_name: string
+  config_source: string
+  source: string
+  branch: string
+  environment: string
+  commit_sha?: string
+  bundle_sha?: string
+  commit_message?: string
+  environment_id?: string
+  schedule_id?: string
+  total_tests: number
+  passed_tests: number
+  failed_tests: number
+  timeout_tests: number
+  skipped_tests: number
+  created_at: string
+  updated_at: string
+  started_at?: string
+  ended_at?: string
+  duration_ms?: number
+  initiator_type: 'ci' | 'manual' | 'schedule'
+  initiator_name?: string
+}
+
+// Run test from /api/runs/{runId}/tests
+export interface RunTest {
+  id: string
+  run_id: string
+  test_id?: string
+  workflow_id: string
+  name: string
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'PENDING'
+  step_count: number
+  passed_steps: number
+  failed_steps: number
+  error_message?: string
+  created_at: string
+  started_at?: string
+  ended_at?: string
+  duration_ms?: number
+}
+
+// Run log from /api/runs/{runId}/logs
+export interface RunLog {
+  id: string
+  run_id: string
+  run_test_id?: string
+  run_step_id?: string
+  level: string
+  message: string
+  logged_at: string
+  metadata?: Record<string, unknown>
+}
+
+// Test run detail from /api/test-runs/{testRunId}
+export interface TestRunDetail {
+  test: RunTest
+  run: RunDetail
+}
+
 // Profile types
 export interface ProfileUser {
   id: string
@@ -152,6 +220,11 @@ export const consoleKeys = {
   suite: (id: string) => [...consoleKeys.all, 'suite', id] as const,
   suiteRuns: (id: string) => [...consoleKeys.all, 'suite', id, 'runs'] as const,
   profile: () => [...consoleKeys.all, 'profile'] as const,
+  run: (id: string) => [...consoleKeys.all, 'run', id] as const,
+  runTests: (id: string) => [...consoleKeys.all, 'run', id, 'tests'] as const,
+  runLogs: (id: string) => [...consoleKeys.all, 'run', id, 'logs'] as const,
+  testRun: (id: string) => [...consoleKeys.all, 'testRun', id] as const,
+  testRunLogs: (id: string) => [...consoleKeys.all, 'testRun', id, 'logs'] as const,
 }
 
 // Query hooks
@@ -206,5 +279,47 @@ export function useProfile() {
   return useQuery({
     queryKey: consoleKeys.profile(),
     queryFn: () => apiGet<ProfileData>('/api/profile'),
+  })
+}
+
+// Run detail hooks
+
+export function useRun(runId: string) {
+  return useQuery({
+    queryKey: consoleKeys.run(runId),
+    queryFn: () => apiGet<RunDetail>(`/api/runs/${runId}`),
+    enabled: !!runId,
+  })
+}
+
+export function useRunTests(runId: string) {
+  return useQuery({
+    queryKey: consoleKeys.runTests(runId),
+    queryFn: () => apiGet<RunTest[]>(`/api/runs/${runId}/tests`),
+    enabled: !!runId,
+  })
+}
+
+export function useRunLogs(runId: string, limit = 500) {
+  return useQuery({
+    queryKey: consoleKeys.runLogs(runId),
+    queryFn: () => apiGet<RunLog[]>(`/api/runs/${runId}/logs?limit=${limit}`),
+    enabled: !!runId,
+  })
+}
+
+export function useTestRun(testRunId: string) {
+  return useQuery({
+    queryKey: consoleKeys.testRun(testRunId),
+    queryFn: () => apiGet<TestRunDetail>(`/api/test-runs/${testRunId}`),
+    enabled: !!testRunId,
+  })
+}
+
+export function useTestRunLogs(testRunId: string, limit = 500) {
+  return useQuery({
+    queryKey: consoleKeys.testRunLogs(testRunId),
+    queryFn: () => apiGet<RunLog[]>(`/api/test-runs/${testRunId}/logs?limit=${limit}`),
+    enabled: !!testRunId,
   })
 }

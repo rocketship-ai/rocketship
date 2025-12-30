@@ -152,6 +152,35 @@ export function Overview({ onNavigate }: OverviewProps) {
     }
   }, [selectedRepo, fetchSetup]);
 
+  // Sync GitHub App installation (for pre-existing installs)
+  const [syncing, setSyncing] = useState(false);
+  const syncGitHubApp = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const token = await tokenManager.get();
+      const response = await fetch('/api/github/app/sync', {
+        method: 'POST',
+        credentials: 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to sync GitHub App');
+      }
+      const result = await response.json();
+      if (result.synced) {
+        toast.success('GitHub App installation synced!');
+        await fetchSetup();
+      } else {
+        toast.info(result.message || 'No installation found to sync');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to sync');
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchSetup]);
+
   // Load setup data on mount
   useEffect(() => {
     fetchSetup();
@@ -309,17 +338,9 @@ export function Overview({ onNavigate }: OverviewProps) {
                       ) : (
                         <Circle className="w-5 h-5 text-[#999999]" />
                       )}
-                      <span className={`text-sm flex-1 ${item.done ? 'text-[#666666]' : 'text-black'}`}>
+                      <span className={`text-sm ${item.done ? 'text-[#666666]' : 'text-black'}`}>
                         {item.label}
                       </span>
-                      {!item.done && item.onClick && (
-                        <button
-                          onClick={item.onClick}
-                          className="text-sm text-black hover:underline"
-                        >
-                          {item.action} →
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -332,15 +353,27 @@ export function Overview({ onNavigate }: OverviewProps) {
                     Create organization
                   </button>
                 ) : !isGitHubAppInstalled && setupData.github_install_url ? (
-                  <a
-                    href={setupData.github_install_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Install GitHub App
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={setupData.github_install_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Install GitHub App
+                    </a>
+                    <button
+                      onClick={syncGitHubApp}
+                      disabled={syncing}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-[#e5e5e5] text-[#666666] rounded-md hover:border-black hover:text-black transition-colors disabled:opacity-50"
+                    >
+                      {syncing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : null}
+                      {syncing ? 'Syncing...' : 'Already installed? Sync'}
+                    </button>
+                  </div>
                 ) : isGitHubAppInstalled && !getStep('connect_repo')?.complete ? (
                   <button
                     onClick={openConnectModal}
