@@ -83,10 +83,10 @@ func (s *Server) handleConsoleProjectDetail(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Get suite and test counts
-	suites, err := s.store.ListSuites(r.Context(), projectID)
+	// Get canonical suite and test counts (deduped by file_path, prefer default branch)
+	suites, err := s.store.ListSuitesForProjectCanonical(r.Context(), projectID)
 	if err != nil {
-		log.Printf("failed to list suites: %v", err)
+		log.Printf("failed to list canonical suites: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to get project details")
 		return
 	}
@@ -155,9 +155,10 @@ func (s *Server) handleConsoleProjectSuites(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	suites, err := s.store.ListSuites(r.Context(), projectID)
+	// Use canonical suites list (deduped by file_path, prefer default branch)
+	suites, err := s.store.ListSuitesForProjectCanonical(r.Context(), projectID)
 	if err != nil {
-		log.Printf("failed to list suites: %v", err)
+		log.Printf("failed to list canonical suites: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list suites")
 		return
 	}

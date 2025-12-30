@@ -51,9 +51,9 @@ type ScanSummary struct {
 	TestsFound   int       `db:"tests_found"`
 }
 
-// ListProjectSummariesForOrg returns all projects for an org with counts and last scan info
+// ListProjectSummariesForOrg returns all active projects for an org with counts and last scan info
 func (s *Store) ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]ProjectSummary, error) {
-	// Get projects with counts
+	// Get active projects with counts (only count active suites/tests)
 	const projectQuery = `
 		SELECT
 			p.id,
@@ -63,10 +63,10 @@ func (s *Store) ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID)
 			p.path_scope,
 			p.source_ref,
 			p.created_at,
-			COALESCE((SELECT COUNT(*) FROM suites WHERE project_id = p.id), 0) AS suite_count,
-			COALESCE((SELECT COUNT(*) FROM tests WHERE project_id = p.id), 0) AS test_count
+			COALESCE((SELECT COUNT(*) FROM suites WHERE project_id = p.id AND is_active = true), 0) AS suite_count,
+			COALESCE((SELECT COUNT(*) FROM tests WHERE project_id = p.id AND is_active = true), 0) AS test_count
 		FROM projects p
-		WHERE p.organization_id = $1
+		WHERE p.organization_id = $1 AND p.is_active = true
 		ORDER BY p.name ASC, p.source_ref ASC
 	`
 
@@ -197,7 +197,9 @@ type SuiteActivityRow struct {
 	RepoURL       string         `db:"repo_url"`
 }
 
-// ListSuitesForOrg returns suites across the org with project info
+// ListSuitesForOrg returns active suites across the org with project info.
+// Deduplicates suites by (project_id, file_path), preferring the default branch version.
+// Suites that only exist on a PR branch (no default branch version) are also shown.
 func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]SuiteActivityRow, error) {
 	if limit <= 0 {
 		limit = 100
@@ -206,23 +208,51 @@ func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int
 		limit = 1000
 	}
 
+	// Use a CTE with ROW_NUMBER to deduplicate suites by (project_id, file_path).
+	// Prefer suites where source_ref matches the project's default_branch.
+	// This prevents showing duplicate suites when a PR modifies an existing suite.
 	const query = `
+		WITH ranked_suites AS (
+			SELECT
+				s.id AS suite_id,
+				s.name AS suite_name,
+				s.description,
+				s.file_path,
+				s.source_ref,
+				s.test_count,
+				s.last_run_status,
+				s.last_run_at,
+				p.id AS project_id,
+				p.name AS project_name,
+				p.repo_url,
+				p.default_branch,
+				ROW_NUMBER() OVER (
+					PARTITION BY p.id, s.file_path
+					ORDER BY
+						-- Prefer default branch first
+						CASE WHEN s.source_ref = p.default_branch THEN 0 ELSE 1 END,
+						-- Then by most recently updated
+						s.updated_at DESC
+				) AS rn
+			FROM suites s
+			JOIN projects p ON p.id = s.project_id
+			WHERE p.organization_id = $1 AND p.is_active = true AND s.is_active = true
+		)
 		SELECT
-			s.id AS suite_id,
-			s.name AS suite_name,
-			s.description,
-			s.file_path,
-			s.source_ref,
-			s.test_count,
-			s.last_run_status,
-			s.last_run_at,
-			p.id AS project_id,
-			p.name AS project_name,
-			p.repo_url
-		FROM suites s
-		JOIN projects p ON p.id = s.project_id
-		WHERE p.organization_id = $1
-		ORDER BY s.name ASC, s.source_ref ASC
+			suite_id,
+			suite_name,
+			description,
+			file_path,
+			source_ref,
+			test_count,
+			last_run_status,
+			last_run_at,
+			project_id,
+			project_name,
+			repo_url
+		FROM ranked_suites
+		WHERE rn = 1
+		ORDER BY suite_name ASC, source_ref ASC
 		LIMIT $2
 	`
 
@@ -332,6 +362,73 @@ func (s *Store) GetProjectWithOrgCheck(ctx context.Context, orgID, projectID uui
 	}
 
 	return project, nil
+}
+
+// CanonicalSuiteRow represents a suite for project canonical list views
+type CanonicalSuiteRow struct {
+	ID            uuid.UUID      `db:"id"`
+	Name          string         `db:"name"`
+	Description   sql.NullString `db:"description"`
+	FilePath      sql.NullString `db:"file_path"`
+	SourceRef     string         `db:"source_ref"`
+	TestCount     int            `db:"test_count"`
+	LastRunStatus sql.NullString `db:"last_run_status"`
+	LastRunAt     sql.NullTime   `db:"last_run_at"`
+}
+
+// ListSuitesForProjectCanonical returns active suites for a project with deduplication.
+// Deduplicates suites by (project_id, file_path), preferring the default branch version.
+// Suites that only exist on a PR branch (no default branch version) are also shown.
+// Only returns active suites from active projects.
+func (s *Store) ListSuitesForProjectCanonical(ctx context.Context, projectID uuid.UUID) ([]CanonicalSuiteRow, error) {
+	// Use a CTE with ROW_NUMBER to deduplicate suites by (project_id, file_path).
+	// Prefer suites where source_ref matches the project's default_branch.
+	const query = `
+		WITH ranked_suites AS (
+			SELECT
+				s.id,
+				s.name,
+				s.description,
+				s.file_path,
+				s.source_ref,
+				s.test_count,
+				s.last_run_status,
+				s.last_run_at,
+				ROW_NUMBER() OVER (
+					PARTITION BY s.file_path
+					ORDER BY
+						-- Prefer default branch first
+						CASE WHEN s.source_ref = p.default_branch THEN 0 ELSE 1 END,
+						-- Then by most recently updated
+						s.updated_at DESC
+				) AS rn
+			FROM suites s
+			JOIN projects p ON p.id = s.project_id
+			WHERE s.project_id = $1 AND p.is_active = true AND s.is_active = true
+		)
+		SELECT
+			id,
+			name,
+			description,
+			file_path,
+			source_ref,
+			test_count,
+			last_run_status,
+			last_run_at
+		FROM ranked_suites
+		WHERE rn = 1
+		ORDER BY name ASC
+	`
+
+	var rows []CanonicalSuiteRow
+	if err := s.db.SelectContext(ctx, &rows, query, projectID); err != nil {
+		return nil, fmt.Errorf("failed to list canonical suites for project: %w", err)
+	}
+	if rows == nil {
+		rows = []CanonicalSuiteRow{}
+	}
+
+	return rows, nil
 }
 
 // GetLatestScanForProject returns the most recent scan for a project

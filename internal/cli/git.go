@@ -11,9 +11,10 @@ import (
 
 // GitInfo contains local git repository information
 type GitInfo struct {
-	Branch    string
-	CommitSHA string
-	RepoURL   string // Normalized https://github.com/<owner>/<repo> format
+	Branch        string
+	CommitSHA     string
+	RepoURL       string // Normalized https://github.com/<owner>/<repo> format
+	CommitMessage string // First line (subject) of the commit message
 }
 
 // GetGitInfo retrieves git information from the local repository
@@ -33,6 +34,13 @@ func GetGitInfo() (*GitInfo, error) {
 		return nil, err
 	}
 	info.CommitSHA = strings.TrimSpace(sha)
+
+	// Get commit message subject (first line)
+	msg, err := runGitCommand("log", "-1", "--pretty=%s", info.CommitSHA)
+	if err == nil {
+		info.CommitMessage = strings.TrimSpace(msg)
+	}
+	// Ignore error - commit message is optional
 
 	// Get remote URL
 	remoteURL, err := runGitCommand("config", "--get", "remote.origin.url")

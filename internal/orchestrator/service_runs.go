@@ -70,6 +70,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			Branch:         strings.TrimSpace(runContext.Branch),
 			Environment:    environment,
 			CommitSHA:      makeNullString(runContext.CommitSHA),
+			CommitMessage:  makeNullString(runContext.Metadata["rs_commit_message"]),
 			BundleSHA:      sql.NullString{},
 			TotalTests:     len(run.Tests),
 			PassedTests:    0,

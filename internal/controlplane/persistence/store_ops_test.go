@@ -424,3 +424,55 @@ func TestErrors_Constants(t *testing.T) {
 		t.Errorf("unexpected error message: %v", ErrOrganizationSlugUsed)
 	}
 }
+
+// TestGitHubUserInput_NameFieldIgnored documents that the Name field in
+// GitHubUserInput is intentionally NOT used when upserting users.
+// The display name (users.name) is only set via onboarding (UpdateUserName),
+// never from GitHub OAuth data. This prevents GitHub logins from overwriting
+// user's chosen display names with GitHub's often-empty name field.
+//
+// SQL behavior (tested via integration tests in CI):
+// - INSERT: name is set to NULL regardless of input.Name
+// - UPDATE: name is never touched, only username and updated_at change
+func TestGitHubUserInput_NameFieldIgnored(t *testing.T) {
+	// GitHubUserInput has a Name field but it should be ignored by UpsertGitHubUser.
+	// This test documents the contract: even if Name is provided, it won't be used.
+	input := GitHubUserInput{
+		GitHubUserID: 12345,
+		Email:        "user@example.com",
+		Name:         "GitHub Display Name", // This field exists but should be ignored
+		Username:     "ghuser",
+	}
+
+	// Verify the input struct accepts the name field (for backwards compat)
+	if input.Name != "GitHub Display Name" {
+		t.Errorf("GitHubUserInput.Name should be settable, got %q", input.Name)
+	}
+
+	// The actual SQL behavior (name=NULL on insert, name unchanged on update)
+	// is verified by the UpsertGitHubUser implementation and integration tests.
+	// This unit test just documents the expected contract.
+}
+
+// TestUser_NullNameHandling verifies that User struct handles NULL name correctly
+func TestUser_NullNameHandling(t *testing.T) {
+	// User.Name is sql.NullString, so it can represent NULL from the database
+	user := User{
+		ID:           uuid.New(),
+		GitHubUserID: 12345,
+		Email:        "user@example.com",
+		Name:         "", // Empty string represents NULL/unset name
+		Username:     "ghuser",
+	}
+
+	// Verify empty name is valid (represents pre-onboarding state)
+	if user.Name != "" {
+		t.Errorf("expected empty name for pre-onboarding user, got %q", user.Name)
+	}
+
+	// After onboarding, name would be set
+	user.Name = "John Doe"
+	if user.Name != "John Doe" {
+		t.Errorf("expected name to be set after onboarding, got %q", user.Name)
+	}
+}

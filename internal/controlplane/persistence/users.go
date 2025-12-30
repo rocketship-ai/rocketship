@@ -9,7 +9,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// UpsertGitHubUser creates or updates a user based on GitHub user ID
+// UpsertGitHubUser creates or updates a user based on GitHub user ID.
+// Note: The display name (users.name) is NOT set from GitHub data. It is only
+// set via onboarding (UpdateUserName). This prevents GitHub logins from
+// overwriting the user's chosen display name with GitHub's often-empty name field.
 func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (User, error) {
 	if input.GitHubUserID == 0 {
 		return User{}, errors.New("github user id required")
@@ -21,19 +24,20 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
 
 	id := uuid.New()
 
+	// On INSERT: name is NULL (user sets it during onboarding)
+	// On UPDATE: only update username (GitHub SoT) and updated_at; never touch name
 	const query = `
         INSERT INTO users (id, github_user_id, email, name, username, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        VALUES ($1, $2, $3, NULL, $4, NOW(), NOW())
         ON CONFLICT (github_user_id)
         DO UPDATE SET
-            name = EXCLUDED.name,
             username = EXCLUDED.username,
             updated_at = NOW()
         RETURNING id, github_user_id, email, name, username, created_at, updated_at
     `
 
 	var user User
-	if err := s.db.GetContext(ctx, &user, query, id, input.GitHubUserID, email, input.Name, input.Username); err != nil {
+	if err := s.db.GetContext(ctx, &user, query, id, input.GitHubUserID, email, input.Username); err != nil {
 		if isUniqueViolation(err, "users_email_unique") {
 			return User{}, ErrEmailInUse
 		}

@@ -454,6 +454,10 @@ func (f *fakeStore) ListSuites(_ context.Context, _ uuid.UUID) ([]persistence.Su
 	return nil, nil
 }
 
+func (f *fakeStore) ListSuitesForProjectCanonical(_ context.Context, _ uuid.UUID) ([]persistence.CanonicalSuiteRow, error) {
+	return nil, nil
+}
+
 func (f *fakeStore) UpsertTest(_ context.Context, test persistence.Test) (persistence.Test, error) {
 	return test, nil
 }
@@ -636,6 +640,34 @@ func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.U
 
 func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _ string, _ int) ([]persistence.SuiteRunRow, error) {
 	return []persistence.SuiteRunRow{}, nil
+}
+
+func (f *fakeStore) DeactivateProjectsForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _, _ string) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) ReactivateProjectsForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _ string) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) DeactivateSuitesForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _, _ string) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) FindDefaultBranchProject(_ context.Context, _ uuid.UUID, _ string, _ []string) (persistence.Project, bool, error) {
+	return persistence.Project{}, false, nil
+}
+
+func (f *fakeStore) DeactivateSuiteByProjectRefAndFilePath(_ context.Context, _ uuid.UUID, _, _, _ string) error {
+	return nil
+}
+
+func (f *fakeStore) DeactivateSuitesMissingFromDir(_ context.Context, _ uuid.UUID, _, _ string, _ []string, _ string) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) DeactivateTestsMissingFromSuite(_ context.Context, _ uuid.UUID, _ string, _ []string, _ string) (int, error) {
+	return 0, nil
 }
 
 func TestServerDeviceFlowAndRefresh(t *testing.T) {

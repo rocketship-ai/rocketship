@@ -413,7 +413,9 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                         <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm divide-y divide-[#e5e5e5]">
                           {filteredRuns.map((run) => {
                             const status = mapStatus(run.status);
-                            const title = run.commit_message || run.id;
+                            // Prefer commit message, then "Commit <sha>", then "Manual run"
+                            const title = run.commit_message
+                              || (run.commit_sha ? `Commit ${run.commit_sha.slice(0, 7)}` : 'Manual run');
 
                             return (
                               <div
@@ -450,7 +452,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                                         {run.environment && <EnvBadge env={run.environment} />}
                                         <InitiatorBadge initiator={run.initiator_type} />
                                         {run.initiator_type === 'manual' && run.initiator_name && (
-                                          <span className="text-xs text-[#666666]">{run.initiator_name}</span>
+                                          <span className="text-xs text-[#666666]">@{run.initiator_name}</span>
                                         )}
                                       </div>
                                     </div>

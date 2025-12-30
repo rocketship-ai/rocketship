@@ -118,6 +118,25 @@ func (s *Scanner) Scan(ctx context.Context, input ScanInput) (*ScanResult, error
 			result.SuitesFound += suitesCreated
 			result.TestsFound += testsCreated
 		}
+
+		// Reconcile: deactivate suites that were previously discovered but no longer exist
+		// This ensures deleted suite files are marked inactive
+		deactivatedCount, err := s.store.DeactivateSuitesMissingFromDir(
+			ctx, project.ID, input.SourceRef.Ref, dir, suiteFiles, "missing_from_scan",
+		)
+		if err != nil {
+			slog.Error("scanner: failed to reconcile deleted suites",
+				"dir", dir,
+				"ref", input.SourceRef.Ref,
+				"error", err,
+			)
+		} else if deactivatedCount > 0 {
+			slog.Info("scanner: deactivated missing suites",
+				"dir", dir,
+				"ref", input.SourceRef.Ref,
+				"count", deactivatedCount,
+			)
+		}
 	}
 
 	return result, nil
@@ -311,9 +330,12 @@ func (s *Scanner) processSuiteFile(ctx context.Context, input ScanInput, project
 		"test_count", len(config.Tests),
 	)
 
-	// Upsert tests
+	// Upsert tests and collect present test names for reconciliation
 	testsCreated := 0
+	presentTestNames := make([]string, 0, len(config.Tests))
 	for _, test := range config.Tests {
+		presentTestNames = append(presentTestNames, test.Name)
+
 		testRecord := persistence.Test{
 			SuiteID:   upsertedSuite.ID,
 			ProjectID: project.ID,
@@ -331,6 +353,25 @@ func (s *Scanner) processSuiteFile(ctx context.Context, input ScanInput, project
 			continue
 		}
 		testsCreated++
+	}
+
+	// Reconcile: deactivate tests that were previously discovered but no longer exist in the YAML
+	deactivatedCount, err := s.store.DeactivateTestsMissingFromSuite(
+		ctx, upsertedSuite.ID, input.SourceRef.Ref, presentTestNames, "missing_from_suite_yaml",
+	)
+	if err != nil {
+		slog.Error("scanner: failed to reconcile deleted tests",
+			"suite_id", upsertedSuite.ID,
+			"ref", input.SourceRef.Ref,
+			"error", err,
+		)
+	} else if deactivatedCount > 0 {
+		slog.Info("scanner: deactivated missing tests",
+			"suite_id", upsertedSuite.ID,
+			"suite_name", upsertedSuite.Name,
+			"ref", input.SourceRef.Ref,
+			"count", deactivatedCount,
+		)
 	}
 
 	return 1, testsCreated, nil
@@ -396,6 +437,300 @@ func (s *Scanner) ScanForWebhook(ctx context.Context, input ScanInput) {
 			"error", insertErr,
 		)
 	}
+}
+
+// ScanPullRequestDelta performs a delta scan for a pull request.
+// Instead of scanning the entire tree, it only scans the files changed in the PR.
+// This prevents creating duplicate branch-specific discovery rows.
+func (s *Scanner) ScanPullRequestDelta(ctx context.Context, input ScanInput, prNumber int) (*ScanResult, error) {
+	if s.github == nil || !s.github.Configured() {
+		return nil, fmt.Errorf("github app client not configured")
+	}
+
+	result := &ScanResult{}
+
+	// Parse owner/repo from full name
+	parts := strings.SplitN(input.RepoFullName, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repo full name: %s", input.RepoFullName)
+	}
+	owner, repo := parts[0], parts[1]
+
+	// Get repository metadata for default_branch
+	repoInfo, err := s.github.GetRepository(ctx, input.InstallationID, owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get repository info: %w", err)
+	}
+
+	// Get the list of files changed in the PR
+	prFiles, err := s.github.ListPullRequestFiles(ctx, input.InstallationID, owner, repo, prNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list PR files: %w", err)
+	}
+
+	// Group all files under .rocketship directories (not just YAML)
+	// This ensures we detect new .rocketship dirs even without YAML files
+	dirFiles := make(map[string][]PullRequestFile)
+	for _, f := range prFiles {
+		// Check if file is in a .rocketship directory
+		if s.isUnderRocketshipDir(f.Filename) {
+			rocketshipDir := s.extractRocketshipDir(f.Filename)
+			dirFiles[rocketshipDir] = append(dirFiles[rocketshipDir], f)
+		}
+	}
+
+	if len(dirFiles) == 0 {
+		slog.Debug("scanner: PR does not change any .rocketship files",
+			"repo", input.RepoFullName,
+			"pr", prNumber,
+			"total_files", len(prFiles),
+		)
+		return result, nil
+	}
+
+	slog.Info("scanner: processing PR delta scan",
+		"repo", input.RepoFullName,
+		"pr", prNumber,
+		"ref", input.SourceRef.Ref,
+		"rocketship_dirs", len(dirFiles),
+	)
+
+	// Determine which ref to use for fetching content
+	fetchRef := input.HeadSHA
+	if fetchRef == "" {
+		fetchRef = input.SourceRef.Ref
+	}
+
+	// Process each .rocketship directory
+	for rocketshipDir, files := range dirFiles {
+		slog.Info("scanner: processing .rocketship directory (delta)",
+			"repo", input.RepoFullName,
+			"ref", input.SourceRef.Ref,
+			"dir", rocketshipDir,
+			"files", len(files),
+		)
+
+		// Get or create project - but prefer using existing default-branch project
+		project, err := s.upsertProjectForPR(ctx, input, repoInfo, rocketshipDir)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to upsert project for dir %s: %v", rocketshipDir, err)
+			result.Errors = append(result.Errors, errMsg)
+			slog.Error("scanner: "+errMsg, "repo", input.RepoFullName)
+			continue
+		}
+
+		// Process each file based on its status and type
+		for _, file := range files {
+			// Only process YAML files for suite operations
+			isYAML := strings.HasSuffix(file.Filename, ".yaml") || strings.HasSuffix(file.Filename, ".yml")
+
+			switch file.Status {
+			case "removed":
+				// File was deleted - deactivate the suite for this branch
+				if isYAML {
+					slog.Info("scanner: deactivating removed suite",
+						"file", file.Filename,
+						"ref", input.SourceRef.Ref,
+					)
+					if err := s.store.DeactivateSuiteByProjectRefAndFilePath(
+						ctx, project.ID, input.SourceRef.Ref, file.Filename, "removed_in_pr",
+					); err != nil {
+						slog.Error("scanner: failed to deactivate removed suite",
+							"file", file.Filename,
+							"error", err,
+						)
+					}
+				}
+
+			case "renamed":
+				// File was renamed - deactivate old path, process new path
+				if isYAML {
+					// Deactivate the old file path
+					if file.PreviousFilename != "" {
+						slog.Info("scanner: deactivating renamed suite (old path)",
+							"old_file", file.PreviousFilename,
+							"new_file", file.Filename,
+							"ref", input.SourceRef.Ref,
+						)
+						if err := s.store.DeactivateSuiteByProjectRefAndFilePath(
+							ctx, project.ID, input.SourceRef.Ref, file.PreviousFilename, "renamed_in_pr",
+						); err != nil {
+							slog.Error("scanner: failed to deactivate old path for renamed suite",
+								"file", file.PreviousFilename,
+								"error", err,
+							)
+						}
+					}
+
+					// Process the new path (will create new suite)
+					suitesCreated, testsCreated, err := s.processSuiteFile(ctx, input, project, file.Filename, fetchRef, owner, repo)
+					if err != nil {
+						errMsg := fmt.Sprintf("failed to process renamed suite file %s: %v", file.Filename, err)
+						result.Errors = append(result.Errors, errMsg)
+						slog.Error("scanner: "+errMsg, "repo", input.RepoFullName)
+						continue
+					}
+					result.SuitesFound += suitesCreated
+					result.TestsFound += testsCreated
+				}
+
+			case "added", "modified":
+				// Process added/modified YAML files
+				if isYAML {
+					suitesCreated, testsCreated, err := s.processSuiteFile(ctx, input, project, file.Filename, fetchRef, owner, repo)
+					if err != nil {
+						errMsg := fmt.Sprintf("failed to process suite file %s: %v", file.Filename, err)
+						result.Errors = append(result.Errors, errMsg)
+						slog.Error("scanner: "+errMsg, "repo", input.RepoFullName)
+						continue
+					}
+					result.SuitesFound += suitesCreated
+					result.TestsFound += testsCreated
+				}
+
+			default:
+				// Handle other statuses (copied, changed) as modified
+				if isYAML {
+					suitesCreated, testsCreated, err := s.processSuiteFile(ctx, input, project, file.Filename, fetchRef, owner, repo)
+					if err != nil {
+						errMsg := fmt.Sprintf("failed to process suite file %s: %v", file.Filename, err)
+						result.Errors = append(result.Errors, errMsg)
+						slog.Error("scanner: "+errMsg, "repo", input.RepoFullName)
+						continue
+					}
+					result.SuitesFound += suitesCreated
+					result.TestsFound += testsCreated
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// isUnderRocketshipDir checks if a file path is under a .rocketship directory
+func (s *Scanner) isUnderRocketshipDir(filePath string) bool {
+	return strings.Contains(filePath, "/.rocketship/") || strings.HasPrefix(filePath, ".rocketship/")
+}
+
+// extractRocketshipDir extracts the .rocketship directory path from a file path
+func (s *Scanner) extractRocketshipDir(filePath string) string {
+	// Handle root .rocketship/
+	if strings.HasPrefix(filePath, ".rocketship/") {
+		return ".rocketship"
+	}
+
+	// Find the .rocketship directory in the path
+	parts := strings.Split(filePath, "/")
+	for i, part := range parts {
+		if part == ".rocketship" {
+			return strings.Join(parts[:i+1], "/")
+		}
+	}
+
+	// Fallback to parent directory
+	return path.Dir(filePath)
+}
+
+// ScanPullRequestDeltaForWebhook performs a delta scan triggered by a webhook and records the attempt
+func (s *Scanner) ScanPullRequestDeltaForWebhook(ctx context.Context, input ScanInput, prNumber int) {
+	startTime := time.Now()
+
+	result, err := s.ScanPullRequestDelta(ctx, input, prNumber)
+
+	// Record the scan attempt
+	attempt := persistence.ScanAttempt{
+		DeliveryID:         input.DeliveryID,
+		OrganizationID:     input.OrgID,
+		RepositoryFullName: input.RepoFullName,
+		SourceRef:          input.SourceRef.Ref,
+		HeadSHA:            input.HeadSHA,
+	}
+
+	if err != nil {
+		attempt.Status = persistence.ScanAttemptError
+		attempt.ErrorMessage = err.Error()
+		slog.Error("scanner: PR delta scan failed",
+			"org_id", input.OrgID,
+			"repo", input.RepoFullName,
+			"ref", input.SourceRef.Ref,
+			"pr", prNumber,
+			"error", err,
+			"duration", time.Since(startTime),
+		)
+	} else if len(result.Errors) > 0 {
+		attempt.Status = persistence.ScanAttemptError
+		attempt.ErrorMessage = strings.Join(result.Errors, "; ")
+		attempt.SuitesFound = result.SuitesFound
+		attempt.TestsFound = result.TestsFound
+		slog.Warn("scanner: PR delta scan completed with errors",
+			"org_id", input.OrgID,
+			"repo", input.RepoFullName,
+			"ref", input.SourceRef.Ref,
+			"pr", prNumber,
+			"suites_found", result.SuitesFound,
+			"tests_found", result.TestsFound,
+			"errors", len(result.Errors),
+			"duration", time.Since(startTime),
+		)
+	} else {
+		attempt.Status = persistence.ScanAttemptSuccess
+		attempt.SuitesFound = result.SuitesFound
+		attempt.TestsFound = result.TestsFound
+		slog.Info("scanner: PR delta scan completed",
+			"org_id", input.OrgID,
+			"repo", input.RepoFullName,
+			"ref", input.SourceRef.Ref,
+			"pr", prNumber,
+			"suites_found", result.SuitesFound,
+			"tests_found", result.TestsFound,
+			"duration", time.Since(startTime),
+		)
+	}
+
+	// Insert scan attempt record
+	if insertErr := s.store.InsertScanAttempt(ctx, attempt); insertErr != nil {
+		slog.Error("scanner: failed to record scan attempt",
+			"delivery_id", input.DeliveryID,
+			"error", insertErr,
+		)
+	}
+}
+
+// upsertProjectForPR creates or retrieves a project for a PR scan.
+// Unlike upsertProject, this prefers reusing an existing default-branch project
+// rather than creating a new branch-specific project.
+func (s *Scanner) upsertProjectForPR(ctx context.Context, input ScanInput, repoInfo *GitHubRepoInfo, rocketshipDir string) (persistence.Project, error) {
+	// Build path_scope
+	pathScope := []string{rocketshipDir + "/**"}
+	repoURL := fmt.Sprintf("https://github.com/%s", input.RepoFullName)
+
+	// First, check if a default-branch project exists for this repo+pathScope
+	defaultProject, found, err := s.store.FindDefaultBranchProject(ctx, input.OrgID, repoURL, pathScope)
+	if err != nil {
+		return persistence.Project{}, fmt.Errorf("failed to check for default branch project: %w", err)
+	}
+
+	if found {
+		// Use the existing default-branch project - don't create a branch variant
+		slog.Debug("scanner: reusing default branch project for PR",
+			"project_id", defaultProject.ID,
+			"project_name", defaultProject.Name,
+			"pr_ref", input.SourceRef.Ref,
+			"default_branch", defaultProject.DefaultBranch,
+		)
+		return defaultProject, nil
+	}
+
+	// No default-branch project exists - this is a new .rocketship dir introduced by the PR
+	// Create a new project for this PR branch
+	slog.Info("scanner: creating new project for PR (new .rocketship dir)",
+		"repo", input.RepoFullName,
+		"ref", input.SourceRef.Ref,
+		"dir", rocketshipDir,
+	)
+
+	return s.upsertProject(ctx, input, repoInfo, rocketshipDir)
 }
 
 // recordScanAttempt records a scan attempt without performing the scan

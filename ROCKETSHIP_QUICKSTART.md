@@ -27,6 +27,10 @@ playwright install chromium
 pip install claude-agent-sdk
 ```
 
+## Things to ALWAYS Remember. THEY ARE BIBLE.
+
+- Rocketship YAML files are strongly typed and must be 100% accurate in order to run. NEVER make assumptions on ANY yaml schema, eg. plugin configs. ALWAYS fetch the docs and read them before editing.
+
 ## Basic Test Structure
 
 ```yaml
@@ -103,6 +107,8 @@ I highly recommend you just use the -a flag and let Rocketship handle the server
 
 ## Core Plugins (Quick Examples)
 
+Examples below are minimal; ALWAYS verify full schema and types in the plugin docs.
+
 ### HTTP Plugin
 
 ```yaml
@@ -125,64 +131,21 @@ I highly recommend you just use the -a flag and let Rocketship handle the server
       as: "user_id"
 ```
 
-### Supabase Plugin
-
-```yaml
-- plugin: supabase
-  config:
-    url: "{{ .env.SUPABASE_URL }}"
-    key: "{{ .env.SUPABASE_KEY }}"
-    operation: "auth_sign_up"
-    auth:
-      email: "test-{{ .run.id }}@example.com"
-      password: "password123"
-  save:
-    - json_path: ".user.id"
-      as: "user_id"
-```
-
-More operations: `select`, `insert`, `update`, `delete`, `rpc`, `auth_sign_in`, `auth_create_user`, `auth_delete_user`, `storage_*`. See docs for full examples.
-
 ### Log Plugin
 
 ```yaml
 - plugin: log
   config:
     message: "Starting auth flow for run {{ .run.id }}"
-    level: "INFO"
 ```
 
-### Playwright Plugin (Scripted Browser)
+### Delay Plugin
 
 ```yaml
-- plugin: playwright
+- plugin: delay
   config:
-    role: script
-    script: |
-      from playwright.sync_api import expect
-
-      page.goto("{{ .env.FRONTEND_URL }}/login")
-      page.locator("#email").fill("test@example.com")
-      page.locator("#password").fill("password123")
-      page.locator("button[type='submit']").click()
-
-      expect(page).to_have_url("{{ .env.FRONTEND_URL }}/dashboard")
+    duration: "1s"
 ```
-
-### Agent Plugin (AI-Driven)
-
-```yaml
-- plugin: agent
-  config:
-    prompt: |
-      In the current browser session, verify:
-      - Login form has email and password fields
-      - Submit button is present and enabled
-      - Successful login shows "Hello {{ login_email }}" somewhere on the page
-    capabilities: ["browser"]
-```
-
-**Capabilities**: `["browser"]` lets the agent hook into a browser session created by Rocketship (e.g., via the Playwright plugin).
 
 ### Script Plugin
 

@@ -63,6 +63,7 @@ type dataStore interface {
 	UpsertSuite(ctx context.Context, suite persistence.Suite) (persistence.Suite, error)
 	GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, sourceRef string) (persistence.Suite, bool, error)
 	ListSuites(ctx context.Context, projectID uuid.UUID) ([]persistence.Suite, error)
+	ListSuitesForProjectCanonical(ctx context.Context, projectID uuid.UUID) ([]persistence.CanonicalSuiteRow, error)
 	UpsertTest(ctx context.Context, test persistence.Test) (persistence.Test, error)
 
 	// Schedule management
@@ -94,6 +95,23 @@ type dataStore interface {
 	// Suite run activity queries
 	ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) ([]uuid.UUID, error)
 	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName string, limit int) ([]persistence.SuiteRunRow, error)
+
+	// Project lifecycle management (PR close/reopen)
+	DeactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef, reason string) (int, error)
+	ReactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef string) (int, error)
+
+	// Suite lifecycle management (PR close)
+	DeactivateSuitesForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef, reason string) (int, error)
+
+	// Project lookup for PR delta scanning
+	FindDefaultBranchProject(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) (persistence.Project, bool, error)
+
+	// Suite lifecycle management for PR delta scanning
+	DeactivateSuiteByProjectRefAndFilePath(ctx context.Context, projectID uuid.UUID, sourceRef, filePath, reason string) error
+
+	// Reconciliation for full scans (deactivate missing suites/tests)
+	DeactivateSuitesMissingFromDir(ctx context.Context, projectID uuid.UUID, sourceRef, rocketshipDir string, presentFilePaths []string, reason string) (int, error)
+	DeactivateTestsMissingFromSuite(ctx context.Context, suiteID uuid.UUID, sourceRef string, presentTestNames []string, reason string) (int, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)

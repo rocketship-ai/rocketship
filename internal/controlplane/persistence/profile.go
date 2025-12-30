@@ -38,6 +38,8 @@ func (s *Store) GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (Organ
 // ListProjectPermissionsForUser returns project permissions for a user within an organization.
 // If the user is an org admin, they get read+write on all projects in the org.
 // Otherwise, permissions come from project_members table.
+// Results are deduped by (repo_url, path_scope), preferring the default branch version.
+// Only returns active projects.
 func (s *Store) ListProjectPermissionsForUser(ctx context.Context, orgID, userID uuid.UUID) ([]ProjectPermissionRow, error) {
 	// First check if user is org admin
 	isAdmin, err := s.IsOrganizationAdmin(ctx, orgID, userID)
@@ -46,12 +48,27 @@ func (s *Store) ListProjectPermissionsForUser(ctx context.Context, orgID, userID
 	}
 
 	if isAdmin {
-		// Org admins get read+write on all projects in the org
+		// Org admins get read+write on all active projects in the org
+		// Dedup by (repo_url, path_scope), preferring default branch version
 		const adminQuery = `
+			WITH ranked_projects AS (
+				SELECT
+					id,
+					name,
+					source_ref,
+					ROW_NUMBER() OVER (
+						PARTITION BY lower(repo_url), path_scope::text
+						ORDER BY
+							CASE WHEN source_ref = default_branch THEN 0 ELSE 1 END,
+							updated_at DESC
+					) AS rn
+				FROM projects
+				WHERE organization_id = $1 AND is_active = true
+			)
 			SELECT id, name, source_ref
-			FROM projects
-			WHERE organization_id = $1
-			ORDER BY name ASC, source_ref ASC
+			FROM ranked_projects
+			WHERE rn = 1
+			ORDER BY name ASC
 		`
 
 		rows, err := s.db.QueryContext(ctx, adminQuery, orgID)
@@ -76,12 +93,28 @@ func (s *Store) ListProjectPermissionsForUser(ctx context.Context, orgID, userID
 	}
 
 	// Non-admin: get permissions from project_members, scoped to org
+	// Dedup by (repo_url, path_scope), preferring default branch version
 	const memberQuery = `
-		SELECT p.id, p.name, p.source_ref, pm.role
-		FROM projects p
-		JOIN project_members pm ON pm.project_id = p.id
-		WHERE p.organization_id = $1 AND pm.user_id = $2
-		ORDER BY p.name ASC, p.source_ref ASC
+		WITH ranked_projects AS (
+			SELECT
+				p.id,
+				p.name,
+				p.source_ref,
+				pm.role,
+				ROW_NUMBER() OVER (
+					PARTITION BY lower(p.repo_url), p.path_scope::text
+					ORDER BY
+						CASE WHEN p.source_ref = p.default_branch THEN 0 ELSE 1 END,
+						p.updated_at DESC
+				) AS rn
+			FROM projects p
+			JOIN project_members pm ON pm.project_id = p.id
+			WHERE p.organization_id = $1 AND pm.user_id = $2 AND p.is_active = true
+		)
+		SELECT id, name, source_ref, role
+		FROM ranked_projects
+		WHERE rn = 1
+		ORDER BY name ASC
 	`
 
 	rows, err := s.db.QueryContext(ctx, memberQuery, orgID, userID)

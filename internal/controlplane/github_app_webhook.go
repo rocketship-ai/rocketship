@@ -118,6 +118,11 @@ func (s *Server) processWebhookForScanning(ctx context.Context, event, deliveryI
 		return
 	}
 
+	// Handle PR lifecycle events (close/reopen) before scan determination
+	if event == "pull_request" {
+		s.handlePRLifecycleEvent(ctx, payload)
+	}
+
 	// Determine if this event should trigger a scan
 	var shouldScan bool
 	var sourceRef NormalizedRef
@@ -181,11 +186,18 @@ func (s *Server) processWebhookForScanning(ctx context.Context, event, deliveryI
 
 		// Scan synchronously for now (MVP)
 		// TODO: Consider moving to async/queue for production
-		scanner.ScanForWebhook(ctx, input)
+		if event == "pull_request" && payload.PullRequest != nil {
+			// Use delta scan for PRs - only scan changed files
+			scanner.ScanPullRequestDeltaForWebhook(ctx, input, payload.PullRequest.Number)
+		} else {
+			// Full scan for push events (already restricted to default branch)
+			scanner.ScanForWebhook(ctx, input)
+		}
 	}
 }
 
 // shouldScanPushEvent determines if a push event should trigger a scan
+// Only scans pushes to the default branch to prevent feature branch duplicates
 func (s *Server) shouldScanPushEvent(payload *webhookPayload) (bool, NormalizedRef, string) {
 	// Normalize the ref
 	sourceRef := NormalizeSourceRef(payload.Ref)
@@ -194,6 +206,18 @@ func (s *Server) shouldScanPushEvent(payload *webhookPayload) (bool, NormalizedR
 	headSHA := payload.After
 	if headSHA == "" && payload.HeadCommit != nil {
 		headSHA = payload.HeadCommit.ID
+	}
+
+	// Only scan pushes to the default branch
+	// Feature branch pushes should not create branch-specific discovery rows
+	if payload.Repository != nil && payload.Repository.DefaultBranch != "" {
+		if sourceRef.Ref != payload.Repository.DefaultBranch {
+			slog.Debug("webhook: push is not to default branch, skipping scan",
+				"ref", sourceRef.Ref,
+				"default_branch", payload.Repository.DefaultBranch,
+			)
+			return false, sourceRef, headSHA
+		}
 	}
 
 	// Check if any commits touch .rocketship files
@@ -259,6 +283,119 @@ func (s *Server) shouldScanPullRequestEvent(payload *webhookPayload) (bool, Norm
 	return true, sourceRef, headSHA
 }
 
+// handlePRLifecycleEvent handles PR close/reopen events to deactivate/reactivate discovery rows
+func (s *Server) handlePRLifecycleEvent(ctx context.Context, payload *webhookPayload) {
+	if payload.PullRequest == nil || payload.PullRequest.Head == nil || payload.PullRequest.Head.Ref == "" {
+		return
+	}
+
+	headBranch := payload.PullRequest.Head.Ref
+
+	// Handle PR closed - deactivate feature-branch discovery
+	if payload.Action == "closed" {
+		reason := "closed"
+		if payload.PullRequest.Merged {
+			reason = "merged"
+		}
+
+		// Build repo URL from repository full name
+		if payload.Repository == nil || payload.Repository.FullName == "" {
+			return
+		}
+		repoURL := "https://github.com/" + payload.Repository.FullName
+
+		// Look up organizations for this installation
+		orgIDs, err := s.store.ListOrgsByInstallationID(ctx, payload.Installation.ID)
+		if err != nil {
+			slog.Error("webhook: failed to list orgs for PR lifecycle",
+				"installation_id", payload.Installation.ID,
+				"error", err,
+			)
+			return
+		}
+
+		// Deactivate projects and suites for each org
+		for _, orgID := range orgIDs {
+			// Deactivate feature-branch projects
+			projectCount, err := s.store.DeactivateProjectsForRepoAndSourceRef(ctx, orgID, repoURL, headBranch, reason)
+			if err != nil {
+				slog.Error("webhook: failed to deactivate projects",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"error", err,
+				)
+			} else if projectCount > 0 {
+				slog.Info("webhook: deactivated projects on PR close",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"reason", reason,
+					"count", projectCount,
+				)
+			}
+
+			// Deactivate feature-branch suites (may exist under default-branch project)
+			suiteCount, err := s.store.DeactivateSuitesForRepoAndSourceRef(ctx, orgID, repoURL, headBranch, reason)
+			if err != nil {
+				slog.Error("webhook: failed to deactivate suites",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"error", err,
+				)
+			} else if suiteCount > 0 {
+				slog.Info("webhook: deactivated suites on PR close",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"reason", reason,
+					"count", suiteCount,
+				)
+			}
+		}
+		return
+	}
+
+	// Handle PR reopened - reactivate feature-branch discovery
+	if payload.Action == "reopened" {
+		if payload.Repository == nil || payload.Repository.FullName == "" {
+			return
+		}
+		repoURL := "https://github.com/" + payload.Repository.FullName
+
+		orgIDs, err := s.store.ListOrgsByInstallationID(ctx, payload.Installation.ID)
+		if err != nil {
+			slog.Error("webhook: failed to list orgs for PR lifecycle",
+				"installation_id", payload.Installation.ID,
+				"error", err,
+			)
+			return
+		}
+
+		for _, orgID := range orgIDs {
+			count, err := s.store.ReactivateProjectsForRepoAndSourceRef(ctx, orgID, repoURL, headBranch)
+			if err != nil {
+				slog.Error("webhook: failed to reactivate projects",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"error", err,
+				)
+				continue
+			}
+			if count > 0 {
+				slog.Info("webhook: reactivated projects on PR reopen",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"count", count,
+				)
+			}
+		}
+	}
+}
+
 // commitTouchesRocketship checks if a commit touches any .rocketship files
 func (s *Server) commitTouchesRocketship(commit *webhookCommit) bool {
 	if commit == nil {
@@ -317,6 +454,7 @@ type webhookPullRequest struct {
 	Number int                    `json:"number"`
 	Head   *webhookPullRequestRef `json:"head,omitempty"`
 	Base   *webhookPullRequestRef `json:"base,omitempty"`
+	Merged bool                   `json:"merged"`
 }
 
 type webhookPullRequestRef struct {
