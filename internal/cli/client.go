@@ -23,8 +23,11 @@ import (
 )
 
 type EngineClient struct {
-	client generated.EngineClient
-	conn   *grpc.ClientConn
+	client    generated.EngineClient
+	conn      *grpc.ClientConn
+	hasAuth   bool // whether an auth token was attached
+	usedProfile bool // whether we resolved via a profile
+	profileName string // name of the profile used
 }
 
 type tokenSource string
@@ -46,6 +49,7 @@ func NewEngineClient(address string) (*EngineClient, error) {
 	Logger.Debug("connecting to engine", "address", target)
 
 	dialOpts := []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	hasAuth := false
 	if token, src, err := resolveAuthToken(usedProfile, profileName); err != nil {
 		return nil, err
 	} else if token != "" {
@@ -54,6 +58,7 @@ func NewEngineClient(address string) (*EngineClient, error) {
 			grpc.WithChainUnaryInterceptor(newTokenUnaryInterceptor(token)),
 			grpc.WithChainStreamInterceptor(newTokenStreamInterceptor(token)),
 		)
+		hasAuth = true
 	}
 
 	conn, err := grpc.NewClient(target, dialOpts...)
@@ -66,13 +71,21 @@ func NewEngineClient(address string) (*EngineClient, error) {
 
 	client := generated.NewEngineClient(conn)
 	return &EngineClient{
-		client: client,
-		conn:   conn,
+		client:      client,
+		conn:        conn,
+		hasAuth:     hasAuth,
+		usedProfile: usedProfile,
+		profileName: profileName,
 	}, nil
 }
 
 func (c *EngineClient) Close() error {
 	return c.conn.Close()
+}
+
+// HasAuthToken returns true if the client is using an auth token
+func (c *EngineClient) HasAuthToken() bool {
+	return c.hasAuth
 }
 
 // HealthCheck performs a health check against the engine

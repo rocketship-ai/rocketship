@@ -542,6 +542,40 @@ func NewRunCmd() *cobra.Command {
 				}
 			}
 
+			// Auto-populate from local git for authenticated manual runs (non-CI, non-auto mode)
+			// This enables project association for manual local runs
+			if !isAuto && client.HasAuthToken() && os.Getenv("GITHUB_ACTIONS") != "true" {
+				// Only auto-populate if user didn't provide flags
+				if source == "" {
+					source = "cli-local"
+				}
+				if trigger == "" {
+					trigger = "manual"
+				}
+
+				// Try to get git info from local repo
+				gitInfo, err := GetGitInfo()
+				if err != nil {
+					Logger.Debug("failed to get git info", "error", err)
+				} else {
+					if branch == "" && gitInfo.Branch != "" {
+						branch = gitInfo.Branch
+					}
+					if commit == "" && gitInfo.CommitSHA != "" {
+						commit = gitInfo.CommitSHA
+					}
+					// Add repo URL to metadata
+					if gitInfo.RepoURL != "" {
+						if metadata == nil {
+							metadata = make(map[string]string)
+						}
+						if _, ok := metadata["rs_repo_url"]; !ok {
+							metadata["rs_repo_url"] = gitInfo.RepoURL
+						}
+					}
+				}
+			}
+
 			// Build RunContext if any context flags are set
 			var runContext *generated.RunContext
 			if projectID != "" || source != "" || branch != "" || commit != "" ||
@@ -600,6 +634,36 @@ func NewRunCmd() *cobra.Command {
 					return fmt.Errorf("failed to get working directory: %w", err)
 				}
 				testFiles = []string{filepath.Join(wd, "rocketship.yaml")}
+			}
+
+			// Add path_scope to metadata if we have authenticated manual runs
+			// Use the first test file to derive path scope (assumes all files are in the same .rocketship dir)
+			if runContext != nil && client.HasAuthToken() && len(testFiles) > 0 {
+				if runContext.Metadata == nil {
+					runContext.Metadata = make(map[string]string)
+				}
+				if _, ok := runContext.Metadata["rs_path_scope_json"]; !ok {
+					pathScope, err := DerivePathScope(testFiles[0])
+					if err != nil {
+						Logger.Debug("failed to derive path scope", "error", err)
+					} else {
+						runContext.Metadata["rs_path_scope_json"] = PathScopeToJSON(pathScope)
+						Logger.Debug("derived path scope", "path_scope", pathScope)
+					}
+				}
+				// Also add the suite file path for debugging
+				if _, ok := runContext.Metadata["rs_suite_file"]; !ok && len(testFiles) == 1 {
+					repoRoot, err := GetRepoRoot()
+					if err == nil {
+						absPath, err := filepath.Abs(testFiles[0])
+						if err == nil {
+							relPath, err := filepath.Rel(repoRoot, absPath)
+							if err == nil {
+								runContext.Metadata["rs_suite_file"] = relPath
+							}
+						}
+					}
+				}
 			}
 
 			// Channel to collect results from all test suites
