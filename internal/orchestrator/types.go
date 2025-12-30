@@ -34,6 +34,13 @@ type RunStore interface {
 	ListRunTests(ctx context.Context, runID string) ([]persistence.RunTest, error)
 	InsertRunLog(ctx context.Context, log persistence.RunLog) (persistence.RunLog, error)
 	ListRunLogs(ctx context.Context, runID string, limit int) ([]persistence.RunLog, error)
+	// Project lookup for run association
+	FindProjectByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) (persistence.Project, bool, error)
+	// Suite/test lookup for run linking
+	GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, sourceRef string) (persistence.Suite, bool, error)
+	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
+	UpdateSuiteLastRun(ctx context.Context, suiteID uuid.UUID, runID, status string, runAt time.Time) error
+	UpdateTestLastRun(ctx context.Context, testID uuid.UUID, runID, status string, runAt time.Time, durationMs int64) error
 }
 
 type RunInfo struct {
@@ -53,6 +60,10 @@ type RunInfo struct {
 	Vars               map[string]interface{}
 	SuiteOpenAPI       *dsl.OpenAPISuiteConfig
 	OrganizationID     uuid.UUID
+	// Project/suite/test linking for DB persistence
+	ProjectID uuid.UUID            // Resolved project ID (copied from record for convenience)
+	SuiteID   uuid.UUID            // Resolved suite ID
+	TestIDs   map[string]uuid.UUID // Test name (lowercase) -> discovered test ID
 }
 
 type LogLine struct {
@@ -70,6 +81,7 @@ type TestInfo struct {
 	StartedAt  time.Time
 	EndedAt    time.Time
 	RunID      string
+	TestID     uuid.UUID // Resolved discovered test ID (for last_run updates)
 }
 
 // TestStatusCounts represents the count of tests in different states

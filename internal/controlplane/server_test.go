@@ -629,6 +629,15 @@ func (f *fakeStore) ListProjectPermissionsForUser(_ context.Context, orgID, user
 	}, nil
 }
 
+// Suite run activity methods
+func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.UUID, _ string, _ []string) ([]uuid.UUID, error) {
+	return []uuid.UUID{}, nil
+}
+
+func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _ string, _ int) ([]persistence.SuiteRunRow, error) {
+	return []persistence.SuiteRunRow{}, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

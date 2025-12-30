@@ -95,6 +95,13 @@ func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
 		if err := e.runStore.UpdateRunTestByWorkflowID(context.Background(), workflowID, status, errMsg, endedAt, durationMs); err != nil {
 			slog.Error("updateTestStatus: failed to persist run_test status", "workflow_id", workflowID, "error", err)
 		}
+
+		// Update test last_run if we have a resolved test_id
+		if testInfo.TestID != uuid.Nil {
+			if err := e.runStore.UpdateTestLastRun(context.Background(), testInfo.TestID, runID, status, endedAt, durationMs); err != nil {
+				slog.Debug("updateTestStatus: failed to update test last_run", "test_id", testInfo.TestID, "error", err)
+			}
+		}
 	}
 
 	e.checkIfRunFinished(runID)
@@ -180,6 +187,7 @@ func (e *Engine) checkIfRunFinished(runID string) {
 		runInfo.Status = "PASSED"
 		runInfo.EndedAt = time.Now().UTC()
 		orgID := runInfo.OrganizationID
+		suiteID := runInfo.SuiteID
 		endTime := runInfo.EndedAt
 		e.mu.Unlock()
 		e.addLog(runID, fmt.Sprintf("Test run: \"%s\" finished. All %d tests passed.", runName, counts.Total), "n/a", true)
@@ -193,6 +201,12 @@ func (e *Engine) checkIfRunFinished(runID string) {
 			}); err != nil {
 				slog.Error("checkIfRunFinished: failed to persist PASSED state", "run_id", runID, "error", err)
 			}
+			// Update suite last_run
+			if suiteID != uuid.Nil {
+				if err := e.runStore.UpdateSuiteLastRun(context.Background(), suiteID, runID, "PASSED", endTime); err != nil {
+					slog.Debug("checkIfRunFinished: failed to update suite last_run", "suite_id", suiteID, "error", err)
+				}
+			}
 		}
 		return
 	}
@@ -200,6 +214,7 @@ func (e *Engine) checkIfRunFinished(runID string) {
 	runInfo.Status = "FAILED"
 	runInfo.EndedAt = time.Now().UTC()
 	orgID := runInfo.OrganizationID
+	suiteID := runInfo.SuiteID
 	endTime := runInfo.EndedAt
 	e.mu.Unlock()
 
@@ -218,6 +233,12 @@ func (e *Engine) checkIfRunFinished(runID string) {
 			Totals:         makeRunTotals(counts),
 		}); err != nil {
 			slog.Error("checkIfRunFinished: failed to persist FAILED state", "run_id", runID, "error", err)
+		}
+		// Update suite last_run
+		if suiteID != uuid.Nil {
+			if err := e.runStore.UpdateSuiteLastRun(context.Background(), suiteID, runID, "FAILED", endTime); err != nil {
+				slog.Debug("checkIfRunFinished: failed to update suite last_run", "suite_id", suiteID, "error", err)
+			}
 		}
 	}
 }

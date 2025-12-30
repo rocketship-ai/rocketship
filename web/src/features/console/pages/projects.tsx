@@ -90,7 +90,7 @@ export function Projects({ onSelectProject }: ProjectsProps) {
                   <div className="flex items-center gap-3 mb-3">
                     <FolderOpen className="w-5 h-5 text-[#666666]" />
                     <h3>{project.name}</h3>
-                    <SourceRefBadge sourceRef={project.source_ref} />
+                    <SourceRefBadge sourceRef={project.source_ref} defaultBranch={project.default_branch} />
                   </div>
 
                   <div className="space-y-2 mb-4">
@@ -129,12 +129,7 @@ export function Projects({ onSelectProject }: ProjectsProps) {
                   {project.last_scan ? (
                     <p className="text-xs text-[#999999]">
                       Last scanned {new Date(project.last_scan.created_at).toLocaleString()}
-                      {project.last_scan.status === 'success'
-                        ? ` - found ${project.last_scan.suites_found} suites, ${project.last_scan.tests_found} tests`
-                        : project.last_scan.status === 'error'
-                          ? ` - scan failed: ${project.last_scan.error_message}`
-                          : ` - ${project.last_scan.status}`
-                      }
+                      {project.last_scan.status === 'error' && ` - scan failed: ${project.last_scan.error_message}`}
                     </p>
                   ) : (
                     <p className="text-xs text-[#999999]">Not yet scanned</p>

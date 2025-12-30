@@ -245,6 +245,115 @@ func (s *Server) handleSuiteActivity(w http.ResponseWriter, r *http.Request, pri
 	writeJSON(w, http.StatusOK, payload)
 }
 
+// handleSuiteRuns handles GET /api/suites/{suiteId}/runs
+// Returns run history for a suite across all branches/refs
+func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, suiteID uuid.UUID) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	// Get suite detail (includes org check)
+	suite, err := s.store.GetSuiteDetail(r.Context(), principal.OrgID, suiteID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "suite not found")
+			return
+		}
+		log.Printf("failed to get suite detail: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get suite")
+		return
+	}
+
+	// Get project to obtain repo_url and path_scope
+	project, err := s.store.GetProjectWithOrgCheck(r.Context(), principal.OrgID, suite.ProjectID)
+	if err != nil {
+		log.Printf("failed to get project for suite: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get project")
+		return
+	}
+
+	// Find all project IDs in this org with the same repo/path_scope (same .rocketship directory)
+	projectIDs, err := s.store.ListProjectIDsByRepoAndPathScope(r.Context(), principal.OrgID, project.RepoURL, project.PathScope)
+	if err != nil {
+		log.Printf("failed to list project IDs: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to find related projects")
+		return
+	}
+
+	// Query runs for these projects + suite name
+	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, 200)
+	if err != nil {
+		log.Printf("failed to list runs for suite: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to list runs")
+		return
+	}
+
+	// Build response
+	payload := make([]map[string]interface{}, 0, len(runs))
+	for _, run := range runs {
+		item := map[string]interface{}{
+			"id":          run.ID,
+			"status":      run.Status,
+			"branch":      run.Branch,
+			"environment": run.Environment,
+			"created_at":  run.CreatedAt.Format(time.RFC3339),
+			"total_tests":   run.TotalTests,
+			"passed_tests":  run.PassedTests,
+			"failed_tests":  run.FailedTests,
+			"timeout_tests": run.TimeoutTests,
+			"skipped_tests": run.SkippedTests,
+		}
+
+		// Nullable fields
+		if run.CommitSHA.Valid {
+			item["commit_sha"] = run.CommitSHA.String
+		}
+		if run.CommitMessage.Valid {
+			item["commit_message"] = run.CommitMessage.String
+		}
+		if run.StartedAt.Valid {
+			item["started_at"] = run.StartedAt.Time.Format(time.RFC3339)
+		}
+		if run.EndedAt.Valid {
+			item["ended_at"] = run.EndedAt.Time.Format(time.RFC3339)
+		}
+
+		// Compute duration_ms if both started and ended are present
+		if run.StartedAt.Valid && run.EndedAt.Valid {
+			item["duration_ms"] = run.EndedAt.Time.Sub(run.StartedAt.Time).Milliseconds()
+		}
+
+		// Derive initiator_type:
+		// - if schedule_id not null OR schedule_name != "" => "schedule"
+		// - else if trigger == "webhook" OR source == "ci-branch" => "ci"
+		// - else "manual"
+		var initiatorType string
+		if run.ScheduleID.Valid || run.ScheduleName != "" {
+			initiatorType = "schedule"
+		} else if run.Trigger == "webhook" || run.Source == "ci-branch" {
+			initiatorType = "ci"
+		} else {
+			initiatorType = "manual"
+		}
+		item["initiator_type"] = initiatorType
+
+		// For manual runs, include the initiator name
+		if initiatorType == "manual" && run.Initiator != "" {
+			item["initiator_name"] = run.Initiator
+		}
+
+		payload = append(payload, item)
+	}
+
+	writeJSON(w, http.StatusOK, payload)
+}
+
 // handleSuiteDetail handles GET /api/suites/{suiteId}
 func (s *Server) handleSuiteDetail(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, suiteID uuid.UUID) {
 	if r.Method != http.MethodGet {
@@ -409,6 +518,8 @@ func (s *Server) handleConsoleSuiteRoutesDispatch(w http.ResponseWriter, r *http
 
 	// Handle sub-resources
 	switch segments[1] {
+	case "runs":
+		s.handleSuiteRuns(w, r, principal, suiteID)
 	case "tests":
 		// Could add /api/suites/{id}/tests later if needed
 		writeError(w, http.StatusNotFound, "resource not found")

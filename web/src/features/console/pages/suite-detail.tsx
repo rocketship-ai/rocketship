@@ -1,10 +1,11 @@
 import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, AlertCircle, RefreshCw, FileCode } from 'lucide-react';
-import { EnvBadge } from '../components/status-badge';
+import { EnvBadge, InitiatorBadge } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { environments } from '../data/mock-data';
-import { useSuite } from '../hooks/use-console-queries';
+import { useSuite, useSuiteRuns, type SuiteRunSummary } from '../hooks/use-console-queries';
+import { SourceRefBadge } from '../components/SourceRefBadge';
 
 interface SuiteDetailProps {
   suiteId: string;
@@ -13,28 +14,64 @@ interface SuiteDetailProps {
   onViewTest?: (testId: string) => void;
 }
 
-function SourceRefBadge({ sourceRef }: { sourceRef: string }) {
-  const isPR = sourceRef.startsWith('pr/');
-  const displayText = isPR ? `#${sourceRef.slice(3)}` : sourceRef;
+// Helper to display branch name
+function BranchDisplay({ branch }: { branch: string }) {
   return (
-    <span className={`text-xs px-2 py-0.5 rounded border ${
-      isPR
-        ? 'bg-amber-50 text-amber-700 border-amber-200'
-        : 'bg-gray-50 text-gray-700 border-gray-200'
-    }`}>
-      {displayText}
+    <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
+      <GitBranch className="w-3 h-3" />
+      {branch}
     </span>
   );
 }
 
+// Map API status to UI status
+function mapStatus(status: string): 'success' | 'failed' | 'running' {
+  switch (status.toUpperCase()) {
+    case 'PASSED':
+      return 'success';
+    case 'RUNNING':
+      return 'running';
+    case 'FAILED':
+    case 'CANCELLED':
+    default:
+      return 'failed';
+  }
+}
+
+// Format duration in human-readable format
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
+// Format relative time
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
 export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDetailProps) {
   const { data: suite, isLoading, error, refetch } = useSuite(suiteId);
+  const { data: runs, isLoading: runsLoading, error: runsError, refetch: refetchRuns } = useSuiteRuns(suiteId);
 
   const [activeTab, setActiveTab] = useState<'activity' | 'tests' | 'schedules' | 'variables' | 'lifecycle-hooks' | 'retry-policy' | 'alerts'>('activity');
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInitiators, setSelectedInitiators] = useState<string[]>([]);
-  const [selectedStates, _setSelectedStates] = useState<string[]>([]);
   const [_selectedEnvironments, _setSelectedEnvironments] = useState<string[]>([]);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<string | null>(null);
@@ -85,6 +122,45 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
       name: `Step ${i + 1}`,
     })),
   }));
+
+  // Group runs by branch, sorted by latest run time
+  // NOTE: This must be before early returns to satisfy React hooks rules
+  const { runsByBranch, branches } = useMemo(() => {
+    if (!runs || runs.length === 0) {
+      return { runsByBranch: {} as Record<string, SuiteRunSummary[]>, branches: [] as string[] };
+    }
+
+    // Group runs by branch
+    const grouped: Record<string, SuiteRunSummary[]> = {};
+    for (const run of runs) {
+      const branch = run.branch || 'unknown';
+      if (!grouped[branch]) {
+        grouped[branch] = [];
+      }
+      grouped[branch].push(run);
+    }
+
+    // Sort runs within each branch by created_at desc (already sorted from API, but ensure)
+    for (const branch of Object.keys(grouped)) {
+      grouped[branch].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+    }
+
+    // Sort branches: main first, then by latest run time desc
+    const sortedBranches = Object.keys(grouped).sort((a, b) => {
+      // Main branch always comes first
+      if (a === 'main') return -1;
+      if (b === 'main') return 1;
+
+      // Then sort by latest run time desc
+      const aLatest = grouped[a][0]?.created_at || '';
+      const bLatest = grouped[b][0]?.created_at || '';
+      return new Date(bLatest).getTime() - new Date(aLatest).getTime();
+    });
+
+    return { runsByBranch: grouped, branches: sortedBranches };
+  }, [runs]);
 
   if (isLoading) {
     return (
@@ -140,31 +216,6 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
     );
   }
 
-  // Runs data - empty until run history is implemented
-  const runsByBranch: Record<string, Array<{
-    id: string;
-    status: 'success' | 'failed' | 'running';
-    title: string;
-    branch: string;
-    sha: string;
-    initiator: string;
-    env: string;
-    created: string;
-    duration: string;
-  }>> = {};
-
-  const branches = Object.keys(runsByBranch);
-
-  const getInitiatorColor = (initiator: string) => {
-    switch (initiator) {
-      case 'ci': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'manual': return 'bg-green-50 text-green-700 border-green-200';
-      case 'schedule': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'agent': return 'bg-orange-50 text-orange-700 border-orange-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
-
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
@@ -193,7 +244,11 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
               </p>
             </div>
 
-            <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors">
+            <button
+              disabled
+              className="flex items-center gap-2 px-4 py-2 bg-black/50 text-white rounded-md cursor-not-allowed"
+              title="Coming soon"
+            >
               <Play className="w-4 h-4" />
               <span>Run suite</span>
             </button>
@@ -223,20 +278,55 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
         {/* Activity Tab */}
         {activeTab === 'activity' && (
           <div>
-            {branches.length === 0 ? (
-              /* Empty state when no runs exist */
+            {/* Loading state for runs */}
+            {runsLoading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-[#666666]" />
+                <span className="ml-3 text-[#666666]">Loading run history...</span>
+              </div>
+            )}
+
+            {/* Error state for runs */}
+            {runsError && !runsLoading && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-700 font-medium">Failed to load run history</p>
+                  <p className="text-red-600 text-sm mt-1">
+                    {runsError instanceof Error ? runsError.message : 'An unexpected error occurred'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => refetchRuns()}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 rounded transition-colors"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Empty state when no runs exist */}
+            {!runsLoading && !runsError && branches.length === 0 && (
               <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
                 <Clock className="w-12 h-12 text-[#999999] mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No run history yet</h3>
                 <p className="text-[#666666] text-sm mb-4">
                   Run this suite to see activity here.
                 </p>
-                <button className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-black/50 text-white rounded-md cursor-not-allowed"
+                  title="Coming soon"
+                >
                   <Play className="w-4 h-4" />
                   Run suite
                 </button>
               </div>
-            ) : (
+            )}
+
+            {/* Runs list */}
+            {!runsLoading && !runsError && branches.length > 0 && (
               <>
                 {/* Controls */}
                 <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4 mb-6">
@@ -286,8 +376,29 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
 
                 {/* Activity List */}
                 <div className="space-y-6">
-                  {Object.entries(runsByBranch).map(([branch, runs]) => {
+                  {branches.map((branch) => {
                     if (selectedBranches.length > 0 && !selectedBranches.includes(branch)) return null;
+                    const branchRuns = runsByBranch[branch] || [];
+
+                    // Filter runs based on search and initiator
+                    const filteredRuns = branchRuns.filter((run) => {
+                      // Initiator filter
+                      if (selectedInitiators.length > 0 && !selectedInitiators.includes(run.initiator_type)) {
+                        return false;
+                      }
+                      // Search filter (commit_message or commit_sha)
+                      if (searchQuery) {
+                        const query = searchQuery.toLowerCase();
+                        const matchesMessage = run.commit_message?.toLowerCase().includes(query);
+                        const matchesSha = run.commit_sha?.toLowerCase().includes(query);
+                        if (!matchesMessage && !matchesSha) {
+                          return false;
+                        }
+                      }
+                      return true;
+                    });
+
+                    if (filteredRuns.length === 0) return null;
 
                     return (
                       <div key={branch}>
@@ -295,15 +406,14 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                         <div className="flex items-center gap-2 mb-3">
                           <GitBranch className="w-4 h-4 text-[#666666]" />
                           <h3>{branch}</h3>
-                          <span className="text-xs text-[#999999]">({runs.length} runs)</span>
+                          <span className="text-xs text-[#999999]">({filteredRuns.length} runs)</span>
                         </div>
 
                         {/* Runs list */}
                         <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm divide-y divide-[#e5e5e5]">
-                          {[...runs].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map((run) => {
-                            if (selectedStates.length > 0 && !selectedStates.includes(run.status)) return null;
-                            if (selectedInitiators.length > 0 && !selectedInitiators.includes(run.initiator)) return null;
-                            if (searchQuery && !run.title.toLowerCase().includes(searchQuery.toLowerCase()) && !run.sha.includes(searchQuery)) return null;
+                          {filteredRuns.map((run) => {
+                            const status = mapStatus(run.status);
+                            const title = run.commit_message || run.id;
 
                             return (
                               <div
@@ -315,46 +425,42 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                                   <div className="flex items-center gap-4 flex-1">
                                     {/* Status icon */}
                                     <div>
-                                      {run.status === 'success' && (
+                                      {status === 'success' && (
                                         <CheckCircle2 className="w-5 h-5 text-[#4CBB17]" />
                                       )}
-                                      {run.status === 'failed' && (
+                                      {status === 'failed' && (
                                         <XCircle className="w-5 h-5 text-[#ef0000]" />
                                       )}
-                                      {run.status === 'running' && (
-                                        <Clock className="w-5 h-5 text-[#4CBB17] animate-spin" />
+                                      {status === 'running' && (
+                                        <Loader2 className="w-5 h-5 text-[#4CBB17] animate-spin" />
                                       )}
                                     </div>
 
                                     {/* Run info */}
                                     <div className="flex-1">
-                                      <p className="text-sm mb-1">{run.title}</p>
-                                      <div className="flex items-center gap-3">
-                                        <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
-                                          <GitBranch className="w-3 h-3" />
-                                          {run.branch}
-                                        </span>
-                                        <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
-                                          <Hash className="w-3 h-3" />
-                                          {run.sha}
-                                        </span>
-                                        {run.initiator !== 'manual' && <EnvBadge env={run.env} />}
-                                        <span className={`text-xs px-2 py-0.5 rounded border ${getInitiatorColor(run.initiator)}`}>
-                                          {run.initiator}
-                                        </span>
-                                        {run.initiator === 'manual' && (
-                                          <>
-                                            <span className="text-xs text-[#999999]">•</span>
-                                            <span className="text-xs text-[#666666]">Austin Rath</span>
-                                          </>
+                                      <p className="text-sm mb-1 truncate max-w-lg">{title}</p>
+                                      <div className="flex items-center gap-3 flex-wrap">
+                                        <BranchDisplay branch={run.branch} />
+                                        {run.commit_sha && (
+                                          <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
+                                            <Hash className="w-3 h-3" />
+                                            {run.commit_sha.slice(0, 7)}
+                                          </span>
+                                        )}
+                                        {run.environment && <EnvBadge env={run.environment} />}
+                                        <InitiatorBadge initiator={run.initiator_type} />
+                                        {run.initiator_type === 'manual' && run.initiator_name && (
+                                          <span className="text-xs text-[#666666]">{run.initiator_name}</span>
                                         )}
                                       </div>
                                     </div>
 
                                     {/* Metadata */}
                                     <div className="flex items-center gap-4 text-sm text-[#666666]">
-                                      <span>{run.created}</span>
-                                      <span>{run.duration}</span>
+                                      <span>{formatRelativeTime(run.created_at)}</span>
+                                      {run.duration_ms !== undefined && (
+                                        <span>{formatDuration(run.duration_ms)}</span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>

@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -80,6 +81,31 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		// Parse project_id as UUID if it's a valid UUID
 		if projectID, err := uuid.Parse(runContext.ProjectID); err == nil && projectID != uuid.Nil {
 			record.ProjectID = uuid.NullUUID{UUID: projectID, Valid: true}
+		} else if runContext.Metadata != nil {
+			// Fallback: resolve project_id from metadata (rs_repo_url + rs_path_scope_json)
+			repoURL := runContext.Metadata["rs_repo_url"]
+			pathScopeJSON := runContext.Metadata["rs_path_scope_json"]
+			if repoURL != "" && pathScopeJSON != "" {
+				var pathScope []string
+				if err := json.Unmarshal([]byte(pathScopeJSON), &pathScope); err != nil {
+					slog.Debug("CreateRun: failed to parse rs_path_scope_json", "error", err)
+				} else {
+					project, found, err := e.runStore.FindProjectByRepoAndPathScope(ctx, orgID, repoURL, pathScope)
+					if err != nil {
+						slog.Debug("CreateRun: failed to lookup project by repo/path_scope", "error", err)
+					} else if found {
+						record.ProjectID = uuid.NullUUID{UUID: project.ID, Valid: true}
+						slog.Debug("CreateRun: resolved project_id from metadata",
+							"project_id", project.ID,
+							"repo_url", repoURL,
+							"path_scope", pathScope)
+					} else {
+						slog.Debug("CreateRun: no matching project found for repo/path_scope",
+							"repo_url", repoURL,
+							"path_scope", pathScope)
+					}
+				}
+			}
 		}
 
 		if _, err := e.runStore.InsertRun(ctx, record); err != nil {
@@ -95,6 +121,58 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		"source", runContext.Source,
 		"branch", runContext.Branch)
 
+	// Resolve suite_id and build test name → test_id map for linking
+	var resolvedProjectID, resolvedSuiteID uuid.UUID
+	testIDMap := make(map[string]uuid.UUID)
+	if orgID != uuid.Nil && e.runStore != nil {
+		// Get resolved project_id from context or metadata lookup above
+		if projectID, err := uuid.Parse(runContext.ProjectID); err == nil && projectID != uuid.Nil {
+			resolvedProjectID = projectID
+		} else if runContext.Metadata != nil {
+			repoURL := runContext.Metadata["rs_repo_url"]
+			pathScopeJSON := runContext.Metadata["rs_path_scope_json"]
+			if repoURL != "" && pathScopeJSON != "" {
+				var pathScope []string
+				if err := json.Unmarshal([]byte(pathScopeJSON), &pathScope); err == nil {
+					project, found, err := e.runStore.FindProjectByRepoAndPathScope(ctx, orgID, repoURL, pathScope)
+					if err == nil && found {
+						resolvedProjectID = project.ID
+					}
+				}
+			}
+		}
+
+		// If we have a project_id, look up suite_id and test_ids
+		if resolvedProjectID != uuid.Nil {
+			sourceRef := strings.TrimSpace(runContext.Branch)
+			if sourceRef == "" {
+				sourceRef = "main" // fallback
+			}
+			suite, found, err := e.runStore.GetSuiteByName(ctx, resolvedProjectID, run.Name, sourceRef)
+			if err != nil {
+				slog.Debug("CreateRun: failed to lookup suite", "error", err)
+			} else if found {
+				resolvedSuiteID = suite.ID
+				slog.Debug("CreateRun: resolved suite_id", "suite_id", suite.ID, "suite_name", run.Name, "source_ref", sourceRef)
+
+				// Build test name → test_id map
+				tests, err := e.runStore.ListTestsBySuite(ctx, suite.ID)
+				if err != nil {
+					slog.Debug("CreateRun: failed to list tests for suite", "error", err)
+				} else {
+					for _, t := range tests {
+						// Use lowercase name for case-insensitive matching
+						key := strings.ToLower(t.Name)
+						testIDMap[key] = t.ID
+					}
+					slog.Debug("CreateRun: built test_id map", "count", len(testIDMap))
+				}
+			} else {
+				slog.Debug("CreateRun: suite not found", "suite_name", run.Name, "source_ref", sourceRef)
+			}
+		}
+	}
+
 	runInfo := &RunInfo{
 		ID:             runID,
 		Name:           run.Name,
@@ -106,6 +184,9 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		Vars:           cloneInterfaceMap(run.Vars),
 		SuiteOpenAPI:   run.OpenAPI,
 		OrganizationID: orgID,
+		ProjectID:      resolvedProjectID,
+		SuiteID:        resolvedSuiteID,
+		TestIDs:        testIDMap,
 		Logs: []LogLine{
 			{
 				Msg:   fmt.Sprintf("Starting test run \"%s\"... 🚀 [%s/%s]", run.Name, runContext.ProjectID, runContext.Source),
@@ -153,12 +234,23 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			return nil, fmt.Errorf("failed to generate test ID: %w", err)
 		}
 		testStartTime := time.Now().UTC()
+
+		// Look up discovered test_id for linking
+		var discoveredTestID uuid.UUID
+		if len(runInfo.TestIDs) > 0 {
+			key := strings.ToLower(test.Name)
+			if tid, ok := runInfo.TestIDs[key]; ok {
+				discoveredTestID = tid
+			}
+		}
+
 		testInfo := &TestInfo{
 			WorkflowID: testID,
 			Name:       test.Name,
 			Status:     "PENDING",
 			StartedAt:  testStartTime,
 			RunID:      runID,
+			TestID:     discoveredTestID,
 		}
 
 		// Persist run_test record
@@ -170,6 +262,10 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 				Status:     "PENDING",
 				StartedAt:  sql.NullTime{Time: testStartTime, Valid: true},
 				StepCount:  len(test.Steps),
+			}
+			// Set test_id if we found a matching discovered test
+			if discoveredTestID != uuid.Nil {
+				runTest.TestID = uuid.NullUUID{UUID: discoveredTestID, Valid: true}
 			}
 			if _, err := e.runStore.InsertRunTest(ctx, runTest); err != nil {
 				slog.Error("CreateRun: failed to persist run_test", "run_id", runID, "workflow_id", testID, "error", err)

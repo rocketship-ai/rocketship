@@ -1,24 +1,11 @@
 import { ArrowLeft, FolderOpen, ExternalLink, GitBranch, FileCode, Key, Users, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useProject, useProjectSuites } from '../hooks/use-console-queries';
+import { SourceRefBadge } from '../components/SourceRefBadge';
 
 interface ProjectDetailProps {
   projectId: string;
   onBack: () => void;
   onViewSuite?: (suiteId: string) => void;
-}
-
-function SourceRefBadge({ sourceRef }: { sourceRef: string }) {
-  const isPR = sourceRef.startsWith('pr/');
-  const displayText = isPR ? `#${sourceRef.slice(3)}` : sourceRef;
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded border ${
-      isPR
-        ? 'bg-amber-50 text-amber-700 border-amber-200'
-        : 'bg-gray-50 text-gray-700 border-gray-200'
-    }`}>
-      {displayText}
-    </span>
-  );
 }
 
 export function ProjectDetail({ projectId, onBack, onViewSuite }: ProjectDetailProps) {
@@ -102,7 +89,7 @@ export function ProjectDetail({ projectId, onBack, onViewSuite }: ProjectDetailP
             <div className="flex items-center gap-3">
               <FolderOpen className="w-6 h-6 text-[#666666]" />
               <h2>{project.name}</h2>
-              <SourceRefBadge sourceRef={project.source_ref} />
+              <SourceRefBadge sourceRef={project.source_ref} defaultBranch={project.default_branch} />
             </div>
           </div>
 
@@ -197,7 +184,7 @@ export function ProjectDetail({ projectId, onBack, onViewSuite }: ProjectDetailP
                       <div className="flex items-center gap-3 mb-1">
                         <FileCode className="w-4 h-4 text-[#666666]" />
                         <span className="text-sm">{suite.name}</span>
-                        <SourceRefBadge sourceRef={suite.source_ref} />
+                        <SourceRefBadge sourceRef={suite.source_ref} defaultBranch={project.default_branch} />
                       </div>
                       {suite.file_path && (
                         <p className="text-xs text-[#666666] font-mono ml-7">{suite.file_path}</p>

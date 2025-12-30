@@ -239,19 +239,21 @@ func (s *Server) shouldScanPullRequestEvent(payload *webhookPayload) (bool, Norm
 		return false, NormalizedRef{}, ""
 	}
 
-	// Use the PR number for source_ref
-	prNum := payload.PullRequest.Number
-	sourceRef := NormalizedRef{
-		Ref:  "pr/" + itoa(prNum),
-		Kind: RefKindPR,
-		Raw:  "refs/pull/" + itoa(prNum) + "/head",
+	// Guard: need head branch info
+	if payload.PullRequest.Head == nil || payload.PullRequest.Head.Ref == "" {
+		return false, NormalizedRef{}, ""
 	}
 
-	// Get head SHA and branch
-	headSHA := ""
-	if payload.PullRequest.Head != nil {
-		headSHA = payload.PullRequest.Head.SHA
+	// Use the PR head branch name for source_ref (not PR number)
+	headBranch := payload.PullRequest.Head.Ref
+	sourceRef := NormalizedRef{
+		Ref:  headBranch,
+		Kind: RefKindBranch,
+		Raw:  "refs/heads/" + headBranch,
 	}
+
+	// Get head SHA
+	headSHA := payload.PullRequest.Head.SHA
 
 	// For PRs, always scan (the PR is already scoped to specific changes)
 	return true, sourceRef, headSHA
@@ -280,26 +282,6 @@ func (s *Server) commitTouchesRocketship(commit *webhookCommit) bool {
 	}
 
 	return false
-}
-
-// itoa converts int to string without importing strconv
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	negative := n < 0
-	if negative {
-		n = -n
-	}
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	if negative {
-		digits = append([]byte{'-'}, digits...)
-	}
-	return string(digits)
 }
 
 // webhookPayload represents the GitHub webhook payload fields we need

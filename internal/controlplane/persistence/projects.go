@@ -255,3 +255,58 @@ func (s *Store) ProjectNameExists(ctx context.Context, orgID uuid.UUID, name, so
 	}
 	return exists, nil
 }
+
+// FindProjectByRepoAndPathScope looks up a project by organization, repo URL, and path scope.
+// This is used by the engine to resolve project_id from CLI metadata when project_id is not a UUID.
+// Returns (project, found, error) - found is true if a matching project exists.
+func (s *Store) FindProjectByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) (Project, bool, error) {
+	// Encode path_scope as JSON for comparison
+	pathScopeJSON, err := json.Marshal(pathScope)
+	if err != nil {
+		return Project{}, false, fmt.Errorf("failed to encode path_scope: %w", err)
+	}
+
+	const query = `
+		SELECT id, organization_id, name, repo_url, default_branch, path_scope, source_ref, created_at
+		FROM projects
+		WHERE organization_id = $1 AND repo_url = $2 AND path_scope = $3::jsonb
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+
+	dest := struct {
+		ID             uuid.UUID `db:"id"`
+		OrganizationID uuid.UUID `db:"organization_id"`
+		Name           string    `db:"name"`
+		RepoURL        string    `db:"repo_url"`
+		DefaultBranch  string    `db:"default_branch"`
+		PathScope      string    `db:"path_scope"`
+		SourceRef      string    `db:"source_ref"`
+		CreatedAt      time.Time `db:"created_at"`
+	}{}
+
+	if err := s.db.GetContext(ctx, &dest, query, orgID, repoURL, string(pathScopeJSON)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Project{}, false, nil
+		}
+		return Project{}, false, fmt.Errorf("failed to find project: %w", err)
+	}
+
+	project := Project{
+		ID:             dest.ID,
+		OrganizationID: dest.OrganizationID,
+		Name:           dest.Name,
+		RepoURL:        dest.RepoURL,
+		DefaultBranch:  dest.DefaultBranch,
+		SourceRef:      dest.SourceRef,
+		CreatedAt:      dest.CreatedAt,
+	}
+
+	if dest.PathScope != "" {
+		if err := json.Unmarshal([]byte(dest.PathScope), &project.PathScope); err != nil {
+			return Project{}, false, fmt.Errorf("failed to parse path_scope: %w", err)
+		}
+	}
+
+	return project, true, nil
+}

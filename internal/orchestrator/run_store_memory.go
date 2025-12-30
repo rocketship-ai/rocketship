@@ -142,3 +142,30 @@ func (s *memoryRunStore) ListRunLogs(_ context.Context, _ string, _ int) ([]pers
 	// No-op for memory store - logs are tracked via Engine.runs
 	return []persistence.RunLog{}, nil
 }
+
+// Project/suite/test lookup methods - no-op for memory store (no project discovery in local mode)
+
+func (s *memoryRunStore) FindProjectByRepoAndPathScope(_ context.Context, _ uuid.UUID, _ string, _ []string) (persistence.Project, bool, error) {
+	// No-op for memory store - no project discovery
+	return persistence.Project{}, false, nil
+}
+
+func (s *memoryRunStore) GetSuiteByName(_ context.Context, _ uuid.UUID, _, _ string) (persistence.Suite, bool, error) {
+	// No-op for memory store - no suite discovery
+	return persistence.Suite{}, false, nil
+}
+
+func (s *memoryRunStore) ListTestsBySuite(_ context.Context, _ uuid.UUID) ([]persistence.Test, error) {
+	// No-op for memory store - no test discovery
+	return []persistence.Test{}, nil
+}
+
+func (s *memoryRunStore) UpdateSuiteLastRun(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	// No-op for memory store
+	return nil
+}
+
+func (s *memoryRunStore) UpdateTestLastRun(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time, _ int64) error {
+	// No-op for memory store
+	return nil
+}
