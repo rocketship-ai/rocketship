@@ -256,6 +256,138 @@ func (s *Store) ProjectNameExists(ctx context.Context, orgID uuid.UUID, name, so
 	return exists, nil
 }
 
+// DeactivateProjectsForRepoAndSourceRef marks all projects for a repo+sourceRef as inactive.
+// This is called when a PR is closed/merged to hide the feature-branch discovery rows.
+// Cascades to suites and tests for those project_ids.
+// Returns the count of projects deactivated.
+func (s *Store) DeactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef, reason string) (int, error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Find all matching projects
+	const findQuery = `
+		SELECT id FROM projects
+		WHERE organization_id = $1 AND repo_url = $2 AND source_ref = $3 AND is_active = true
+	`
+	var projectIDs []uuid.UUID
+	if err := tx.SelectContext(ctx, &projectIDs, findQuery, orgID, repoURL, sourceRef); err != nil {
+		return 0, fmt.Errorf("failed to find projects: %w", err)
+	}
+
+	if len(projectIDs) == 0 {
+		return 0, nil
+	}
+
+	// Deactivate projects
+	const projectUpdate = `
+		UPDATE projects
+		SET is_active = false, deactivated_at = NOW(), deactivated_reason = $4
+		WHERE organization_id = $1 AND repo_url = $2 AND source_ref = $3 AND is_active = true
+	`
+	result, err := tx.ExecContext(ctx, projectUpdate, orgID, repoURL, sourceRef, reason)
+	if err != nil {
+		return 0, fmt.Errorf("failed to deactivate projects: %w", err)
+	}
+	affected, _ := result.RowsAffected()
+
+	// Deactivate suites for these projects
+	for _, pid := range projectIDs {
+		const suiteUpdate = `
+			UPDATE suites
+			SET is_active = false, deactivated_at = NOW(), deactivated_reason = $2
+			WHERE project_id = $1 AND is_active = true
+		`
+		if _, err := tx.ExecContext(ctx, suiteUpdate, pid, reason); err != nil {
+			return 0, fmt.Errorf("failed to deactivate suites: %w", err)
+		}
+
+		// Deactivate tests for these projects
+		const testUpdate = `
+			UPDATE tests
+			SET is_active = false, deactivated_at = NOW(), deactivated_reason = $2
+			WHERE project_id = $1 AND is_active = true
+		`
+		if _, err := tx.ExecContext(ctx, testUpdate, pid, reason); err != nil {
+			return 0, fmt.Errorf("failed to deactivate tests: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return int(affected), nil
+}
+
+// ReactivateProjectsForRepoAndSourceRef marks all projects for a repo+sourceRef as active.
+// This is called when a PR is reopened to restore the feature-branch discovery rows.
+// Cascades to suites and tests for those project_ids.
+// Returns the count of projects reactivated.
+func (s *Store) ReactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef string) (int, error) {
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Find all matching inactive projects
+	const findQuery = `
+		SELECT id FROM projects
+		WHERE organization_id = $1 AND repo_url = $2 AND source_ref = $3 AND is_active = false
+	`
+	var projectIDs []uuid.UUID
+	if err := tx.SelectContext(ctx, &projectIDs, findQuery, orgID, repoURL, sourceRef); err != nil {
+		return 0, fmt.Errorf("failed to find projects: %w", err)
+	}
+
+	if len(projectIDs) == 0 {
+		return 0, nil
+	}
+
+	// Reactivate projects
+	const projectUpdate = `
+		UPDATE projects
+		SET is_active = true, deactivated_at = NULL, deactivated_reason = NULL
+		WHERE organization_id = $1 AND repo_url = $2 AND source_ref = $3 AND is_active = false
+	`
+	result, err := tx.ExecContext(ctx, projectUpdate, orgID, repoURL, sourceRef)
+	if err != nil {
+		return 0, fmt.Errorf("failed to reactivate projects: %w", err)
+	}
+	affected, _ := result.RowsAffected()
+
+	// Reactivate suites for these projects
+	for _, pid := range projectIDs {
+		const suiteUpdate = `
+			UPDATE suites
+			SET is_active = true, deactivated_at = NULL, deactivated_reason = NULL
+			WHERE project_id = $1 AND is_active = false
+		`
+		if _, err := tx.ExecContext(ctx, suiteUpdate, pid); err != nil {
+			return 0, fmt.Errorf("failed to reactivate suites: %w", err)
+		}
+
+		// Reactivate tests for these projects
+		const testUpdate = `
+			UPDATE tests
+			SET is_active = true, deactivated_at = NULL, deactivated_reason = NULL
+			WHERE project_id = $1 AND is_active = false
+		`
+		if _, err := tx.ExecContext(ctx, testUpdate, pid); err != nil {
+			return 0, fmt.Errorf("failed to reactivate tests: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return int(affected), nil
+}
+
 // FindProjectByRepoAndPathScope looks up a project by organization, repo URL, and path scope.
 // This is used by the engine to resolve project_id from CLI metadata when project_id is not a UUID.
 // Returns (project, found, error) - found is true if a matching project exists.

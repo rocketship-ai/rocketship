@@ -94,6 +94,10 @@ type dataStore interface {
 	// Suite run activity queries
 	ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) ([]uuid.UUID, error)
 	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName string, limit int) ([]persistence.SuiteRunRow, error)
+
+	// Project lifecycle management (PR close/reopen)
+	DeactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef, reason string) (int, error)
+	ReactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef string) (int, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)

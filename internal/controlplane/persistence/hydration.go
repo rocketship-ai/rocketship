@@ -51,9 +51,9 @@ type ScanSummary struct {
 	TestsFound   int       `db:"tests_found"`
 }
 
-// ListProjectSummariesForOrg returns all projects for an org with counts and last scan info
+// ListProjectSummariesForOrg returns all active projects for an org with counts and last scan info
 func (s *Store) ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]ProjectSummary, error) {
-	// Get projects with counts
+	// Get active projects with counts (only count active suites/tests)
 	const projectQuery = `
 		SELECT
 			p.id,
@@ -63,10 +63,10 @@ func (s *Store) ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID)
 			p.path_scope,
 			p.source_ref,
 			p.created_at,
-			COALESCE((SELECT COUNT(*) FROM suites WHERE project_id = p.id), 0) AS suite_count,
-			COALESCE((SELECT COUNT(*) FROM tests WHERE project_id = p.id), 0) AS test_count
+			COALESCE((SELECT COUNT(*) FROM suites WHERE project_id = p.id AND is_active = true), 0) AS suite_count,
+			COALESCE((SELECT COUNT(*) FROM tests WHERE project_id = p.id AND is_active = true), 0) AS test_count
 		FROM projects p
-		WHERE p.organization_id = $1
+		WHERE p.organization_id = $1 AND p.is_active = true
 		ORDER BY p.name ASC, p.source_ref ASC
 	`
 
@@ -197,7 +197,7 @@ type SuiteActivityRow struct {
 	RepoURL       string         `db:"repo_url"`
 }
 
-// ListSuitesForOrg returns suites across the org with project info
+// ListSuitesForOrg returns active suites across the org with project info
 func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]SuiteActivityRow, error) {
 	if limit <= 0 {
 		limit = 100
@@ -221,7 +221,7 @@ func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int
 			p.repo_url
 		FROM suites s
 		JOIN projects p ON p.id = s.project_id
-		WHERE p.organization_id = $1
+		WHERE p.organization_id = $1 AND p.is_active = true AND s.is_active = true
 		ORDER BY s.name ASC, s.source_ref ASC
 		LIMIT $2
 	`

@@ -638,6 +638,14 @@ func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uu
 	return []persistence.SuiteRunRow{}, nil
 }
 
+func (f *fakeStore) DeactivateProjectsForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _, _ string) (int, error) {
+	return 0, nil
+}
+
+func (f *fakeStore) ReactivateProjectsForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _ string) (int, error) {
+	return 0, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
