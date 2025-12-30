@@ -532,3 +532,63 @@ func (g *GitHubAppClient) GetBranchHeadSHA(ctx context.Context, installationID i
 
 	return refResp.Object.SHA, nil
 }
+
+// PullRequestFile represents a file changed in a pull request
+type PullRequestFile struct {
+	Filename         string `json:"filename"`
+	Status           string `json:"status"` // added, modified, removed, renamed
+	PreviousFilename string `json:"previous_filename,omitempty"`
+	Additions        int    `json:"additions"`
+	Deletions        int    `json:"deletions"`
+	Changes          int    `json:"changes"`
+}
+
+// ListPullRequestFiles fetches the list of files changed in a pull request
+func (g *GitHubAppClient) ListPullRequestFiles(ctx context.Context, installationID int64, owner, repo string, prNumber int) ([]PullRequestFile, error) {
+	token, err := g.GetInstallationToken(ctx, installationID)
+	if err != nil {
+		return nil, err
+	}
+
+	var allFiles []PullRequestFile
+	page := 1
+	perPage := 100
+
+	for {
+		url := fmt.Sprintf("https://api.github.com/repos/%s/%s/pulls/%d/files?per_page=%d&page=%d", owner, repo, prNumber, perPage, page)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("User-Agent", "rocketship-controlplane")
+
+		resp, err := g.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("failed to list PR files (status %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+
+		var files []PullRequestFile
+		if err := json.NewDecoder(resp.Body).Decode(&files); err != nil {
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode PR files response: %w", err)
+		}
+		_ = resp.Body.Close()
+
+		allFiles = append(allFiles, files...)
+
+		if len(files) < perPage {
+			break
+		}
+		page++
+	}
+
+	return allFiles, nil
+}

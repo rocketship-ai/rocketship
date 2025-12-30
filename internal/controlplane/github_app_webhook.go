@@ -186,11 +186,18 @@ func (s *Server) processWebhookForScanning(ctx context.Context, event, deliveryI
 
 		// Scan synchronously for now (MVP)
 		// TODO: Consider moving to async/queue for production
-		scanner.ScanForWebhook(ctx, input)
+		if event == "pull_request" && payload.PullRequest != nil {
+			// Use delta scan for PRs - only scan changed files
+			scanner.ScanPullRequestDeltaForWebhook(ctx, input, payload.PullRequest.Number)
+		} else {
+			// Full scan for push events (already restricted to default branch)
+			scanner.ScanForWebhook(ctx, input)
+		}
 	}
 }
 
 // shouldScanPushEvent determines if a push event should trigger a scan
+// Only scans pushes to the default branch to prevent feature branch duplicates
 func (s *Server) shouldScanPushEvent(payload *webhookPayload) (bool, NormalizedRef, string) {
 	// Normalize the ref
 	sourceRef := NormalizeSourceRef(payload.Ref)
@@ -199,6 +206,18 @@ func (s *Server) shouldScanPushEvent(payload *webhookPayload) (bool, NormalizedR
 	headSHA := payload.After
 	if headSHA == "" && payload.HeadCommit != nil {
 		headSHA = payload.HeadCommit.ID
+	}
+
+	// Only scan pushes to the default branch
+	// Feature branch pushes should not create branch-specific discovery rows
+	if payload.Repository != nil && payload.Repository.DefaultBranch != "" {
+		if sourceRef.Ref != payload.Repository.DefaultBranch {
+			slog.Debug("webhook: push is not to default branch, skipping scan",
+				"ref", sourceRef.Ref,
+				"default_branch", payload.Repository.DefaultBranch,
+			)
+			return false, sourceRef, headSHA
+		}
 	}
 
 	// Check if any commits touch .rocketship files
@@ -295,9 +314,10 @@ func (s *Server) handlePRLifecycleEvent(ctx context.Context, payload *webhookPay
 			return
 		}
 
-		// Deactivate projects for each org
+		// Deactivate projects and suites for each org
 		for _, orgID := range orgIDs {
-			count, err := s.store.DeactivateProjectsForRepoAndSourceRef(ctx, orgID, repoURL, headBranch, reason)
+			// Deactivate feature-branch projects
+			projectCount, err := s.store.DeactivateProjectsForRepoAndSourceRef(ctx, orgID, repoURL, headBranch, reason)
 			if err != nil {
 				slog.Error("webhook: failed to deactivate projects",
 					"org_id", orgID,
@@ -305,15 +325,32 @@ func (s *Server) handlePRLifecycleEvent(ctx context.Context, payload *webhookPay
 					"source_ref", headBranch,
 					"error", err,
 				)
-				continue
-			}
-			if count > 0 {
+			} else if projectCount > 0 {
 				slog.Info("webhook: deactivated projects on PR close",
 					"org_id", orgID,
 					"repo", payload.Repository.FullName,
 					"source_ref", headBranch,
 					"reason", reason,
-					"count", count,
+					"count", projectCount,
+				)
+			}
+
+			// Deactivate feature-branch suites (may exist under default-branch project)
+			suiteCount, err := s.store.DeactivateSuitesForRepoAndSourceRef(ctx, orgID, repoURL, headBranch, reason)
+			if err != nil {
+				slog.Error("webhook: failed to deactivate suites",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"error", err,
+				)
+			} else if suiteCount > 0 {
+				slog.Info("webhook: deactivated suites on PR close",
+					"org_id", orgID,
+					"repo", payload.Repository.FullName,
+					"source_ref", headBranch,
+					"reason", reason,
+					"count", suiteCount,
 				)
 			}
 		}
