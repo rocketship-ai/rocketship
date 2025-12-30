@@ -149,7 +149,6 @@ More operations: `select`, `insert`, `update`, `delete`, `rpc`, `auth_sign_in`, 
 - plugin: log
   config:
     message: "Starting auth flow for run {{ .run.id }}"
-    level: "INFO"
 ```
 
 ### Playwright Plugin (Scripted Browser)
