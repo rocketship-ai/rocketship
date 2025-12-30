@@ -540,6 +540,18 @@ func NewRunCmd() *cobra.Command {
 				if trigger == "" {
 					trigger = "webhook"
 				}
+				// Get commit message from git if we have a commit SHA
+				if commit != "" {
+					gitInfo, err := GetGitInfo()
+					if err == nil && gitInfo.CommitMessage != "" {
+						if metadata == nil {
+							metadata = make(map[string]string)
+						}
+						if _, ok := metadata["rs_commit_message"]; !ok {
+							metadata["rs_commit_message"] = gitInfo.CommitMessage
+						}
+					}
+				}
 			}
 
 			// Auto-populate from local git for authenticated manual runs (non-CI, non-auto mode)
@@ -571,6 +583,15 @@ func NewRunCmd() *cobra.Command {
 						}
 						if _, ok := metadata["rs_repo_url"]; !ok {
 							metadata["rs_repo_url"] = gitInfo.RepoURL
+						}
+					}
+					// Add commit message to metadata
+					if gitInfo.CommitMessage != "" {
+						if metadata == nil {
+							metadata = make(map[string]string)
+						}
+						if _, ok := metadata["rs_commit_message"]; !ok {
+							metadata["rs_commit_message"] = gitInfo.CommitMessage
 						}
 					}
 				}

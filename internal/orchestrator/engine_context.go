@@ -117,6 +117,10 @@ func determineInitiator(principal *Principal) string {
 	if principal == nil {
 		return "unknown"
 	}
+	// Prefer GitHub username (for manual runs) over email
+	if username := strings.TrimSpace(principal.Username); username != "" {
+		return username
+	}
 	if email := strings.TrimSpace(principal.Email); email != "" {
 		return email
 	}
