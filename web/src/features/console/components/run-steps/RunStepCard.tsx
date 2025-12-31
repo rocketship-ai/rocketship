@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, XCircle, Clock, Loader2, ChevronRight, ChevronDown } from 'lucide-react';
 import type { RunStep } from '../../hooks/use-console-queries';
 import { Tabs } from '../step-ui';
-import { formatDuration } from '../../lib/http';
+import { formatDuration } from '../../lib/format';
 import { getPluginRenderer } from './renderers';
 import { mapStepStatus, type StepUIStatus } from './types';
 

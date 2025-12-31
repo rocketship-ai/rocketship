@@ -3,78 +3,13 @@ import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } fr
 import { TestItem } from '../components/test-item';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
+import { LoadingState, ErrorState } from '../components/ui';
+import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary } from '../lib/format';
 
 interface SuiteRunDetailProps {
   suiteRunId: string;
   onBack: () => void;
   onViewTestRun: (testRunId: string) => void;
-}
-
-// Helper to format duration from milliseconds
-function formatDuration(ms?: number): string {
-  if (!ms) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-}
-
-// Helper to format date/time
-function formatDateTime(isoString?: string): string {
-  if (!isoString) return '—';
-  const date = new Date(isoString);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-}
-
-// Map API status to UI status for run display (includes running)
-function mapRunStatus(status: string): 'success' | 'failed' | 'running' {
-  switch (status.toUpperCase()) {
-    case 'PASSED':
-      return 'success';
-    case 'FAILED':
-    case 'CANCELLED':
-      return 'failed';
-    case 'RUNNING':
-    case 'PENDING':
-      return 'running';
-    default:
-      return 'running';
-  }
-}
-
-// Map API status to TestItem status (pending, not running)
-function mapTestStatus(status: string): 'success' | 'failed' | 'pending' {
-  switch (status.toUpperCase()) {
-    case 'PASSED':
-      return 'success';
-    case 'FAILED':
-    case 'CANCELLED':
-      return 'failed';
-    default:
-      return 'pending';
-  }
-}
-
-// Map step status to TestItem step status
-function mapStepStatus(status: string): 'success' | 'failed' | 'pending' {
-  switch (status.toUpperCase()) {
-    case 'PASSED':
-      return 'success';
-    case 'FAILED':
-      return 'failed';
-    default:
-      return 'pending';
-  }
 }
 
 // Transform RunTest to TestItem format
@@ -83,7 +18,7 @@ function transformTestRun(test: RunTest) {
   const steps = (test.steps || []).map(step => ({
     name: step.name,
     plugin: step.plugin,
-    status: mapStepStatus(step.status),
+    status: mapStepStatusForSummary(step.status),
   }));
 
   return {
@@ -103,13 +38,24 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
   const { data: testsData, isLoading: testsLoading } = useRunTests(suiteRunId);
   const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId);
 
+  // Back button component (shared across states)
+  const BackButton = () => (
+    <button
+      onClick={onBack}
+      className="flex items-center gap-2 text-[#666666] hover:text-black mb-4 transition-colors"
+    >
+      <ArrowLeft className="w-4 h-4" />
+      <span>Back to suite</span>
+    </button>
+  );
+
   // Loading state
   if (runLoading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[400px]">
-        <div className="flex items-center gap-3 text-[#666666]">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading run details...</span>
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <BackButton />
+          <LoadingState message="Loading run details..." />
         </div>
       </div>
     );
@@ -120,17 +66,11 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-[#666666] hover:text-black mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to suite</span>
-          </button>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <p className="text-red-600">Failed to load run details</p>
-            <p className="text-sm text-[#666666] mt-2">{runError?.message || 'Run not found'}</p>
-          </div>
+          <BackButton />
+          <ErrorState
+            title="Failed to load run details"
+            message={runError?.message || 'Run not found'}
+          />
         </div>
       </div>
     );

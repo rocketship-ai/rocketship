@@ -9,9 +9,12 @@ import { CopyButton } from './step-ui';
 type StepStatus = 'success' | 'failed' | 'pending' | 'running' | 'skipped';
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
+// Use JsonValue for generic config values (safer than any but still flexible)
+type JsonValue = string | number | boolean | null | undefined | JsonValue[] | { [key: string]: JsonValue };
+
 interface BaseStepConfig {
   plugin: string;
-  [key: string]: any;
+  [key: string]: JsonValue;
 }
 
 interface HttpStepConfig extends BaseStepConfig {
@@ -19,7 +22,7 @@ interface HttpStepConfig extends BaseStepConfig {
   method: HttpMethod;
   url: string;
   headers?: Record<string, string>;
-  body?: any;
+  body?: JsonValue;
   form?: Record<string, string>;
 }
 
@@ -27,8 +30,8 @@ interface Assertion {
   type: string;
   field?: string;
   operator?: string;
-  expected?: any;
-  actual?: any;
+  expected?: JsonValue;
+  actual?: JsonValue;
   passed?: boolean;
   message?: string;
 }
@@ -36,7 +39,7 @@ interface Assertion {
 interface SaveRule {
   name: string;
   path: string;
-  value?: any; // Resolved value if run context available
+  value?: JsonValue; // Resolved value if run context available
 }
 
 interface StepExecutionResult {
@@ -46,7 +49,7 @@ interface StepExecutionResult {
     status: number;
     statusText: string;
     headers: Record<string, string>;
-    body: any;
+    body: JsonValue;
   };
   logs?: string[];
   artifacts?: {
@@ -216,6 +219,18 @@ function getPluginRenderer(plugin: string): PluginRenderer {
 }
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/** Convert JsonValue body to string for display */
+function formatBodyAsString(body: JsonValue): string {
+  if (typeof body === 'string') {
+    return body;
+  }
+  return JSON.stringify(body, null, 2);
+}
+
+// ============================================================================
 // SUB-COMPONENTS (Tab Content Panels)
 // ============================================================================
 
@@ -260,9 +275,9 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Body</label>
-            <CopyButton text={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} variant="small" />
+            <CopyButton text={formatBodyAsString(config.body)} variant="small" />
           </div>
-          <CodeBlock code={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} language="json" />
+          <CodeBlock code={formatBodyAsString(config.body)} language="json" />
         </div>
       )}
       
@@ -291,8 +306,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
 }
 
 function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionResult['response']> }) {
-  const isJson = typeof response.body === 'object';
-  const bodyString = isJson ? JSON.stringify(response.body, null, 2) : String(response.body);
+  const bodyString = formatBodyAsString(response.body);
   
   return (
     <div className="space-y-4">
@@ -341,7 +355,7 @@ function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionRe
           <label className="text-xs text-[#999999]">Body</label>
           <CopyButton text={bodyString} variant="small" />
         </div>
-        <CodeBlock code={bodyString} language={isJson ? 'json' : 'text'} />
+        <CodeBlock code={bodyString} language="json" />
       </div>
     </div>
   );
@@ -702,11 +716,11 @@ interface OldStepFormat {
   details?: {
     request: {
       headers: Record<string, string | undefined>;
-      body: unknown;
+      body: JsonValue;
     };
     response: {
       headers: Record<string, string | undefined>;
-      body: unknown;
+      body: JsonValue;
       statusCode: number;
       latency: number;
     };

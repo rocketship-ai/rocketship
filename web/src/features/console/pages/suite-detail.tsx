@@ -1,4 +1,4 @@
-import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, AlertCircle, RefreshCw, FileCode } from 'lucide-react';
+import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
@@ -6,6 +6,8 @@ import { useMemo, useState } from 'react';
 import { environments } from '../data/mock-data';
 import { useSuite, useSuiteRuns, type SuiteRunSummary } from '../hooks/use-console-queries';
 import { SourceRefBadge } from '../components/SourceRefBadge';
+import { LoadingState, ErrorState } from '../components/ui';
+import { formatDuration, formatRelativeTime, mapRunStatus } from '../lib/format';
 
 interface SuiteDetailProps {
   suiteId: string;
@@ -22,46 +24,6 @@ function BranchDisplay({ branch }: { branch: string }) {
       {branch}
     </span>
   );
-}
-
-// Map API status to UI status
-function mapStatus(status: string): 'success' | 'failed' | 'running' {
-  switch (status.toUpperCase()) {
-    case 'PASSED':
-      return 'success';
-    case 'RUNNING':
-      return 'running';
-    case 'FAILED':
-    case 'CANCELLED':
-    default:
-      return 'failed';
-  }
-}
-
-// Format duration in human-readable format
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-}
-
-// Format relative time
-function formatRelativeTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
 }
 
 export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDetailProps) {
@@ -162,21 +124,23 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
     return { runsByBranch: grouped, branches: sortedBranches };
   }, [runs]);
 
+  // Back button component (shared across states)
+  const BackButton = () => (
+    <button
+      onClick={onBack}
+      className="flex items-center gap-2 text-[#666666] hover:text-black transition-colors mb-6"
+    >
+      <ArrowLeft className="w-4 h-4" />
+      Back to Suite Activity
+    </button>
+  );
+
   if (isLoading) {
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-[#666666] hover:text-black transition-colors mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Suite Activity
-          </button>
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-[#666666]" />
-            <span className="ml-3 text-[#666666]">Loading suite...</span>
-          </div>
+          <BackButton />
+          <LoadingState message="Loading suite..." />
         </div>
       </div>
     );
@@ -186,31 +150,12 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-[#666666] hover:text-black transition-colors mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Suite Activity
-          </button>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-red-700 font-medium">
-                {!suite ? 'Suite not found' : 'Failed to load suite'}
-              </p>
-              <p className="text-red-600 text-sm mt-1">
-                {error instanceof Error ? error.message : 'An unexpected error occurred'}
-              </p>
-            </div>
-            <button
-              onClick={() => refetch()}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 rounded transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Retry
-            </button>
-          </div>
+          <BackButton />
+          <ErrorState
+            title={!suite ? 'Suite not found' : 'Failed to load suite'}
+            message={error instanceof Error ? error.message : 'An unexpected error occurred'}
+            onRetry={() => refetch()}
+          />
         </div>
       </div>
     );
@@ -412,7 +357,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                         {/* Runs list */}
                         <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm divide-y divide-[#e5e5e5]">
                           {filteredRuns.map((run) => {
-                            const status = mapStatus(run.status);
+                            const status = mapRunStatus(run.status);
                             // Prefer commit message, then "Commit <sha>", then "Manual run"
                             const title = run.commit_message
                               || (run.commit_sha ? `Commit ${run.commit_sha.slice(0, 7)}` : 'Manual run');

@@ -2,7 +2,7 @@ import yaml from 'js-yaml';
 import { Check, X } from 'lucide-react';
 import type { RunStep } from '../../../hooks/use-console-queries';
 import { CopyButton, KeyValueTable, headersToRows, CodeBlock, InlineCode } from '../../step-ui';
-import { tryFormatJSON, getUrlParts } from '../../../lib/http';
+import { tryFormatJSON, getUrlParts } from '../../../lib/format';
 
 interface HttpRendererProps {
   step: RunStep;

@@ -1,7 +1,8 @@
-import { User, Mail, Github, Shield, Check, LogOut, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Mail, Github, Shield, Check, LogOut } from 'lucide-react';
 import { useProfile } from '../hooks/use-console-queries';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { ApiError } from '@/lib/api';
+import { LoadingState, ErrorState } from '../components/ui';
 
 interface ProfileSettingsProps {
   onLogout?: () => void;
@@ -13,19 +14,8 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
   if (isLoading) {
     return (
       <div className="p-8">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Loading skeleton */}
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-              <span className="text-[#666666]">Loading profile...</span>
-            </div>
-            <div className="space-y-4">
-              <div className="h-4 bg-[#f5f5f5] rounded w-48 animate-pulse" />
-              <div className="h-4 bg-[#f5f5f5] rounded w-64 animate-pulse" />
-              <div className="h-4 bg-[#f5f5f5] rounded w-32 animate-pulse" />
-            </div>
-          </div>
+        <div className="max-w-4xl mx-auto">
+          <LoadingState message="Loading profile..." />
         </div>
       </div>
     );
@@ -36,12 +26,7 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
     return (
       <div className="p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg border border-[#ef0000]/20 shadow-sm p-6">
-            <div className="flex items-center gap-3 text-[#ef0000]">
-              <AlertCircle className="w-5 h-5" />
-              <span>{errorMessage}</span>
-            </div>
-          </div>
+          <ErrorState title="Failed to load profile" message={errorMessage} />
         </div>
       </div>
     );

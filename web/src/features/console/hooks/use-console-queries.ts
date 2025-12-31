@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { apiGet } from '@/lib/api'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiGet, apiPost } from '@/lib/api'
 
 // Types matching the API response shapes
 
@@ -288,6 +288,39 @@ export interface ProfileData {
   project_permissions: ProfileProjectPermission[]
 }
 
+// Overview / Setup types
+export interface SetupStep {
+  id: string
+  title: string
+  complete: boolean
+}
+
+export interface SetupData {
+  steps: SetupStep[]
+  github_app_slug?: string
+  github_install_url?: string
+}
+
+export interface GitHubRepo {
+  id: number
+  name: string
+  full_name: string
+  private: boolean
+  default_branch: string
+  html_url: string
+}
+
+export interface ConnectRepoResult {
+  project_id: string
+  name: string
+  repo_url: string
+}
+
+export interface SyncResult {
+  synced: boolean
+  message?: string
+}
+
 // Query key factories
 export const consoleKeys = {
   all: ['console'] as const,
@@ -304,6 +337,9 @@ export const consoleKeys = {
   testRun: (id: string) => [...consoleKeys.all, 'testRun', id] as const,
   testRunLogs: (id: string) => [...consoleKeys.all, 'testRun', id, 'logs'] as const,
   testRunSteps: (id: string) => [...consoleKeys.all, 'testRun', id, 'steps'] as const,
+  // Overview / Setup
+  overviewSetup: () => [...consoleKeys.all, 'overview', 'setup'] as const,
+  githubAppRepos: () => [...consoleKeys.all, 'github', 'repos'] as const,
 }
 
 // Query hooks
@@ -408,5 +444,59 @@ export function useTestRunSteps(testRunId: string) {
     queryKey: consoleKeys.testRunSteps(testRunId),
     queryFn: () => apiGet<RunStep[]>(`/api/test-runs/${testRunId}/steps`),
     enabled: !!testRunId,
+  })
+}
+
+// Overview / Setup hooks
+
+export function useOverviewSetup() {
+  return useQuery({
+    queryKey: consoleKeys.overviewSetup(),
+    queryFn: async () => {
+      try {
+        return await apiGet<SetupData>('/api/overview/setup')
+      } catch (error) {
+        // Return null for 403 (user not in org yet) instead of throwing
+        if (error instanceof Error && 'status' in error && (error as { status: number }).status === 403) {
+          return null
+        }
+        throw error
+      }
+    },
+  })
+}
+
+export function useGithubAppRepos() {
+  return useQuery({
+    queryKey: consoleKeys.githubAppRepos(),
+    queryFn: () => apiGet<GitHubRepo[]>('/api/github/app/repos'),
+    enabled: false, // Only fetch when explicitly triggered
+  })
+}
+
+export function useConnectGithubRepo() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (repoFullName: string) =>
+      apiPost<ConnectRepoResult>('/api/github/app/repos/connect', {
+        repo_full_name: repoFullName,
+      }),
+    onSuccess: () => {
+      // Invalidate setup data to refresh the setup steps
+      queryClient.invalidateQueries({ queryKey: consoleKeys.overviewSetup() })
+    },
+  })
+}
+
+export function useSyncGithubApp() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => apiPost<SyncResult>('/api/github/app/sync'),
+    onSuccess: () => {
+      // Invalidate setup data to refresh the setup steps
+      queryClient.invalidateQueries({ queryKey: consoleKeys.overviewSetup() })
+    },
   })
 }

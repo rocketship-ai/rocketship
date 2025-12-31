@@ -3,7 +3,7 @@ import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, 
 import { useState } from 'react';
 import { useTestRun, useTestRunLogs, useTestRunSteps } from '../hooks/use-console-queries';
 import { RunStepCard } from '../components/run-steps';
-import { formatDuration, formatDateTime } from '../lib/http';
+import { formatDuration, formatDateTime } from '../lib/format';
 
 interface TestRunDetailProps {
   testRunId: string;
