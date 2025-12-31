@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -56,6 +57,12 @@ func (e *Engine) UpsertRunStep(ctx context.Context, req *generated.UpsertRunStep
 	// Resolve run_test_id from workflow_id
 	runTest, err := e.runStore.GetRunTestByWorkflowID(ctx, req.WorkflowId)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Local/in-memory mode may not persist run_tests, but we still want workflows to run without
+			// StepReporterActivity producing noisy Temporal "Activity error" logs (which break CLI CI).
+			slog.Debug("UpsertRunStep: run test not found, skipping persistence", "workflow_id", req.WorkflowId)
+			return &generated.UpsertRunStepResponse{StepId: ""}, nil
+		}
 		slog.Error("UpsertRunStep: failed to resolve run test", "workflow_id", req.WorkflowId, "error", err)
 		return nil, fmt.Errorf("failed to resolve run test from workflow_id: %w", err)
 	}
