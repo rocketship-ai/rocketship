@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -210,19 +211,9 @@ func executeStep(
 		assertionCount = len(step.Assertions)
 	}
 
-	// Check for assertion failures in HTTP plugin response
-	// The HTTP plugin returns without error but with assertion_failed=true when assertions fail
-	var assertionFailed bool
-	var assertionError string
 	var assertionsPassed, assertionsFailed int
 	if activityResp != nil {
 		if respMap := toMap(activityResp); respMap != nil {
-			if failed, ok := respMap["assertion_failed"].(bool); ok && failed {
-				assertionFailed = true
-				if errStr, ok := respMap["assertion_error"].(string); ok {
-					assertionError = errStr
-				}
-			}
 			// Count passed/failed from assertion results
 			if assertionResults, ok := respMap["assertion_results"].([]interface{}); ok {
 				for _, ar := range assertionResults {
@@ -242,10 +233,10 @@ func executeStep(
 
 	// If no assertion results from plugin, fall back to step definition count
 	if assertionsPassed == 0 && assertionsFailed == 0 {
-		if assertionFailed {
-			assertionsFailed = assertionCount
-		} else if err == nil {
+		if err == nil {
 			assertionsPassed = assertionCount
+		} else {
+			assertionsFailed = assertionCount
 		}
 	}
 
@@ -259,17 +250,6 @@ func executeStep(
 		sendStepReportWithDetails(ctx, runID, index, step, "FAILED", cleanErr, startTime, endTime, durationMs, assertionsPassed, assertionsFailed, activityResp, availableRuntimeState, availableConfigVars)
 
 		return phase.wrapError(index, step.Name, err)
-	}
-
-	// Handle assertion failure (activity succeeded but assertions failed)
-	if assertionFailed {
-		sendStepLog(ctx, runID, testName, step.Name, phase.failureMessage(fmt.Errorf("%s", assertionError)), "red", true)
-		logger.Error("Step assertions failed", "phase", string(phase), "step", step.Name, "error", assertionError)
-
-		// Report step as FAILED with assertion error
-		sendStepReportWithDetails(ctx, runID, index, step, "FAILED", assertionError, startTime, endTime, durationMs, assertionsPassed, assertionsFailed, activityResp, availableRuntimeState, availableConfigVars)
-
-		return phase.wrapError(index, step.Name, fmt.Errorf("%s", assertionError))
 	}
 
 	sendStepLog(ctx, runID, testName, step.Name, phase.successMessage(), "green", false)
@@ -424,6 +404,16 @@ func executePluginWithResponse(ctx workflow.Context, step dsl.Step, state map[st
 	var activityResp interface{}
 	err := workflow.ExecuteActivity(stepCtx, step.Plugin, pluginParams).Get(stepCtx, &activityResp)
 	if err != nil {
+		// If an activity fails with rich details (e.g. HTTP assertion failures), attempt to
+		// extract the details so we can persist request/response/assertion info even on failure.
+		var appErr *temporal.ApplicationError
+		if errors.As(err, &appErr) && appErr.Type() == "http_assertion_failed" {
+			var detail map[string]interface{}
+			if derr := appErr.Details(&detail); derr == nil && len(detail) > 0 {
+				activityResp = detail
+			}
+		}
+
 		logger.Error("Plugin activity failed", "plugin", step.Plugin, "error", err)
 		return activityResp, fmt.Errorf("%s activity error: %w", step.Plugin, err)
 	}

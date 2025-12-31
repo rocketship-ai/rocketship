@@ -14,6 +14,7 @@ import (
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
@@ -359,13 +360,25 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		},
 	}
 
+	// Preserve Temporal retry semantics for assertion failures:
+	// return a retryable activity error so Temporal can perform retries according to the step retry policy.
+	// Include rich UI payload + assertion results + saved values as error details so the workflow can persist them.
+	if assertionFailed {
+		details := map[string]interface{}{
+			"ui_payload":        uiPayload,
+			"assertion_results": assertionResults,
+			"saved":             saved,
+		}
+		return nil, temporal.NewApplicationError(assertionError, "http_assertion_failed", details)
+	}
+
 	return &ActivityResponse{
 		Response:         response,
 		Saved:            saved,
 		UIPayload:        uiPayload,
 		AssertionResults: assertionResults,
-		AssertionFailed:  assertionFailed,
-		AssertionError:   assertionError,
+		AssertionFailed:  false,
+		AssertionError:   "",
 	}, nil
 }
 
