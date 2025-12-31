@@ -39,8 +39,11 @@ cli-introspection.json
 .rocketship/tmp/
 
 # rocketship-internal code
-rocketship-internal
 charts/rocketship-internal/
+
+#symlinks
+rocketship-internal
+chickenfarm
 
 # Local secrets vault (NEVER commit)
 rocketship-vault/

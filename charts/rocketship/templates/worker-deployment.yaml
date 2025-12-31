@@ -39,6 +39,17 @@ spec:
               value: {{ .Values.temporal.host | quote }}
             - name: TEMPORAL_NAMESPACE
               value: {{ .Values.temporal.namespace | quote }}
+            {{- if .Values.worker.engineAddress }}
+            - name: ROCKETSHIP_ENGINE_GRPC_ADDR
+              value: {{ .Values.worker.engineAddress | quote }}
+            {{- end }}
+            {{- if .Values.worker.tokenSecret }}
+            - name: ROCKETSHIP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.worker.tokenSecret.secretName }}
+                  key: {{ .Values.worker.tokenSecret.secretKey | default "token" }}
+            {{- end }}
             {{- range .Values.worker.env }}
             - name: {{ .name }}
               value: {{ .value | quote }}

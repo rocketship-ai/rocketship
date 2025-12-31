@@ -112,6 +112,10 @@ func (e *Engine) addLog(runID, message, color string, bold bool) {
 }
 
 func (e *Engine) addLogWithContext(runID, message, color string, bold bool, testName, stepName string) {
+	e.addLogWithWorkflowContext(runID, "", message, color, bold, testName, stepName)
+}
+
+func (e *Engine) addLogWithWorkflowContext(runID, workflowID, message, color string, bold bool, testName, stepName string) {
 	var orgID uuid.UUID
 
 	e.mu.Lock()
@@ -136,20 +140,29 @@ func (e *Engine) addLogWithContext(runID, message, color string, bold bool, test
 		return
 	}
 
-	meta := map[string]interface{}{
-		"color":     color,
-		"bold":      bold,
-		"test_name": testName,
-		"step_name": stepName,
-	}
-	if _, err := e.runStore.InsertRunLog(context.Background(), persistence.RunLog{
+	// Prepare log entry with optional run_test_id linking
+	logEntry := persistence.RunLog{
 		RunID:    runID,
 		Level:    "INFO",
 		Message:  message,
-		Metadata: meta,
+		Metadata: map[string]interface{}{
+			"color":     color,
+			"bold":      bold,
+			"test_name": testName,
+			"step_name": stepName,
+		},
 		LoggedAt: time.Now().UTC(),
-	}); err != nil {
-		slog.Error("addLogWithContext: failed to persist run log", "run_id", runID, "error", err)
+	}
+
+	// Resolve run_test_id from workflow_id if provided
+	if workflowID != "" {
+		if runTest, err := e.runStore.GetRunTestByWorkflowID(context.Background(), workflowID); err == nil {
+			logEntry.RunTestID = uuid.NullUUID{Valid: true, UUID: runTest.ID}
+		}
+	}
+
+	if _, err := e.runStore.InsertRunLog(context.Background(), logEntry); err != nil {
+		slog.Error("addLogWithWorkflowContext: failed to persist run log", "run_id", runID, "error", err)
 	}
 }
 

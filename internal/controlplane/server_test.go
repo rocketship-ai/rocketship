@@ -153,6 +153,15 @@ func (f *fakeStore) UpsertGitHubUser(_ context.Context, input persistence.GitHub
 	return f.user, nil
 }
 
+func (f *fakeStore) GetUserByID(_ context.Context, userID uuid.UUID) (persistence.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.user.ID == userID {
+		return f.user, nil
+	}
+	return persistence.User{}, sql.ErrNoRows
+}
+
 func (f *fakeStore) UpdateUserEmail(_ context.Context, userID uuid.UUID, email string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -638,7 +647,7 @@ func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.U
 	return []uuid.UUID{}, nil
 }
 
-func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _ string, _ int) ([]persistence.SuiteRunRow, error) {
+func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int) ([]persistence.SuiteRunRow, error) {
 	return []persistence.SuiteRunRow{}, nil
 }
 
@@ -668,6 +677,31 @@ func (f *fakeStore) DeactivateSuitesMissingFromDir(_ context.Context, _ uuid.UUI
 
 func (f *fakeStore) DeactivateTestsMissingFromSuite(_ context.Context, _ uuid.UUID, _ string, _ []string, _ string) (int, error) {
 	return 0, nil
+}
+
+// Run detail stubs
+func (f *fakeStore) GetRun(_ context.Context, _ uuid.UUID, _ string) (persistence.RunRecord, error) {
+	return persistence.RunRecord{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) ListRunTests(_ context.Context, _ string) ([]persistence.RunTest, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ListRunLogs(_ context.Context, _ string, _ int) ([]persistence.RunLog, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetRunTestWithRun(_ context.Context, _ uuid.UUID, _ uuid.UUID) (persistence.RunTestWithRun, error) {
+	return persistence.RunTestWithRun{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) ListRunLogsByTest(_ context.Context, _ uuid.UUID, _ int) ([]persistence.RunLog, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.RunStep, error) {
+	return nil, nil
 }
 
 func TestServerDeviceFlowAndRefresh(t *testing.T) {

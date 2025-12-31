@@ -4,8 +4,13 @@ import { environments, accessKeys, projects } from '../data/mock-data';
 import { InfoLabel } from '../components/info-label';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 
+interface NavigationParams {
+  env?: string;
+  [key: string]: string | undefined;
+}
+
 interface EnvironmentsProps {
-  onNavigate: (page: string, params?: any) => void;
+  onNavigate: (page: string, params?: NavigationParams) => void;
 }
 
 export function Environments({ onNavigate }: EnvironmentsProps) {

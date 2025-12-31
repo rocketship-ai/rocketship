@@ -44,12 +44,13 @@ func (p permission) String() string {
 }
 
 var methodPermissions = map[string]permission{
-	"/rocketship.v1.Engine/CreateRun":  permWrite,
-	"/rocketship.v1.Engine/AddLog":     permWrite,
-	"/rocketship.v1.Engine/CancelRun":  permWrite,
-	"/rocketship.v1.Engine/ListRuns":   permRead,
-	"/rocketship.v1.Engine/GetRun":     permRead,
-	"/rocketship.v1.Engine/StreamLogs": permRead,
+	"/rocketship.v1.Engine/CreateRun":     permWrite,
+	"/rocketship.v1.Engine/AddLog":        permWrite,
+	"/rocketship.v1.Engine/CancelRun":     permWrite,
+	"/rocketship.v1.Engine/UpsertRunStep": permWrite,
+	"/rocketship.v1.Engine/ListRuns":      permRead,
+	"/rocketship.v1.Engine/GetRun":        permRead,
+	"/rocketship.v1.Engine/StreamLogs":    permRead,
 }
 
 type principalContextKey struct{}
@@ -89,6 +90,23 @@ func (p *Principal) denialMessage(required permission) string {
 		roles = "none"
 	}
 	return fmt.Sprintf("requires %s access (roles: %s)", required.String(), roles)
+}
+
+// isServiceAccount returns true if the principal represents a service account.
+// Service accounts have either "service_account" role or a subject starting with "service:".
+func (p *Principal) isServiceAccount() bool {
+	if p == nil {
+		return false
+	}
+	if strings.HasPrefix(p.Subject, "service:") {
+		return true
+	}
+	for _, role := range p.Roles {
+		if strings.TrimSpace(strings.ToLower(role)) == "service_account" {
+			return true
+		}
+	}
+	return false
 }
 
 func contextWithPrincipal(ctx context.Context, p *Principal) context.Context {
@@ -330,6 +348,41 @@ func (e *Engine) resolvePrincipalAndOrg(ctx context.Context) (*Principal, uuid.U
 
 	orgIDStr := strings.TrimSpace(principal.OrgID)
 	if orgIDStr == "" {
+		if !e.requireOrgScope {
+			return principal, uuid.Nil, nil
+		}
+		return nil, uuid.Nil, fmt.Errorf("token missing organization scope")
+	}
+
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		return nil, uuid.Nil, fmt.Errorf("invalid organization identifier: %w", err)
+	}
+	return principal, orgID, nil
+}
+
+// resolvePrincipalAndOrgForInternalCallbacks is similar to resolvePrincipalAndOrg but allows
+// service account tokens to omit org scope. This is used for internal worker callbacks (AddLog,
+// UpsertRunStep) where the worker has a service token but no org_id claim.
+//
+// - If principal has OrgID: parse and return it (same as resolvePrincipalAndOrg).
+// - If principal has no OrgID AND is a service account: return (principal, uuid.Nil, nil).
+// - If principal has no OrgID AND is NOT a service account: enforce requireOrgScope as usual.
+func (e *Engine) resolvePrincipalAndOrgForInternalCallbacks(ctx context.Context) (*Principal, uuid.UUID, error) {
+	principal, ok := PrincipalFromContext(ctx)
+	if e.authConfig.mode == authModeNone {
+		return principal, uuid.Nil, nil
+	}
+	if !ok {
+		return nil, uuid.Nil, fmt.Errorf("missing authentication context")
+	}
+
+	orgIDStr := strings.TrimSpace(principal.OrgID)
+	if orgIDStr == "" {
+		// Service accounts may omit org scope for internal callbacks
+		if principal.isServiceAccount() {
+			return principal, uuid.Nil, nil
+		}
 		if !e.requireOrgScope {
 			return principal, uuid.Nil, nil
 		}

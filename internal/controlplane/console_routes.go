@@ -288,7 +288,9 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 	}
 
 	// Query runs for these projects + suite name
-	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, 200)
+	// - Limit to 5 runs per branch (default)
+	// - Only show branches with activity in last 24 hours (except default branch)
+	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, 5)
 	if err != nil {
 		log.Printf("failed to list runs for suite: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list runs")

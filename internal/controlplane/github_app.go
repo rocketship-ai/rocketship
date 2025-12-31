@@ -543,6 +543,56 @@ type PullRequestFile struct {
 	Changes          int    `json:"changes"`
 }
 
+// ListInstallations lists all installations of the GitHub App
+func (g *GitHubAppClient) ListInstallations(ctx context.Context) ([]GitHubAppInstallationInfo, error) {
+	appJWT, err := g.generateAppJWT()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate app JWT: %w", err)
+	}
+
+	var allInstallations []GitHubAppInstallationInfo
+	page := 1
+	perPage := 100
+
+	for {
+		url := fmt.Sprintf("%s?per_page=%d&page=%d", gitHubAppInstallationsURL, perPage, page)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("Authorization", "Bearer "+appJWT)
+		req.Header.Set("User-Agent", "rocketship-controlplane")
+
+		resp, err := g.client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("failed to list installations (status %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+
+		var installations []GitHubAppInstallationInfo
+		if err := json.NewDecoder(resp.Body).Decode(&installations); err != nil {
+			_ = resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode installations response: %w", err)
+		}
+		_ = resp.Body.Close()
+
+		allInstallations = append(allInstallations, installations...)
+
+		if len(installations) < perPage {
+			break
+		}
+		page++
+	}
+
+	return allInstallations, nil
+}
+
 // ListPullRequestFiles fetches the list of files changed in a pull request
 func (g *GitHubAppClient) ListPullRequestFiles(ctx context.Context, installationID int64, owner, repo string, prNumber int) ([]PullRequestFile, error) {
 	token, err := g.GetInstallationToken(ctx, installationID)

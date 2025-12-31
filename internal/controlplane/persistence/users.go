@@ -26,6 +26,7 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
 
 	// On INSERT: name is NULL (user sets it during onboarding)
 	// On UPDATE: only update username (GitHub SoT) and updated_at; never touch name
+	// Use COALESCE to convert NULL name to empty string for Go scanning
 	const query = `
         INSERT INTO users (id, github_user_id, email, name, username, created_at, updated_at)
         VALUES ($1, $2, $3, NULL, $4, NOW(), NOW())
@@ -33,7 +34,7 @@ func (s *Store) UpsertGitHubUser(ctx context.Context, input GitHubUserInput) (Us
         DO UPDATE SET
             username = EXCLUDED.username,
             updated_at = NOW()
-        RETURNING id, github_user_id, email, name, username, created_at, updated_at
+        RETURNING id, github_user_id, email, COALESCE(name, '') as name, username, created_at, updated_at
     `
 
 	var user User
@@ -90,6 +91,20 @@ func (s *Store) UpdateUserName(ctx context.Context, userID uuid.UUID, name strin
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+// GetUserByID retrieves a user by their ID
+func (s *Store) GetUserByID(ctx context.Context, userID uuid.UUID) (User, error) {
+	const query = `
+        SELECT id, github_user_id, email, COALESCE(name, '') as name, username, created_at, updated_at
+        FROM users
+        WHERE id = $1
+    `
+	var user User
+	if err := s.db.GetContext(ctx, &user, query, userID); err != nil {
+		return User{}, fmt.Errorf("failed to get user: %w", err)
+	}
+	return user, nil
 }
 
 // RoleSummary returns aggregated user membership information

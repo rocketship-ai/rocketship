@@ -14,6 +14,7 @@ import (
 
 	"github.com/itchyny/gojq"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
@@ -26,8 +27,12 @@ func init() {
 
 // ActivityResponse represents the response from the HTTP activity
 type ActivityResponse struct {
-	Response *HTTPResponse     `json:"response"`
-	Saved    map[string]string `json:"saved"`
+	Response          *HTTPResponse         `json:"response"`
+	Saved             map[string]string     `json:"saved"`
+	UIPayload         *UIPayload            `json:"ui_payload,omitempty"`
+	AssertionResults  []HTTPAssertionResult `json:"assertion_results,omitempty"`
+	AssertionFailed   bool                  `json:"assertion_failed,omitempty"`
+	AssertionError    string                `json:"assertion_error,omitempty"`
 }
 
 // replaceVariables replaces {{ variable }} patterns in the input string with values from the state
@@ -69,6 +74,39 @@ func getStateKeys(state map[string]string) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// sensitiveHeaders is the list of header names (case-insensitive) that should be redacted
+var sensitiveHeaders = map[string]bool{
+	"authorization": true,
+	"cookie":        true,
+	"x-api-key":     true,
+	"x-auth-token":  true,
+}
+
+// maxUIBodyBytes is the maximum body size to include in UI payload (8KB)
+const maxUIBodyBytes = 8 * 1024
+
+// redactHeaders returns a copy of headers with sensitive values redacted
+func redactHeaders(headers map[string]string) map[string]string {
+	redacted := make(map[string]string, len(headers))
+	for k, v := range headers {
+		if sensitiveHeaders[strings.ToLower(k)] {
+			redacted[k] = "[REDACTED]"
+		} else {
+			redacted[k] = v
+		}
+	}
+	return redacted
+}
+
+// truncateBody returns a truncated body if it exceeds maxUIBodyBytes
+func truncateBody(body string) (truncated string, wasTruncated bool, originalBytes int) {
+	originalBytes = len(body)
+	if originalBytes <= maxUIBodyBytes {
+		return body, false, originalBytes
+	}
+	return body[:maxUIBodyBytes], true, originalBytes
 }
 
 func (hp *HTTPPlugin) GetType() string {
@@ -279,20 +317,68 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		}
 	}
 
-	// Process assertions
-	if err := hp.processAssertions(p, resp, respBody); err != nil {
-		return nil, err
-	}
+	// Process assertions - collect results without failing the activity
+	assertionResults, assertionFailed, assertionError := hp.processAssertionsWithResults(p, resp, respBody)
 
-	// Process saves
+	// Process saves - we still do this even if assertions failed so we capture all data
 	saved := make(map[string]string)
 	if err := hp.processSaves(p, resp, respBody, saved); err != nil {
 		return nil, err
 	}
 
+	// Build UI payload with request/response details for the web UI
+	// Apply redaction and truncation for security and storage efficiency
+
+	// Prepare request headers for UI (flatten multi-value headers)
+	reqHeaders := make(map[string]string)
+	for key, values := range req.Header {
+		if len(values) > 0 {
+			reqHeaders[key] = values[0]
+		}
+	}
+
+	// Truncate request body if needed
+	reqBodyStr, reqTruncated, reqOrigBytes := truncateBody(string(reqBodyBytes))
+	// Truncate response body if needed
+	respBodyStr, respTruncated, respOrigBytes := truncateBody(string(respBody))
+
+	uiPayload := &UIPayload{
+		Request: &UIRequestData{
+			Method:        method,
+			URL:           urlStr,
+			Headers:       redactHeaders(reqHeaders),
+			Body:          reqBodyStr,
+			BodyTruncated: reqTruncated,
+			BodyBytes:     reqOrigBytes,
+		},
+		Response: &UIResponseData{
+			StatusCode:    resp.StatusCode,
+			Headers:       redactHeaders(response.Headers),
+			Body:          respBodyStr,
+			BodyTruncated: respTruncated,
+			BodyBytes:     respOrigBytes,
+		},
+	}
+
+	// Preserve Temporal retry semantics for assertion failures:
+	// return a retryable activity error so Temporal can perform retries according to the step retry policy.
+	// Include rich UI payload + assertion results + saved values as error details so the workflow can persist them.
+	if assertionFailed {
+		details := map[string]interface{}{
+			"ui_payload":        uiPayload,
+			"assertion_results": assertionResults,
+			"saved":             saved,
+		}
+		return nil, temporal.NewApplicationError(assertionError, "http_assertion_failed", details)
+	}
+
 	return &ActivityResponse{
-		Response: response,
-		Saved:    saved,
+		Response:         response,
+		Saved:            saved,
+		UIPayload:        uiPayload,
+		AssertionResults: assertionResults,
+		AssertionFailed:  false,
+		AssertionError:   "",
 	}, nil
 }
 
@@ -397,10 +483,12 @@ func (hp *HTTPPlugin) processSaves(p map[string]interface{}, resp *http.Response
 	return nil
 }
 
-func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Response, respBody []byte) error {
+// processAssertionsWithResults evaluates all assertions and returns structured results
+// Returns (results, hasFailed, errorSummary) - never returns an error so the activity can complete
+func (hp *HTTPPlugin) processAssertionsWithResults(p map[string]interface{}, resp *http.Response, respBody []byte) ([]HTTPAssertionResult, bool, string) {
 	assertions, ok := p["assertions"].([]interface{})
-	if !ok {
-		return nil
+	if !ok || len(assertions) == 0 {
+		return nil, false, ""
 	}
 
 	// Get state from input parameters
@@ -419,164 +507,226 @@ func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Res
 			default:
 				bytes, err := json.Marshal(val)
 				if err != nil {
-					return fmt.Errorf("failed to convert state value for %s: %w", k, err)
+					state[k] = fmt.Sprintf("%v", val)
+				} else {
+					state[k] = string(bytes)
 				}
-				state[k] = string(bytes)
 			}
 		}
 	}
 
+	var results []HTTPAssertionResult
+	var hasFailed bool
+	var failedMessages []string
+
 	for _, assertion := range assertions {
 		assertionMap, ok := assertion.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("invalid assertion format: got type %T", assertion)
+			results = append(results, HTTPAssertionResult{
+				Type:    "unknown",
+				Passed:  false,
+				Message: fmt.Sprintf("invalid assertion format: got type %T", assertion),
+			})
+			hasFailed = true
+			failedMessages = append(failedMessages, "invalid assertion format")
+			continue
 		}
 
 		assertionType, ok := assertionMap["type"].(string)
 		if !ok {
-			return fmt.Errorf("assertion type is required")
+			results = append(results, HTTPAssertionResult{
+				Type:    "unknown",
+				Passed:  false,
+				Message: "assertion type is required",
+			})
+			hasFailed = true
+			failedMessages = append(failedMessages, "assertion type is required")
+			continue
 		}
 
 		// Replace variables in expected value if it's a string
-		if expectedStr, ok := assertionMap["expected"].(string); ok {
-			expectedStr, err := replaceVariables(expectedStr, state)
-			if err != nil {
-				return fmt.Errorf("failed to replace variables in expected value: %w", err)
+		expected := assertionMap["expected"]
+		if expectedStr, ok := expected.(string); ok {
+			if replaced, err := replaceVariables(expectedStr, state); err == nil {
+				expected = replaced
 			}
-			assertionMap["expected"] = expectedStr
+		}
+
+		result := HTTPAssertionResult{
+			Type:     assertionType,
+			Expected: expected,
 		}
 
 		switch assertionType {
 		case AssertionTypeStatusCode:
-			expected, ok := assertionMap["expected"].(float64)
+			expectedCode, ok := expected.(float64)
 			if !ok {
-				return fmt.Errorf("status code assertion expected value must be a number: got type %T", assertionMap["expected"])
-			}
-			if int(expected) != resp.StatusCode {
-				// Include response body in error for better debugging
-				bodyPreview := string(respBody)
-				if len(bodyPreview) > 500 {
-					bodyPreview = bodyPreview[:500] + "..."
+				result.Passed = false
+				result.Message = fmt.Sprintf("status code assertion expected value must be a number: got type %T", expected)
+				result.Actual = resp.StatusCode
+			} else {
+				result.Actual = resp.StatusCode
+				if int(expectedCode) == resp.StatusCode {
+					result.Passed = true
+				} else {
+					result.Passed = false
+					result.Message = fmt.Sprintf("expected %d, got %d", int(expectedCode), resp.StatusCode)
 				}
-				if bodyPreview != "" {
-					return fmt.Errorf("status code assertion failed: expected %d, got %d. Response body: %s", int(expected), resp.StatusCode, bodyPreview)
-				}
-				return fmt.Errorf("status code assertion failed: expected %d, got %d", int(expected), resp.StatusCode)
 			}
 
 		case AssertionTypeHeader:
 			headerName, ok := assertionMap["name"].(string)
 			if !ok {
-				return fmt.Errorf("header name is required for header assertion")
-			}
-
-			expected, ok := assertionMap["expected"].(string)
-			if !ok {
-				return fmt.Errorf("header value must be a string")
-			}
-
-			actual := resp.Header.Get(headerName)
-			if actual != expected {
-				return fmt.Errorf("header assertion failed for %q: expected %q, got %q", headerName, expected, actual)
+				result.Passed = false
+				result.Message = "header name is required for header assertion"
+			} else {
+				result.Name = headerName
+				expectedVal, ok := expected.(string)
+				if !ok {
+					result.Passed = false
+					result.Message = "header value must be a string"
+				} else {
+					actual := resp.Header.Get(headerName)
+					result.Actual = actual
+					if actual == expectedVal {
+						result.Passed = true
+					} else {
+						result.Passed = false
+						result.Message = fmt.Sprintf("expected %q, got %q", expectedVal, actual)
+					}
+				}
 			}
 
 		case AssertionTypeJSONPath:
-			// Handle JSON path assertions
-			var jsonData interface{}
-			if err := json.Unmarshal(respBody, &jsonData); err != nil {
-				return fmt.Errorf("failed to parse response body as JSON: %w", err)
-			}
-
 			path, ok := assertionMap["path"].(string)
 			if !ok {
-				return fmt.Errorf("path is required for JSONPath assertion")
-			}
-
-			// Replace variables in path field before parsing as jq expression
-			path, err := replaceVariables(path, state)
-			if err != nil {
-				return fmt.Errorf("failed to replace variables in path field: %w", err)
-			}
-
-			query, err := gojq.Parse(path)
-			if err != nil {
-				return fmt.Errorf("failed to parse jq expression %q: %w", path, err)
-			}
-
-			iter := query.Run(jsonData)
-			var result interface{}
-			var found bool
-
-			for {
-				v, ok := iter.Next()
-				if !ok {
-					break
+				result.Passed = false
+				result.Message = "path is required for JSONPath assertion"
+			} else {
+				// Replace variables in path
+				if replaced, err := replaceVariables(path, state); err == nil {
+					path = replaced
 				}
-				if err, ok := v.(error); ok {
-					return fmt.Errorf("error evaluating jq expression %q: %w", path, err)
-				}
-				if !found {
-					result = v
-					found = true
-				}
-			}
+				result.Path = path
 
-			// If we're just checking existence
-			if exists, ok := assertionMap["exists"].(bool); ok && exists {
-				if !found {
-					// Include a preview of the response body for debugging
-					bodyPreview := string(respBody)
-					if len(bodyPreview) > 200 {
-						bodyPreview = bodyPreview[:200] + "..."
+				var jsonData interface{}
+				if err := json.Unmarshal(respBody, &jsonData); err != nil {
+					result.Passed = false
+					result.Message = fmt.Sprintf("failed to parse response body as JSON: %v", err)
+				} else {
+					query, err := gojq.Parse(path)
+					if err != nil {
+						result.Passed = false
+						result.Message = fmt.Sprintf("failed to parse jq expression: %v", err)
+					} else {
+						iter := query.Run(jsonData)
+						var queryResult interface{}
+						var found bool
+
+						for {
+							v, ok := iter.Next()
+							if !ok {
+								break
+							}
+							if err, ok := v.(error); ok {
+								result.Passed = false
+								result.Message = fmt.Sprintf("error evaluating jq expression: %v", err)
+								break
+							}
+							if !found {
+								queryResult = v
+								found = true
+							}
+						}
+
+						result.Actual = queryResult
+
+						// If we're just checking existence
+						if exists, ok := assertionMap["exists"].(bool); ok && exists {
+							if found {
+								result.Passed = true
+							} else {
+								result.Passed = false
+								result.Message = fmt.Sprintf("path %q does not exist", path)
+							}
+						} else if !found {
+							result.Passed = false
+							result.Message = fmt.Sprintf("no results from jq expression %q", path)
+						} else if expected != nil {
+							// Compare values
+							equal := false
+							switch v := queryResult.(type) {
+							case int:
+								if exp, ok := expected.(float64); ok {
+									equal = float64(v) == exp
+								} else if exp, ok := expected.(int); ok {
+									equal = v == exp
+								}
+							case float64:
+								if exp, ok := expected.(float64); ok {
+									equal = v == exp
+								} else if exp, ok := expected.(int); ok {
+									equal = v == float64(exp)
+								}
+							case string:
+								if exp, ok := expected.(string); ok {
+									equal = v == exp
+								}
+							default:
+								equal = queryResult == expected
+							}
+
+							if equal {
+								result.Passed = true
+							} else {
+								result.Passed = false
+								result.Message = fmt.Sprintf("expected %v, got %v", expected, queryResult)
+							}
+						} else {
+							// No expected value and we found a result
+							result.Passed = true
+						}
 					}
-					return fmt.Errorf("jq assertion failed: path %q does not exist. Response body: %s", path, bodyPreview)
-				}
-				// Skip value comparison if we're only checking existence
-				continue
-			}
-
-			if !found {
-				// Include a preview of the response body for debugging
-				bodyPreview := string(respBody)
-				if len(bodyPreview) > 200 {
-					bodyPreview = bodyPreview[:200] + "..."
-				}
-				return fmt.Errorf("no results from jq expression %q. Response body: %s", path, bodyPreview)
-			}
-
-			// Only compare values if we have an expected value
-			if expected, hasExpected := assertionMap["expected"]; hasExpected {
-				equal := false
-				switch v := result.(type) {
-				case int:
-					if exp, ok := expected.(float64); ok {
-						equal = float64(v) == exp
-					} else if exp, ok := expected.(int); ok {
-						equal = v == exp
-					}
-				case float64:
-					if exp, ok := expected.(float64); ok {
-						equal = v == exp
-					} else if exp, ok := expected.(int); ok {
-						equal = v == float64(exp)
-					}
-				case string:
-					if exp, ok := expected.(string); ok {
-						equal = v == exp
-					}
-				default:
-					equal = result == expected
-				}
-
-				if !equal {
-					return fmt.Errorf("jq assertion failed: path %q expected %v (type %T), got %v (type %T)",
-						path, expected, expected, result, result)
 				}
 			}
+
 		default:
-			return fmt.Errorf("unknown assertion type: %s", assertionType)
+			result.Passed = false
+			result.Message = fmt.Sprintf("unknown assertion type: %s", assertionType)
+		}
+
+		results = append(results, result)
+		if !result.Passed {
+			hasFailed = true
+			if result.Message != "" {
+				failedMessages = append(failedMessages, fmt.Sprintf("%s: %s", result.Type, result.Message))
+			}
 		}
 	}
 
+	var errorSummary string
+	if hasFailed && len(failedMessages) > 0 {
+		if len(failedMessages) == 1 {
+			errorSummary = fmt.Sprintf("Assertion failed: %s", failedMessages[0])
+		} else {
+			errorSummary = fmt.Sprintf("Assertions failed: %s", strings.Join(failedMessages, "; "))
+		}
+	}
+
+	return results, hasFailed, errorSummary
+}
+
+// processAssertions is kept for backward compatibility but now uses the new implementation
+func (hp *HTTPPlugin) processAssertions(p map[string]interface{}, resp *http.Response, respBody []byte) error {
+	results, hasFailed, errorSummary := hp.processAssertionsWithResults(p, resp, respBody)
+	if hasFailed {
+		// Find first failure for detailed error message
+		for _, r := range results {
+			if !r.Passed && r.Message != "" {
+				return fmt.Errorf("%s", r.Message)
+			}
+		}
+		return fmt.Errorf("%s", errorSummary)
+	}
 	return nil
 }

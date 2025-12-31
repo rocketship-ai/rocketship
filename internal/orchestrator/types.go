@@ -31,9 +31,14 @@ type RunStore interface {
 	// Run details
 	InsertRunTest(ctx context.Context, rt persistence.RunTest) (persistence.RunTest, error)
 	UpdateRunTestByWorkflowID(ctx context.Context, workflowID, status string, errorMsg *string, endedAt time.Time, durationMs int64) error
+	GetRunTestByWorkflowID(ctx context.Context, workflowID string) (persistence.RunTest, error)
 	ListRunTests(ctx context.Context, runID string) ([]persistence.RunTest, error)
 	InsertRunLog(ctx context.Context, log persistence.RunLog) (persistence.RunLog, error)
 	ListRunLogs(ctx context.Context, runID string, limit int) ([]persistence.RunLog, error)
+	// Step operations
+	UpsertRunStep(ctx context.Context, step persistence.RunStep) (persistence.RunStep, error)
+	UpdateRunTestStepCounts(ctx context.Context, runTestID uuid.UUID) error
+	ListRunSteps(ctx context.Context, runTestID uuid.UUID) ([]persistence.RunStep, error)
 	// Project lookup for run association
 	FindProjectByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) (persistence.Project, bool, error)
 	// Suite/test lookup for run linking

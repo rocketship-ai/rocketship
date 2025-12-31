@@ -1,7 +1,10 @@
-import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { EnvBadge, InitiatorBadge, ConfigSourceBadge } from '../components/status-badge';
+import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
 import { useState } from 'react';
+import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
+import { LoadingState, ErrorState } from '../components/ui';
+import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary } from '../lib/format';
 
 interface SuiteRunDetailProps {
   suiteRunId: string;
@@ -9,352 +12,99 @@ interface SuiteRunDetailProps {
   onViewTestRun: (testRunId: string) => void;
 }
 
+// Transform RunTest to TestItem format
+function transformTestRun(test: RunTest) {
+  // Transform step summaries for step chips display
+  const steps = (test.steps || []).map(step => ({
+    name: step.name,
+    plugin: step.plugin,
+    status: mapStepStatusForSummary(step.status),
+  }));
+
+  return {
+    id: test.id,
+    name: test.name,
+    status: mapTestStatus(test.status),
+    duration: formatDuration(test.duration_ms),
+    steps,
+  };
+}
+
 export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDetailProps) {
   const [activeTab, setActiveTab] = useState<'test-runs' | 'logs' | 'artifacts'>('test-runs');
 
+  // Fetch run data from API
+  const { data: runData, isLoading: runLoading, error: runError } = useRun(suiteRunId);
+  const { data: testsData, isLoading: testsLoading } = useRunTests(suiteRunId);
+  const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId);
+
+  // Back button component (shared across states)
+  const BackButton = () => (
+    <button
+      onClick={onBack}
+      className="flex items-center gap-2 text-[#666666] hover:text-black mb-4 transition-colors"
+    >
+      <ArrowLeft className="w-4 h-4" />
+      <span>Back to suite</span>
+    </button>
+  );
+
+  // Loading state
+  if (runLoading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <BackButton />
+          <LoadingState message="Loading run details..." />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (runError || !runData) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <BackButton />
+          <ErrorState
+            title="Failed to load run details"
+            message={runError?.message || 'Run not found'}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Transform data for display
   const suiteRun = {
-    id: suiteRunId,
-    suiteName: 'API regression suite',
-    status: 'failed' as 'success' | 'failed' | 'running',
-    env: 'staging',
-    initiator: 'ci' as const,
-    configSource: { type: 'repo' as const, sha: 'def4567890123' },
-    duration: '1m 57s',
-    started: '2024-11-30 14:23:45',
-    ended: '2024-11-30 14:25:42',
-    branch: 'feature/payment-v2',
-    commit: 'def4567',
-    passed: 2,
-    failed: 1,
-    skipped: 0,
+    id: runData.id,
+    suiteName: runData.suite_name || 'Suite Run',
+    status: mapRunStatus(runData.status),
+    env: runData.environment || 'default',
+    trigger: runData.initiator_type as 'ci' | 'manual' | 'schedule',
+    initiatorName: runData.initiator_name || '',
+    configSource: {
+      type: (runData.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
+      sha: runData.commit_sha || runData.bundle_sha || '',
+    },
+    duration: formatDuration(runData.duration_ms),
+    started: formatDateTime(runData.started_at),
+    ended: formatDateTime(runData.ended_at),
+    branch: runData.branch || 'main',
+    commit: runData.commit_sha?.substring(0, 7) || '—',
+    passed: runData.passed_tests,
+    failed: runData.failed_tests,
+    skipped: runData.skipped_tests,
   };
 
-  // Test runs within this suite run - only 3 tests, all HTTP
-  const testRuns = [
-    {
-      id: 'testrun-1',
-      name: 'User authentication',
-      status: 'success' as const,
-      duration: '1m 12s',
-      steps: [
-        {
-          id: 'step-1',
-          plugin: 'HTTP',
-          name: 'Health check',
-          status: 'success' as const,
-          duration: '89ms',
-          input: {
-            method: 'GET',
-            url: 'https://api.staging.example.com/health',
-            headers: {},
-            body: null,
-          },
-          output: {
-            statusCode: 200,
-            headers: { 'Content-Type': 'application/json' },
-            body: { status: 'ok' },
-            duration: '89ms',
-          },
-        },
-        {
-          id: 'step-2',
-          plugin: 'HTTP',
-          name: 'Login request',
-          status: 'success' as const,
-          duration: '234ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/auth/login',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { email: 'test@example.com', password: '***' },
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Request-Id': 'req_abc123',
-            },
-            body: { token: 'eyJhbGc...', user: { id: 123, email: 'test@example.com' } },
-            duration: '234ms',
-          },
-        },
-        {
-          id: 'step-3',
-          plugin: 'HTTP',
-          name: 'Verify token',
-          status: 'success' as const,
-          duration: '145ms',
-          input: {
-            method: 'GET',
-            url: 'https://api.staging.example.com/api/auth/verify',
-            headers: {
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: null,
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { valid: true, userId: 123 },
-            duration: '145ms',
-          },
-        },
-        {
-          id: 'step-4',
-          plugin: 'HTTP',
-          name: 'Get user profile',
-          status: 'success' as const,
-          duration: '178ms',
-          input: {
-            method: 'GET',
-            url: 'https://api.staging.example.com/api/users/123',
-            headers: {
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: null,
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { id: 123, email: 'test@example.com', name: 'Test User' },
-            duration: '178ms',
-          },
-        },
-      ],
-    },
-    {
-      id: 'testrun-2',
-      name: 'Payment processing',
-      status: 'failed' as const,
-      duration: '2m 34s',
-      steps: [
-        {
-          id: 'step-5',
-          plugin: 'HTTP',
-          name: 'Get customer',
-          status: 'success' as const,
-          duration: '198ms',
-          input: {
-            method: 'GET',
-            url: 'https://api.staging.example.com/api/customers/cus_123',
-            headers: {
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: null,
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { id: 'cus_123', email: 'customer@example.com' },
-            duration: '198ms',
-          },
-        },
-        {
-          id: 'step-6',
-          plugin: 'HTTP',
-          name: 'Create payment',
-          status: 'success' as const,
-          duration: '312ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/payments/create',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: { amount: 1000, currency: 'USD', customerId: 'cus_123' },
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { paymentId: 'pay_456', status: 'pending' },
-            duration: '312ms',
-          },
-        },
-        {
-          id: 'step-7',
-          plugin: 'HTTP',
-          name: 'Confirm payment',
-          status: 'failed' as const,
-          duration: '5234ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/payments/confirm',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: { paymentId: 'pay_456' },
-          },
-          output: {
-            statusCode: 500,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { error: 'Payment gateway timeout', code: 'GATEWAY_TIMEOUT' },
-            duration: '5234ms',
-          },
-        },
-        {
-          id: 'step-8',
-          plugin: 'HTTP',
-          name: 'Retry payment',
-          status: 'failed' as const,
-          duration: '5123ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/payments/retry',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: { paymentId: 'pay_456' },
-          },
-          output: {
-            statusCode: 500,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { error: 'Payment gateway timeout', code: 'GATEWAY_TIMEOUT' },
-            duration: '5123ms',
-          },
-        },
-        {
-          id: 'step-9',
-          plugin: 'HTTP',
-          name: 'Send failure notification',
-          status: 'success' as const,
-          duration: '256ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/notifications/send',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: { type: 'payment_failed', paymentId: 'pay_456' },
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { notificationId: 'notif_789', sent: true },
-            duration: '256ms',
-          },
-        },
-      ],
-    },
-    {
-      id: 'testrun-3',
-      name: 'Webhook endpoints',
-      status: 'success' as const,
-      duration: '45s',
-      steps: [
-        {
-          id: 'step-10',
-          plugin: 'HTTP',
-          name: 'Stripe webhook',
-          status: 'success' as const,
-          duration: '189ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/webhooks/stripe',
-            headers: {
-              'Content-Type': 'application/json',
-              'Stripe-Signature': 't=1234567890,v1=...',
-            },
-            body: { type: 'payment.succeeded', data: { id: 'pay_456' } },
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { received: true },
-            duration: '189ms',
-          },
-        },
-        {
-          id: 'step-11',
-          plugin: 'HTTP',
-          name: 'Verify webhook signature',
-          status: 'success' as const,
-          duration: '23ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/webhooks/verify',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { signature: 't=1234567890,v1=...', payload: '...' },
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { valid: true },
-            duration: '23ms',
-          },
-        },
-        {
-          id: 'step-12',
-          plugin: 'HTTP',
-          name: 'Process webhook event',
-          status: 'success' as const,
-          duration: '345ms',
-          input: {
-            method: 'POST',
-            url: 'https://api.staging.example.com/api/events/process',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer eyJhbGc...',
-            },
-            body: { eventType: 'payment.succeeded', paymentId: 'pay_456' },
-          },
-          output: {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: { processed: true, eventId: 'evt_123' },
-            duration: '345ms',
-          },
-        },
-      ],
-    },
-  ];
+  // Transform test runs
+  const testRuns = (testsData || []).map(transformTestRun);
 
-  const logs = `[14:23:45] Starting suite run: API regression suite
-[14:23:45] Environment: staging
-[14:23:45] Initiator: GitHub Actions (CI)
-[14:23:45] Config source: repo@def4567890123
-[14:23:46] Running test 1/10: User authentication
-[14:24:31] ✓ User authentication passed (45s)
-[14:24:31] Running test 2/10: Payment processing
-[14:25:43] ✗ Payment processing failed (1m 12s)
-[14:25:43] Running test 3/10: Database migrations
-[14:26:05] ✓ Database migrations passed (22s)
-[14:26:05] Running test 4/10: Email notifications
-[14:26:43] ✓ Email notifications passed (38s)
-[14:26:43] Running test 5/10: Webhook endpoints
-[14:27:48] ✗ Webhook endpoints failed (1m 5s)
-[14:27:48] Running test 6/10: User profile updates
-[14:28:19] ✓ User profile updates passed (31s)
-[14:28:19] Suite run completed
-[14:28:20] Total duration: 4m 35s
-[14:28:20] Results: 8 passed, 2 failed, 0 skipped`;
+  // Format logs for display
+  const logs = (logsData || [])
+    .map(log => `[${new Date(log.logged_at).toLocaleTimeString()}] ${log.message}`)
+    .join('\n') || 'No logs available';
 
   return (
     <div className="p-8">
@@ -385,8 +135,12 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                   )}
                 </div>
                 <EnvBadge env={suiteRun.env} />
-                <InitiatorBadge initiator={suiteRun.initiator} />
                 <ConfigSourceBadge type={suiteRun.configSource.type} sha={suiteRun.configSource.sha} />
+                <BadgeDot />
+                <TriggerBadge trigger={suiteRun.trigger} />
+                {suiteRun.initiatorName && (
+                  <UsernameBadge username={suiteRun.initiatorName} />
+                )}
               </div>
             </div>
 
@@ -474,13 +228,22 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
         {/* Tab Content */}
         {activeTab === 'test-runs' && (
           <div className="space-y-3">
-            {testRuns.map((testRun) => (
-              <TestItem
-                key={testRun.id}
-                test={testRun}
-                onClick={() => onViewTestRun(testRun.id)}
-              />
-            ))}
+            {testsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                <span className="ml-2 text-[#666666]">Loading tests...</span>
+              </div>
+            ) : testRuns.length === 0 ? (
+              <div className="text-center py-8 text-[#666666]">No tests found</div>
+            ) : (
+              testRuns.map((testRun) => (
+                <TestItem
+                  key={testRun.id}
+                  test={testRun}
+                  onClick={() => onViewTestRun(testRun.id)}
+                />
+              ))
+            )}
           </div>
         )}
 
@@ -494,9 +257,16 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                 Download
               </button>
             </div>
-            <pre className="bg-black rounded p-4 font-mono text-xs text-[#00ff00] overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
-              {logs}
-            </pre>
+            {logsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                <span className="ml-2 text-[#666666]">Loading logs...</span>
+              </div>
+            ) : (
+              <pre className="bg-black rounded p-4 font-mono text-xs text-[#00ff00] overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
+                {logs}
+              </pre>
+            )}
           </div>
         )}
 

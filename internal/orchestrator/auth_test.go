@@ -494,3 +494,226 @@ func signJWTRSAWithoutRoles(key *rsa.PrivateKey, issuer, audience string) string
 	}
 	return signed
 }
+
+func TestPrincipal_IsServiceAccount(t *testing.T) {
+	tests := []struct {
+		name      string
+		principal *Principal
+		expected  bool
+	}{
+		{
+			name:      "nil principal",
+			principal: nil,
+			expected:  false,
+		},
+		{
+			name:      "empty principal",
+			principal: &Principal{},
+			expected:  false,
+		},
+		{
+			name: "owner role",
+			principal: &Principal{
+				Subject: "user123",
+				Roles:   []string{"owner"},
+			},
+			expected: false,
+		},
+		{
+			name: "service_account role",
+			principal: &Principal{
+				Subject: "worker",
+				Roles:   []string{"service_account"},
+			},
+			expected: true,
+		},
+		{
+			name: "service_account role with mixed case",
+			principal: &Principal{
+				Subject: "worker",
+				Roles:   []string{"Service_Account"},
+			},
+			expected: true,
+		},
+		{
+			name: "service_account role with whitespace",
+			principal: &Principal{
+				Subject: "worker",
+				Roles:   []string{" service_account "},
+			},
+			expected: true,
+		},
+		{
+			name: "subject starts with service:",
+			principal: &Principal{
+				Subject: "service:rocketship-worker",
+				Roles:   []string{"viewer"},
+			},
+			expected: true,
+		},
+		{
+			name: "multiple roles including service_account",
+			principal: &Principal{
+				Subject: "worker",
+				Roles:   []string{"viewer", "service_account"},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.principal.isServiceAccount()
+			if result != tt.expected {
+				t.Errorf("isServiceAccount() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestResolvePrincipalAndOrgForInternalCallbacks(t *testing.T) {
+	t.Run("auth disabled allows all", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		// Auth is disabled by default
+
+		ctx := contextWithPrincipal(context.Background(), &Principal{Subject: "user"})
+		principal, orgID, err := engine.resolvePrincipalAndOrgForInternalCallbacks(ctx)
+
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if principal == nil {
+			t.Fatal("expected principal")
+		}
+		if orgID.String() != "00000000-0000-0000-0000-000000000000" {
+			t.Fatalf("expected nil UUID, got %v", orgID)
+		}
+	})
+
+	t.Run("missing auth context fails", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		engine.ConfigureToken("secret-token")
+
+		_, _, err := engine.resolvePrincipalAndOrgForInternalCallbacks(context.Background())
+		if err == nil {
+			t.Fatal("expected error for missing auth context")
+		}
+		if !strings.Contains(err.Error(), "missing authentication context") {
+			t.Fatalf("expected 'missing authentication context' error, got %v", err)
+		}
+	})
+
+	t.Run("service account without org scope succeeds", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		engine.ConfigureToken("secret-token")
+		engine.requireOrgScope = true
+
+		principal := &Principal{
+			Subject: "service:rocketship-worker",
+			Roles:   []string{"service_account"},
+			OrgID:   "", // No org scope
+		}
+		ctx := contextWithPrincipal(context.Background(), principal)
+
+		p, orgID, err := engine.resolvePrincipalAndOrgForInternalCallbacks(ctx)
+		if err != nil {
+			t.Fatalf("expected service account to succeed without org scope, got %v", err)
+		}
+		if p != principal {
+			t.Fatal("expected same principal returned")
+		}
+		if orgID.String() != "00000000-0000-0000-0000-000000000000" {
+			t.Fatalf("expected nil UUID for service account, got %v", orgID)
+		}
+	})
+
+	t.Run("non-service account without org scope fails when required", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		engine.ConfigureToken("secret-token")
+		engine.requireOrgScope = true
+
+		principal := &Principal{
+			Subject: "user123",
+			Roles:   []string{"owner"},
+			OrgID:   "", // No org scope
+		}
+		ctx := contextWithPrincipal(context.Background(), principal)
+
+		_, _, err := engine.resolvePrincipalAndOrgForInternalCallbacks(ctx)
+		if err == nil {
+			t.Fatal("expected error for non-service account without org scope")
+		}
+		if !strings.Contains(err.Error(), "token missing organization scope") {
+			t.Fatalf("expected 'token missing organization scope' error, got %v", err)
+		}
+	})
+
+	t.Run("non-service account without org scope succeeds when not required", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		engine.ConfigureToken("secret-token")
+		engine.requireOrgScope = false
+
+		principal := &Principal{
+			Subject: "user123",
+			Roles:   []string{"owner"},
+			OrgID:   "", // No org scope
+		}
+		ctx := contextWithPrincipal(context.Background(), principal)
+
+		p, orgID, err := engine.resolvePrincipalAndOrgForInternalCallbacks(ctx)
+		if err != nil {
+			t.Fatalf("expected success when org scope not required, got %v", err)
+		}
+		if p != principal {
+			t.Fatal("expected same principal returned")
+		}
+		if orgID.String() != "00000000-0000-0000-0000-000000000000" {
+			t.Fatalf("expected nil UUID, got %v", orgID)
+		}
+	})
+
+	t.Run("principal with valid org ID returns parsed org", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		engine.ConfigureToken("secret-token")
+		engine.requireOrgScope = true
+
+		orgUUID := "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+		principal := &Principal{
+			Subject: "user123",
+			Roles:   []string{"owner"},
+			OrgID:   orgUUID,
+		}
+		ctx := contextWithPrincipal(context.Background(), principal)
+
+		p, orgID, err := engine.resolvePrincipalAndOrgForInternalCallbacks(ctx)
+		if err != nil {
+			t.Fatalf("expected success with valid org ID, got %v", err)
+		}
+		if p != principal {
+			t.Fatal("expected same principal returned")
+		}
+		if orgID.String() != orgUUID {
+			t.Fatalf("expected org ID %s, got %v", orgUUID, orgID)
+		}
+	})
+
+	t.Run("invalid org ID format fails", func(t *testing.T) {
+		engine := newTestEngineWithClient(&noopTemporalClient{})
+		engine.ConfigureToken("secret-token")
+
+		principal := &Principal{
+			Subject: "user123",
+			Roles:   []string{"owner"},
+			OrgID:   "not-a-uuid",
+		}
+		ctx := contextWithPrincipal(context.Background(), principal)
+
+		_, _, err := engine.resolvePrincipalAndOrgForInternalCallbacks(ctx)
+		if err == nil {
+			t.Fatal("expected error for invalid org ID format")
+		}
+		if !strings.Contains(err.Error(), "invalid organization identifier") {
+			t.Fatalf("expected 'invalid organization identifier' error, got %v", err)
+		}
+	})
+}

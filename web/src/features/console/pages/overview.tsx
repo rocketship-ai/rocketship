@@ -1,161 +1,43 @@
 import { CheckCircle2, Circle, AlertCircle, X, Loader2, ExternalLink } from 'lucide-react';
 import { Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { tokenManager } from '@/features/auth/tokenManager';
+import {
+  useOverviewSetup,
+  useGithubAppRepos,
+  useConnectGithubRepo,
+  useSyncGithubApp,
+  type SetupData,
+  type GitHubRepo,
+  type ConnectRepoResult,
+} from '../hooks/use-console-queries';
+import { Button } from '../components/ui';
 
 interface OverviewProps {
   onNavigate: (page: string) => void;
 }
 
-// API types for new GitHub App flow
-interface SetupStepAPI {
-  id: string;
-  title: string;
-  complete: boolean;
-}
-
-interface SetupDataAPI {
-  steps: SetupStepAPI[];
-  github_app_slug?: string;
-  github_install_url?: string;
-}
-
-interface GitHubRepo {
-  id: number;
-  name: string;
-  full_name: string;
-  private: boolean;
-  default_branch: string;
-  html_url: string;
-}
-
-
-interface ConnectResult {
-  project_id: string;
-  name: string;
-  repo_url: string;
-}
-
 export function Overview({ onNavigate }: OverviewProps) {
-  const [_selectedProject, _setSelectedProject] = useState('all');
-  const [_selectedEnv, _setSelectedEnv] = useState('all');
-  const [_timeRange, _setTimeRange] = useState('7d');
+  // Setup data from API via React Query
+  const { data: setupData, isLoading: setupLoading } = useOverviewSetup();
 
-  // Setup data from API
-  const [setupData, setSetupData] = useState<SetupDataAPI | null>(null);
-  const [setupLoading, setSetupLoading] = useState(true);
-  const [setupError, setSetupError] = useState<string | null>(null);
+  // GitHub repos query (only fetched when modal opens)
+  const {
+    data: repos,
+    isLoading: reposLoading,
+    error: reposError,
+    refetch: fetchRepos,
+    isFetched: reposFetched,
+  } = useGithubAppRepos();
+
+  // Mutations
+  const connectMutation = useConnectGithubRepo();
+  const syncMutation = useSyncGithubApp();
 
   // Connect modal state
   const [connectModalOpen, setConnectModalOpen] = useState(false);
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
-  const [reposLoading, setReposLoading] = useState(false);
-  const [reposError, setReposError] = useState<string | null>(null);
-  const [reposFetched, setReposFetched] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepo | null>(null);
-  const [connecting, setConnecting] = useState(false);
-  const [connectResult, setConnectResult] = useState<ConnectResult | null>(null);
-  const [connectError, setConnectError] = useState<string | null>(null);
-
-  // Fetch setup data
-  const fetchSetup = useCallback(async () => {
-    setSetupLoading(true);
-    setSetupError(null);
-    try {
-      const token = await tokenManager.get();
-      const response = await fetch('/api/overview/setup', {
-        method: 'GET',
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!response.ok) {
-        if (response.status === 403) {
-          setSetupData(null);
-          return;
-        }
-        throw new Error('Failed to fetch setup data');
-      }
-      const data: SetupDataAPI = await response.json();
-      setSetupData(data);
-    } catch (err) {
-      setSetupError(err instanceof Error ? err.message : 'Failed to load setup data');
-    } finally {
-      setSetupLoading(false);
-    }
-  }, []);
-
-  // Fetch repos when modal opens (uses GitHub App API)
-  const fetchRepos = useCallback(async () => {
-    setReposLoading(true);
-    setReposError(null);
-    setReposFetched(true);
-    try {
-      const token = await tokenManager.get();
-      const response = await fetch('/api/github/app/repos', {
-        method: 'GET',
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        if (response.status === 412) {
-          // GitHub App not installed - shouldn't happen if we check first
-          throw new Error('GitHub App not installed. Please install it first.');
-        }
-        throw new Error(errorData.error || 'Failed to fetch repositories');
-      }
-      const data: GitHubRepo[] = await response.json();
-      setRepos(data);
-    } catch (err) {
-      setReposError(err instanceof Error ? err.message : 'Failed to load repositories');
-    } finally {
-      setReposLoading(false);
-    }
-  }, []);
-
-  // Connect repository
-  const handleConnect = useCallback(async () => {
-    if (!selectedRepo) return;
-
-    setConnecting(true);
-    setConnectError(null);
-    setConnectResult(null);
-    try {
-      const token = await tokenManager.get();
-      const response = await fetch('/api/github/app/repos/connect', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          repo_full_name: selectedRepo.full_name,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to connect repository');
-      }
-
-      const result: ConnectResult = await response.json();
-      setConnectResult(result);
-
-      // Refresh setup data after successful connect
-      await fetchSetup();
-    } catch (err) {
-      setConnectError(err instanceof Error ? err.message : 'Failed to connect repository');
-    } finally {
-      setConnecting(false);
-    }
-  }, [selectedRepo, fetchSetup]);
-
-  // Load setup data on mount
-  useEffect(() => {
-    fetchSetup();
-  }, [fetchSetup]);
+  const [connectResult, setConnectResult] = useState<ConnectRepoResult | null>(null);
 
   // Load repos when modal opens
   useEffect(() => {
@@ -169,10 +51,6 @@ export function Overview({ onNavigate }: OverviewProps) {
     setConnectModalOpen(true);
     setSelectedRepo(null);
     setConnectResult(null);
-    setConnectError(null);
-    setReposFetched(false);
-    setRepos([]);
-    setReposError(null);
   };
 
   // Close connect modal
@@ -180,7 +58,32 @@ export function Overview({ onNavigate }: OverviewProps) {
     setConnectModalOpen(false);
     setSelectedRepo(null);
     setConnectResult(null);
-    setConnectError(null);
+  };
+
+  // Handle connecting a repository
+  const handleConnect = async () => {
+    if (!selectedRepo) return;
+
+    try {
+      const result = await connectMutation.mutateAsync(selectedRepo.full_name);
+      setConnectResult(result);
+    } catch {
+      // Error is available via connectMutation.error
+    }
+  };
+
+  // Handle syncing GitHub App
+  const handleSync = async () => {
+    try {
+      const result = await syncMutation.mutateAsync();
+      if (result.synced) {
+        toast.success('GitHub App installation synced!');
+      } else {
+        toast.info(result.message || 'No installation found to sync');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to sync');
+    }
   };
 
   // Helper to get step by ID
@@ -215,10 +118,8 @@ export function Overview({ onNavigate }: OverviewProps) {
   }, [setupComplete, setupLoading]);
 
   // Build setup items from API data
-  const getSetupItems = () => {
-    if (!setupData) return [];
-
-    return setupData.steps.map((step) => {
+  const getSetupItems = (data: SetupData) => {
+    return data.steps.map((step) => {
       switch (step.id) {
         case 'create_account':
           return {
@@ -243,8 +144,8 @@ export function Overview({ onNavigate }: OverviewProps) {
             label: step.title,
             action: step.complete ? null : 'Install App',
             onClick: step.complete ? null : () => {
-              if (setupData.github_install_url) {
-                window.open(setupData.github_install_url, '_blank');
+              if (data.github_install_url) {
+                window.open(data.github_install_url, '_blank');
               }
             },
           };
@@ -268,7 +169,7 @@ export function Overview({ onNavigate }: OverviewProps) {
     });
   };
 
-  const setupItems = getSetupItems();
+  const setupItems = setupData ? getSetupItems(setupData) : [];
 
   // Check if GitHub App is installed (step 2 complete)
   const isGitHubAppInstalled = getStep('install_github_app')?.complete ?? false;
@@ -292,7 +193,7 @@ export function Overview({ onNavigate }: OverviewProps) {
     <div className="flex-1 min-w-0 p-8">
       <div className="max-w-[1600px] mx-auto">
         {/* Setup Banner - only show when setup is incomplete, load silently */}
-        {!setupLoading && !setupError && !setupComplete && setupData ? (
+        {!setupLoading && !setupComplete && setupData ? (
           <div className="bg-[#f6a724]/10 border-2 border-[#f6a724] rounded-lg p-6 mb-6">
             <div className="flex items-start gap-4">
               <AlertCircle className="w-6 h-6 text-[#f6a724] flex-shrink-0 mt-1" />
@@ -309,45 +210,40 @@ export function Overview({ onNavigate }: OverviewProps) {
                       ) : (
                         <Circle className="w-5 h-5 text-[#999999]" />
                       )}
-                      <span className={`text-sm flex-1 ${item.done ? 'text-[#666666]' : 'text-black'}`}>
+                      <span className={`text-sm ${item.done ? 'text-[#666666]' : 'text-black'}`}>
                         {item.label}
                       </span>
-                      {!item.done && item.onClick && (
-                        <button
-                          onClick={item.onClick}
-                          className="text-sm text-black hover:underline"
-                        >
-                          {item.action} →
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
                 {/* Primary CTA based on current step */}
                 {!getStep('create_org')?.complete ? (
-                  <button
-                    onClick={() => onNavigate('settings')}
-                    className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-                  >
+                  <Button onClick={() => onNavigate('settings')}>
                     Create organization
-                  </button>
+                  </Button>
                 ) : !isGitHubAppInstalled && setupData.github_install_url ? (
-                  <a
-                    href={setupData.github_install_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Install GitHub App
-                  </a>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={setupData.github_install_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Install GitHub App
+                    </a>
+                    <Button
+                      variant="secondary"
+                      onClick={handleSync}
+                      loading={syncMutation.isPending}
+                    >
+                      {syncMutation.isPending ? 'Syncing...' : 'Already installed? Sync'}
+                    </Button>
+                  </div>
                 ) : isGitHubAppInstalled && !getStep('connect_repo')?.complete ? (
-                  <button
-                    onClick={openConnectModal}
-                    className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-                  >
+                  <Button onClick={openConnectModal}>
                     Connect repository
-                  </button>
+                  </Button>
                 ) : null}
               </div>
             </div>
@@ -516,19 +412,20 @@ export function Overview({ onNavigate }: OverviewProps) {
                       <p>Project <strong>{connectResult.name}</strong> created</p>
                     </div>
                   </div>
-                  <button
-                    onClick={closeConnectModal}
-                    className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-                  >
+                  <Button onClick={closeConnectModal} className="w-full">
                     Done
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {/* Error state */}
-              {connectError && !connectResult && (
+              {connectMutation.error && !connectResult && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                  <p className="text-sm text-red-600">{connectError}</p>
+                  <p className="text-sm text-red-600">
+                    {connectMutation.error instanceof Error
+                      ? connectMutation.error.message
+                      : 'Failed to connect repository'}
+                  </p>
                 </div>
               )}
 
@@ -546,15 +443,17 @@ export function Overview({ onNavigate }: OverviewProps) {
                       </div>
                     ) : reposError ? (
                       <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                        <p className="text-sm text-red-600">{reposError}</p>
+                        <p className="text-sm text-red-600">
+                          {reposError instanceof Error ? reposError.message : 'Failed to load repositories'}
+                        </p>
                         <button
-                          onClick={fetchRepos}
+                          onClick={() => fetchRepos()}
                           className="text-sm text-red-700 hover:underline mt-1"
                         >
                           Try again
                         </button>
                       </div>
-                    ) : repos.length === 0 ? (
+                    ) : !repos || repos.length === 0 ? (
                       <div className="p-3 bg-[#fafafa] border border-[#e5e5e5] rounded-md">
                         <p className="text-sm text-[#666666]">No repositories found.</p>
                         <p className="text-xs text-[#999999] mt-1">
@@ -596,20 +495,14 @@ export function Overview({ onNavigate }: OverviewProps) {
                   )}
 
                   {/* Connect button */}
-                  <button
+                  <Button
                     onClick={handleConnect}
-                    disabled={!selectedRepo || connecting}
-                    className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled={!selectedRepo}
+                    loading={connectMutation.isPending}
+                    className="w-full"
                   >
-                    {connecting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      'Connect repository'
-                    )}
-                  </button>
+                    {connectMutation.isPending ? 'Connecting...' : 'Connect repository'}
+                  </Button>
                 </div>
               )}
             </div>

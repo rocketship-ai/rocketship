@@ -190,6 +190,57 @@ func (c *EngineClient) AddLogWithContext(ctx context.Context, runID, workflowID,
 	return err
 }
 
+// UpsertRunStepRequest holds the parameters for reporting a step result
+type UpsertRunStepRequest struct {
+	RunID            string
+	WorkflowID       string
+	StepIndex        int
+	StepName         string
+	Plugin           string
+	Status           string
+	ErrorMessage     string
+	StartedAt        string
+	EndedAt          string
+	DurationMs       int64
+	AssertionsPassed int
+	AssertionsFailed int
+	RequestJSON      []byte
+	ResponseJSON     []byte
+	AssertionsJSON   []byte
+	VariablesJSON    []byte
+	StepConfigJSON   []byte
+}
+
+// UpsertRunStep reports a step result to the engine
+func (c *EngineClient) UpsertRunStep(ctx context.Context, req UpsertRunStepRequest) (string, error) {
+	resp, err := c.client.UpsertRunStep(ctx, &generated.UpsertRunStepRequest{
+		RunId:            req.RunID,
+		WorkflowId:       req.WorkflowID,
+		StepIndex:        int32(req.StepIndex),
+		StepName:         req.StepName,
+		Plugin:           req.Plugin,
+		Status:           req.Status,
+		ErrorMessage:     req.ErrorMessage,
+		StartedAt:        req.StartedAt,
+		EndedAt:          req.EndedAt,
+		DurationMs:       req.DurationMs,
+		AssertionsPassed: int32(req.AssertionsPassed),
+		AssertionsFailed: int32(req.AssertionsFailed),
+		RequestJson:      req.RequestJSON,
+		ResponseJson:     req.ResponseJSON,
+		AssertionsJson:   req.AssertionsJSON,
+		VariablesJson:    req.VariablesJSON,
+		StepConfigJson:   req.StepConfigJSON,
+	})
+	if err != nil {
+		if wrapped := translateAuthError("failed to upsert run step", err); wrapped != nil {
+			return "", wrapped
+		}
+		return "", err
+	}
+	return resp.GetStepId(), nil
+}
+
 func (c *EngineClient) CancelRun(ctx context.Context, runID string) error {
 	cancelCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

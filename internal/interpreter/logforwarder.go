@@ -3,9 +3,17 @@ package interpreter
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/rocketship-ai/rocketship/internal/cli"
 	"go.temporal.io/sdk/activity"
+)
+
+const (
+	// EnvEngineGRPCAddr is the environment variable for the engine gRPC address
+	// Default is "localhost:7700" for local development
+	// In Kubernetes, set to "rocketship-engine:7700" for in-cluster communication
+	EnvEngineGRPCAddr = "ROCKETSHIP_ENGINE_GRPC_ADDR"
 )
 
 // LogForwarderActivity forwards log messages from plugins to the engine
@@ -34,7 +42,10 @@ func LogForwarderActivity(ctx context.Context, params map[string]interface{}) (i
 	stepName, _ := params["step_name"].(string)
 
 	// Get engine address from environment or use default
-	engineAddr := "localhost:7700" // TODO: Make this configurable
+	engineAddr := os.Getenv(EnvEngineGRPCAddr)
+	if engineAddr == "" {
+		engineAddr = "localhost:7700"
+	}
 
 	// Create engine client
 	client, err := cli.NewEngineClient(engineAddr)

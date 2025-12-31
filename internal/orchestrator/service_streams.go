@@ -152,7 +152,8 @@ func (e *Engine) AddLog(ctx context.Context, req *generated.AddLogRequest) (*gen
 		return nil, fmt.Errorf("message is required")
 	}
 
-	_, orgID, err := e.resolvePrincipalAndOrg(ctx)
+	// Use internal callback resolver to allow service accounts without org scope
+	_, orgID, err := e.resolvePrincipalAndOrgForInternalCallbacks(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +170,6 @@ func (e *Engine) AddLog(ctx context.Context, req *generated.AddLogRequest) (*gen
 	}
 	e.mu.RUnlock()
 
-	e.addLogWithContext(req.RunId, req.Message, req.Color, req.Bold, req.TestName, req.StepName)
+	e.addLogWithWorkflowContext(req.RunId, req.WorkflowId, req.Message, req.Color, req.Bold, req.TestName, req.StepName)
 	return &generated.AddLogResponse{}, nil
 }

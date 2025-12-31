@@ -1,5 +1,6 @@
-import { ChevronRight, ChevronDown, Copy, Check, CheckCircle2, XCircle, Clock, Circle } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock, Circle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CopyButton } from './step-ui';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -8,9 +9,12 @@ import { useState } from 'react';
 type StepStatus = 'success' | 'failed' | 'pending' | 'running' | 'skipped';
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
+// Use JsonValue for generic config values (safer than any but still flexible)
+type JsonValue = string | number | boolean | null | undefined | JsonValue[] | { [key: string]: JsonValue };
+
 interface BaseStepConfig {
   plugin: string;
-  [key: string]: any;
+  [key: string]: JsonValue;
 }
 
 interface HttpStepConfig extends BaseStepConfig {
@@ -18,7 +22,7 @@ interface HttpStepConfig extends BaseStepConfig {
   method: HttpMethod;
   url: string;
   headers?: Record<string, string>;
-  body?: any;
+  body?: JsonValue;
   form?: Record<string, string>;
 }
 
@@ -26,8 +30,8 @@ interface Assertion {
   type: string;
   field?: string;
   operator?: string;
-  expected?: any;
-  actual?: any;
+  expected?: JsonValue;
+  actual?: JsonValue;
   passed?: boolean;
   message?: string;
 }
@@ -35,7 +39,7 @@ interface Assertion {
 interface SaveRule {
   name: string;
   path: string;
-  value?: any; // Resolved value if run context available
+  value?: JsonValue; // Resolved value if run context available
 }
 
 interface StepExecutionResult {
@@ -45,7 +49,7 @@ interface StepExecutionResult {
     status: number;
     statusText: string;
     headers: Record<string, string>;
-    body: any;
+    body: JsonValue;
   };
   logs?: string[];
   artifacts?: {
@@ -215,6 +219,18 @@ function getPluginRenderer(plugin: string): PluginRenderer {
 }
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/** Convert JsonValue body to string for display */
+function formatBodyAsString(body: JsonValue): string {
+  if (typeof body === 'string') {
+    return body;
+  }
+  return JSON.stringify(body, null, 2);
+}
+
+// ============================================================================
 // SUB-COMPONENTS (Tab Content Panels)
 // ============================================================================
 
@@ -225,7 +241,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-[#999999]">URL</label>
-          <CopyButton value={config.url} />
+          <CopyButton text={config.url} variant="small" />
         </div>
         <code className="block text-sm font-mono bg-[#fafafa] border border-[#e5e5e5] rounded px-3 py-2 break-all">
           {config.url}
@@ -237,7 +253,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Headers</label>
-            <CopyButton value={JSON.stringify(config.headers, null, 2)} />
+            <CopyButton text={JSON.stringify(config.headers, null, 2)} variant="small" />
           </div>
           <div className="border border-[#e5e5e5] rounded overflow-hidden">
             <table className="w-full text-sm">
@@ -259,9 +275,9 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Body</label>
-            <CopyButton value={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} />
+            <CopyButton text={formatBodyAsString(config.body)} variant="small" />
           </div>
-          <CodeBlock code={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} language="json" />
+          <CodeBlock code={formatBodyAsString(config.body)} language="json" />
         </div>
       )}
       
@@ -290,8 +306,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
 }
 
 function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionResult['response']> }) {
-  const isJson = typeof response.body === 'object';
-  const bodyString = isJson ? JSON.stringify(response.body, null, 2) : String(response.body);
+  const bodyString = formatBodyAsString(response.body);
   
   return (
     <div className="space-y-4">
@@ -317,7 +332,7 @@ function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionRe
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Headers</label>
-            <CopyButton value={JSON.stringify(response.headers, null, 2)} />
+            <CopyButton text={JSON.stringify(response.headers, null, 2)} variant="small" />
           </div>
           <div className="border border-[#e5e5e5] rounded overflow-hidden max-h-[200px] overflow-y-auto">
             <table className="w-full text-sm">
@@ -338,9 +353,9 @@ function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionRe
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-[#999999]">Body</label>
-          <CopyButton value={bodyString} />
+          <CopyButton text={bodyString} variant="small" />
         </div>
-        <CodeBlock code={bodyString} language={isJson ? 'json' : 'text'} />
+        <CodeBlock code={bodyString} language="json" />
       </div>
     </div>
   );
@@ -426,7 +441,7 @@ function DetailsPanel({ config }: { config: BaseStepConfig }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs text-[#999999]">Configuration</label>
-        <CopyButton value={JSON.stringify(config, null, 2)} />
+        <CopyButton text={JSON.stringify(config, null, 2)} variant="small" />
       </div>
       <CodeBlock code={JSON.stringify(config, null, 2)} language="json" />
     </div>
@@ -451,45 +466,6 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-  
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (_err) {
-      // Clipboard API blocked - fallback to manual selection
-      const textArea = document.createElement('textarea');
-      textArea.value = value;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (e) {
-        // Silent fail if both methods don't work
-        console.error('Copy failed:', e);
-      }
-      document.body.removeChild(textArea);
-    }
-  };
-  
-  return (
-    <button
-      onClick={handleCopy}
-      className="text-[#999999] hover:text-black transition-colors p-1"
-      title="Copy to clipboard"
-    >
-      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-    </button>
-  );
-}
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -509,12 +485,14 @@ export function TestStepCard({ step }: { step: TestStep }) {
   };
   
   const allTabs = [...pluginTabs, codeTab];
-  
-  // Set default active tab when expanding
-  if (isExpanded && !activeTab && allTabs.length > 0) {
-    setActiveTab(allTabs[0].id);
-  }
-  
+
+  // Set default active tab when expanding (using useEffect to avoid render-time state updates)
+  useEffect(() => {
+    if (isExpanded && !activeTab && allTabs.length > 0) {
+      setActiveTab(allTabs[0].id);
+    }
+  }, [isExpanded, activeTab, allTabs]);
+
   const status = step.result?.status;
   const hasFailed = status === 'failed';
   const hasPassed = status === 'success';
@@ -714,7 +692,7 @@ function CodePanel({ step }: { step: TestStep }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs text-[#999999]">YAML Configuration</label>
-        <CopyButton value={yamlCode} />
+        <CopyButton text={yamlCode} variant="small" />
       </div>
       <CodeBlock code={yamlCode} language="yaml" />
     </div>
@@ -738,11 +716,11 @@ interface OldStepFormat {
   details?: {
     request: {
       headers: Record<string, string | undefined>;
-      body: unknown;
+      body: JsonValue;
     };
     response: {
       headers: Record<string, string | undefined>;
-      body: unknown;
+      body: JsonValue;
       statusCode: number;
       latency: number;
     };
