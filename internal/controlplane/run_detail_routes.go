@@ -99,6 +99,25 @@ func (s *Server) handleRunTests(w http.ResponseWriter, r *http.Request, principa
 		if test.DurationMs.Valid {
 			item["duration_ms"] = test.DurationMs.Int64
 		}
+
+		// Fetch step summaries for this test to enable step chips display
+		steps, stepsErr := s.store.ListRunSteps(r.Context(), test.ID)
+		if stepsErr == nil && len(steps) > 0 {
+			stepSummaries := make([]map[string]interface{}, 0, len(steps))
+			for _, step := range steps {
+				stepSummary := map[string]interface{}{
+					"step_index": step.StepIndex,
+					"name":       step.Name,
+					"plugin":     step.Plugin,
+					"status":     step.Status,
+				}
+				stepSummaries = append(stepSummaries, stepSummary)
+			}
+			item["steps"] = stepSummaries
+		} else {
+			item["steps"] = []map[string]interface{}{}
+		}
+
 		payload = append(payload, item)
 	}
 
@@ -322,6 +341,86 @@ func (s *Server) handleRunRoutesDispatch(w http.ResponseWriter, r *http.Request,
 	}
 }
 
+// handleTestRunSteps handles GET /api/test-runs/{runTestId}/steps
+func (s *Server) handleTestRunSteps(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, runTestID uuid.UUID) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	// Verify test run belongs to org by getting parent run
+	result, err := s.store.GetRunTestWithRun(r.Context(), principal.OrgID, runTestID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+		log.Printf("failed to verify test run: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to verify test run")
+		return
+	}
+	_ = result // org check passed
+
+	steps, err := s.store.ListRunSteps(r.Context(), runTestID)
+	if err != nil {
+		log.Printf("failed to list test run steps: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to list steps")
+		return
+	}
+
+	payload := make([]map[string]interface{}, 0, len(steps))
+	for _, step := range steps {
+		item := map[string]interface{}{
+			"id":                step.ID.String(),
+			"run_test_id":       step.RunTestID.String(),
+			"step_index":        step.StepIndex,
+			"name":              step.Name,
+			"plugin":            step.Plugin,
+			"status":            step.Status,
+			"assertions_passed": step.AssertionsPassed,
+			"assertions_failed": step.AssertionsFailed,
+			"created_at":        step.CreatedAt.Format(time.RFC3339),
+		}
+		if step.ErrorMessage.Valid {
+			item["error_message"] = step.ErrorMessage.String
+		}
+		if step.StartedAt.Valid {
+			item["started_at"] = step.StartedAt.Time.Format(time.RFC3339)
+		}
+		if step.EndedAt.Valid {
+			item["ended_at"] = step.EndedAt.Time.Format(time.RFC3339)
+		}
+		if step.DurationMs.Valid {
+			item["duration_ms"] = step.DurationMs.Int64
+		}
+		// Include request/response data for HTTP plugin steps (UI display)
+		if len(step.RequestData) > 0 {
+			item["request_data"] = step.RequestData
+		}
+		if len(step.ResponseData) > 0 {
+			item["response_data"] = step.ResponseData
+		}
+		// Include extended data for rich step details UI
+		if len(step.AssertionsData) > 0 {
+			item["assertions_data"] = step.AssertionsData
+		}
+		if len(step.VariablesData) > 0 {
+			item["variables_data"] = step.VariablesData
+		}
+		if len(step.StepConfig) > 0 {
+			item["step_config"] = step.StepConfig
+		}
+		payload = append(payload, item)
+	}
+
+	writeJSON(w, http.StatusOK, payload)
+}
+
 // handleTestRunRoutesDispatch dispatches /api/test-runs/* routes
 func (s *Server) handleTestRunRoutesDispatch(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
 	if !strings.HasPrefix(r.URL.Path, "/api/test-runs/") {
@@ -352,6 +451,8 @@ func (s *Server) handleTestRunRoutesDispatch(w http.ResponseWriter, r *http.Requ
 	switch segments[1] {
 	case "logs":
 		s.handleTestRunLogs(w, r, principal, runTestID)
+	case "steps":
+		s.handleTestRunSteps(w, r, principal, runTestID)
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}

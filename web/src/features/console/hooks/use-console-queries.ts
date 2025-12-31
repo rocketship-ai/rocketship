@@ -137,6 +137,14 @@ export interface RunDetail {
   initiator_name?: string
 }
 
+// Step summary for test runs (minimal data for step chips)
+export interface StepSummary {
+  step_index: number
+  name: string
+  plugin: string
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'PENDING'
+}
+
 // Run test from /api/runs/{runId}/tests
 export interface RunTest {
   id: string
@@ -153,6 +161,7 @@ export interface RunTest {
   started_at?: string
   ended_at?: string
   duration_ms?: number
+  steps?: StepSummary[]
 }
 
 // Run log from /api/runs/{runId}/logs
@@ -171,6 +180,75 @@ export interface RunLog {
 export interface TestRunDetail {
   test: RunTest
   run: RunDetail
+}
+
+// Assertion result from the HTTP plugin
+export interface AssertionResult {
+  type: string // status_code, json_path, header
+  name?: string // Header name for header assertions
+  path?: string // JSONPath/jq expression for json_path assertions
+  expected?: unknown // Expected value
+  actual?: unknown // Actual value received
+  passed: boolean
+  message?: string // Error message if failed
+}
+
+// Saved variable from a step
+export interface SavedVariable {
+  name: string
+  value: string
+  source_type?: string // json_path, header, or auto
+  source?: string // The expression used
+}
+
+// Step configuration snapshot
+export interface StepConfig {
+  name: string
+  plugin: string
+  config?: Record<string, unknown>
+  assertions?: Array<Record<string, unknown>>
+  save?: Array<Record<string, unknown>>
+  retry?: {
+    maximum_attempts?: number
+    initial_interval?: string
+    maximum_interval?: string
+    backoff_coefficient?: number
+  }
+}
+
+// Run step from /api/test-runs/{testRunId}/steps
+export interface RunStep {
+  id: string
+  run_test_id: string
+  step_index: number
+  name: string
+  plugin: string
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'PENDING'
+  error_message?: string
+  assertions_passed: number
+  assertions_failed: number
+  created_at: string
+  started_at?: string
+  ended_at?: string
+  duration_ms?: number
+  request_data?: {
+    method: string
+    url: string
+    headers?: Record<string, string>
+    body?: string
+    body_truncated?: boolean
+    body_bytes?: number
+  }
+  response_data?: {
+    status_code: number
+    headers?: Record<string, string>
+    body?: string
+    body_truncated?: boolean
+    body_bytes?: number
+  }
+  assertions_data?: AssertionResult[]
+  variables_data?: SavedVariable[]
+  step_config?: StepConfig
 }
 
 // Profile types
@@ -225,6 +303,7 @@ export const consoleKeys = {
   runLogs: (id: string) => [...consoleKeys.all, 'run', id, 'logs'] as const,
   testRun: (id: string) => [...consoleKeys.all, 'testRun', id] as const,
   testRunLogs: (id: string) => [...consoleKeys.all, 'testRun', id, 'logs'] as const,
+  testRunSteps: (id: string) => [...consoleKeys.all, 'testRun', id, 'steps'] as const,
 }
 
 // Query hooks
@@ -320,6 +399,14 @@ export function useTestRunLogs(testRunId: string, limit = 500) {
   return useQuery({
     queryKey: consoleKeys.testRunLogs(testRunId),
     queryFn: () => apiGet<RunLog[]>(`/api/test-runs/${testRunId}/logs?limit=${limit}`),
+    enabled: !!testRunId,
+  })
+}
+
+export function useTestRunSteps(testRunId: string) {
+  return useQuery({
+    queryKey: consoleKeys.testRunSteps(testRunId),
+    queryFn: () => apiGet<RunStep[]>(`/api/test-runs/${testRunId}/steps`),
     enabled: !!testRunId,
   })
 }

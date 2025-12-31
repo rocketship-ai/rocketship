@@ -103,6 +103,7 @@ type dataStore interface {
 	ListRunLogs(ctx context.Context, runID string, limit int) ([]persistence.RunLog, error)
 	GetRunTestWithRun(ctx context.Context, orgID uuid.UUID, runTestID uuid.UUID) (persistence.RunTestWithRun, error)
 	ListRunLogsByTest(ctx context.Context, runTestID uuid.UUID, limit int) ([]persistence.RunLog, error)
+	ListRunSteps(ctx context.Context, runTestID uuid.UUID) ([]persistence.RunStep, error)
 
 	// Project lifecycle management (PR close/reopen)
 	DeactivateProjectsForRepoAndSourceRef(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef, reason string) (int, error)

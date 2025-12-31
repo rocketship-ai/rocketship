@@ -65,14 +65,33 @@ function mapTestStatus(status: string): 'success' | 'failed' | 'pending' {
   }
 }
 
+// Map step status to TestItem step status
+function mapStepStatus(status: string): 'success' | 'failed' | 'pending' {
+  switch (status.toUpperCase()) {
+    case 'PASSED':
+      return 'success';
+    case 'FAILED':
+      return 'failed';
+    default:
+      return 'pending';
+  }
+}
+
 // Transform RunTest to TestItem format
 function transformTestRun(test: RunTest) {
+  // Transform step summaries for step chips display
+  const steps = (test.steps || []).map(step => ({
+    name: step.name,
+    plugin: step.plugin,
+    status: mapStepStatus(step.status),
+  }));
+
   return {
     id: test.id,
     name: test.name,
     status: mapTestStatus(test.status),
     duration: formatDuration(test.duration_ms),
-    steps: [], // Steps are loaded on the test run detail page
+    steps,
   };
 }
 

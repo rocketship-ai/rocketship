@@ -169,3 +169,27 @@ func (s *memoryRunStore) UpdateTestLastRun(_ context.Context, _ uuid.UUID, _, _ 
 	// No-op for memory store
 	return nil
 }
+
+// Step reporting methods - no-op for memory store
+
+func (s *memoryRunStore) GetRunTestByWorkflowID(_ context.Context, _ string) (persistence.RunTest, error) {
+	// No-op for memory store
+	return persistence.RunTest{}, sql.ErrNoRows
+}
+
+func (s *memoryRunStore) UpsertRunStep(_ context.Context, step persistence.RunStep) (persistence.RunStep, error) {
+	// No-op for memory store
+	step.ID = uuid.New()
+	step.CreatedAt = time.Now().UTC()
+	return step, nil
+}
+
+func (s *memoryRunStore) UpdateRunTestStepCounts(_ context.Context, _ uuid.UUID) error {
+	// No-op for memory store
+	return nil
+}
+
+func (s *memoryRunStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.RunStep, error) {
+	// No-op for memory store
+	return []persistence.RunStep{}, nil
+}

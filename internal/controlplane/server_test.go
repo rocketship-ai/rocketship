@@ -700,6 +700,10 @@ func (f *fakeStore) ListRunLogsByTest(_ context.Context, _ uuid.UUID, _ int) ([]
 	return nil, nil
 }
 
+func (f *fakeStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.RunStep, error) {
+	return nil, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

@@ -1,5 +1,6 @@
-import { ChevronRight, ChevronDown, Copy, Check, CheckCircle2, XCircle, Clock, Circle } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock, Circle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CopyButton } from './step-ui';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -225,7 +226,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-[#999999]">URL</label>
-          <CopyButton value={config.url} />
+          <CopyButton text={config.url} variant="small" />
         </div>
         <code className="block text-sm font-mono bg-[#fafafa] border border-[#e5e5e5] rounded px-3 py-2 break-all">
           {config.url}
@@ -237,7 +238,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Headers</label>
-            <CopyButton value={JSON.stringify(config.headers, null, 2)} />
+            <CopyButton text={JSON.stringify(config.headers, null, 2)} variant="small" />
           </div>
           <div className="border border-[#e5e5e5] rounded overflow-hidden">
             <table className="w-full text-sm">
@@ -259,7 +260,7 @@ function HttpRequestPanel({ config }: { config: HttpStepConfig }) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Body</label>
-            <CopyButton value={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} />
+            <CopyButton text={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} variant="small" />
           </div>
           <CodeBlock code={typeof config.body === 'string' ? config.body : JSON.stringify(config.body, null, 2)} language="json" />
         </div>
@@ -317,7 +318,7 @@ function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionRe
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-[#999999]">Headers</label>
-            <CopyButton value={JSON.stringify(response.headers, null, 2)} />
+            <CopyButton text={JSON.stringify(response.headers, null, 2)} variant="small" />
           </div>
           <div className="border border-[#e5e5e5] rounded overflow-hidden max-h-[200px] overflow-y-auto">
             <table className="w-full text-sm">
@@ -338,7 +339,7 @@ function HttpResponsePanel({ response }: { response: NonNullable<StepExecutionRe
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-[#999999]">Body</label>
-          <CopyButton value={bodyString} />
+          <CopyButton text={bodyString} variant="small" />
         </div>
         <CodeBlock code={bodyString} language={isJson ? 'json' : 'text'} />
       </div>
@@ -426,7 +427,7 @@ function DetailsPanel({ config }: { config: BaseStepConfig }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs text-[#999999]">Configuration</label>
-        <CopyButton value={JSON.stringify(config, null, 2)} />
+        <CopyButton text={JSON.stringify(config, null, 2)} variant="small" />
       </div>
       <CodeBlock code={JSON.stringify(config, null, 2)} language="json" />
     </div>
@@ -451,45 +452,6 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-  
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (_err) {
-      // Clipboard API blocked - fallback to manual selection
-      const textArea = document.createElement('textarea');
-      textArea.value = value;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (e) {
-        // Silent fail if both methods don't work
-        console.error('Copy failed:', e);
-      }
-      document.body.removeChild(textArea);
-    }
-  };
-  
-  return (
-    <button
-      onClick={handleCopy}
-      className="text-[#999999] hover:text-black transition-colors p-1"
-      title="Copy to clipboard"
-    >
-      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-    </button>
-  );
-}
-
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -509,12 +471,14 @@ export function TestStepCard({ step }: { step: TestStep }) {
   };
   
   const allTabs = [...pluginTabs, codeTab];
-  
-  // Set default active tab when expanding
-  if (isExpanded && !activeTab && allTabs.length > 0) {
-    setActiveTab(allTabs[0].id);
-  }
-  
+
+  // Set default active tab when expanding (using useEffect to avoid render-time state updates)
+  useEffect(() => {
+    if (isExpanded && !activeTab && allTabs.length > 0) {
+      setActiveTab(allTabs[0].id);
+    }
+  }, [isExpanded, activeTab, allTabs]);
+
   const status = step.result?.status;
   const hasFailed = status === 'failed';
   const hasPassed = status === 'success';
@@ -714,7 +678,7 @@ function CodePanel({ step }: { step: TestStep }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="text-xs text-[#999999]">YAML Configuration</label>
-        <CopyButton value={yamlCode} />
+        <CopyButton text={yamlCode} variant="small" />
       </div>
       <CodeBlock code={yamlCode} language="yaml" />
     </div>

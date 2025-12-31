@@ -57,3 +57,39 @@ type HTTPResponse struct {
 	Headers    map[string]string `json:"headers"`
 	Body       string            `json:"body"`
 }
+
+// UIPayload contains request/response data for UI display
+type UIPayload struct {
+	Request  *UIRequestData  `json:"request,omitempty"`
+	Response *UIResponseData `json:"response,omitempty"`
+}
+
+// UIRequestData contains request details for UI display
+type UIRequestData struct {
+	Method        string            `json:"method"`
+	URL           string            `json:"url"`
+	Headers       map[string]string `json:"headers,omitempty"`
+	Body          string            `json:"body,omitempty"`
+	BodyTruncated bool              `json:"body_truncated,omitempty"`
+	BodyBytes     int               `json:"body_bytes,omitempty"`
+}
+
+// UIResponseData contains response details for UI display
+type UIResponseData struct {
+	StatusCode    int               `json:"status_code"`
+	Headers       map[string]string `json:"headers,omitempty"`
+	Body          string            `json:"body,omitempty"`
+	BodyTruncated bool              `json:"body_truncated,omitempty"`
+	BodyBytes     int               `json:"body_bytes,omitempty"`
+}
+
+// HTTPAssertionResult represents a single assertion result for UI display
+type HTTPAssertionResult struct {
+	Type     string      `json:"type"`               // status_code, json_path, header
+	Name     string      `json:"name,omitempty"`     // Header name for header assertions
+	Path     string      `json:"path,omitempty"`     // JSONPath/jq expression for json_path assertions
+	Expected interface{} `json:"expected,omitempty"` // Expected value
+	Actual   interface{} `json:"actual,omitempty"`   // Actual value received
+	Passed   bool        `json:"passed"`             // Whether the assertion passed
+	Message  string      `json:"message,omitempty"`  // Error message if failed
+}

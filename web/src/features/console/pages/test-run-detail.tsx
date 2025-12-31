@@ -1,37 +1,13 @@
 import { ArrowLeft, Play, AlertCircle, Edit3, Loader2 } from 'lucide-react';
 import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { useState } from 'react';
-import { useTestRun, useTestRunLogs } from '../hooks/use-console-queries';
+import { useTestRun, useTestRunLogs, useTestRunSteps } from '../hooks/use-console-queries';
+import { RunStepCard } from '../components/run-steps';
+import { formatDuration, formatDateTime } from '../lib/http';
 
 interface TestRunDetailProps {
   testRunId: string;
   onBack: () => void;
-}
-
-// Helper to format duration from milliseconds
-function formatDuration(ms?: number): string {
-  if (!ms) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-}
-
-// Helper to format date/time
-function formatDateTime(isoString?: string): string {
-  if (!isoString) return '—';
-  const date = new Date(isoString);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
 }
 
 // Map API status to UI status for StatusBadge
@@ -56,6 +32,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
   // Fetch test run data from API
   const { data: testRunData, isLoading: testRunLoading, error: testRunError } = useTestRun(testRunId);
   const { data: logsData, isLoading: logsLoading } = useTestRunLogs(testRunId);
+  const { data: stepsData, isLoading: stepsLoading } = useTestRunSteps(testRunId);
 
   // Loading state
   if (testRunLoading) {
@@ -157,14 +134,17 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
             </div>
 
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 disabled
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-[#e5e5e5] rounded-md text-[#999999] cursor-not-allowed opacity-60"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Edit</span>
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors">
+              <button
+                disabled
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md cursor-not-allowed opacity-60"
+              >
                 <Play className="w-4 h-4" />
                 <span>Run now</span>
               </button>
@@ -175,15 +155,15 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Duration</p>
-              <p className="text-xl">{testRun.duration}</p>
+              <p className="text-sm">{testRun.duration}</p>
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Passed</p>
-              <p className="text-xl text-[#228b22]">{passedCount} steps</p>
+              <p className="text-sm text-[#228b22]">{passedCount} {passedCount === 1 ? 'step' : 'steps'}</p>
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Failed</p>
-              <p className="text-xl text-[#ef0000]">{failedCount} steps</p>
+              <p className={`text-sm ${failedCount > 0 ? 'text-[#ef0000]' : 'text-[#666666]'}`}>{failedCount} {failedCount === 1 ? 'step' : 'steps'}</p>
             </div>
           </div>
         </div>
@@ -238,15 +218,25 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
         {/* Tab Content */}
         {activeTab === 'steps' && (
           <div className="space-y-3">
-            {/* Step details require additional API - show placeholder */}
-            <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-8 text-center">
-              <p className="text-[#666666] mb-2">Step details coming soon</p>
-              <p className="text-sm text-[#999999]">
-                {totalSteps > 0
-                  ? `This test has ${totalSteps} steps (${passedCount} passed, ${failedCount} failed)`
-                  : 'No step information available'}
-              </p>
-            </div>
+            {stepsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                <span className="ml-2 text-[#666666]">Loading steps...</span>
+              </div>
+            ) : !stepsData || stepsData.length === 0 ? (
+              <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-8 text-center">
+                <p className="text-[#666666] mb-2">No step data available</p>
+                <p className="text-sm text-[#999999]">
+                  {totalSteps > 0
+                    ? `This test has ${totalSteps} steps (${passedCount} passed, ${failedCount} failed)`
+                    : 'No step information available'}
+                </p>
+              </div>
+            ) : (
+              stepsData.map((step, index) => (
+                <RunStepCard key={step.id} step={step} stepNumber={(step.step_index ?? index) + 1} />
+              ))
+            )}
           </div>
         )}
 

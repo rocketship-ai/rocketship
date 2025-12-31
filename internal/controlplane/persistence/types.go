@@ -247,21 +247,45 @@ type RunTest struct {
 	CreatedAt    time.Time      `db:"created_at"`
 }
 
+// AssertionResult represents a single assertion result for UI display
+type AssertionResult struct {
+	Type     string      `json:"type"`               // status_code, json_path, header
+	Name     string      `json:"name,omitempty"`     // Header name for header assertions
+	Path     string      `json:"path,omitempty"`     // JSONPath/jq expression for json_path assertions
+	Expected interface{} `json:"expected,omitempty"` // Expected value
+	Actual   interface{} `json:"actual,omitempty"`   // Actual value received
+	Passed   bool        `json:"passed"`             // Whether the assertion passed
+	Message  string      `json:"message,omitempty"`  // Error message if failed
+}
+
+// SavedVariable represents a variable saved from a step
+type SavedVariable struct {
+	Name       string `json:"name"`                  // Variable name (the "as" field)
+	Value      string `json:"value"`                 // Saved value
+	SourceType string `json:"source_type,omitempty"` // "json_path", "header", or "auto"
+	Source     string `json:"source,omitempty"`      // The expression used (json_path or header name)
+}
+
 // RunStep represents a step result within a test run
 type RunStep struct {
-	ID               uuid.UUID      `db:"id"`
-	RunTestID        uuid.UUID      `db:"run_test_id"`
-	StepIndex        int            `db:"step_index"`
-	Name             string         `db:"name"`
-	Plugin           string         `db:"plugin"`
-	Status           string         `db:"status"`
-	ErrorMessage     sql.NullString `db:"error_message"`
-	AssertionsPassed int            `db:"assertions_passed"`
-	AssertionsFailed int            `db:"assertions_failed"`
-	StartedAt        sql.NullTime   `db:"started_at"`
-	EndedAt          sql.NullTime   `db:"ended_at"`
-	DurationMs       sql.NullInt64  `db:"duration_ms"`
-	CreatedAt        time.Time      `db:"created_at"`
+	ID               uuid.UUID              `db:"id"`
+	RunTestID        uuid.UUID              `db:"run_test_id"`
+	StepIndex        int                    `db:"step_index"`
+	Name             string                 `db:"name"`
+	Plugin           string                 `db:"plugin"`
+	Status           string                 `db:"status"`
+	ErrorMessage     sql.NullString         `db:"error_message"`
+	RequestData      map[string]interface{} `db:"-"` // Parsed from JSONB
+	ResponseData     map[string]interface{} `db:"-"` // Parsed from JSONB
+	AssertionsData   []AssertionResult      `db:"-"` // Parsed from JSONB
+	VariablesData    []SavedVariable        `db:"-"` // Parsed from JSONB
+	StepConfig       map[string]interface{} `db:"-"` // Parsed from JSONB
+	AssertionsPassed int                    `db:"assertions_passed"`
+	AssertionsFailed int                    `db:"assertions_failed"`
+	StartedAt        sql.NullTime           `db:"started_at"`
+	EndedAt          sql.NullTime           `db:"ended_at"`
+	DurationMs       sql.NullInt64          `db:"duration_ms"`
+	CreatedAt        time.Time              `db:"created_at"`
 }
 
 // RunLog represents an execution log entry
