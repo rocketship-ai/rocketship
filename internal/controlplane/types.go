@@ -60,11 +60,12 @@ type dataStore interface {
 	CreateEnvironment(ctx context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error)
 	GetEnvironment(ctx context.Context, projectID, envID uuid.UUID) (persistence.ProjectEnvironment, error)
 	GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (persistence.ProjectEnvironment, error)
-	GetDefaultEnvironment(ctx context.Context, projectID uuid.UUID) (persistence.ProjectEnvironment, error)
 	ListEnvironments(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectEnvironment, error)
 	UpdateEnvironment(ctx context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error)
 	DeleteEnvironment(ctx context.Context, projectID, envID uuid.UUID) error
-	SetDefaultEnvironment(ctx context.Context, projectID, envID uuid.UUID) error
+	// Environment selection (per-user, per-project)
+	GetSelectedEnvironment(ctx context.Context, userID, projectID uuid.UUID) (persistence.ProjectEnvironment, bool, error)
+	SetSelectedEnvironment(ctx context.Context, userID, projectID, environmentID uuid.UUID) error
 
 	// Suite and test management
 	UpsertSuite(ctx context.Context, suite persistence.Suite) (persistence.Suite, error)

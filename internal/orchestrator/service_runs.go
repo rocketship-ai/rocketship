@@ -123,35 +123,17 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		}
 
 		// Resolve environment after project_id is set
-		if record.ProjectID.Valid {
-			var env persistence.ProjectEnvironment
-			var found bool
-
-			if envSlug != "" {
-				// Try to get environment by slug
-				env, err = e.runStore.GetEnvironmentBySlug(ctx, record.ProjectID.UUID, envSlug)
-				if err != nil {
-					if !errors.Is(err, sql.ErrNoRows) {
-						slog.Debug("CreateRun: failed to lookup environment by slug", "slug", envSlug, "error", err)
-					}
-				} else {
-					found = true
+		// Only resolve if an explicit envSlug was provided via --env flag
+		// CLI never implicitly applies an environment - only when --env is explicitly provided
+		if record.ProjectID.Valid && envSlug != "" {
+			env, err := e.runStore.GetEnvironmentBySlug(ctx, record.ProjectID.UUID, envSlug)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					slog.Error("CreateRun: environment not found", "slug", envSlug, "project_id", record.ProjectID.UUID)
+					return nil, fmt.Errorf("unknown environment %q for this project; hint: create it in the console /environments page", envSlug)
 				}
-			}
-
-			// If no env slug specified or not found, try default environment
-			if !found && envSlug == "" {
-				env, err = e.runStore.GetDefaultEnvironment(ctx, record.ProjectID.UUID)
-				if err != nil {
-					if !errors.Is(err, sql.ErrNoRows) {
-						slog.Debug("CreateRun: failed to lookup default environment", "error", err)
-					}
-				} else {
-					found = true
-				}
-			}
-
-			if found {
+				slog.Debug("CreateRun: failed to lookup environment by slug", "slug", envSlug, "error", err)
+			} else {
 				envSecrets = env.EnvSecrets
 				envConfigVars = env.ConfigVars
 				record.EnvironmentID = uuid.NullUUID{UUID: env.ID, Valid: true}
@@ -161,14 +143,9 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 					"env_slug", env.Slug,
 					"secrets_count", len(envSecrets),
 					"config_vars_count", len(envConfigVars))
-			} else if envSlug != "" {
-				// If user explicitly specified an environment slug but it wasn't found, fail fast
-				// This is different from empty slug (where we try default env as best-effort)
-				slog.Error("CreateRun: environment not found", "slug", envSlug, "project_id", record.ProjectID.UUID)
-				return nil, fmt.Errorf("unknown environment %q for this project; hint: create it in the console /environments page", envSlug)
 			}
 		} else if envSlug != "" {
-			// No project_id but env slug was specified - just store the slug
+			// No project_id but env slug was specified - just store the slug (won't resolve secrets/vars)
 			record.Environment = envSlug
 		}
 

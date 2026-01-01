@@ -18,7 +18,6 @@ type EnvironmentCreateRequest struct {
 	Name        string                 `json:"name"`
 	Slug        string                 `json:"slug"`
 	Description string                 `json:"description,omitempty"`
-	IsDefault   bool                   `json:"is_default,omitempty"`
 	EnvSecrets  map[string]string      `json:"env_secrets,omitempty"`
 	ConfigVars  map[string]interface{} `json:"config_vars,omitempty"`
 }
@@ -28,9 +27,13 @@ type EnvironmentUpdateRequest struct {
 	Name        string                 `json:"name,omitempty"`
 	Slug        string                 `json:"slug,omitempty"`
 	Description string                 `json:"description,omitempty"`
-	IsDefault   bool                   `json:"is_default,omitempty"`
 	EnvSecrets  map[string]string      `json:"env_secrets,omitempty"`
 	ConfigVars  map[string]interface{} `json:"config_vars,omitempty"`
+}
+
+// EnvironmentSelectionRequest is the request body for setting the selected environment
+type EnvironmentSelectionRequest struct {
+	EnvironmentID string `json:"environment_id"`
 }
 
 // handleProjectEnvironments handles all /api/projects/{projectId}/environments routes
@@ -86,16 +89,6 @@ func (s *Server) handleProjectEnvironments(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// /api/projects/{projectId}/environments/{envId}/default
-	if len(segments) == 2 && segments[1] == "default" {
-		if r.Method != http.MethodPost {
-			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-			return
-		}
-		s.handleSetDefaultEnvironment(w, r, principal, projectID, envID)
-		return
-	}
-
 	writeError(w, http.StatusNotFound, "not found")
 }
 
@@ -137,7 +130,6 @@ func (s *Server) handleCreateEnvironment(w http.ResponseWriter, r *http.Request,
 		ProjectID:  projectID,
 		Name:       strings.TrimSpace(req.Name),
 		Slug:       strings.ToLower(strings.TrimSpace(req.Slug)),
-		IsDefault:  req.IsDefault,
 		EnvSecrets: req.EnvSecrets,
 		ConfigVars: req.ConfigVars,
 	}
@@ -206,7 +198,6 @@ func (s *Server) handleUpdateEnvironment(w http.ResponseWriter, r *http.Request,
 	if req.Description != "" {
 		existing.Description = sql.NullString{String: req.Description, Valid: true}
 	}
-	existing.IsDefault = req.IsDefault
 
 	// For env_secrets, we merge with existing (allow partial updates)
 	// If a key is provided with empty string, we could remove it; otherwise merge
@@ -261,29 +252,6 @@ func (s *Server) handleDeleteEnvironment(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// handleSetDefaultEnvironment handles POST /api/projects/{projectId}/environments/{envId}/default
-func (s *Server) handleSetDefaultEnvironment(w http.ResponseWriter, r *http.Request, _ brokerPrincipal, projectID, envID uuid.UUID) {
-	if err := s.store.SetDefaultEnvironment(r.Context(), projectID, envID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "environment not found")
-			return
-		}
-		log.Printf("failed to set default environment: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to set default environment")
-		return
-	}
-
-	// Return the updated environment
-	env, err := s.store.GetEnvironment(r.Context(), projectID, envID)
-	if err != nil {
-		log.Printf("failed to get environment after setting default: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to get environment")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, formatEnvironmentResponse(env))
-}
-
 // formatEnvironmentResponse formats a ProjectEnvironment for API response
 // Secret values are NOT returned; only keys are exposed
 func formatEnvironmentResponse(env persistence.ProjectEnvironment) map[string]interface{} {
@@ -292,7 +260,6 @@ func formatEnvironmentResponse(env persistence.ProjectEnvironment) map[string]in
 		"project_id": env.ProjectID.String(),
 		"name":       env.Name,
 		"slug":       env.Slug,
-		"is_default": env.IsDefault,
 		"created_at": env.CreatedAt.Format(time.RFC3339),
 		"updated_at": env.UpdatedAt.Format(time.RFC3339),
 	}
@@ -316,4 +283,104 @@ func formatEnvironmentResponse(env persistence.ProjectEnvironment) map[string]in
 	}
 
 	return resp
+}
+
+// handleProjectEnvironmentSelection handles /api/projects/{projectId}/environment-selection routes
+func (s *Server) handleProjectEnvironmentSelection(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID) {
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	// Verify project belongs to org
+	_, err := s.store.GetProjectWithOrgCheck(r.Context(), principal.OrgID, projectID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+		log.Printf("failed to get project: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get project")
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetEnvironmentSelection(w, r, principal, projectID)
+	case http.MethodPut:
+		s.handleSetEnvironmentSelection(w, r, principal, projectID)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+// handleGetEnvironmentSelection handles GET /api/projects/{projectId}/environment-selection
+func (s *Server) handleGetEnvironmentSelection(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID) {
+	env, found, err := s.store.GetSelectedEnvironment(r.Context(), principal.UserID, projectID)
+	if err != nil {
+		log.Printf("failed to get selected environment: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get selected environment")
+		return
+	}
+
+	if !found {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"environment": nil,
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"environment": map[string]interface{}{
+			"id":   env.ID.String(),
+			"name": env.Name,
+			"slug": env.Slug,
+		},
+	})
+}
+
+// handleSetEnvironmentSelection handles PUT /api/projects/{projectId}/environment-selection
+func (s *Server) handleSetEnvironmentSelection(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID) {
+	var req EnvironmentSelectionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.EnvironmentID == "" {
+		writeError(w, http.StatusBadRequest, "environment_id is required")
+		return
+	}
+
+	envID, err := uuid.Parse(req.EnvironmentID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid environment_id")
+		return
+	}
+
+	if err := s.store.SetSelectedEnvironment(r.Context(), principal.UserID, projectID, envID); err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeError(w, http.StatusNotFound, "environment not found in project")
+			return
+		}
+		log.Printf("failed to set selected environment: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to set selected environment")
+		return
+	}
+
+	// Return the selected environment
+	env, found, err := s.store.GetSelectedEnvironment(r.Context(), principal.UserID, projectID)
+	if err != nil || !found {
+		log.Printf("failed to get selected environment after setting: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get selected environment")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"environment": map[string]interface{}{
+			"id":   env.ID.String(),
+			"name": env.Name,
+			"slug": env.Slug,
+		},
+	})
 }

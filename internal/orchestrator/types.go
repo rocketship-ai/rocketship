@@ -48,7 +48,6 @@ type RunStore interface {
 	UpdateTestLastRun(ctx context.Context, testID uuid.UUID, runID, status string, runAt time.Time, durationMs int64) error
 	// Environment lookup for run execution
 	GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (persistence.ProjectEnvironment, error)
-	GetDefaultEnvironment(ctx context.Context, projectID uuid.UUID) (persistence.ProjectEnvironment, error)
 }
 
 type RunInfo struct {

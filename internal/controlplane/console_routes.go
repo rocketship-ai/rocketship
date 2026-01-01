@@ -497,6 +497,9 @@ func (s *Server) handleConsoleProjectRoutesDispatch(w http.ResponseWriter, r *ht
 	case "environments":
 		// Handle environment management
 		s.handleProjectEnvironments(w, r, principal, projectID, segments[2:])
+	case "environment-selection":
+		// Handle per-user environment selection
+		s.handleProjectEnvironmentSelection(w, r, principal, projectID)
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}

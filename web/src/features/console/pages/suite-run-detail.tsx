@@ -83,7 +83,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     id: runData.id,
     suiteName: runData.suite_name || 'Suite Run',
     status: mapRunStatus(runData.status),
-    env: runData.environment || 'default',
+    env: runData.environment || '',
     trigger: runData.initiator_type as 'ci' | 'manual' | 'schedule',
     initiatorName: runData.initiator_name || '',
     configSource: {
@@ -137,7 +137,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                     <Clock className="w-5 h-5 text-[#4CBB17] animate-spin" />
                   )}
                 </div>
-                <EnvBadge env={suiteRun.env} />
+                {suiteRun.env && <EnvBadge env={suiteRun.env} />}
                 {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant with commit shown below */}
                 {suiteRun.configSource.type === 'uncommitted' && (
                   <ConfigSourceBadge type="uncommitted" />

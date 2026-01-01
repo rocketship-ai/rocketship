@@ -54,28 +54,9 @@ func (s *Store) CreateEnvironment(ctx context.Context, env ProjectEnvironment) (
 		desc = env.Description.String
 	}
 
-	// Use a transaction to handle is_default logic safely
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return ProjectEnvironment{}, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	// If setting is_default=true, unset any existing default for this project
-	if env.IsDefault {
-		_, err := tx.ExecContext(ctx, `
-			UPDATE project_environments
-			SET is_default = FALSE, updated_at = NOW()
-			WHERE project_id = $1 AND is_default = TRUE
-		`, env.ProjectID)
-		if err != nil {
-			return ProjectEnvironment{}, fmt.Errorf("failed to clear existing default: %w", err)
-		}
-	}
-
 	const query = `
-		INSERT INTO project_environments (id, project_id, name, slug, description, is_default, env_secrets, config_vars, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, NOW(), NOW())
+		INSERT INTO project_environments (id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, NOW(), NOW())
 		RETURNING created_at, updated_at
 	`
 
@@ -84,17 +65,13 @@ func (s *Store) CreateEnvironment(ctx context.Context, env ProjectEnvironment) (
 		UpdatedAt time.Time `db:"updated_at"`
 	}{}
 
-	if err := tx.GetContext(ctx, &dest, query,
+	if err := s.db.GetContext(ctx, &dest, query,
 		env.ID, env.ProjectID, env.Name, env.Slug,
-		desc, env.IsDefault, string(secretsJSON), string(varsJSON)); err != nil {
+		desc, string(secretsJSON), string(varsJSON)); err != nil {
 		if isUniqueViolation(err, "project_environments_project_slug_idx") {
 			return ProjectEnvironment{}, fmt.Errorf("environment slug already exists in project")
 		}
 		return ProjectEnvironment{}, fmt.Errorf("failed to create environment: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return ProjectEnvironment{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	env.CreatedAt = dest.CreatedAt
@@ -109,7 +86,6 @@ type envRow struct {
 	Name        string         `db:"name"`
 	Slug        string         `db:"slug"`
 	Description sql.NullString `db:"description"`
-	IsDefault   bool           `db:"is_default"`
 	EnvSecrets  []byte         `db:"env_secrets"`
 	ConfigVars  []byte         `db:"config_vars"`
 	CreatedAt   time.Time      `db:"created_at"`
@@ -123,7 +99,6 @@ func (r envRow) toEnvironment() (ProjectEnvironment, error) {
 		Name:        r.Name,
 		Slug:        r.Slug,
 		Description: r.Description,
-		IsDefault:   r.IsDefault,
 		CreatedAt:   r.CreatedAt,
 		UpdatedAt:   r.UpdatedAt,
 	}
@@ -158,7 +133,7 @@ func (r envRow) toEnvironment() (ProjectEnvironment, error) {
 // GetEnvironment retrieves an environment by ID
 func (s *Store) GetEnvironment(ctx context.Context, projectID, envID uuid.UUID) (ProjectEnvironment, error) {
 	const query = `
-		SELECT id, project_id, name, slug, description, is_default, env_secrets, config_vars, created_at, updated_at
+		SELECT id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at
 		FROM project_environments
 		WHERE project_id = $1 AND id = $2
 	`
@@ -177,10 +152,10 @@ func (s *Store) GetEnvironment(ctx context.Context, projectID, envID uuid.UUID) 
 // ListEnvironments returns all environments for a project
 func (s *Store) ListEnvironments(ctx context.Context, projectID uuid.UUID) ([]ProjectEnvironment, error) {
 	const query = `
-		SELECT id, project_id, name, slug, description, is_default, env_secrets, config_vars, created_at, updated_at
+		SELECT id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at
 		FROM project_environments
 		WHERE project_id = $1
-		ORDER BY is_default DESC, name ASC
+		ORDER BY name ASC
 	`
 
 	var rows []envRow
@@ -235,36 +210,17 @@ func (s *Store) UpdateEnvironment(ctx context.Context, env ProjectEnvironment) (
 		desc = env.Description.String
 	}
 
-	// Use a transaction to handle is_default logic safely
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return ProjectEnvironment{}, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	// If setting is_default=true, unset any existing default for this project (except this env)
-	if env.IsDefault {
-		_, err := tx.ExecContext(ctx, `
-			UPDATE project_environments
-			SET is_default = FALSE, updated_at = NOW()
-			WHERE project_id = $1 AND is_default = TRUE AND id != $2
-		`, env.ProjectID, env.ID)
-		if err != nil {
-			return ProjectEnvironment{}, fmt.Errorf("failed to clear existing default: %w", err)
-		}
-	}
-
 	const query = `
 		UPDATE project_environments
-		SET name = $3, slug = $4, description = $5, is_default = $6, env_secrets = $7::jsonb, config_vars = $8::jsonb, updated_at = NOW()
+		SET name = $3, slug = $4, description = $5, env_secrets = $6::jsonb, config_vars = $7::jsonb, updated_at = NOW()
 		WHERE id = $1 AND project_id = $2
 		RETURNING updated_at
 	`
 
 	var updatedAt time.Time
-	if err := tx.GetContext(ctx, &updatedAt, query,
+	if err := s.db.GetContext(ctx, &updatedAt, query,
 		env.ID, env.ProjectID, env.Name, env.Slug,
-		desc, env.IsDefault, string(secretsJSON), string(varsJSON)); err != nil {
+		desc, string(secretsJSON), string(varsJSON)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ProjectEnvironment{}, sql.ErrNoRows
 		}
@@ -272,10 +228,6 @@ func (s *Store) UpdateEnvironment(ctx context.Context, env ProjectEnvironment) (
 			return ProjectEnvironment{}, fmt.Errorf("environment slug already exists in project")
 		}
 		return ProjectEnvironment{}, fmt.Errorf("failed to update environment: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return ProjectEnvironment{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	env.UpdatedAt = updatedAt
@@ -302,29 +254,10 @@ func (s *Store) DeleteEnvironment(ctx context.Context, projectID, envID uuid.UUI
 	return nil
 }
 
-// GetDefaultEnvironment returns the default environment for a project, if any
-func (s *Store) GetDefaultEnvironment(ctx context.Context, projectID uuid.UUID) (ProjectEnvironment, error) {
-	const query = `
-		SELECT id, project_id, name, slug, description, is_default, env_secrets, config_vars, created_at, updated_at
-		FROM project_environments
-		WHERE project_id = $1 AND is_default = TRUE
-	`
-
-	var row envRow
-	if err := s.db.GetContext(ctx, &row, query, projectID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ProjectEnvironment{}, sql.ErrNoRows
-		}
-		return ProjectEnvironment{}, fmt.Errorf("failed to get default environment: %w", err)
-	}
-
-	return row.toEnvironment()
-}
-
 // GetEnvironmentBySlug retrieves an environment by its slug within a project
 func (s *Store) GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (ProjectEnvironment, error) {
 	const query = `
-		SELECT id, project_id, name, slug, description, is_default, env_secrets, config_vars, created_at, updated_at
+		SELECT id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at
 		FROM project_environments
 		WHERE project_id = $1 AND lower(slug) = lower($2)
 	`
@@ -340,32 +273,48 @@ func (s *Store) GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, s
 	return row.toEnvironment()
 }
 
-// SetDefaultEnvironment sets an environment as the default for its project
-func (s *Store) SetDefaultEnvironment(ctx context.Context, projectID, envID uuid.UUID) error {
-	tx, err := s.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
+// GetSelectedEnvironment retrieves the user's selected environment for a project
+// Returns (env, true, nil) if a selection exists, (zero, false, nil) if no selection
+func (s *Store) GetSelectedEnvironment(ctx context.Context, userID, projectID uuid.UUID) (ProjectEnvironment, bool, error) {
+	const query = `
+		SELECT e.id, e.project_id, e.name, e.slug, e.description, e.env_secrets, e.config_vars, e.created_at, e.updated_at
+		FROM project_environment_selections s
+		JOIN project_environments e ON e.id = s.environment_id
+		WHERE s.user_id = $1 AND s.project_id = $2
+	`
 
-	// First, unset any existing default for this project
-	_, err = tx.ExecContext(ctx, `
-		UPDATE project_environments
-		SET is_default = FALSE, updated_at = NOW()
-		WHERE project_id = $1 AND is_default = TRUE
-	`, projectID)
-	if err != nil {
-		return fmt.Errorf("failed to clear existing default: %w", err)
+	var row envRow
+	if err := s.db.GetContext(ctx, &row, query, userID, projectID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ProjectEnvironment{}, false, nil
+		}
+		return ProjectEnvironment{}, false, fmt.Errorf("failed to get selected environment: %w", err)
 	}
 
-	// Now set the new default
-	result, err := tx.ExecContext(ctx, `
-		UPDATE project_environments
-		SET is_default = TRUE, updated_at = NOW()
-		WHERE project_id = $1 AND id = $2
-	`, projectID, envID)
+	env, err := row.toEnvironment()
 	if err != nil {
-		return fmt.Errorf("failed to set default environment: %w", err)
+		return ProjectEnvironment{}, false, err
+	}
+	return env, true, nil
+}
+
+// SetSelectedEnvironment sets the user's selected environment for a project
+// The environmentID must belong to the specified projectID
+func (s *Store) SetSelectedEnvironment(ctx context.Context, userID, projectID, environmentID uuid.UUID) error {
+	// Validate that the environment belongs to the project in a single query with upsert
+	const query = `
+		INSERT INTO project_environment_selections (user_id, project_id, environment_id, created_at, updated_at)
+		SELECT $1, $2, $3, NOW(), NOW()
+		WHERE EXISTS (
+			SELECT 1 FROM project_environments WHERE id = $3 AND project_id = $2
+		)
+		ON CONFLICT (user_id, project_id) DO UPDATE
+		SET environment_id = EXCLUDED.environment_id, updated_at = NOW()
+	`
+
+	result, err := s.db.ExecContext(ctx, query, userID, projectID, environmentID)
+	if err != nil {
+		return fmt.Errorf("failed to set selected environment: %w", err)
 	}
 
 	rows, err := result.RowsAffected()
@@ -373,11 +322,7 @@ func (s *Store) SetDefaultEnvironment(ctx context.Context, projectID, envID uuid
 		return fmt.Errorf("failed to check rows affected: %w", err)
 	}
 	if rows == 0 {
-		return sql.ErrNoRows
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("environment not found in project")
 	}
 
 	return nil

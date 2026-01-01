@@ -454,10 +454,6 @@ func (f *fakeStore) GetEnvironmentBySlug(_ context.Context, _ uuid.UUID, _ strin
 	return persistence.ProjectEnvironment{}, sql.ErrNoRows
 }
 
-func (f *fakeStore) GetDefaultEnvironment(_ context.Context, _ uuid.UUID) (persistence.ProjectEnvironment, error) {
-	return persistence.ProjectEnvironment{}, sql.ErrNoRows
-}
-
 func (f *fakeStore) ListEnvironments(_ context.Context, _ uuid.UUID) ([]persistence.ProjectEnvironment, error) {
 	return nil, nil
 }
@@ -470,7 +466,11 @@ func (f *fakeStore) DeleteEnvironment(_ context.Context, _, _ uuid.UUID) error {
 	return nil
 }
 
-func (f *fakeStore) SetDefaultEnvironment(_ context.Context, _, _ uuid.UUID) error {
+func (f *fakeStore) GetSelectedEnvironment(_ context.Context, _, _ uuid.UUID) (persistence.ProjectEnvironment, bool, error) {
+	return persistence.ProjectEnvironment{}, false, nil
+}
+
+func (f *fakeStore) SetSelectedEnvironment(_ context.Context, _, _, _ uuid.UUID) error {
 	return nil
 }
 

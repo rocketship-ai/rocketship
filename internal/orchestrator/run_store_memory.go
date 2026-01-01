@@ -200,8 +200,3 @@ func (s *memoryRunStore) GetEnvironmentBySlug(_ context.Context, _ uuid.UUID, _ 
 	// No-op for memory store - no project environments
 	return persistence.ProjectEnvironment{}, sql.ErrNoRows
 }
-
-func (s *memoryRunStore) GetDefaultEnvironment(_ context.Context, _ uuid.UUID) (persistence.ProjectEnvironment, error) {
-	// No-op for memory store - no project environments
-	return persistence.ProjectEnvironment{}, sql.ErrNoRows
-}

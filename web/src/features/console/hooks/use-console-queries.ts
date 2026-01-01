@@ -337,7 +337,6 @@ export interface ProjectEnvironment {
   name: string
   slug: string
   description?: string
-  is_default: boolean
   env_secrets_keys: string[] // Only keys are returned, not values
   config_vars: Record<string, unknown>
   created_at: string
@@ -348,7 +347,6 @@ export interface CreateEnvironmentRequest {
   name: string
   slug: string
   description?: string
-  is_default?: boolean
   env_secrets?: Record<string, string>
   config_vars?: Record<string, unknown>
 }
@@ -357,9 +355,21 @@ export interface UpdateEnvironmentRequest {
   name?: string
   slug?: string
   description?: string
-  is_default?: boolean
   env_secrets?: Record<string, string> // Empty string value removes the key
   config_vars?: Record<string, unknown>
+}
+
+// Environment selection types
+export interface EnvironmentSelection {
+  environment: {
+    id: string
+    name: string
+    slug: string
+  } | null
+}
+
+export interface SetEnvironmentSelectionRequest {
+  environment_id: string
 }
 
 // Query key factories
@@ -369,6 +379,7 @@ export const consoleKeys = {
   project: (id: string) => [...consoleKeys.all, 'project', id] as const,
   projectSuites: (id: string) => [...consoleKeys.all, 'project', id, 'suites'] as const,
   projectEnvironments: (id: string) => [...consoleKeys.all, 'project', id, 'environments'] as const,
+  projectEnvironmentSelection: (id: string) => [...consoleKeys.all, 'project', id, 'environment-selection'] as const,
   suiteActivity: () => [...consoleKeys.all, 'suites', 'activity'] as const,
   suite: (id: string) => [...consoleKeys.all, 'suite', id] as const,
   suiteRuns: (id: string) => [...consoleKeys.all, 'suite', id, 'runs'] as const,
@@ -589,13 +600,26 @@ export function useDeleteEnvironment(projectId: string) {
   })
 }
 
-export function useSetDefaultEnvironment(projectId: string) {
+// Environment selection hooks (per-user, per-project)
+
+export function useProjectEnvironmentSelection(projectId: string) {
+  return useQuery({
+    queryKey: consoleKeys.projectEnvironmentSelection(projectId),
+    queryFn: () => apiGet<EnvironmentSelection>(`/api/projects/${projectId}/environment-selection`),
+    enabled: !!projectId,
+  })
+}
+
+export function useSetProjectEnvironmentSelection(projectId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (envId: string) =>
-      apiPost<ProjectEnvironment>(`/api/projects/${projectId}/environments/${envId}/default`),
+    mutationFn: (environmentId: string) =>
+      apiPut<EnvironmentSelection>(`/api/projects/${projectId}/environment-selection`, {
+        environment_id: environmentId,
+      }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironmentSelection(projectId) })
       queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
     },
   })

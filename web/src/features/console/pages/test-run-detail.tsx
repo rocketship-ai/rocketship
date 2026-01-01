@@ -76,7 +76,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
     id: test.id,
     testName: test.name || 'Test Run',
     status: mapStatus(test.status),
-    env: run.environment || 'default',
+    env: run.environment || '',
     trigger: run.initiator_type as 'ci' | 'manual' | 'schedule',
     initiatorName: run.initiator_name || '',
     configSource: {
@@ -126,7 +126,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
               <h1 className="mb-2">{testRun.testName}</h1>
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={testRun.status} />
-                <EnvBadge env={testRun.env} />
+                {testRun.env && <EnvBadge env={testRun.env} />}
                 {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant */}
                 {testRun.isUncommitted && (
                   <ConfigSourceBadge type="uncommitted" />

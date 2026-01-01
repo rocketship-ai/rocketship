@@ -1,4 +1,4 @@
-import { Plus, Star, Edit2, Trash2, Lock, Settings } from 'lucide-react';
+import { Plus, Check, Edit2, Trash2, Lock, Settings } from 'lucide-react';
 import { useState } from 'react';
 import {
   useProjects,
@@ -6,7 +6,8 @@ import {
   useCreateEnvironment,
   useUpdateEnvironment,
   useDeleteEnvironment,
-  useSetDefaultEnvironment,
+  useProjectEnvironmentSelection,
+  useSetProjectEnvironmentSelection,
 } from '../hooks/use-console-queries';
 import type { ProjectEnvironment } from '../hooks/use-console-queries';
 
@@ -23,7 +24,6 @@ interface EnvironmentFormData {
   name: string;
   slug: string;
   description: string;
-  is_default: boolean;
   configVarsJson: string;
   secrets: { key: string; value: string }[];
 }
@@ -32,7 +32,6 @@ const emptyFormData: EnvironmentFormData = {
   name: '',
   slug: '',
   description: '',
-  is_default: false,
   configVarsJson: '{}',
   secrets: [],
 };
@@ -49,11 +48,14 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
   const { data: projects = [], isLoading: projectsLoading } = useProjects();
   const { data: environments = [], isLoading: envsLoading } = useProjectEnvironments(selectedProjectId);
 
+  // Queries
+  const { data: selection } = useProjectEnvironmentSelection(selectedProjectId);
+
   // Mutations
   const createMutation = useCreateEnvironment(selectedProjectId);
   const updateMutation = useUpdateEnvironment(selectedProjectId);
   const deleteMutation = useDeleteEnvironment(selectedProjectId);
-  const setDefaultMutation = useSetDefaultEnvironment(selectedProjectId);
+  const selectMutation = useSetProjectEnvironmentSelection(selectedProjectId);
 
   const openCreateModal = () => {
     setEditingEnv(null);
@@ -68,7 +70,6 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
       name: env.name,
       slug: env.slug,
       description: env.description || '',
-      is_default: env.is_default,
       configVarsJson: JSON.stringify(env.config_vars, null, 2),
       secrets: env.env_secrets_keys.map(key => ({ key, value: '' })),
     });
@@ -125,7 +126,6 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
             name: formData.name.trim(),
             slug: formData.slug.trim(),
             description: formData.description.trim() || undefined,
-            is_default: formData.is_default,
             config_vars: configVars,
             env_secrets: Object.keys(envSecrets).length > 0 ? envSecrets : undefined,
           },
@@ -135,7 +135,6 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
           name: formData.name.trim(),
           slug: formData.slug.trim(),
           description: formData.description.trim() || undefined,
-          is_default: formData.is_default,
           config_vars: configVars,
           env_secrets: envSecrets,
         });
@@ -155,11 +154,11 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
     }
   };
 
-  const handleSetDefault = async (envId: string) => {
+  const handleSelectEnvironment = async (envId: string) => {
     try {
-      await setDefaultMutation.mutateAsync(envId);
+      await selectMutation.mutateAsync(envId);
     } catch (err) {
-      console.error('Failed to set default:', err);
+      console.error('Failed to select environment:', err);
     }
   };
 
@@ -246,76 +245,79 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {environments.map((env) => (
-                  <div
-                    key={env.id}
-                    className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium">{env.name}</h3>
-                          {env.is_default && (
-                            <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded flex items-center gap-1">
-                              <Star className="w-3 h-3" />
-                              Default
-                            </span>
-                          )}
+                {environments.map((env) => {
+                  const isSelected = selection?.environment?.id === env.id;
+                  return (
+                    <div
+                      key={env.id}
+                      className={`bg-white rounded-lg border shadow-sm p-6 ${isSelected ? 'border-black' : 'border-[#e5e5e5]'}`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{env.name}</h3>
+                            {isSelected && (
+                              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                Current
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-[#666666]">slug: {env.slug}</p>
                         </div>
-                        <p className="text-sm text-[#666666]">slug: {env.slug}</p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openEditModal(env)}
+                            className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4 text-[#666666]" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(env.id)}
+                            className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4 text-[#666666]" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEditModal(env)}
-                          className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4 text-[#666666]" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(env.id)}
-                          className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4 text-[#666666]" />
-                        </button>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2 text-sm mb-4">
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-[#999999]" />
-                        <span className="text-[#666666]">
-                          {env.env_secrets_keys.length} secret{env.env_secrets_keys.length !== 1 ? 's' : ''}
-                        </span>
+                      <div className="space-y-2 text-sm mb-4">
+                        <div className="flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-[#999999]" />
+                          <span className="text-[#666666]">
+                            {env.env_secrets_keys.length} secret{env.env_secrets_keys.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Settings className="w-4 h-4 text-[#999999]" />
+                          <span className="text-[#666666]">
+                            {Object.keys(env.config_vars).length} config var{Object.keys(env.config_vars).length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Settings className="w-4 h-4 text-[#999999]" />
-                        <span className="text-[#666666]">
-                          {Object.keys(env.config_vars).length} config var{Object.keys(env.config_vars).length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-[#e5e5e5]">
-                      {!env.is_default && (
+                      <div className="flex items-center justify-between pt-4 border-t border-[#e5e5e5]">
+                        {!isSelected && (
+                          <button
+                            onClick={() => handleSelectEnvironment(env.id)}
+                            className="text-sm text-black hover:underline"
+                            disabled={selectMutation.isPending}
+                          >
+                            Use this environment
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleSetDefault(env.id)}
-                          className="text-sm text-black hover:underline"
-                          disabled={setDefaultMutation.isPending}
+                          onClick={() => onNavigate('suite-activity', { env: env.slug })}
+                          className="text-sm text-black hover:underline ml-auto"
                         >
-                          Set as default
+                          View runs
                         </button>
-                      )}
-                      <button
-                        onClick={() => onNavigate('suite-activity', { env: env.slug })}
-                        className="text-sm text-black hover:underline ml-auto"
-                      >
-                        View runs
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -385,18 +387,6 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
                   placeholder="Optional description"
                   className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
                 />
-              </div>
-
-              {/* Default checkbox */}
-              <div>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_default}
-                    onChange={(e) => setFormData(prev => ({ ...prev, is_default: e.target.checked }))}
-                  />
-                  <span className="text-sm">Set as default environment</span>
-                </label>
               </div>
 
               {/* Config Vars (JSON) */}
