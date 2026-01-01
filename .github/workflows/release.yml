@@ -113,23 +113,24 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Build and publish MCP server
-        working-directory: ./mcp-server
-        run: |
-          # Install dependencies
-          npm ci
+      # NPM revoked our current token's access. We need to do trusted publishing when we have time. https://docs.npmjs.com/trusted-publishers
+      # - name: Build and publish MCP server
+      #   working-directory: ./mcp-server
+      #   run: |
+      #     # Install dependencies
+      #     npm ci
 
-          # Build with embedded knowledge
-          npm run build
+      #     # Build with embedded knowledge
+      #     npm run build
 
-          # Set version to match release tag (remove 'v' prefix)
-          VERSION_NUMBER=${GITHUB_REF#refs/tags/v}
-          npm version $VERSION_NUMBER --no-git-tag-version
+      #     # Set version to match release tag (remove 'v' prefix)
+      #     VERSION_NUMBER=${GITHUB_REF#refs/tags/v}
+      #     npm version $VERSION_NUMBER --no-git-tag-version
 
-          # Publish to npm
-          npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      #     # Publish to npm
+      #     npm publish --access public
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Build and push CLI image
         uses: docker/build-push-action@v5
@@ -190,7 +191,6 @@ jobs:
     env:
       GH_PAT: ${{ secrets.GH_PAT }}
     steps:
-
       - name: GH_PAT not configured
         if: env.GH_PAT == ''
         run: echo "GH_PAT secret not configured; skipping internal chart sync."

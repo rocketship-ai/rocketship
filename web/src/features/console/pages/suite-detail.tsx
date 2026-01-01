@@ -1,6 +1,7 @@
 import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
+import { InfoLabel } from '../components/info-label';
 import { TestItem } from '../components/test-item';
 import { useMemo, useState } from 'react';
 import { environments } from '../data/mock-data';
@@ -438,6 +439,11 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
               </div>
             ) : (
               <div className="space-y-3">
+                <InfoLabel>
+                  <strong>TODO:</strong> Step chips show placeholder data ("HTTP", "Step 1", etc.) because the database only stores <code className="bg-[#e5e5e5] px-1 rounded">step_count</code> for test definitions.
+                  Actual step details (plugin type, step name) are only persisted in <code className="bg-[#e5e5e5] px-1 rounded">run_steps</code> after execution.
+                  Options: (1) Don't show step chips here, just "X steps" text. (2) Add a <code className="bg-[#e5e5e5] px-1 rounded">test_steps</code> table to persist static definitions from YAML. (3) Pull from latest run if available.
+                </InfoLabel>
                 {suiteTests.map((test) => (
                   <TestItem
                     key={test.id}

@@ -1,6 +1,7 @@
 import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
+import { LogsPanel } from '../components/logs-panel';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
 import { LoadingState, ErrorState } from '../components/ui';
@@ -168,7 +169,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Failed</p>
-              <p className="text-xl text-[#ef0000]">{suiteRun.failed}</p>
+              <p className={`text-xl ${suiteRun.failed > 0 ? 'text-[#ef0000]' : 'text-[#999999]'}`}>{suiteRun.failed}</p>
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Skipped</p>
@@ -248,26 +249,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
         )}
 
         {activeTab === 'logs' && (
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
-            <div className="flex justify-end gap-2 mb-4">
-              <button className="text-sm text-[#666666] hover:text-black transition-colors">
-                Copy
-              </button>
-              <button className="text-sm text-[#666666] hover:text-black transition-colors">
-                Download
-              </button>
-            </div>
-            {logsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-                <span className="ml-2 text-[#666666]">Loading logs...</span>
-              </div>
-            ) : (
-              <pre className="bg-black rounded p-4 font-mono text-xs text-[#00ff00] overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
-                {logs}
-              </pre>
-            )}
-          </div>
+          <LogsPanel logs={logs} isLoading={logsLoading} />
         )}
 
         {activeTab === 'artifacts' && (
