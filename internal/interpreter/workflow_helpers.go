@@ -197,8 +197,9 @@ func executeStep(
 
 	var err error
 	var activityResp interface{}
-	if step.Plugin == "delay" {
-		err = handleDelayStep(ctx, step, testName, runID)
+	if resp, handled, stepErr := executeWorkflowBuiltinStep(ctx, step, testName, runID); handled {
+		activityResp = resp
+		err = stepErr
 	} else {
 		activityResp, err = executePluginWithResponse(ctx, step, state, vars, runID, testName, suiteOpenAPI, opts, envSecrets)
 	}
