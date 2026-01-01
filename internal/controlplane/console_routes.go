@@ -494,6 +494,9 @@ func (s *Server) handleConsoleProjectRoutesDispatch(w http.ResponseWriter, r *ht
 	case "members":
 		// Delegate to existing members handler (requires org admin)
 		s.handleProjectRoutes(w, r, principal)
+	case "environments":
+		// Handle environment management
+		s.handleProjectEnvironments(w, r, principal, projectID, segments[2:])
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}

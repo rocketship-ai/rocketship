@@ -75,7 +75,7 @@ func TestReplaceVariables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			result, err := replaceVariables(tt.input, tt.state)
+			result, err := replaceVariables(tt.input, tt.state, make(map[string]string))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("replaceVariables() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -566,12 +566,13 @@ func buildRequest(method, urlStr string, configData map[string]interface{}, stat
 	var body io.Reader
 	isForm := false
 
+	env := make(map[string]string) // empty env for tests
 	if formData, ok := configData["form"].(map[string]interface{}); ok && len(formData) > 0 {
 		values := url.Values{}
 		for k, v := range formData {
 			switch val := v.(type) {
 			case string:
-				replaced, rerr := replaceVariables(val, state)
+				replaced, rerr := replaceVariables(val, state, env)
 				if rerr != nil {
 					return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
 				}
@@ -580,7 +581,7 @@ func buildRequest(method, urlStr string, configData map[string]interface{}, stat
 				for _, elem := range val {
 					str := fmt.Sprint(elem)
 					if s, ok := elem.(string); ok {
-						if rep, rerr := replaceVariables(s, state); rerr == nil {
+						if rep, rerr := replaceVariables(s, state, env); rerr == nil {
 							str = rep
 						}
 					}
@@ -594,7 +595,7 @@ func buildRequest(method, urlStr string, configData map[string]interface{}, stat
 		body = strings.NewReader(encoded)
 		isForm = true
 	} else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
-		bodyStr, err = replaceVariables(bodyStr, state)
+		bodyStr, err = replaceVariables(bodyStr, state, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to replace variables in body: %w", err)
 		}
@@ -608,7 +609,7 @@ func buildRequest(method, urlStr string, configData map[string]interface{}, stat
 	if headers, ok := configData["headers"].(map[string]interface{}); ok {
 		for key, value := range headers {
 			if strValue, ok := value.(string); ok {
-				strValue, err = replaceVariables(strValue, state)
+				strValue, err = replaceVariables(strValue, state, env)
 				if err != nil {
 					return nil, fmt.Errorf("failed to replace variables in header %s: %w", key, err)
 				}
@@ -679,7 +680,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, nil, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -718,7 +719,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, nil, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -759,7 +760,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, nil, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -789,7 +790,7 @@ paths:
 		}
 		configData := map[string]interface{}{}
 
-		validator, err := newOpenAPIValidator(ctx, configData, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -821,7 +822,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -867,7 +868,7 @@ paths:
 			},
 		}
 
-		validator, err := newOpenAPIValidator(ctx, configData, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, configData, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -912,7 +913,7 @@ paths:
 		ctx := context.Background()
 		suite := map[string]interface{}{"spec": formSpecPath}
 
-		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -940,7 +941,7 @@ paths:
 		ctx := context.Background()
 		suite := map[string]interface{}{"spec": formSpecPath}
 
-		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -994,7 +995,7 @@ paths:
 		ctx := context.Background()
 		suite := map[string]interface{}{"spec": jsonSpecPath}
 
-		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -1050,7 +1051,7 @@ paths:
 		ctx := context.Background()
 		suite := map[string]interface{}{"spec": responseSpecPath}
 
-		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -1129,7 +1130,7 @@ paths:
 		ctx := context.Background()
 		suite := map[string]interface{}{"spec": baseSpecPath}
 
-		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -1151,7 +1152,7 @@ paths:
 		ctx := context.Background()
 		suite := map[string]interface{}{"spec": pathPrecedenceSpecPath}
 
-		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+		validator, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 		if err != nil {
 			t.Fatalf("unexpected error creating validator: %v", err)
 		}
@@ -1228,7 +1229,7 @@ paths:
 		"version":   "v1",
 	}
 
-	validatorOne, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+	validatorOne, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating validator: %v", err)
 	}
@@ -1236,7 +1237,7 @@ paths:
 		t.Fatalf("expected validator instance")
 	}
 
-	validatorTwo, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil)
+	validatorTwo, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suite, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating second validator: %v", err)
 	}
@@ -1249,7 +1250,7 @@ paths:
 		"version": "v2",
 	}
 
-	validatorThree, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteVersionTwo, nil)
+	validatorThree, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteVersionTwo, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating validator with new version: %v", err)
 	}
@@ -1263,13 +1264,13 @@ paths:
 	}
 
 	resetCache()
-	validatorShortTTL, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteShortTTL, nil)
+	validatorShortTTL, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteShortTTL, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating validator with short TTL: %v", err)
 	}
 	entryBefore := validatorShortTTL.entry
 	time.Sleep(10 * time.Millisecond)
-	validatorAfterTTL, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteShortTTL, nil)
+	validatorAfterTTL, err := newOpenAPIValidator(ctx, map[string]interface{}{}, suiteShortTTL, nil, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating validator after TTL: %v", err)
 	}

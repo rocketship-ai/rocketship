@@ -9,6 +9,7 @@ type Context struct {
 	// Input data (read-only)
 	State map[string]string      // Current workflow state from previous steps
 	Vars  map[string]interface{} // Configuration variables
+	Env   map[string]string      // Environment secrets from project environment
 
 	// Output data
 	Saved map[string]string // Values to save back to workflow state
@@ -19,10 +20,11 @@ type Context struct {
 }
 
 // NewContext creates a new runtime context
-func NewContext(state map[string]string, vars map[string]interface{}) *Context {
+func NewContext(state map[string]string, vars map[string]interface{}, env map[string]string) *Context {
 	ctx := &Context{
 		State: state,
 		Vars:  vars,
+		Env:   env,
 		Saved: make(map[string]string),
 	}
 

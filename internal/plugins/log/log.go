@@ -52,9 +52,22 @@ func (lp *LogPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 		stateInterface = stateInt
 	}
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := p["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := p["env"].(map[string]string); ok {
+		env = envData
+	}
+
 	// Process templates in the message (config vars already processed by CLI)
 	context := dsl.TemplateContext{
 		Runtime: stateInterface,
+		Env:     env,
 	}
 
 	processedMessage, err := dsl.ProcessTemplate(config.Message, context)

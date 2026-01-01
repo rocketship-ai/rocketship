@@ -17,6 +17,7 @@ import (
 	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/interpreter"
 	"go.temporal.io/sdk/client"
+	yaml "gopkg.in/yaml.v3"
 )
 
 func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest) (*generated.CreateRunResponse, error) {
@@ -53,8 +54,12 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	runContext := extractRunContext(req.Context)
 	startTime := time.Now().UTC()
 	configSource := detectConfigSource(runContext)
-	environment := detectEnvironment(runContext)
+	envSlug := detectEnvironment(runContext)
 	initiator := determineInitiator(principal)
+
+	// Environment resolution variables - will be set after project_id is resolved
+	var envSecrets map[string]string
+	var envConfigVars map[string]interface{}
 
 	if orgID != uuid.Nil && e.runStore != nil {
 		// Extract bundle_sha from metadata if present (set by CLI for uncommitted files)
@@ -77,7 +82,6 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			ConfigSource:   configSource,
 			Source:         strings.TrimSpace(runContext.Source),
 			Branch:         strings.TrimSpace(runContext.Branch),
-			Environment:    environment,
 			CommitSHA:      makeNullString(runContext.CommitSHA),
 			CommitMessage:  makeNullString(runContext.Metadata["rs_commit_message"]),
 			BundleSHA:      bundleSHA,
@@ -116,6 +120,56 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 					}
 				}
 			}
+		}
+
+		// Resolve environment after project_id is set
+		if record.ProjectID.Valid {
+			var env persistence.ProjectEnvironment
+			var found bool
+
+			if envSlug != "" {
+				// Try to get environment by slug
+				env, err = e.runStore.GetEnvironmentBySlug(ctx, record.ProjectID.UUID, envSlug)
+				if err != nil {
+					if !errors.Is(err, sql.ErrNoRows) {
+						slog.Debug("CreateRun: failed to lookup environment by slug", "slug", envSlug, "error", err)
+					}
+				} else {
+					found = true
+				}
+			}
+
+			// If no env slug specified or not found, try default environment
+			if !found && envSlug == "" {
+				env, err = e.runStore.GetDefaultEnvironment(ctx, record.ProjectID.UUID)
+				if err != nil {
+					if !errors.Is(err, sql.ErrNoRows) {
+						slog.Debug("CreateRun: failed to lookup default environment", "error", err)
+					}
+				} else {
+					found = true
+				}
+			}
+
+			if found {
+				envSecrets = env.EnvSecrets
+				envConfigVars = env.ConfigVars
+				record.EnvironmentID = uuid.NullUUID{UUID: env.ID, Valid: true}
+				record.Environment = env.Slug
+				slog.Debug("CreateRun: resolved environment",
+					"env_id", env.ID,
+					"env_slug", env.Slug,
+					"secrets_count", len(envSecrets),
+					"config_vars_count", len(envConfigVars))
+			} else if envSlug != "" {
+				// If user explicitly specified an environment slug but it wasn't found, fail fast
+				// This is different from empty slug (where we try default env as best-effort)
+				slog.Error("CreateRun: environment not found", "slug", envSlug, "project_id", record.ProjectID.UUID)
+				return nil, fmt.Errorf("unknown environment %q for this project; hint: create it in the console /environments page", envSlug)
+			}
+		} else if envSlug != "" {
+			// No project_id but env slug was specified - just store the slug
+			record.Environment = envSlug
 		}
 
 		if _, err := e.runStore.InsertRun(ctx, record); err != nil {
@@ -183,6 +237,64 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		}
 	}
 
+	// Merge environment config vars with run.Vars (environment is lowest precedence)
+	// Use deep merge to properly handle nested config vars (like Helm values)
+	// Base = envConfigVars (lowest), Overlay = run.Vars (higher)
+	mergedVars := dsl.MergeInterfaceMaps(envConfigVars, run.Vars)
+
+	// Server-side: Apply .vars.* substitution using merged vars (includes env config vars)
+	// Important: Do NOT substitute .env.* here - leave for plugin-time resolution with env secrets
+	// Re-parse the YAML after template substitution so tests have resolved values
+	if len(mergedVars) > 0 {
+		// Parse YAML to interface{} for template processing
+		var yamlDoc interface{}
+		if err := json.Unmarshal(req.YamlPayload, &yamlDoc); err != nil {
+			// Try YAML unmarshal if JSON fails
+			if yamlErr := yaml.Unmarshal(req.YamlPayload, &yamlDoc); yamlErr != nil {
+				slog.Debug("CreateRun: failed to parse YAML for vars substitution", "error", yamlErr)
+			} else {
+				// Use ProcessVarsOnlyRecursive to only substitute .vars.* (not .env.*)
+				processedDoc, err := dsl.ProcessVarsOnlyRecursive(yamlDoc, mergedVars)
+				if err != nil {
+					slog.Warn("CreateRun: failed to process config variables", "error", err)
+				} else {
+					// Re-marshal and re-parse
+					processedYaml, err := yaml.Marshal(processedDoc)
+					if err != nil {
+						slog.Warn("CreateRun: failed to marshal processed YAML", "error", err)
+					} else {
+						newRun, err := dsl.ParseYAML(processedYaml)
+						if err != nil {
+							slog.Warn("CreateRun: failed to re-parse processed YAML", "error", err)
+						} else {
+							run = newRun
+							slog.Debug("CreateRun: applied server-side vars substitution", "vars_count", len(mergedVars))
+						}
+					}
+				}
+			}
+		} else {
+			// JSON parse succeeded - use ProcessVarsOnlyRecursive to only substitute .vars.* (not .env.*)
+			processedDoc, err := dsl.ProcessVarsOnlyRecursive(yamlDoc, mergedVars)
+			if err != nil {
+				slog.Warn("CreateRun: failed to process config variables (JSON)", "error", err)
+			} else {
+				processedYaml, err := yaml.Marshal(processedDoc)
+				if err != nil {
+					slog.Warn("CreateRun: failed to marshal processed YAML (JSON)", "error", err)
+				} else {
+					newRun, err := dsl.ParseYAML(processedYaml)
+					if err != nil {
+						slog.Warn("CreateRun: failed to re-parse processed YAML (JSON)", "error", err)
+					} else {
+						run = newRun
+						slog.Debug("CreateRun: applied server-side vars substitution (JSON)", "vars_count", len(mergedVars))
+					}
+				}
+			}
+		}
+	}
+
 	runInfo := &RunInfo{
 		ID:             runID,
 		Name:           run.Name,
@@ -191,12 +303,13 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 		Tests:          make(map[string]*TestInfo),
 		Context:        runContext,
 		SuiteCleanup:   run.Cleanup,
-		Vars:           cloneInterfaceMap(run.Vars),
+		Vars:           cloneInterfaceMap(mergedVars),
 		SuiteOpenAPI:   run.OpenAPI,
 		OrganizationID: orgID,
 		ProjectID:      resolvedProjectID,
 		SuiteID:        resolvedSuiteID,
 		TestIDs:        testIDMap,
+		EnvSecrets:     envSecrets,
 		Logs: []LogLine{
 			{
 				Msg:   fmt.Sprintf("Starting test run \"%s\"... 🚀 [%s/%s]", run.Name, runContext.ProjectID, runContext.Source),
@@ -213,7 +326,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	var suiteGlobals map[string]string
 	if len(run.Init) > 0 {
 		e.addLog(runID, "Running suite init...", "n/a", false)
-		initGlobals, initErr := e.runSuiteInitWorkflow(ctx, runID, run.Name, run.Init, runInfo.Vars, run.OpenAPI)
+		initGlobals, initErr := e.runSuiteInitWorkflow(ctx, runID, run.Name, run.Init, runInfo.Vars, run.OpenAPI, runInfo.EnvSecrets)
 		if initErr != nil {
 			e.handleSuiteInitFailure(runID, runInfo, initErr)
 			return &generated.CreateRunResponse{RunId: runID}, nil
@@ -295,7 +408,8 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			"source", runContext.Source)
 
 		suiteGlobalsCopy := cloneStringMap(suiteGlobals)
-		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, runInfo.Vars, runID, run.OpenAPI, suiteGlobalsCopy)
+		envSecretsCopy := cloneStringMap(runInfo.EnvSecrets)
+		execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", test, runInfo.Vars, runID, run.OpenAPI, suiteGlobalsCopy, envSecretsCopy)
 		if err != nil {
 			log.Printf("[ERROR] Failed to start workflow for run %s: %v", runID, err)
 			e.addLog(runID, fmt.Sprintf("Failed to start test \"%s\": %v", test.Name, err), "red", true)
@@ -334,7 +448,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	return &generated.CreateRunResponse{RunId: runID}, nil
 }
 
-func (e *Engine) runSuiteInitWorkflow(ctx context.Context, runID, runName string, initSteps []dsl.Step, vars map[string]interface{}, suiteOpenAPI *dsl.OpenAPISuiteConfig) (map[string]string, error) {
+func (e *Engine) runSuiteInitWorkflow(ctx context.Context, runID, runName string, initSteps []dsl.Step, vars map[string]interface{}, suiteOpenAPI *dsl.OpenAPISuiteConfig, envSecrets map[string]string) (map[string]string, error) {
 	if len(initSteps) == 0 {
 		return make(map[string]string), nil
 	}
@@ -350,7 +464,7 @@ func (e *Engine) runSuiteInitWorkflow(ctx context.Context, runID, runName string
 		TaskQueue: "test-workflows",
 	}
 
-	execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", suiteTest, vars, runID, suiteOpenAPI, map[string]string(nil))
+	execution, err := e.temporal.ExecuteWorkflow(ctx, workflowOptions, "TestWorkflow", suiteTest, vars, runID, suiteOpenAPI, map[string]string(nil), envSecrets)
 	if err != nil {
 		return nil, err
 	}
@@ -421,6 +535,7 @@ func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
 	varsCopy := cloneInterfaceMap(runInfo.Vars)
 	suiteGlobalsCopy := cloneStringMap(runInfo.SuiteGlobals)
 	suiteOpenAPI := runInfo.SuiteOpenAPI
+	envSecretsCopy := cloneStringMap(runInfo.EnvSecrets)
 	e.mu.Unlock()
 
 	slog.Info("triggerSuiteCleanup: Starting suite cleanup workflow", "run_id", runID)
@@ -450,6 +565,7 @@ func (e *Engine) triggerSuiteCleanup(runID string, hasFailure bool) {
 			SuiteOpenAPI:   suiteOpenAPI,
 			SuiteGlobals:   suiteGlobalsCopy,
 			TreatAsFailure: hasFailure,
+			EnvSecrets:     envSecretsCopy,
 		}
 
 		slog.Debug("triggerSuiteCleanup: Executing suite cleanup workflow", "run_id", runID, "workflow_id", options.ID)

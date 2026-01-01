@@ -64,28 +64,27 @@ func summarizeResults(results []TestSuiteResult) testSummary {
 	}
 }
 
-// processConfigTemplates processes only config variable templates ({{ .vars.* }}) in the YAML
-// Leaves runtime variables ({{ variable }}) untouched for later processing
-func processConfigTemplates(yamlData []byte, vars map[string]interface{}) ([]byte, error) {
-	// Parse YAML to interface{} for template processing
-	var yamlDoc interface{}
+// injectVarsIntoYAML updates the vars: block in the YAML with the final merged vars.
+// This does NOT substitute {{ .vars.* }} templates - that happens server-side after
+// merging with environment config vars from the database.
+func injectVarsIntoYAML(yamlData []byte, vars map[string]interface{}) ([]byte, error) {
+	// Parse YAML to map
+	var yamlDoc map[string]interface{}
 	if err := yaml.Unmarshal(yamlData, &yamlDoc); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML for template processing: %w", err)
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
-	// Process only config variables, leaving runtime variables for later
-	processedDoc, err := dsl.ProcessConfigVariablesRecursive(yamlDoc, vars)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process config variables: %w", err)
-	}
+	// Update the vars block with merged vars
+	// This gives the engine the CLI's precedence: YAML vars < var-file < --var
+	yamlDoc["vars"] = vars
 
 	// Convert back to YAML
-	processedYaml, err := yaml.Marshal(processedDoc)
+	updatedYaml, err := yaml.Marshal(yamlDoc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal processed YAML: %w", err)
+		return nil, fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	return processedYaml, nil
+	return updatedYaml, nil
 }
 
 // isReservedTestDir returns true if a directory name is reserved for internal use
@@ -206,21 +205,23 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 	}
 
 	// Merge variables: YAML vars < var-file < CLI vars (CLI takes highest precedence)
+	// Use deep merge to preserve nested keys not explicitly overridden
 	mergedVars := config.Vars
 	if varFileVars != nil {
 		if mergedVars == nil {
 			mergedVars = make(map[string]interface{})
 		}
-		for k, v := range varFileVars {
-			mergedVars[k] = v
-		}
+		// Deep merge var-file vars on top of YAML vars
+		mergedVars = dsl.MergeInterfaceMaps(mergedVars, varFileVars)
 	}
 	finalVars := dsl.MergeVariables(mergedVars, cliVars)
 
-	// Process templates in the config before sending to engine
-	processedYamlData, err := processConfigTemplates(yamlData, finalVars)
+	// Inject merged vars into the YAML's vars: block
+	// Note: We do NOT substitute {{ .vars.* }} templates here - that happens server-side
+	// after merging with environment config vars from the database
+	processedYamlData, err := injectVarsIntoYAML(yamlData, finalVars)
 	if err != nil {
-		Logger.Error("failed to process templates", "path", yamlPath, "error", err)
+		Logger.Error("failed to inject vars into YAML", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: config.Name}
 		return
 	}
@@ -559,6 +560,24 @@ func NewRunCmd() *cobra.Command {
 			trigger, _ := cmd.Flags().GetString("trigger")
 			scheduleName, _ := cmd.Flags().GetString("schedule-name")
 			metadata, _ := cmd.Flags().GetStringToString("metadata")
+			environment, _ := cmd.Flags().GetString("environment")
+			envAlias, _ := cmd.Flags().GetString("env")
+
+			// Handle --env alias for --environment
+			if envAlias != "" && environment != "" && envAlias != environment {
+				return fmt.Errorf("conflicting environment flags: --env %q and --environment %q; use only one", envAlias, environment)
+			}
+			if envAlias != "" && environment == "" {
+				environment = envAlias
+			}
+
+			// Set environment slug in metadata if provided (for project environment lookup)
+			if environment != "" {
+				if metadata == nil {
+					metadata = make(map[string]string)
+				}
+				metadata["env"] = environment
+			}
 
 			// Auto-populate from GitHub Actions environment variables if running in CI
 			// See: https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
@@ -833,6 +852,8 @@ func NewRunCmd() *cobra.Command {
 	cmd.Flags().String("trigger", "", "Trigger type: manual, webhook, schedule")
 	cmd.Flags().String("schedule-name", "", "Schedule name for scheduled runs")
 	cmd.Flags().StringToString("metadata", nil, "Additional metadata key=value pairs")
+	cmd.Flags().String("environment", "", "Project environment slug for secrets and config vars")
+	cmd.Flags().String("env", "", "Alias for --environment")
 
 	return cmd
 }

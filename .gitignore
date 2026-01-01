@@ -40,6 +40,7 @@ cli-introspection.json
 
 # rocketship-internal code
 charts/rocketship-internal/
+plans
 
 #symlinks
 rocketship-internal

@@ -57,9 +57,23 @@ func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 
 	logger.Info("Executing SQL plugin", "driver", config.Driver, "queries", len(config.Commands))
 
-	// Apply variable replacement to DSN and commands
+	// Extract state and env from parameters
 	state, _ := p["state"].(map[string]interface{})
-	if err := applyVariableReplacement(config, state); err != nil {
+
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := p["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := p["env"].(map[string]string); ok {
+		env = envData
+	}
+
+	// Apply variable replacement to DSN and commands
+	if err := applyVariableReplacement(config, state, env); err != nil {
 		return nil, fmt.Errorf("variable replacement failed: %w", err)
 	}
 
@@ -126,10 +140,12 @@ func parseConfig(configData map[string]interface{}, config *SQLConfig) error {
 }
 
 // applyVariableReplacement replaces variables in DSN and commands using DSL template processing
-func applyVariableReplacement(config *SQLConfig, state map[string]interface{}) error {
-	// Create template context with only runtime variables (config vars already processed by CLI)
+func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, env map[string]string) error {
+	// Create template context with runtime variables and env secrets
+	// (config vars already processed by CLI)
 	context := dsl.TemplateContext{
 		Runtime: state,
+		Env:     env,
 	}
 
 	// Process DSN

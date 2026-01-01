@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiGet, apiPost } from '@/lib/api'
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
 
 // Types matching the API response shapes
 
@@ -330,12 +330,45 @@ export interface SyncResult {
   message?: string
 }
 
+// Environment types
+export interface ProjectEnvironment {
+  id: string
+  project_id: string
+  name: string
+  slug: string
+  description?: string
+  is_default: boolean
+  env_secrets_keys: string[] // Only keys are returned, not values
+  config_vars: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateEnvironmentRequest {
+  name: string
+  slug: string
+  description?: string
+  is_default?: boolean
+  env_secrets?: Record<string, string>
+  config_vars?: Record<string, unknown>
+}
+
+export interface UpdateEnvironmentRequest {
+  name?: string
+  slug?: string
+  description?: string
+  is_default?: boolean
+  env_secrets?: Record<string, string> // Empty string value removes the key
+  config_vars?: Record<string, unknown>
+}
+
 // Query key factories
 export const consoleKeys = {
   all: ['console'] as const,
   projects: () => [...consoleKeys.all, 'projects'] as const,
   project: (id: string) => [...consoleKeys.all, 'project', id] as const,
   projectSuites: (id: string) => [...consoleKeys.all, 'project', id, 'suites'] as const,
+  projectEnvironments: (id: string) => [...consoleKeys.all, 'project', id, 'environments'] as const,
   suiteActivity: () => [...consoleKeys.all, 'suites', 'activity'] as const,
   suite: (id: string) => [...consoleKeys.all, 'suite', id] as const,
   suiteRuns: (id: string) => [...consoleKeys.all, 'suite', id, 'runs'] as const,
@@ -506,6 +539,64 @@ export function useSyncGithubApp() {
     onSuccess: () => {
       // Invalidate setup data to refresh the setup steps
       queryClient.invalidateQueries({ queryKey: consoleKeys.overviewSetup() })
+    },
+  })
+}
+
+// Environment hooks
+
+export function useProjectEnvironments(projectId: string) {
+  return useQuery({
+    queryKey: consoleKeys.projectEnvironments(projectId),
+    queryFn: () => apiGet<ProjectEnvironment[]>(`/api/projects/${projectId}/environments`),
+    enabled: !!projectId,
+  })
+}
+
+export function useCreateEnvironment(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateEnvironmentRequest) =>
+      apiPost<ProjectEnvironment>(`/api/projects/${projectId}/environments`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
+    },
+  })
+}
+
+export function useUpdateEnvironment(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ envId, data }: { envId: string; data: UpdateEnvironmentRequest }) =>
+      apiPut<ProjectEnvironment>(`/api/projects/${projectId}/environments/${envId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
+    },
+  })
+}
+
+export function useDeleteEnvironment(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (envId: string) =>
+      apiDelete(`/api/projects/${projectId}/environments/${envId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
+    },
+  })
+}
+
+export function useSetDefaultEnvironment(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (envId: string) =>
+      apiPost<ProjectEnvironment>(`/api/projects/${projectId}/environments/${envId}/default`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
     },
   })
 }

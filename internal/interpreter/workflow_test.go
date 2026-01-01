@@ -279,7 +279,7 @@ func TestTestWorkflow(t *testing.T) {
 				tt.setupEnv(env)
 			}
 
-			env.ExecuteWorkflow(TestWorkflow, tt.test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil))
+			env.ExecuteWorkflow(TestWorkflow, tt.test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil), map[string]string(nil))
 
 			if tt.wantErr {
 				if env.IsWorkflowCompleted() {
@@ -379,7 +379,7 @@ func TestWorkflowStatePropagation(t *testing.T) {
 		},
 	}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil))
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil), map[string]string(nil))
 
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("Expected workflow to complete successfully")
@@ -467,7 +467,7 @@ func TestWorkflowConcurrency(t *testing.T) {
 				},
 			}
 
-			env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil))
+			env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil), map[string]string(nil))
 
 			if !env.IsWorkflowCompleted() {
 				errors <- fmt.Errorf("workflow %d did not complete", workflowID)
@@ -574,7 +574,7 @@ func TestWorkflowWithComplexState(t *testing.T) {
 		},
 	}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil))
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil), map[string]string(nil))
 
 	if !env.IsWorkflowCompleted() {
 		t.Fatal("Expected workflow to complete successfully")
@@ -649,7 +649,7 @@ func TestTestWorkflow_InitFailureTriggersCleanup(t *testing.T) {
 		},
 	}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil))
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil), map[string]string(nil))
 	err := env.GetWorkflowError()
 	assert.Error(t, err)
 
@@ -721,7 +721,7 @@ func TestTestWorkflow_SuccessRunsCleanupAlwaysOnly(t *testing.T) {
 		},
 	}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil))
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "test-run-id", (*dsl.OpenAPISuiteConfig)(nil), map[string]string(nil), map[string]string(nil))
 	err := env.GetWorkflowError()
 	assert.NoError(t, err)
 
@@ -752,7 +752,7 @@ func TestTestWorkflowInjectsSuiteGlobalsIntoState(t *testing.T) {
 
 	suiteGlobals := map[string]string{"api_token": "abc123"}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals)
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals, map[string]string(nil))
 	assert.NoError(t, env.GetWorkflowError())
 
 	var state map[string]string
@@ -889,7 +889,7 @@ func TestSuiteGlobalsPropagationToTestSteps(t *testing.T) {
 
 	suiteGlobals := map[string]string{"suite_token": "abc123xyz"}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals)
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals, map[string]string(nil))
 	assert.NoError(t, env.GetWorkflowError())
 
 	// Verify the suite global was available in the step's state
@@ -953,7 +953,7 @@ func TestSuiteGlobalsPropagationToTestCleanup(t *testing.T) {
 
 	suiteGlobals := map[string]string{"suite_api_key": "secret123"}
 
-	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals)
+	env.ExecuteWorkflow(TestWorkflow, test, make(map[string]interface{}), "run-id", (*dsl.OpenAPISuiteConfig)(nil), suiteGlobals, map[string]string(nil))
 	assert.NoError(t, env.GetWorkflowError())
 
 	// Verify cleanup received suite globals

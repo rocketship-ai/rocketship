@@ -104,6 +104,18 @@ func processAssertions(response *SupabaseResponse, assertions []interface{}, par
 		}
 	}
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := params["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := params["env"].(map[string]string); ok {
+		env = envData
+	}
+
 	for _, assertionInterface := range assertions {
 		assertion, ok := assertionInterface.(map[string]interface{})
 		if !ok {
@@ -118,15 +130,15 @@ func processAssertions(response *SupabaseResponse, assertions []interface{}, par
 		var err error
 		switch assertionType {
 		case "status_code":
-			err = processStatusCodeAssertion(response, assertion, state)
+			err = processStatusCodeAssertion(response, assertion, state, env)
 		case "json_path":
-			err = processJSONPathAssertion(response, assertion, state)
+			err = processJSONPathAssertion(response, assertion, state, env)
 		case "row_count":
-			err = processRowCountAssertion(response, assertion, state)
+			err = processRowCountAssertion(response, assertion, state, env)
 		case "error_code":
-			err = processErrorCodeAssertion(response, assertion, state)
+			err = processErrorCodeAssertion(response, assertion, state, env)
 		case "error_message":
-			err = processErrorMessageAssertion(response, assertion, state)
+			err = processErrorMessageAssertion(response, assertion, state, env)
 		default:
 			return fmt.Errorf("unknown assertion type: %s", assertionType)
 		}
@@ -140,7 +152,7 @@ func processAssertions(response *SupabaseResponse, assertions []interface{}, par
 }
 
 // processStatusCodeAssertion validates HTTP status code
-func processStatusCodeAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+func processStatusCodeAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string, env map[string]string) error {
 	expectedInterface, ok := assertion["expected"]
 	if !ok {
 		return fmt.Errorf("expected value is required for status_code assertion")
@@ -154,7 +166,7 @@ func processStatusCodeAssertion(response *SupabaseResponse, assertion map[string
 		expected = v
 	case string:
 		// Try to parse or replace variables
-		str := replaceVariables(v, state)
+		str := replaceVariables(v, state, env)
 		parsed, err := strconv.Atoi(str)
 		if err != nil {
 			return fmt.Errorf("invalid expected status code: %s", str)
@@ -173,7 +185,7 @@ func processStatusCodeAssertion(response *SupabaseResponse, assertion map[string
 }
 
 // processJSONPathAssertion validates JSON path value
-func processJSONPathAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+func processJSONPathAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string, env map[string]string) error {
 	path, ok := assertion["path"].(string)
 	if !ok {
 		return fmt.Errorf("path is required for json_path assertion")
@@ -203,7 +215,7 @@ func processJSONPathAssertion(response *SupabaseResponse, assertion map[string]i
 	// Process expected value with variable replacement
 	var expected = expectedInterface
 	if expectedStr, ok := expectedInterface.(string); ok {
-		expected = replaceVariables(expectedStr, state)
+		expected = replaceVariables(expectedStr, state, env)
 
 		// Try to convert to same type as actual
 		switch actual.(type) {
@@ -227,7 +239,7 @@ func processJSONPathAssertion(response *SupabaseResponse, assertion map[string]i
 }
 
 // processRowCountAssertion validates row count
-func processRowCountAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+func processRowCountAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string, env map[string]string) error {
 	expectedInterface, ok := assertion["expected"]
 	if !ok {
 		return fmt.Errorf("expected value is required for row_count assertion")
@@ -240,7 +252,7 @@ func processRowCountAssertion(response *SupabaseResponse, assertion map[string]i
 	case int:
 		expected = v
 	case string:
-		str := replaceVariables(v, state)
+		str := replaceVariables(v, state, env)
 		parsed, err := strconv.Atoi(str)
 		if err != nil {
 			return fmt.Errorf("invalid expected row count: %s", str)
@@ -276,7 +288,7 @@ func processRowCountAssertion(response *SupabaseResponse, assertion map[string]i
 }
 
 // processErrorCodeAssertion validates error code
-func processErrorCodeAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+func processErrorCodeAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string, env map[string]string) error {
 	expectedInterface, ok := assertion["expected"]
 	if !ok {
 		return fmt.Errorf("expected value is required for error_code assertion")
@@ -284,7 +296,7 @@ func processErrorCodeAssertion(response *SupabaseResponse, assertion map[string]
 
 	var expected string
 	if expectedStr, ok := expectedInterface.(string); ok {
-		expected = replaceVariables(expectedStr, state)
+		expected = replaceVariables(expectedStr, state, env)
 	} else {
 		expected = fmt.Sprintf("%v", expectedInterface)
 	}
@@ -301,7 +313,7 @@ func processErrorCodeAssertion(response *SupabaseResponse, assertion map[string]
 }
 
 // processErrorMessageAssertion validates error message
-func processErrorMessageAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string) error {
+func processErrorMessageAssertion(response *SupabaseResponse, assertion map[string]interface{}, state map[string]string, env map[string]string) error {
 	expectedInterface, ok := assertion["expected"]
 	if !ok {
 		return fmt.Errorf("expected value is required for error_message assertion")
@@ -309,7 +321,7 @@ func processErrorMessageAssertion(response *SupabaseResponse, assertion map[stri
 
 	var expected string
 	if expectedStr, ok := expectedInterface.(string); ok {
-		expected = replaceVariables(expectedStr, state)
+		expected = replaceVariables(expectedStr, state, env)
 	} else {
 		expected = fmt.Sprintf("%v", expectedInterface)
 	}

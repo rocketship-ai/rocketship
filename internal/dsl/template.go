@@ -21,6 +21,8 @@ var (
 // Config variables are processed earlier by CLI, only runtime variables are needed here
 type TemplateContext struct {
 	Runtime map[string]interface{} // Runtime variables (accessed via {{ key }})
+	Env     map[string]string      // Environment secrets from project environment (accessed via {{ .env.KEY }})
+	// Precedence for .env.*: OS env (highest) > context.Env (lowest/from DB)
 }
 
 // getEnvironmentVariables returns all environment variables as a map
@@ -56,9 +58,21 @@ func ProcessTemplate(input string, context TemplateContext) (string, error) {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Prepare template data with environment variables
+	// Build env map with proper precedence:
+	// 1. Start with context.Env (from project environment DB, lowest precedence)
+	// 2. Overlay OS env (from os.Environ(), highest precedence)
+	envMap := make(map[string]interface{})
+	for key, value := range context.Env {
+		envMap[key] = value
+	}
+	// OS env takes precedence over context.Env
+	for key, value := range getEnvironmentVariables() {
+		envMap[key] = value
+	}
+
+	// Prepare template data with merged environment variables
 	templateData := map[string]interface{}{
-		"env": getEnvironmentVariables(),
+		"env": envMap,
 	}
 
 	// Add runtime variables to the root level (supporting nested paths)
@@ -150,6 +164,56 @@ func ProcessConfigVariablesOnly(input string, vars map[string]interface{}) (stri
 	return buf.String(), nil
 }
 
+// ProcessVarsOnlyServerSide processes ONLY config variables ({{ .vars.* }}) patterns
+// This is used by the engine server-side after merging with environment config vars
+// It leaves {{ .env.* }} patterns untouched for plugin-time resolution with env secrets from the database
+func ProcessVarsOnlyServerSide(input string, vars map[string]interface{}) (string, error) {
+	if input == "" {
+		return input, nil
+	}
+
+	// Handle escaped handlebars first - convert to safe placeholders
+	processed := handleAllEscapedHandlebars(input)
+
+	// Only process if the string contains .vars patterns
+	if !strings.Contains(processed, ".vars.") {
+		return processed, nil
+	}
+
+	// Use regex approach to only replace .vars.* patterns
+	// This leaves .env.* patterns untouched for plugin-time resolution
+	result := processVarsOnlyWithRegex(processed, vars)
+	return result, nil
+}
+
+// processVarsOnlyWithRegex uses regex to replace only {{ .vars.* }} patterns
+// Leaves {{ .env.* }} patterns untouched
+func processVarsOnlyWithRegex(input string, vars map[string]interface{}) string {
+	result := input
+
+	// Process flat config vars
+	for key, value := range vars {
+		pattern := fmt.Sprintf("{{ .vars.%s }}", key)
+		if strValue, ok := value.(string); ok {
+			result = strings.ReplaceAll(result, pattern, strValue)
+		} else {
+			result = strings.ReplaceAll(result, pattern, fmt.Sprintf("%v", value))
+		}
+		// Also handle without spaces
+		patternNoSpace := fmt.Sprintf("{{.vars.%s}}", key)
+		if strValue, ok := value.(string); ok {
+			result = strings.ReplaceAll(result, patternNoSpace, strValue)
+		} else {
+			result = strings.ReplaceAll(result, patternNoSpace, fmt.Sprintf("%v", value))
+		}
+	}
+
+	// Handle nested vars like {{ .vars.auth.token }}
+	result = processNestedVars(result, vars, "vars")
+
+	return result
+}
+
 // processConfigAndEnvVarsWithRegex uses regex to replace only {{ .vars.* }} and {{ .env.* }} patterns
 func processConfigAndEnvVarsWithRegex(input string, vars map[string]interface{}) string {
 	// This is a fallback when Go templates fail due to mixed variable types
@@ -208,6 +272,56 @@ func processNestedVars(input string, vars map[string]interface{}, prefix string)
 	}
 
 	return result
+}
+
+// ProcessVarsOnlyRecursive processes only {{ .vars.* }} patterns in any nested data structure
+// This is used server-side to substitute vars after merging with environment config vars
+// It leaves {{ .env.* }} patterns untouched for plugin-time resolution
+func ProcessVarsOnlyRecursive(data interface{}, vars map[string]interface{}) (interface{}, error) {
+	switch v := data.(type) {
+	case string:
+		return ProcessVarsOnlyServerSide(v, vars)
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range v {
+			processedKey, err := ProcessVarsOnlyServerSide(key, vars)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process template in key '%s': %w", key, err)
+			}
+			processedValue, err := ProcessVarsOnlyRecursive(value, vars)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process template in value for key '%s': %w", key, err)
+			}
+			result[processedKey] = processedValue
+		}
+		return result, nil
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			processedItem, err := ProcessVarsOnlyRecursive(item, vars)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process template in array item %d: %w", i, err)
+			}
+			result[i] = processedItem
+		}
+		return result, nil
+	case []map[string]interface{}:
+		result := make([]map[string]interface{}, len(v))
+		for i, item := range v {
+			processedItem, err := ProcessVarsOnlyRecursive(item, vars)
+			if err != nil {
+				return nil, fmt.Errorf("failed to process template in array item %d: %w", i, err)
+			}
+			if processedMap, ok := processedItem.(map[string]interface{}); ok {
+				result[i] = processedMap
+			} else {
+				return nil, fmt.Errorf("expected map[string]interface{} after processing, got %T", processedItem)
+			}
+		}
+		return result, nil
+	default:
+		return data, nil
+	}
 }
 
 // ProcessConfigVariablesRecursive processes only config variables in any nested data structure
@@ -281,6 +395,88 @@ func MergeVariables(yamlVars map[string]interface{}, cliVars map[string]string) 
 		setNestedValue(result, k, v)
 	}
 
+	return result
+}
+
+// MergeInterfaceMaps performs a deep merge of two maps with overlay taking precedence.
+// Used for merging environment config vars (base) with run vars (overlay).
+// Rules:
+//   - If both sides are maps → recurse (merge nested maps)
+//   - Otherwise overlay value replaces base value
+//   - Arrays/slices: overlay replaces base (no merging)
+func MergeInterfaceMaps(base, overlay map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// Copy all base values first
+	for k, v := range base {
+		// Deep copy maps to avoid mutation issues
+		if baseMap, ok := v.(map[string]interface{}); ok {
+			result[k] = deepCopyMap(baseMap)
+		} else {
+			result[k] = v
+		}
+	}
+
+	// Overlay values on top
+	for k, overlayVal := range overlay {
+		baseVal, exists := result[k]
+		if !exists {
+			// Key doesn't exist in base - add it (deep copy if map)
+			if overlayMap, ok := overlayVal.(map[string]interface{}); ok {
+				result[k] = deepCopyMap(overlayMap)
+			} else {
+				result[k] = overlayVal
+			}
+			continue
+		}
+
+		// Both values exist - check if both are maps
+		baseMap, baseIsMap := baseVal.(map[string]interface{})
+		overlayMap, overlayIsMap := overlayVal.(map[string]interface{})
+
+		if baseIsMap && overlayIsMap {
+			// Both are maps - recursive merge
+			result[k] = MergeInterfaceMaps(baseMap, overlayMap)
+		} else {
+			// Either or both are not maps - overlay replaces base
+			if overlayMap, ok := overlayVal.(map[string]interface{}); ok {
+				result[k] = deepCopyMap(overlayMap)
+			} else {
+				result[k] = overlayVal
+			}
+		}
+	}
+
+	return result
+}
+
+// deepCopyMap creates a deep copy of a map[string]interface{}
+func deepCopyMap(m map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range m {
+		if nestedMap, ok := v.(map[string]interface{}); ok {
+			result[k] = deepCopyMap(nestedMap)
+		} else if slice, ok := v.([]interface{}); ok {
+			result[k] = deepCopySlice(slice)
+		} else {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+// deepCopySlice creates a deep copy of a []interface{}
+func deepCopySlice(s []interface{}) []interface{} {
+	result := make([]interface{}, len(s))
+	for i, v := range s {
+		if nestedMap, ok := v.(map[string]interface{}); ok {
+			result[i] = deepCopyMap(nestedMap)
+		} else if slice, ok := v.([]interface{}); ok {
+			result[i] = deepCopySlice(slice)
+		} else {
+			result[i] = v
+		}
+	}
 	return result
 }
 

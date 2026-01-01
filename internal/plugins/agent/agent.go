@@ -48,9 +48,22 @@ func (ap *AgentPlugin) Activity(ctx context.Context, p map[string]interface{}) (
 		stateInterface["run"] = runData
 	}
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	envSecrets := make(map[string]string)
+	if envData, ok := p["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				envSecrets[k] = strVal
+			}
+		}
+	} else if envData, ok := p["env"].(map[string]string); ok {
+		envSecrets = envData
+	}
+
 	// Process templates in configuration
 	templateContext := dsl.TemplateContext{
 		Runtime: stateInterface,
+		Env:     envSecrets,
 	}
 
 	config, err := parseConfig(configData, templateContext)

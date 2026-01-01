@@ -446,8 +446,32 @@ func (f *fakeStore) CreateEnvironment(_ context.Context, env persistence.Project
 	return env, nil
 }
 
+func (f *fakeStore) GetEnvironment(_ context.Context, _, _ uuid.UUID) (persistence.ProjectEnvironment, error) {
+	return persistence.ProjectEnvironment{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) GetEnvironmentBySlug(_ context.Context, _ uuid.UUID, _ string) (persistence.ProjectEnvironment, error) {
+	return persistence.ProjectEnvironment{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) GetDefaultEnvironment(_ context.Context, _ uuid.UUID) (persistence.ProjectEnvironment, error) {
+	return persistence.ProjectEnvironment{}, sql.ErrNoRows
+}
+
 func (f *fakeStore) ListEnvironments(_ context.Context, _ uuid.UUID) ([]persistence.ProjectEnvironment, error) {
 	return nil, nil
+}
+
+func (f *fakeStore) UpdateEnvironment(_ context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error) {
+	return env, nil
+}
+
+func (f *fakeStore) DeleteEnvironment(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (f *fakeStore) SetDefaultEnvironment(_ context.Context, _, _ uuid.UUID) error {
+	return nil
 }
 
 // Suite methods

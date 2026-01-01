@@ -105,7 +105,7 @@ func TestShellExecutor_Execute_BasicCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rtCtx := runtime.NewContext(make(map[string]string), make(map[string]interface{}))
+			rtCtx := runtime.NewContext(make(map[string]string), make(map[string]interface{}), make(map[string]string))
 
 			err := executor.Execute(ctx, tt.script, rtCtx)
 
@@ -162,7 +162,7 @@ func TestShellExecutor_Execute_VariableSubstitution(t *testing.T) {
 		"env_name":   "testing",
 	}
 
-	rtCtx := runtime.NewContext(state, vars)
+	rtCtx := runtime.NewContext(state, vars, make(map[string]string))
 
 	script := `
 		echo "State: {{ test_var }}"
@@ -204,7 +204,7 @@ func TestShellExecutor_Execute_EnvironmentVariables(t *testing.T) {
 		"config_value": "var_value",
 	}
 
-	rtCtx := runtime.NewContext(state, vars)
+	rtCtx := runtime.NewContext(state, vars, make(map[string]string))
 
 	script := `
 		echo "State env: $ROCKETSHIP_TEST_VALUE"
@@ -235,7 +235,7 @@ func TestShellExecutor_Execute_EnvironmentVariables(t *testing.T) {
 func TestShellExecutor_Execute_WorkingDirectory(t *testing.T) {
 	executor := NewShellExecutor()
 	ctx := context.Background()
-	rtCtx := runtime.NewContext(make(map[string]string), make(map[string]interface{}))
+	rtCtx := runtime.NewContext(make(map[string]string), make(map[string]interface{}), make(map[string]string))
 
 	// Get current working directory
 	expectedWd, err := os.Getwd()
@@ -259,7 +259,7 @@ func TestShellExecutor_Execute_WorkingDirectory(t *testing.T) {
 func TestShellExecutor_Execute_FileOperations(t *testing.T) {
 	executor := NewShellExecutor()
 	ctx := context.Background()
-	rtCtx := runtime.NewContext(make(map[string]string), make(map[string]interface{}))
+	rtCtx := runtime.NewContext(make(map[string]string), make(map[string]interface{}), make(map[string]string))
 
 	// Use os.TempDir() for better cross-platform compatibility
 	tempDir := os.TempDir()
@@ -314,7 +314,7 @@ func TestShellExecutor_processVariables(t *testing.T) {
 		"timeout": 30,
 	}
 
-	rtCtx := runtime.NewContext(state, vars)
+	rtCtx := runtime.NewContext(state, vars, make(map[string]string))
 
 	script := `
 		curl -H "Authorization: Bearer {{ token }}" \

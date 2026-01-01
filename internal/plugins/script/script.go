@@ -57,7 +57,7 @@ func (p *ScriptPlugin) Activity(ctx context.Context, params map[string]interface
 	}
 
 	// Create runtime context
-	rtCtx := runtime.NewContext(req.State, req.Vars)
+	rtCtx := runtime.NewContext(req.State, req.Vars, req.Env)
 
 	// Set up timeout if specified
 	execCtx := ctx
@@ -117,6 +117,20 @@ func (p *ScriptPlugin) parseRequest(params map[string]interface{}) (ActivityRequ
 		req.Vars = vars
 	} else {
 		req.Vars = make(map[string]interface{})
+	}
+
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	if envData, ok := params["env"].(map[string]interface{}); ok {
+		req.Env = make(map[string]string)
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				req.Env[k] = strVal
+			}
+		}
+	} else if envData, ok := params["env"].(map[string]string); ok {
+		req.Env = envData
+	} else {
+		req.Env = make(map[string]string)
 	}
 
 	return req, nil
