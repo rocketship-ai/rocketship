@@ -55,12 +55,20 @@ export interface SuiteActivityItem {
   }
 }
 
+// Step summary from test definition (YAML)
+export interface TestStepSummary {
+  step_index: number
+  plugin: string
+  name: string
+}
+
 export interface TestSummary {
   id: string
   name: string
   description?: string
   source_ref: string
   step_count: number
+  step_summaries?: TestStepSummary[]
   last_run_status?: string
   last_run_at?: string
   pass_rate?: number
@@ -91,6 +99,7 @@ export interface SuiteRunSummary {
   branch: string
   commit_sha?: string
   commit_message?: string
+  config_source: 'repo_commit' | 'uncommitted'
   environment: string
   created_at: string
   started_at?: string

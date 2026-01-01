@@ -18,6 +18,7 @@ type SuiteRunRow struct {
 	Branch        string         `db:"branch"`
 	CommitSHA     sql.NullString `db:"commit_sha"`
 	CommitMessage sql.NullString `db:"commit_message"`
+	ConfigSource  string         `db:"config_source"`
 	Environment   string         `db:"environment"`
 	Initiator     string         `db:"initiator"`
 	Trigger       string         `db:"trigger"`
@@ -96,6 +97,7 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 				branch,
 				commit_sha,
 				commit_message,
+				config_source,
 				environment,
 				initiator,
 				trigger,
@@ -123,6 +125,7 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			branch,
 			commit_sha,
 			commit_message,
+			config_source,
 			environment,
 			initiator,
 			trigger,

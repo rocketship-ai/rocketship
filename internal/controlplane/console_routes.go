@@ -301,11 +301,12 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 	payload := make([]map[string]interface{}, 0, len(runs))
 	for _, run := range runs {
 		item := map[string]interface{}{
-			"id":          run.ID,
-			"status":      run.Status,
-			"branch":      run.Branch,
-			"environment": run.Environment,
-			"created_at":  run.CreatedAt.Format(time.RFC3339),
+			"id":            run.ID,
+			"status":        run.Status,
+			"branch":        run.Branch,
+			"environment":   run.Environment,
+			"config_source": run.ConfigSource,
+			"created_at":    run.CreatedAt.Format(time.RFC3339),
 			"total_tests":   run.TotalTests,
 			"passed_tests":  run.PassedTests,
 			"failed_tests":  run.FailedTests,
@@ -395,6 +396,18 @@ func (s *Server) handleSuiteDetail(w http.ResponseWriter, r *http.Request, princ
 			"source_ref": test.SourceRef,
 			"step_count": test.StepCount,
 		}
+
+		// Always include step_summaries (empty array if none)
+		stepSummaries := make([]map[string]interface{}, 0, len(test.StepSummaries))
+		for _, s := range test.StepSummaries {
+			stepSummaries = append(stepSummaries, map[string]interface{}{
+				"step_index": s.StepIndex,
+				"plugin":     s.Plugin,
+				"name":       s.Name,
+			})
+		}
+		item["step_summaries"] = stepSummaries
+
 		if test.Description.Valid {
 			item["description"] = test.Description.String
 		}

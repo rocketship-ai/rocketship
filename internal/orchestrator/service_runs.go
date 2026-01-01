@@ -57,6 +57,15 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	initiator := determineInitiator(principal)
 
 	if orgID != uuid.Nil && e.runStore != nil {
+		// Extract bundle_sha from metadata if present (set by CLI for uncommitted files)
+		bundleSHA := sql.NullString{}
+		if runContext.Metadata != nil {
+			if sha := strings.TrimSpace(runContext.Metadata["rs_bundle_sha"]); sha != "" {
+				bundleSHA = sql.NullString{String: sha, Valid: true}
+				slog.Debug("CreateRun: using bundle_sha from CLI metadata", "bundle_sha", sha[:12])
+			}
+		}
+
 		record := persistence.RunRecord{
 			ID:             runID,
 			OrganizationID: orgID,
@@ -71,7 +80,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 			Environment:    environment,
 			CommitSHA:      makeNullString(runContext.CommitSHA),
 			CommitMessage:  makeNullString(runContext.Metadata["rs_commit_message"]),
-			BundleSHA:      sql.NullString{},
+			BundleSHA:      bundleSHA,
 			TotalTests:     len(run.Tests),
 			PassedTests:    0,
 			FailedTests:    0,

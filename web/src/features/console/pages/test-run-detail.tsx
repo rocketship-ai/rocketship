@@ -3,6 +3,7 @@ import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, 
 import { useState } from 'react';
 import { useTestRun, useTestRunLogs, useTestRunSteps } from '../hooks/use-console-queries';
 import { RunStepCard } from '../components/run-steps';
+import { LogsPanel } from '../components/logs-panel';
 import { formatDuration, formatDateTime } from '../lib/format';
 
 interface TestRunDetailProps {
@@ -70,6 +71,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
   const { test, run } = testRunData;
 
   // Transform test run data for display
+  const isUncommitted = run.config_source === 'uncommitted';
   const testRun = {
     id: test.id,
     testName: test.name || 'Test Run',
@@ -78,7 +80,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
     trigger: run.initiator_type as 'ci' | 'manual' | 'schedule',
     initiatorName: run.initiator_name || '',
     configSource: {
-      type: (run.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
+      type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: run.commit_sha || run.bundle_sha || '',
     },
     duration: formatDuration(test.duration_ms),
@@ -86,6 +88,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
     ended: formatDateTime(test.ended_at),
     branch: run.branch || 'main',
     commit: run.commit_sha?.substring(0, 7) || '—',
+    isUncommitted,
   };
 
   // Format logs for display
@@ -124,7 +127,10 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={testRun.status} />
                 <EnvBadge env={testRun.env} />
-                <ConfigSourceBadge type={testRun.configSource.type} sha={testRun.configSource.sha} />
+                {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant */}
+                {testRun.isUncommitted && (
+                  <ConfigSourceBadge type="uncommitted" />
+                )}
                 <BadgeDot />
                 <TriggerBadge trigger={testRun.trigger} />
                 {testRun.initiatorName && (
@@ -162,7 +168,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
               <p className="text-sm text-[#228b22]">{passedCount} {passedCount === 1 ? 'step' : 'steps'}</p>
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
-              <p className="text-sm text-[#666666] mb-1">Failed</p>
+              <p className="text-sm text-[#666666] mb-1">Failed / Did Not Run</p>
               <p className={`text-sm ${failedCount > 0 ? 'text-[#ef0000]' : 'text-[#666666]'}`}>{failedCount} {failedCount === 1 ? 'step' : 'steps'}</p>
             </div>
           </div>
@@ -241,26 +247,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
         )}
 
         {activeTab === 'logs' && (
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
-            <div className="flex justify-end gap-2 mb-4">
-              <button className="text-sm text-[#666666] hover:text-black transition-colors">
-                Copy
-              </button>
-              <button className="text-sm text-[#666666] hover:text-black transition-colors">
-                Download
-              </button>
-            </div>
-            {logsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-                <span className="ml-2 text-[#666666]">Loading logs...</span>
-              </div>
-            ) : (
-              <pre className="bg-black rounded p-4 font-mono text-xs text-[#00ff00] overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
-                {logs}
-              </pre>
-            )}
-          </div>
+          <LogsPanel logs={logs} isLoading={logsLoading} />
         )}
 
         {activeTab === 'artifacts' && (

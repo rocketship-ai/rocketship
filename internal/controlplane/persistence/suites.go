@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -216,7 +217,7 @@ func (s *Store) UpsertTest(ctx context.Context, test Test) (Test, error) {
 		// Update existing test
 		const updateQuery = `
 			UPDATE tests
-			SET description = $2, step_count = $3, updated_at = NOW()
+			SET description = $2, step_count = $3, step_summaries = $4, updated_at = NOW()
 			WHERE id = $1
 			RETURNING updated_at
 		`
@@ -226,14 +227,24 @@ func (s *Store) UpsertTest(ctx context.Context, test Test) (Test, error) {
 			desc = test.Description.String
 		}
 
+		// Marshal step summaries to JSON
+		stepSummariesJSON, err := json.Marshal(test.StepSummaries)
+		if err != nil {
+			return Test{}, fmt.Errorf("failed to marshal step summaries: %w", err)
+		}
+		if test.StepSummaries == nil {
+			stepSummariesJSON = []byte("[]")
+		}
+
 		var updatedAt time.Time
 		if err := s.db.GetContext(ctx, &updatedAt, updateQuery,
-			existing.ID, desc, test.StepCount); err != nil {
+			existing.ID, desc, test.StepCount, stepSummariesJSON); err != nil {
 			return Test{}, fmt.Errorf("failed to update test: %w", err)
 		}
 
 		existing.Description = test.Description
 		existing.StepCount = test.StepCount
+		existing.StepSummaries = test.StepSummaries
 		existing.UpdatedAt = updatedAt
 		return existing, nil
 	}
@@ -348,8 +359,8 @@ func (s *Store) CreateTest(ctx context.Context, test Test) (Test, error) {
 	}
 
 	const query = `
-        INSERT INTO tests (id, suite_id, project_id, name, description, source_ref, step_count, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        INSERT INTO tests (id, suite_id, project_id, name, description, source_ref, step_count, step_summaries, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         RETURNING created_at, updated_at
     `
 
@@ -358,13 +369,22 @@ func (s *Store) CreateTest(ctx context.Context, test Test) (Test, error) {
 		desc = test.Description.String
 	}
 
+	// Marshal step summaries to JSON
+	stepSummariesJSON, err := json.Marshal(test.StepSummaries)
+	if err != nil {
+		return Test{}, fmt.Errorf("failed to marshal step summaries: %w", err)
+	}
+	if test.StepSummaries == nil {
+		stepSummariesJSON = []byte("[]")
+	}
+
 	dest := struct {
 		CreatedAt time.Time `db:"created_at"`
 		UpdatedAt time.Time `db:"updated_at"`
 	}{}
 
 	if err := s.db.GetContext(ctx, &dest, query,
-		test.ID, test.SuiteID, test.ProjectID, test.Name, desc, test.SourceRef, test.StepCount); err != nil {
+		test.ID, test.SuiteID, test.ProjectID, test.Name, desc, test.SourceRef, test.StepCount, stepSummariesJSON); err != nil {
 		if isUniqueViolation(err, "tests_suite_name_ref_idx") {
 			return Test{}, fmt.Errorf("test name already exists in suite for this ref")
 		}
@@ -397,10 +417,59 @@ func (s *Store) GetTest(ctx context.Context, testID uuid.UUID) (Test, error) {
 	return test, nil
 }
 
+// testRow is a helper struct for scanning tests with JSONB columns
+type testRow struct {
+	ID              uuid.UUID       `db:"id"`
+	SuiteID         uuid.UUID       `db:"suite_id"`
+	ProjectID       uuid.UUID       `db:"project_id"`
+	Name            string          `db:"name"`
+	Description     sql.NullString  `db:"description"`
+	SourceRef       string          `db:"source_ref"`
+	StepCount       int             `db:"step_count"`
+	StepSummaries   []byte          `db:"step_summaries"`
+	LastRunID       sql.NullString  `db:"last_run_id"`
+	LastRunStatus   sql.NullString  `db:"last_run_status"`
+	LastRunAt       sql.NullTime    `db:"last_run_at"`
+	PassRate        sql.NullFloat64 `db:"pass_rate"`
+	AvgDurationMs   sql.NullInt64   `db:"avg_duration_ms"`
+	CreatedAt       time.Time       `db:"created_at"`
+	UpdatedAt       time.Time       `db:"updated_at"`
+}
+
+func (r testRow) toTest() Test {
+	t := Test{
+		ID:            r.ID,
+		SuiteID:       r.SuiteID,
+		ProjectID:     r.ProjectID,
+		Name:          r.Name,
+		Description:   r.Description,
+		SourceRef:     r.SourceRef,
+		StepCount:     r.StepCount,
+		LastRunID:     r.LastRunID,
+		LastRunStatus: r.LastRunStatus,
+		LastRunAt:     r.LastRunAt,
+		PassRate:      r.PassRate,
+		AvgDurationMs: r.AvgDurationMs,
+		CreatedAt:     r.CreatedAt,
+		UpdatedAt:     r.UpdatedAt,
+	}
+	// Parse step_summaries JSONB
+	if len(r.StepSummaries) > 0 {
+		var summaries []StepSummary
+		if err := json.Unmarshal(r.StepSummaries, &summaries); err == nil {
+			t.StepSummaries = summaries
+		}
+	}
+	if t.StepSummaries == nil {
+		t.StepSummaries = []StepSummary{}
+	}
+	return t
+}
+
 // ListTestsBySuite returns all tests for a suite
 func (s *Store) ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]Test, error) {
 	const query = `
-        SELECT id, suite_id, project_id, name, description, source_ref, step_count,
+        SELECT id, suite_id, project_id, name, description, source_ref, step_count, step_summaries,
                last_run_id, last_run_status, last_run_at, pass_rate, avg_duration_ms,
                created_at, updated_at
         FROM tests
@@ -408,12 +477,14 @@ func (s *Store) ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]Test
         ORDER BY name ASC, source_ref ASC
     `
 
-	var tests []Test
-	if err := s.db.SelectContext(ctx, &tests, query, suiteID); err != nil {
+	var rows []testRow
+	if err := s.db.SelectContext(ctx, &rows, query, suiteID); err != nil {
 		return nil, fmt.Errorf("failed to list tests: %w", err)
 	}
-	if tests == nil {
-		tests = []Test{}
+
+	tests := make([]Test, 0, len(rows))
+	for _, row := range rows {
+		tests = append(tests, row.toTest())
 	}
 
 	return tests, nil

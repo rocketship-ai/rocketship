@@ -134,6 +134,16 @@ func detectConfigSource(ctx *RunContext) string {
 	if ctx == nil {
 		return "repo_commit"
 	}
+	// Honor explicit per-file config_source from CLI metadata
+	if ctx.Metadata != nil {
+		if source := strings.TrimSpace(ctx.Metadata["rs_config_source"]); source != "" {
+			if source == "repo_commit" || source == "uncommitted" {
+				slog.Debug("Using explicit config_source from CLI", "config_source", source)
+				return source
+			}
+		}
+	}
+	// Fallback: infer from commit_sha presence (for backwards compatibility)
 	if strings.TrimSpace(ctx.CommitSHA) == "" {
 		return "uncommitted"
 	}

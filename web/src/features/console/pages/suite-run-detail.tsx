@@ -1,6 +1,7 @@
 import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
+import { LogsPanel } from '../components/logs-panel';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
 import { LoadingState, ErrorState } from '../components/ui';
@@ -77,6 +78,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
   }
 
   // Transform data for display
+  const isUncommitted = runData.config_source === 'uncommitted';
   const suiteRun = {
     id: runData.id,
     suiteName: runData.suite_name || 'Suite Run',
@@ -85,7 +87,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     trigger: runData.initiator_type as 'ci' | 'manual' | 'schedule',
     initiatorName: runData.initiator_name || '',
     configSource: {
-      type: (runData.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
+      type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: runData.commit_sha || runData.bundle_sha || '',
     },
     duration: formatDuration(runData.duration_ms),
@@ -93,6 +95,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     ended: formatDateTime(runData.ended_at),
     branch: runData.branch || 'main',
     commit: runData.commit_sha?.substring(0, 7) || '—',
+    isUncommitted,
     passed: runData.passed_tests,
     failed: runData.failed_tests,
     skipped: runData.skipped_tests,
@@ -135,7 +138,10 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                   )}
                 </div>
                 <EnvBadge env={suiteRun.env} />
-                <ConfigSourceBadge type={suiteRun.configSource.type} sha={suiteRun.configSource.sha} />
+                {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant with commit shown below */}
+                {suiteRun.configSource.type === 'uncommitted' && (
+                  <ConfigSourceBadge type="uncommitted" />
+                )}
                 <BadgeDot />
                 <TriggerBadge trigger={suiteRun.trigger} />
                 {suiteRun.initiatorName && (
@@ -168,7 +174,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Failed</p>
-              <p className="text-xl text-[#ef0000]">{suiteRun.failed}</p>
+              <p className={`text-xl ${suiteRun.failed > 0 ? 'text-[#ef0000]' : 'text-[#999999]'}`}>{suiteRun.failed}</p>
             </div>
             <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
               <p className="text-sm text-[#666666] mb-1">Skipped</p>
@@ -196,7 +202,9 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#999999] mb-1">Commit</p>
+              <p className="text-xs text-[#999999] mb-1">
+                {suiteRun.isUncommitted ? 'Base Commit' : 'Commit'}
+              </p>
               <p className="text-sm flex items-center gap-2">
                 <Hash className="w-3 h-3" />
                 {suiteRun.commit}
@@ -248,26 +256,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
         )}
 
         {activeTab === 'logs' && (
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6">
-            <div className="flex justify-end gap-2 mb-4">
-              <button className="text-sm text-[#666666] hover:text-black transition-colors">
-                Copy
-              </button>
-              <button className="text-sm text-[#666666] hover:text-black transition-colors">
-                Download
-              </button>
-            </div>
-            {logsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-                <span className="ml-2 text-[#666666]">Loading logs...</span>
-              </div>
-            ) : (
-              <pre className="bg-black rounded p-4 font-mono text-xs text-[#00ff00] overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap">
-                {logs}
-              </pre>
-            )}
-          </div>
+          <LogsPanel logs={logs} isLoading={logsLoading} />
         )}
 
         {activeTab === 'artifacts' && (

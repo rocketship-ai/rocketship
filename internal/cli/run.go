@@ -135,6 +135,28 @@ func findYamlTestFiles(dir string) ([]string, error) {
 	return files, err
 }
 
+// cloneRunContext creates a deep copy of a RunContext for per-file customization
+func cloneRunContext(ctx *generated.RunContext) *generated.RunContext {
+	if ctx == nil {
+		return nil
+	}
+	clone := &generated.RunContext{
+		ProjectId:    ctx.ProjectId,
+		Source:       ctx.Source,
+		Branch:       ctx.Branch,
+		CommitSha:    ctx.CommitSha,
+		Trigger:      ctx.Trigger,
+		ScheduleName: ctx.ScheduleName,
+	}
+	if ctx.Metadata != nil {
+		clone.Metadata = make(map[string]string)
+		for k, v := range ctx.Metadata {
+			clone.Metadata[k] = v
+		}
+	}
+	return clone
+}
+
 // runSingleTest runs a single test file and streams its logs
 func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, cliVars map[string]string, varFile string, showTimestamp bool, runContext *generated.RunContext, resultChan chan<- TestSuiteResult) {
 	defer func() {
@@ -201,6 +223,31 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 		Logger.Error("failed to process templates", "path", yamlPath, "error", err)
 		resultChan <- TestSuiteResult{Name: config.Name}
 		return
+	}
+
+	// Determine per-file config_source and bundle_sha
+	if runContext != nil {
+		if runContext.Metadata == nil {
+			runContext.Metadata = make(map[string]string)
+		}
+		// Check if this specific suite file is dirty (modified/staged/untracked)
+		isDirty, err := IsFileDirty(yamlPath)
+		if err != nil {
+			// If we can't determine dirty status (not a git repo, etc.), log and default to uncommitted
+			Logger.Debug("could not determine file dirty status, defaulting to uncommitted", "path", yamlPath, "error", err)
+			isDirty = true
+		}
+
+		if isDirty {
+			runContext.Metadata["rs_config_source"] = "uncommitted"
+			// Compute bundle_sha for uncommitted files (sha256 of processed YAML bytes)
+			runContext.Metadata["rs_bundle_sha"] = ComputeBundleSHA(processedYamlData)
+			Logger.Debug("file is dirty, setting config_source=uncommitted", "path", yamlPath, "bundle_sha", runContext.Metadata["rs_bundle_sha"][:12])
+		} else {
+			runContext.Metadata["rs_config_source"] = "repo_commit"
+			// Clean file - no bundle_sha needed (it's in the repo at commit_sha)
+			Logger.Debug("file is clean, setting config_source=repo_commit", "path", yamlPath)
+		}
 	}
 
 	// Create run with timeout
@@ -696,7 +743,9 @@ func NewRunCmd() *cobra.Command {
 				wg.Add(1)
 				go func(testFile string) {
 					defer wg.Done()
-					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, runContext, resultChan)
+					// Clone RunContext for each file so they can have per-file config_source metadata
+					fileRunContext := cloneRunContext(runContext)
+					runSingleTest(ctx, client, testFile, cliVars, varFile, showTimestamp, fileRunContext, resultChan)
 				}(tf)
 			}
 

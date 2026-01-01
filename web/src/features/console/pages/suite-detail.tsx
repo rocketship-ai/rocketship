@@ -1,5 +1,5 @@
 import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
-import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot } from '../components/status-badge';
+import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
 import { useMemo, useState } from 'react';
@@ -74,16 +74,24 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   ];
 
   // Convert suite tests to the format expected by TestItem component
-  const suiteTests = (suite?.tests || []).map((test) => ({
-    id: test.id,
-    name: test.name,
-    type: 'HTTP' as const,
-    tags: [] as string[],
-    steps: Array.from({ length: test.step_count }, (_, i) => ({
-      method: 'GET' as const,
-      name: `Step ${i + 1}`,
-    })),
-  }));
+  const suiteTests = (suite?.tests || []).map((test) => {
+    // Use step_summaries from API if available, otherwise fallback to step_count
+    const steps = test.step_summaries && test.step_summaries.length > 0
+      ? test.step_summaries.map((s) => ({
+          plugin: s.plugin,
+          name: s.name,
+        }))
+      : Array.from({ length: test.step_count }, (_, i) => ({
+          plugin: 'unknown',
+          name: `Step ${i + 1}`,
+        }));
+
+    return {
+      id: test.id,
+      name: test.name,
+      steps,
+    };
+  });
 
   // Group runs by branch, sorted by latest run time
   // NOTE: This must be before early returns to satisfy React hooks rules
@@ -388,11 +396,17 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                                       <p className="text-sm mb-1 truncate max-w-lg">{title}</p>
                                       <div className="flex items-center gap-3 flex-wrap">
                                         <BranchDisplay branch={run.branch} />
-                                        {run.commit_sha && (
-                                          <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
-                                            <Hash className="w-3 h-3" />
-                                            {run.commit_sha.slice(0, 7)}
-                                          </span>
+                                        {/* For uncommitted runs: show Uncommitted badge, no commit SHA */}
+                                        {/* For repo_commit runs: show commit SHA, no badge */}
+                                        {run.config_source === 'uncommitted' ? (
+                                          <ConfigSourceBadge type="uncommitted" />
+                                        ) : (
+                                          run.commit_sha && (
+                                            <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
+                                              <Hash className="w-3 h-3" />
+                                              {run.commit_sha.slice(0, 7)}
+                                            </span>
+                                          )
                                         )}
                                         <BadgeDot />
                                         {run.environment && <EnvBadge env={run.environment} />}

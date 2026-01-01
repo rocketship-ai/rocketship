@@ -81,7 +81,7 @@ export function InitiatorBadge({ initiator, name }: InitiatorBadgeProps) {
 }
 
 interface ConfigSourceBadgeProps {
-  type: 'uncommitted' | 'repo';
+  type: 'uncommitted' | 'repo_commit';
   sha?: string;
 }
 
@@ -94,9 +94,10 @@ export function ConfigSourceBadge({ type, sha }: ConfigSourceBadgeProps) {
     );
   }
 
+  // type === 'repo_commit' - show the commit SHA
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#fafafa] border border-[#e5e5e5] text-[#666666]">
-      Repo@{sha?.slice(0, 7)}
+      Repo@{sha?.slice(0, 7) || '—'}
     </span>
   );
 }

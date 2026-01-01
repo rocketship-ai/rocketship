@@ -336,12 +336,27 @@ func (s *Scanner) processSuiteFile(ctx context.Context, input ScanInput, project
 	for _, test := range config.Tests {
 		presentTestNames = append(presentTestNames, test.Name)
 
+		// Build step summaries from the test's steps
+		stepSummaries := make([]persistence.StepSummary, 0, len(test.Steps))
+		for i, step := range test.Steps {
+			name := step.Name
+			if name == "" {
+				name = fmt.Sprintf("Step %d", i+1)
+			}
+			stepSummaries = append(stepSummaries, persistence.StepSummary{
+				StepIndex: i + 1,
+				Plugin:    step.Plugin,
+				Name:      name,
+			})
+		}
+
 		testRecord := persistence.Test{
-			SuiteID:   upsertedSuite.ID,
-			ProjectID: project.ID,
-			Name:      test.Name,
-			SourceRef: input.SourceRef.Ref,
-			StepCount: len(test.Steps),
+			SuiteID:       upsertedSuite.ID,
+			ProjectID:     project.ID,
+			Name:          test.Name,
+			SourceRef:     input.SourceRef.Ref,
+			StepCount:     len(test.Steps),
+			StepSummaries: stepSummaries,
 		}
 
 		_, err := s.store.UpsertTest(ctx, testRecord)
