@@ -24,7 +24,7 @@ install-workflowcheck:
 	fi
 
 # Run linting
-lint: build-binaries install-workflowcheck lint-python lint-typescript go-lint workflow-check helm-lint
+lint: build-binaries install-workflowcheck lint-python go-lint workflow-check helm-lint
 
 # Run Python linting
 lint-python:
@@ -36,8 +36,8 @@ lint-python:
 		exit 1; \
 	fi
 
-# Run TypeScript linting
-lint-typescript:
+# Not used today since mcp-server is not prioritized
+lint-mcp-server-typescript:
 	@echo "Running TypeScript linter..."
 	@if [ -d "mcp-server" ]; then \
 		cd mcp-server && \
