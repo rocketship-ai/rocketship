@@ -396,6 +396,18 @@ func (s *Server) handleSuiteDetail(w http.ResponseWriter, r *http.Request, princ
 			"source_ref": test.SourceRef,
 			"step_count": test.StepCount,
 		}
+
+		// Always include step_summaries (empty array if none)
+		stepSummaries := make([]map[string]interface{}, 0, len(test.StepSummaries))
+		for _, s := range test.StepSummaries {
+			stepSummaries = append(stepSummaries, map[string]interface{}{
+				"step_index": s.StepIndex,
+				"plugin":     s.Plugin,
+				"name":       s.Name,
+			})
+		}
+		item["step_summaries"] = stepSummaries
+
 		if test.Description.Valid {
 			item["description"] = test.Description.String
 		}

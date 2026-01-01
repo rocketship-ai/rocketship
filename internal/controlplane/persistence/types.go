@@ -191,6 +191,14 @@ type Suite struct {
 	UpdatedAt     time.Time      `db:"updated_at"`
 }
 
+// StepSummary represents a step descriptor for UI display
+// This is stored in the tests.step_summaries JSONB column
+type StepSummary struct {
+	StepIndex int    `json:"step_index"`
+	Plugin    string `json:"plugin"`
+	Name      string `json:"name"`
+}
+
 // Test represents an individual test definition
 type Test struct {
 	ID            uuid.UUID       `db:"id"`
@@ -200,6 +208,7 @@ type Test struct {
 	Description   sql.NullString  `db:"description"`
 	SourceRef     string          `db:"source_ref"` // Branch/ref this test was discovered from
 	StepCount     int             `db:"step_count"`
+	StepSummaries []StepSummary   `db:"-"` // Parsed from JSONB
 	LastRunID     sql.NullString  `db:"last_run_id"`
 	LastRunStatus sql.NullString  `db:"last_run_status"`
 	LastRunAt     sql.NullTime    `db:"last_run_at"`

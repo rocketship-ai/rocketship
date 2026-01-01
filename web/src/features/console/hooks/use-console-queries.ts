@@ -55,12 +55,20 @@ export interface SuiteActivityItem {
   }
 }
 
+// Step summary from test definition (YAML)
+export interface TestStepSummary {
+  step_index: number
+  plugin: string
+  name: string
+}
+
 export interface TestSummary {
   id: string
   name: string
   description?: string
   source_ref: string
   step_count: number
+  step_summaries?: TestStepSummary[]
   last_run_status?: string
   last_run_at?: string
   pass_rate?: number

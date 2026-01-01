@@ -1,7 +1,6 @@
 import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
-import { InfoLabel } from '../components/info-label';
 import { TestItem } from '../components/test-item';
 import { useMemo, useState } from 'react';
 import { environments } from '../data/mock-data';
@@ -75,16 +74,24 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   ];
 
   // Convert suite tests to the format expected by TestItem component
-  const suiteTests = (suite?.tests || []).map((test) => ({
-    id: test.id,
-    name: test.name,
-    type: 'HTTP' as const,
-    tags: [] as string[],
-    steps: Array.from({ length: test.step_count }, (_, i) => ({
-      method: 'GET' as const,
-      name: `Step ${i + 1}`,
-    })),
-  }));
+  const suiteTests = (suite?.tests || []).map((test) => {
+    // Use step_summaries from API if available, otherwise fallback to step_count
+    const steps = test.step_summaries && test.step_summaries.length > 0
+      ? test.step_summaries.map((s) => ({
+          plugin: s.plugin,
+          name: s.name,
+        }))
+      : Array.from({ length: test.step_count }, (_, i) => ({
+          plugin: 'unknown',
+          name: `Step ${i + 1}`,
+        }));
+
+    return {
+      id: test.id,
+      name: test.name,
+      steps,
+    };
+  });
 
   // Group runs by branch, sorted by latest run time
   // NOTE: This must be before early returns to satisfy React hooks rules
@@ -445,11 +452,6 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
               </div>
             ) : (
               <div className="space-y-3">
-                <InfoLabel>
-                  <strong>TODO:</strong> Step chips show placeholder data ("HTTP", "Step 1", etc.) because the database only stores <code className="bg-[#e5e5e5] px-1 rounded">step_count</code> for test definitions.
-                  Actual step details (plugin type, step name) are only persisted in <code className="bg-[#e5e5e5] px-1 rounded">run_steps</code> after execution.
-                  Options: (1) Don't show step chips here, just "X steps" text. (2) Add a <code className="bg-[#e5e5e5] px-1 rounded">test_steps</code> table to persist static definitions from YAML. (3) Pull from latest run if available.
-                </InfoLabel>
                 {suiteTests.map((test) => (
                   <TestItem
                     key={test.id}
