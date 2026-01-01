@@ -1,5 +1,5 @@
 import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
-import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot } from '../components/status-badge';
+import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from '../components/status-badge';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { InfoLabel } from '../components/info-label';
 import { TestItem } from '../components/test-item';
@@ -389,11 +389,17 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                                       <p className="text-sm mb-1 truncate max-w-lg">{title}</p>
                                       <div className="flex items-center gap-3 flex-wrap">
                                         <BranchDisplay branch={run.branch} />
-                                        {run.commit_sha && (
-                                          <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
-                                            <Hash className="w-3 h-3" />
-                                            {run.commit_sha.slice(0, 7)}
-                                          </span>
+                                        {/* For uncommitted runs: show Uncommitted badge, no commit SHA */}
+                                        {/* For repo_commit runs: show commit SHA, no badge */}
+                                        {run.config_source === 'uncommitted' ? (
+                                          <ConfigSourceBadge type="uncommitted" />
+                                        ) : (
+                                          run.commit_sha && (
+                                            <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
+                                              <Hash className="w-3 h-3" />
+                                              {run.commit_sha.slice(0, 7)}
+                                            </span>
+                                          )
                                         )}
                                         <BadgeDot />
                                         {run.environment && <EnvBadge env={run.environment} />}

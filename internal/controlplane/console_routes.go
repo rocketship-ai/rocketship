@@ -301,11 +301,12 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 	payload := make([]map[string]interface{}, 0, len(runs))
 	for _, run := range runs {
 		item := map[string]interface{}{
-			"id":          run.ID,
-			"status":      run.Status,
-			"branch":      run.Branch,
-			"environment": run.Environment,
-			"created_at":  run.CreatedAt.Format(time.RFC3339),
+			"id":            run.ID,
+			"status":        run.Status,
+			"branch":        run.Branch,
+			"environment":   run.Environment,
+			"config_source": run.ConfigSource,
+			"created_at":    run.CreatedAt.Format(time.RFC3339),
 			"total_tests":   run.TotalTests,
 			"passed_tests":  run.PassedTests,
 			"failed_tests":  run.FailedTests,

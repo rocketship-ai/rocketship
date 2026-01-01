@@ -78,6 +78,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
   }
 
   // Transform data for display
+  const isUncommitted = runData.config_source === 'uncommitted';
   const suiteRun = {
     id: runData.id,
     suiteName: runData.suite_name || 'Suite Run',
@@ -86,7 +87,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     trigger: runData.initiator_type as 'ci' | 'manual' | 'schedule',
     initiatorName: runData.initiator_name || '',
     configSource: {
-      type: (runData.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
+      type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: runData.commit_sha || runData.bundle_sha || '',
     },
     duration: formatDuration(runData.duration_ms),
@@ -94,6 +95,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
     ended: formatDateTime(runData.ended_at),
     branch: runData.branch || 'main',
     commit: runData.commit_sha?.substring(0, 7) || '—',
+    isUncommitted,
     passed: runData.passed_tests,
     failed: runData.failed_tests,
     skipped: runData.skipped_tests,
@@ -136,7 +138,10 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                   )}
                 </div>
                 <EnvBadge env={suiteRun.env} />
-                <ConfigSourceBadge type={suiteRun.configSource.type} sha={suiteRun.configSource.sha} />
+                {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant with commit shown below */}
+                {suiteRun.configSource.type === 'uncommitted' && (
+                  <ConfigSourceBadge type="uncommitted" />
+                )}
                 <BadgeDot />
                 <TriggerBadge trigger={suiteRun.trigger} />
                 {suiteRun.initiatorName && (
@@ -197,7 +202,9 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
               </p>
             </div>
             <div>
-              <p className="text-xs text-[#999999] mb-1">Commit</p>
+              <p className="text-xs text-[#999999] mb-1">
+                {suiteRun.isUncommitted ? 'Base Commit' : 'Commit'}
+              </p>
               <p className="text-sm flex items-center gap-2">
                 <Hash className="w-3 h-3" />
                 {suiteRun.commit}

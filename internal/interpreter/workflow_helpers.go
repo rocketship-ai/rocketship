@@ -1,9 +1,9 @@
 package interpreter
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -591,6 +591,68 @@ func sendStepReport(ctx workflow.Context, runID string, stepIndex int, step dsl.
 	sendStepReportWithDetails(ctx, runID, stepIndex, step, status, errorMsg, startTime, endTime, 0, 0, 0, activityResp, nil, nil)
 }
 
+func deterministicJSONValueString(v interface{}) string {
+	switch typed := v.(type) {
+	case nil:
+		return "null"
+	case bool:
+		if typed {
+			return "true"
+		}
+		return "false"
+	case float64:
+		// YAML numbers are commonly decoded as float64.
+		return strconv.FormatFloat(typed, 'f', -1, 64)
+	case float32:
+		return strconv.FormatFloat(float64(typed), 'f', -1, 64)
+	case int:
+		return strconv.FormatInt(int64(typed), 10)
+	case int64:
+		return strconv.FormatInt(typed, 10)
+	case int32:
+		return strconv.FormatInt(int64(typed), 10)
+	case uint:
+		return strconv.FormatUint(uint64(typed), 10)
+	case uint64:
+		return strconv.FormatUint(typed, 10)
+	case uint32:
+		return strconv.FormatUint(uint64(typed), 10)
+	case string:
+		return strconv.Quote(typed)
+	case []interface{}:
+		if len(typed) == 0 {
+			return "[]"
+		}
+		out := make([]byte, 0, 2+len(typed)*8)
+		out = append(out, '[')
+		for idx, elem := range typed {
+			if idx > 0 {
+				out = append(out, ',')
+			}
+			out = append(out, deterministicJSONValueString(elem)...)
+		}
+		out = append(out, ']')
+		return string(out)
+	case map[string]interface{}:
+		keys := workflow.DeterministicKeys(typed)
+		out := make([]byte, 0, 2+len(keys)*16)
+		out = append(out, '{')
+		for idx, key := range keys {
+			if idx > 0 {
+				out = append(out, ',')
+			}
+			out = append(out, strconv.Quote(key)...)
+			out = append(out, ':')
+			out = append(out, deterministicJSONValueString(typed[key])...)
+		}
+		out = append(out, '}')
+		return string(out)
+	default:
+		// Fallback: ensure a stable string for common scalar types; avoid relying on fmt's map printing.
+		return strconv.Quote(fmt.Sprintf("%v", typed))
+	}
+}
+
 // buildVariablesData builds the variables_data array combining config vars, runtime state, and saved values
 // Config variables are YAML-defined variables accessed via {{ .vars.* }}
 // Runtime variables are the workflow state BEFORE the step runs (what templates can reference via {{ var_name }})
@@ -613,12 +675,7 @@ func buildVariablesData(ctx workflow.Context, availableRuntimeState map[string]s
 			if strVal, ok := value.(string); ok {
 				valueStr = strVal
 			} else {
-				// JSON marshal for non-string values
-				if jsonBytes, err := json.Marshal(value); err == nil {
-					valueStr = string(jsonBytes)
-				} else {
-					valueStr = fmt.Sprintf("%v", value)
-				}
+				valueStr = deterministicJSONValueString(value)
 			}
 
 			varData := map[string]interface{}{

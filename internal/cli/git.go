@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/url"
 	"os/exec"
@@ -124,6 +126,34 @@ func runGitCommand(args ...string) (string, error) {
 		return "", err
 	}
 	return string(output), nil
+}
+
+// IsFileDirty checks if a specific file is modified, staged, or untracked relative to HEAD.
+// Returns true if the file has any changes, false if it's clean.
+// If git commands fail (not a git repo, etc.), returns false and an error.
+func IsFileDirty(filePath string) (bool, error) {
+	// Get absolute path for the file
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return false, err
+	}
+
+	// Use git status --porcelain to check file status
+	// This will show nothing if the file is clean, or a status indicator if dirty
+	output, err := runGitCommand("status", "--porcelain", "--", absPath)
+	if err != nil {
+		// If git command fails, we can't determine dirty status
+		return false, err
+	}
+
+	// If output is non-empty, the file is dirty (modified, staged, or untracked)
+	return strings.TrimSpace(output) != "", nil
+}
+
+// ComputeBundleSHA computes SHA256 hash of the provided data (for bundle identification)
+func ComputeBundleSHA(data []byte) string {
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
 }
 
 // normalizeGitURL converts various git remote URL formats to https://github.com/<owner>/<repo>

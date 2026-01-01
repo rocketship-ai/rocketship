@@ -91,6 +91,7 @@ export interface SuiteRunSummary {
   branch: string
   commit_sha?: string
   commit_message?: string
+  config_source: 'repo_commit' | 'uncommitted'
   environment: string
   created_at: string
   started_at?: string

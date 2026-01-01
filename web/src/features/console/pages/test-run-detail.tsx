@@ -71,6 +71,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
   const { test, run } = testRunData;
 
   // Transform test run data for display
+  const isUncommitted = run.config_source === 'uncommitted';
   const testRun = {
     id: test.id,
     testName: test.name || 'Test Run',
@@ -79,7 +80,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
     trigger: run.initiator_type as 'ci' | 'manual' | 'schedule',
     initiatorName: run.initiator_name || '',
     configSource: {
-      type: (run.config_source === 'repo' ? 'repo' : 'uncommitted') as 'repo' | 'uncommitted',
+      type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: run.commit_sha || run.bundle_sha || '',
     },
     duration: formatDuration(test.duration_ms),
@@ -87,6 +88,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
     ended: formatDateTime(test.ended_at),
     branch: run.branch || 'main',
     commit: run.commit_sha?.substring(0, 7) || '—',
+    isUncommitted,
   };
 
   // Format logs for display
@@ -125,7 +127,10 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={testRun.status} />
                 <EnvBadge env={testRun.env} />
-                <ConfigSourceBadge type={testRun.configSource.type} sha={testRun.configSource.sha} />
+                {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant */}
+                {testRun.isUncommitted && (
+                  <ConfigSourceBadge type="uncommitted" />
+                )}
                 <BadgeDot />
                 <TriggerBadge trigger={testRun.trigger} />
                 {testRun.initiatorName && (
