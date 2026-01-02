@@ -35,6 +35,19 @@ interface EnvWithProject extends ProjectEnvironment {
   projectName: string;
 }
 
+// Count leaf values in a nested object (actual config vars users reference)
+function countConfigVarLeaves(obj: Record<string, unknown>): number {
+  let count = 0;
+  for (const value of Object.values(obj)) {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      count += countConfigVarLeaves(value as Record<string, unknown>);
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 export function Environments() {
   // Global project filter - derive effective project from it
   const { selectedProjectIds } = useConsoleProjectFilter();
@@ -313,7 +326,7 @@ export function Environments() {
               projectName={env.projectName}
               isSelected={isSelected}
               secretCount={env.env_secrets_keys.length}
-              configVarCount={Object.keys(env.config_vars).length}
+              configVarCount={countConfigVarLeaves(env.config_vars)}
               onEdit={() => openEditModal(env)}
               onDelete={() => setDeleteConfirm({ envId: env.id, projectId: env.project_id })}
               onSelect={() => handleAllProjectsSelect(env)}
@@ -385,7 +398,7 @@ export function Environments() {
                     projectName={selectedProject?.name}
                     isSelected={selectedEnvironmentId === env.id}
                     secretCount={env.env_secrets_keys.length}
-                    configVarCount={Object.keys(env.config_vars).length}
+                    configVarCount={countConfigVarLeaves(env.config_vars)}
                     onEdit={() => openEditModal({ ...env, projectName: selectedProject?.name ?? '' })}
                     onDelete={() => setDeleteConfirm({ envId: env.id, projectId: env.project_id })}
                     onSelect={() => handleSelectEnvironment(env.id)}
