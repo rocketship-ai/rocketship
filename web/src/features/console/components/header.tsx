@@ -1,5 +1,6 @@
-import { Play } from 'lucide-react';
-import { useState } from 'react';
+import { Play, ChevronDown, Check } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useProjects } from '../hooks/use-console-queries';
 import { MultiSelectDropdown } from './multi-select-dropdown';
 
 interface HeaderProps {
@@ -11,36 +12,70 @@ interface HeaderProps {
     label: string;
     onClick: () => void;
   };
+  // For pages that need single project selection (e.g., environments)
+  selectedProjectId?: string;
+  onProjectSelect?: (projectId: string) => void;
 }
 
-export function Header({ title, activePage, isDetailView = false, detailViewType, primaryAction }: HeaderProps) {
+export function Header({
+  title,
+  activePage,
+  isDetailView = false,
+  detailViewType,
+  primaryAction,
+  selectedProjectId,
+  onProjectSelect,
+}: HeaderProps) {
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showEnvironmentDropdown, setShowEnvironmentDropdown] = useState(false);
+  const [showSingleProjectDropdown, setShowSingleProjectDropdown] = useState(false);
+  const singleProjectDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch real projects data
+  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (singleProjectDropdownRef.current && !singleProjectDropdownRef.current.contains(event.target as Node)) {
+        setShowSingleProjectDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Pages that should show filters - but not if we're in a detail view
-  const showProjectFilter = !isDetailView && ['overview', 'test-health', 'suite-activity'].includes(activePage);
-  const showEnvironmentFilter = (!isDetailView && ['overview', 'test-health'].includes(activePage)) || 
+  // Environments page uses single-select project dropdown
+  const showMultiProjectFilter = !isDetailView && ['overview', 'test-health', 'suite-activity'].includes(activePage);
+  const showSingleProjectFilter = !isDetailView && activePage === 'environments';
+  const showEnvironmentFilter = (!isDetailView && ['overview', 'test-health'].includes(activePage)) ||
                                  (isDetailView && (detailViewType === 'suite' || detailViewType === 'test'));
-  
-  const projects = ['Frontend', 'Backend'];
-  
+
+  // Get project names for multi-select dropdown
+  const projectNames = projects.map(p => p.name);
+
+  // Get selected project for single-select
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+
   const environments = ['Production', 'Staging', 'Development'];
 
   return (
     <div className="bg-white border-b border-[#e5e5e5] px-8 py-4 flex items-center justify-between">
       <div className="flex items-center gap-6">
         <h1>{title}</h1>
-        
+
         {/* Project and Environment Selectors */}
-        {(showProjectFilter || showEnvironmentFilter) && (
+        {(showMultiProjectFilter || showSingleProjectFilter || showEnvironmentFilter) && (
           <div className="flex items-center gap-2">
-            {showProjectFilter && (
+            {/* Multi-select project dropdown for overview, test-health, suite-activity */}
+            {showMultiProjectFilter && (
               <div className="min-w-[180px]">
                 <MultiSelectDropdown
                   label="Projects"
-                  items={projects}
+                  items={projectNames}
                   selectedItems={selectedProjects}
                   onSelectionChange={setSelectedProjects}
                   isOpen={showProjectDropdown}
@@ -51,7 +86,48 @@ export function Header({ title, activePage, isDetailView = false, detailViewType
                 />
               </div>
             )}
-            {showProjectFilter && showEnvironmentFilter && (
+
+            {/* Single-select project dropdown for environments page */}
+            {showSingleProjectFilter && (
+              <div className="relative min-w-[200px]" ref={singleProjectDropdownRef}>
+                <button
+                  onClick={() => setShowSingleProjectDropdown(!showSingleProjectDropdown)}
+                  disabled={projectsLoading}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm hover:border-[#999999] transition-colors focus:outline-none focus:ring-2 focus:ring-black/5"
+                >
+                  <span className={selectedProject ? 'text-black' : 'text-[#999999]'}>
+                    {projectsLoading ? 'Loading...' : selectedProject ? selectedProject.name : 'Select project...'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-[#666666] transition-transform ${showSingleProjectDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showSingleProjectDropdown && !projectsLoading && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e5e5e5] rounded-md shadow-lg z-50 max-h-[300px] overflow-y-auto">
+                    {projects.length === 0 ? (
+                      <div className="px-3 py-2 text-sm text-[#999999]">No projects available</div>
+                    ) : (
+                      projects.map((project) => (
+                        <button
+                          key={project.id}
+                          onClick={() => {
+                            onProjectSelect?.(project.id);
+                            setShowSingleProjectDropdown(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-[#fafafa] transition-colors"
+                        >
+                          <span>{project.name}</span>
+                          {project.id === selectedProjectId && (
+                            <Check className="w-4 h-4 text-[#4CBB17]" />
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(showMultiProjectFilter || showSingleProjectFilter) && showEnvironmentFilter && (
               <span className="text-[#999999]">/</span>
             )}
             {showEnvironmentFilter && (

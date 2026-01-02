@@ -12,6 +12,10 @@ export function ConsoleLayout() {
   const navigate = useNavigate()
   const pathname = location.pathname
 
+  // Get search params for environments page project selection
+  const searchParams = location.search as { project?: string }
+  const selectedProjectId = searchParams.project
+
   // Determine active page and detail view from pathname
   const getActivePageAndDetail = (): { activePage: ActivePage; isDetailView: boolean; detailViewType: DetailViewType } => {
     // Detail views
@@ -134,6 +138,13 @@ export function ConsoleLayout() {
           activePage={activePage}
           isDetailView={isDetailView}
           detailViewType={detailViewType}
+          selectedProjectId={selectedProjectId}
+          onProjectSelect={(projectId) => {
+            // Update URL with project search param for environments page
+            if (activePage === 'environments') {
+              navigate({ to: '/environments', search: { project: projectId } })
+            }
+          }}
         />
 
         <main>

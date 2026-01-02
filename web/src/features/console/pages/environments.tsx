@@ -1,7 +1,6 @@
 import { Plus, Check, Edit2, Trash2, Lock, Settings } from 'lucide-react';
 import { useState } from 'react';
 import {
-  useProjects,
   useProjectEnvironments,
   useCreateEnvironment,
   useUpdateEnvironment,
@@ -18,6 +17,8 @@ interface NavigationParams {
 
 interface EnvironmentsProps {
   onNavigate: (page: string, params?: NavigationParams) => void;
+  selectedProjectId?: string;
+  onProjectSelect?: (projectId: string) => void;
 }
 
 interface EnvironmentFormData {
@@ -36,16 +37,14 @@ const emptyFormData: EnvironmentFormData = {
   secrets: [],
 };
 
-export function Environments({ onNavigate }: EnvironmentsProps) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+export function Environments({ onNavigate, selectedProjectId = '', onProjectSelect: _onProjectSelect }: EnvironmentsProps) {
   const [showModal, setShowModal] = useState(false);
   const [editingEnv, setEditingEnv] = useState<ProjectEnvironment | null>(null);
   const [formData, setFormData] = useState<EnvironmentFormData>(emptyFormData);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Queries
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  // Queries - project is now selected via header dropdown
   const { data: environments = [], isLoading: envsLoading } = useProjectEnvironments(selectedProjectId);
 
   // Queries
@@ -186,26 +185,9 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* Project Selector */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <label className="text-sm text-[#666666]">Project:</label>
-            <select
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5 min-w-[200px]"
-              disabled={projectsLoading}
-            >
-              <option value="">Select a project...</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedProjectId && (
+        {/* New Environment button - shown when project is selected */}
+        {selectedProjectId && (
+          <div className="flex items-center justify-end">
             <button
               onClick={openCreateModal}
               className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
@@ -213,16 +195,16 @@ export function Environments({ onNavigate }: EnvironmentsProps) {
               <Plus className="w-4 h-4" />
               <span>New Environment</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Empty state when no project selected */}
+        {/* Empty state when no project selected - use header dropdown */}
         {!selectedProjectId && (
           <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
             <Settings className="w-12 h-12 text-[#999999] mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Select a project to manage environments</h3>
             <p className="text-sm text-[#666666]">
-              Environments allow you to configure different settings for staging, production, and other deployment targets.
+              Use the project dropdown above to select a project. Environments allow you to configure different settings for staging, production, and other deployment targets.
             </p>
           </div>
         )}
