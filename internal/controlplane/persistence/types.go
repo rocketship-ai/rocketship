@@ -332,22 +332,29 @@ type RunArtifact struct {
 	CreatedAt    time.Time      `db:"created_at"`
 }
 
+// CITokenProjectScope represents a project-scope pair for CI tokens
+type CITokenProjectScope struct {
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	ProjectName string    `db:"project_name" json:"project_name"`
+	Scope       string    `db:"scope" json:"scope"` // "read" or "write"
+}
+
 // CITokenRecord represents a CI token with audit fields
 type CITokenRecord struct {
-	ID           uuid.UUID      `db:"id"`
-	ProjectID    uuid.UUID      `db:"project_id"`
-	Name         string         `db:"name"`
-	TokenHash    string         `db:"token_hash"`
-	Scopes       []string       `db:"-"`
-	NeverExpires bool           `db:"never_expires"`
-	ExpiresAt    sql.NullTime   `db:"expires_at"`
-	RevokedAt    sql.NullTime   `db:"revoked_at"`
-	CreatedBy    uuid.NullUUID  `db:"created_by"`
-	LastUsedAt   sql.NullTime   `db:"last_used_at"`
-	RevokedBy    uuid.NullUUID  `db:"revoked_by"`
-	Description  sql.NullString `db:"description"`
-	CreatedAt    time.Time      `db:"created_at"`
-	UpdatedAt    time.Time      `db:"updated_at"`
+	ID             uuid.UUID             `db:"id"`
+	OrganizationID uuid.UUID             `db:"organization_id"`
+	Name           string                `db:"name"`
+	TokenHash      string                `db:"token_hash"`
+	NeverExpires   bool                  `db:"never_expires"`
+	ExpiresAt      sql.NullTime          `db:"expires_at"`
+	RevokedAt      sql.NullTime          `db:"revoked_at"`
+	CreatedBy      uuid.NullUUID         `db:"created_by"`
+	LastUsedAt     sql.NullTime          `db:"last_used_at"`
+	RevokedBy      uuid.NullUUID         `db:"revoked_by"`
+	Description    sql.NullString        `db:"description"`
+	CreatedAt      time.Time             `db:"created_at"`
+	UpdatedAt      time.Time             `db:"updated_at"`
+	Projects       []CITokenProjectScope `db:"-"` // Assembled from ci_token_projects
 }
 
 type RunTotals struct {

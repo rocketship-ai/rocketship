@@ -587,3 +587,73 @@ export function useDeleteEnvironment(projectId: string) {
     },
   })
 }
+
+// CI Token types
+
+export interface CITokenProjectScope {
+  project_id: string
+  project_name: string
+  scope: 'read' | 'write'
+}
+
+export interface CIToken {
+  id: string
+  name: string
+  description?: string
+  status: 'active' | 'revoked' | 'expired'
+  never_expires: boolean
+  expires_at?: string
+  last_used_at?: string
+  created_at: string
+  updated_at: string
+  created_by?: string
+  revoked_at?: string
+  revoked_by?: string
+  projects: CITokenProjectScope[]
+}
+
+export interface CreateCITokenRequest {
+  name: string
+  description?: string
+  never_expires: boolean
+  expires_at?: string
+  projects: { project_id: string; scope: 'read' | 'write' }[]
+}
+
+export interface CreateCITokenResponse {
+  token: string
+  token_record: CIToken
+}
+
+// CI Token hooks
+
+export function useCITokens() {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'ci-tokens'] as const,
+    queryFn: () => apiGet<CIToken[]>('/api/ci-tokens'),
+  })
+}
+
+export function useCreateCIToken() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateCITokenRequest) =>
+      apiPost<CreateCITokenResponse>('/api/ci-tokens', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'ci-tokens'] })
+    },
+  })
+}
+
+export function useRevokeCIToken() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (tokenId: string) =>
+      apiPost<void>(`/api/ci-tokens/${tokenId}/revoke`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'ci-tokens'] })
+    },
+  })
+}

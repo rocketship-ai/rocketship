@@ -57,6 +57,12 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 	envSlug := detectEnvironment(runContext)
 	initiator := determineInitiator(principal)
 
+	// For CI token principals, override source and trigger
+	if principal != nil && principal.IsCIToken {
+		runContext.Source = "ci"
+		runContext.Trigger = "ci"
+	}
+
 	// Environment resolution variables - will be set after project_id is resolved
 	var envSecrets map[string]string
 	var envConfigVars map[string]interface{}
@@ -120,6 +126,20 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 					}
 				}
 			}
+		}
+
+		// CI Token project scope enforcement
+		// If caller is a CI token, verify they have write access to the resolved project
+		if principal != nil && principal.IsCIToken {
+			if !record.ProjectID.Valid {
+				return nil, fmt.Errorf("CI token runs require a valid project context; ensure your repo is connected and your test is in a known path scope")
+			}
+			if !principal.HasProjectAccess(record.ProjectID.UUID, permWrite) {
+				return nil, fmt.Errorf("CI token does not have write access to project %s", record.ProjectID.UUID)
+			}
+			slog.Debug("CreateRun: CI token project access verified",
+				"token_id", principal.CITokenID,
+				"project_id", record.ProjectID.UUID)
 		}
 
 		// Resolve environment after project_id is set

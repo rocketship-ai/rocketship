@@ -720,6 +720,35 @@ func (f *fakeStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.
 	return nil, nil
 }
 
+// CI Token methods (stubs for dataStore interface)
+func (f *fakeStore) ListCITokensForOrg(_ context.Context, _ uuid.UUID) ([]persistence.CITokenRecord, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) CreateCIToken(_ context.Context, _, _ uuid.UUID, _ persistence.CITokenCreateInput) (string, persistence.CITokenRecord, error) {
+	return "", persistence.CITokenRecord{}, nil
+}
+
+func (f *fakeStore) RevokeCIToken(_ context.Context, _, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (f *fakeStore) GetCIToken(_ context.Context, _, _ uuid.UUID) (persistence.CITokenRecord, error) {
+	return persistence.CITokenRecord{}, nil
+}
+
+func (f *fakeStore) FindCITokenByPlaintext(_ context.Context, _ string) (*persistence.CITokenLookupResult, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) UpdateCITokenLastUsed(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+func (f *fakeStore) VerifyUserHasWriteOnProjects(_ context.Context, _, _ uuid.UUID, _ []uuid.UUID) error {
+	return nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

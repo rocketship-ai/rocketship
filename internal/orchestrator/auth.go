@@ -55,6 +55,12 @@ var methodPermissions = map[string]permission{
 
 type principalContextKey struct{}
 
+// CITokenProjectScope represents a project-scope pair for CI token authorization
+type CITokenProjectScope struct {
+	ProjectID uuid.UUID
+	Scope     string // "read" or "write"
+}
+
 // Principal represents the authenticated caller derived from the bearer token.
 type Principal struct {
 	Subject  string
@@ -65,6 +71,10 @@ type Principal struct {
 	Scopes   []string
 	TokenID  string
 	OrgID    string
+	// CI Token specific fields
+	IsCIToken       bool
+	CITokenID       uuid.UUID
+	AllowedProjects []CITokenProjectScope // Projects this CI token has access to
 }
 
 func (p *Principal) allows(perm permission) bool {
@@ -107,6 +117,34 @@ func (p *Principal) isServiceAccount() bool {
 		}
 	}
 	return false
+}
+
+// HasProjectAccess checks if a CI token principal has access to a specific project with the required permission
+func (p *Principal) HasProjectAccess(projectID uuid.UUID, required permission) bool {
+	if p == nil || !p.IsCIToken {
+		return true // Non-CI token principals are not restricted by project
+	}
+	for _, ps := range p.AllowedProjects {
+		if ps.ProjectID == projectID {
+			if required == permWrite {
+				return ps.Scope == "write"
+			}
+			return true // read access: any scope is sufficient
+		}
+	}
+	return false
+}
+
+// GetAllowedProjectIDs returns a list of project IDs this CI token can access
+func (p *Principal) GetAllowedProjectIDs() []uuid.UUID {
+	if p == nil || !p.IsCIToken {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(p.AllowedProjects))
+	for i, ps := range p.AllowedProjects {
+		ids[i] = ps.ProjectID
+	}
+	return ids
 }
 
 func contextWithPrincipal(ctx context.Context, p *Principal) context.Context {
@@ -187,7 +225,17 @@ func (e *Engine) authorize(ctx context.Context, fullMethod string) (context.Cont
 		return nil, status.Error(codes.Unauthenticated, "empty bearer token")
 	}
 
-	principal, err := e.authConfig.Validate(ctx, token)
+	var principal *Principal
+	var err error
+
+	// Check if this is a CI token (starts with "rs_ci_")
+	if strings.HasPrefix(token, "rs_ci_") {
+		principal, err = e.validateCIToken(ctx, token)
+	} else {
+		// Standard auth (JWT/OIDC/Token)
+		principal, err = e.authConfig.Validate(ctx, token)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +252,70 @@ func (e *Engine) authorize(ctx context.Context, fullMethod string) (context.Cont
 	}
 
 	return contextWithPrincipal(ctx, principal), nil
+}
+
+// validateCIToken validates a CI token against the database
+func (e *Engine) validateCIToken(ctx context.Context, token string) (*Principal, error) {
+	if e.runStore == nil {
+		return nil, status.Error(codes.Unauthenticated, "CI token authentication not available")
+	}
+
+	result, err := e.runStore.FindCITokenByPlaintext(ctx, token)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to validate CI token")
+	}
+	if result == nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid CI token")
+	}
+
+	// Check if token is revoked
+	if result.IsRevoked {
+		return nil, status.Error(codes.Unauthenticated, "CI token has been revoked")
+	}
+
+	// Check if token is expired
+	if result.IsExpired {
+		return nil, status.Error(codes.Unauthenticated, "CI token has expired")
+	}
+
+	// Update last_used_at (fire and forget - don't fail auth if this fails)
+	go func() {
+		_ = e.runStore.UpdateCITokenLastUsed(context.Background(), result.TokenID)
+	}()
+
+	// Build allowed projects list
+	allowedProjects := make([]CITokenProjectScope, len(result.Projects))
+	for i, p := range result.Projects {
+		allowedProjects[i] = CITokenProjectScope{
+			ProjectID: p.ProjectID,
+			Scope:     p.Scope,
+		}
+	}
+
+	// Determine roles based on scopes
+	// If any project has write scope, grant editor role; otherwise viewer
+	hasWrite := false
+	for _, p := range result.Projects {
+		if p.Scope == "write" {
+			hasWrite = true
+			break
+		}
+	}
+	var roles []string
+	if hasWrite {
+		roles = []string{"editor"}
+	} else {
+		roles = []string{"viewer"}
+	}
+
+	return &Principal{
+		Subject:         fmt.Sprintf("ci_token:%s", result.TokenID.String()),
+		OrgID:           result.OrgID.String(),
+		Roles:           roles,
+		IsCIToken:       true,
+		CITokenID:       result.TokenID,
+		AllowedProjects: allowedProjects,
+	}, nil
 }
 
 type authMode int

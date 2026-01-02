@@ -1,4 +1,4 @@
-import { Plus, Settings, Loader2 } from 'lucide-react';
+import { Plus, Settings, Loader2, Key } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -7,6 +7,9 @@ import {
   useCreateEnvironment,
   useUpdateEnvironment,
   useDeleteEnvironment,
+  useCITokens,
+  useCreateCIToken,
+  useRevokeCIToken,
   consoleKeys,
 } from '../hooks/use-console-queries';
 import {
@@ -17,6 +20,9 @@ import {
 import type { ProjectEnvironment, ProjectSummary } from '../hooks/use-console-queries';
 import { EnvironmentCard } from '../components/environment-card';
 import { EnvironmentModal, type EnvironmentSubmitData } from '../components/environment-modal';
+import { CITokenModal } from '../components/ci-token-modal';
+import { CITokenRevealModal } from '../components/ci-token-reveal-modal';
+import { CITokensTable } from '../components/ci-tokens-table';
 import { apiGet } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -34,6 +40,12 @@ export function Environments() {
   const [editingEnv, setEditingEnv] = useState<ProjectEnvironment | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // CI Token state
+  const [showCITokenModal, setShowCITokenModal] = useState(false);
+  const [showTokenReveal, setShowTokenReveal] = useState(false);
+  const [revealedToken, setRevealedToken] = useState({ value: '', name: '' });
+  const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
 
   // Get all projects for "All Projects" mode
   const { data: projects = [] } = useProjects();
@@ -58,6 +70,11 @@ export function Environments() {
   const createMutation = useCreateEnvironment(selectedProjectId);
   const updateMutation = useUpdateEnvironment(selectedProjectId);
   const deleteMutation = useDeleteEnvironment(selectedProjectId);
+
+  // CI Token queries and mutations
+  const { data: ciTokens = [], isLoading: ciTokensLoading } = useCITokens();
+  const createCITokenMutation = useCreateCIToken();
+  const revokeCITokenMutation = useRevokeCIToken();
 
   // "All Projects" mode: fetch environments for all projects in parallel
   const allProjectEnvQueries = useQueries({
@@ -143,6 +160,35 @@ export function Environments() {
 
   const handleClearEnvironment = () => {
     clearSelectedEnvironmentId();
+  };
+
+  // CI Token handlers
+  const handleCreateCIToken = async (data: {
+    name: string;
+    description: string;
+    neverExpires: boolean;
+    expiresAt: string | null;
+    projects: { project_id: string; scope: 'read' | 'write' }[];
+  }) => {
+    const result = await createCITokenMutation.mutateAsync({
+      name: data.name,
+      description: data.description || undefined,
+      never_expires: data.neverExpires,
+      expires_at: data.expiresAt || undefined,
+      projects: data.projects,
+    });
+    setShowCITokenModal(false);
+    setRevealedToken({ value: result.token, name: data.name });
+    setShowTokenReveal(true);
+  };
+
+  const handleRevokeCIToken = async (tokenId: string) => {
+    setRevokingTokenId(tokenId);
+    try {
+      await revokeCITokenMutation.mutateAsync(tokenId);
+    } finally {
+      setRevokingTokenId(null);
+    }
   };
 
   // Render "All Projects" view
@@ -288,20 +334,38 @@ export function Environments() {
           </div>
         )}
 
-        {/* Coming Soon Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6 opacity-60">
-            <h3 className="mb-2">CI Tokens</h3>
-            <p className="text-sm text-[#666666]">
-              Coming soon: Create and manage CI tokens for automated test runs.
-            </p>
+        {/* CI Tokens Section */}
+        <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm">
+          <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
+            <div className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-[#666666]" />
+              <h3>CI Tokens</h3>
+            </div>
+            <button
+              onClick={() => setShowCITokenModal(true)}
+              disabled={projects.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title={projects.length === 0 ? 'Create a project first' : undefined}
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Token</span>
+            </button>
           </div>
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6 opacity-60">
-            <h3 className="mb-2">Access Control</h3>
-            <p className="text-sm text-[#666666]">
-              Coming soon: Manage team member access and permissions.
-            </p>
-          </div>
+          <CITokensTable
+            tokens={ciTokens}
+            isLoading={ciTokensLoading}
+            onRevoke={handleRevokeCIToken}
+            isRevoking={revokeCITokenMutation.isPending}
+            revokingTokenId={revokingTokenId}
+          />
+        </div>
+
+        {/* Access Control Coming Soon */}
+        <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6 opacity-60">
+          <h3 className="mb-2">Access Control</h3>
+          <p className="text-sm text-[#666666]">
+            Coming soon: Manage team member access and permissions.
+          </p>
         </div>
       </div>
 
@@ -347,6 +411,26 @@ export function Environments() {
           </div>
         </div>
       )}
+
+      {/* CI Token Create Modal */}
+      <CITokenModal
+        isOpen={showCITokenModal}
+        onClose={() => setShowCITokenModal(false)}
+        onSubmit={handleCreateCIToken}
+        isSubmitting={createCITokenMutation.isPending}
+        projects={projects}
+      />
+
+      {/* CI Token Reveal Modal */}
+      <CITokenRevealModal
+        isOpen={showTokenReveal}
+        onClose={() => {
+          setShowTokenReveal(false);
+          setRevealedToken({ value: '', name: '' });
+        }}
+        tokenValue={revealedToken.value}
+        tokenName={revealedToken.name}
+      />
     </div>
   );
 }

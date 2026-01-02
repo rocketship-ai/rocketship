@@ -152,6 +152,10 @@ func (s *Server) routes() {
 	// Onboarding API
 	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))
 
+	// CI Token management
+	s.mux.HandleFunc("/api/ci-tokens", s.requireAuth(s.handleCITokensDispatch))
+	s.mux.HandleFunc("/api/ci-tokens/", s.requireAuth(s.handleCITokensDispatch))
+
 	// GitHub App routes (for repo access)
 	s.mux.HandleFunc("/api/github/app/status", s.requireAuth(s.handleGitHubAppStatus))
 	s.mux.HandleFunc("/api/github/app/repos", s.requireAuth(s.handleGitHubAppRepos))

@@ -75,7 +75,13 @@ type dataStore interface {
 	ListEnabledSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.SuiteSchedule, error)
 
 	// CI Token management
-	ListActiveCITokens(ctx context.Context, projectID uuid.UUID) ([]persistence.CITokenRecord, error)
+	ListCITokensForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.CITokenRecord, error)
+	CreateCIToken(ctx context.Context, orgID, createdBy uuid.UUID, input persistence.CITokenCreateInput) (string, persistence.CITokenRecord, error)
+	RevokeCIToken(ctx context.Context, orgID, tokenID, revokedBy uuid.UUID) error
+	GetCIToken(ctx context.Context, orgID, tokenID uuid.UUID) (persistence.CITokenRecord, error)
+	FindCITokenByPlaintext(ctx context.Context, tokenPlaintext string) (*persistence.CITokenLookupResult, error)
+	UpdateCITokenLastUsed(ctx context.Context, tokenID uuid.UUID) error
+	VerifyUserHasWriteOnProjects(ctx context.Context, orgID, userID uuid.UUID, projectIDs []uuid.UUID) error
 
 	// Overview setup counts
 	CountProjectsForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
