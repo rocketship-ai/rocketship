@@ -3,6 +3,10 @@ package playwright
 import "testing"
 
 func TestProcessAssertions_TemplatesExpectedWithEnv(t *testing.T) {
+	// dsl.ProcessTemplate prefers OS env over TemplateContext.Env; CI often sets API_KEY,
+	// so pin it to a deterministic value for this test.
+	t.Setenv("API_KEY", "secret123")
+
 	params := map[string]interface{}{
 		"assertions": []interface{}{
 			map[string]interface{}{
@@ -24,4 +28,3 @@ func TestProcessAssertions_TemplatesExpectedWithEnv(t *testing.T) {
 		t.Fatalf("expected assertions to pass, got error: %v", err)
 	}
 }
-
