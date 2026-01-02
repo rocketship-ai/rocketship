@@ -7,6 +7,9 @@ import {
   useCreateEnvironment,
   useUpdateEnvironment,
   useDeleteEnvironment,
+  useCreateEnvironmentForProject,
+  useUpdateEnvironmentForProject,
+  useDeleteEnvironmentForProject,
   useCITokens,
   useCreateCIToken,
   useRevokeCIToken,
@@ -37,8 +40,8 @@ export function Environments() {
   // If exactly one project is selected, use single-project mode; otherwise All Projects
   const selectedProjectId = selectedProjectIds.length === 1 ? selectedProjectIds[0] : '';
   const [showModal, setShowModal] = useState(false);
-  const [editingEnv, setEditingEnv] = useState<ProjectEnvironment | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editingEnv, setEditingEnv] = useState<EnvWithProject | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ envId: string; projectId: string } | null>(null);
   const queryClient = useQueryClient();
 
   // CI Token state
@@ -70,6 +73,11 @@ export function Environments() {
   const createMutation = useCreateEnvironment(selectedProjectId);
   const updateMutation = useUpdateEnvironment(selectedProjectId);
   const deleteMutation = useDeleteEnvironment(selectedProjectId);
+
+  // Mutations for "All Projects" mode (project-aware)
+  const createForProjectMutation = useCreateEnvironmentForProject();
+  const updateForProjectMutation = useUpdateEnvironmentForProject();
+  const deleteForProjectMutation = useDeleteEnvironmentForProject();
 
   // CI Token queries and mutations
   const { data: ciTokens = [], isLoading: ciTokensLoading } = useCITokens();
@@ -114,7 +122,7 @@ export function Environments() {
     setShowModal(true);
   };
 
-  const openEditModal = (env: ProjectEnvironment) => {
+  const openEditModal = (env: EnvWithProject) => {
     setEditingEnv(env);
     setShowModal(true);
   };
@@ -125,30 +133,62 @@ export function Environments() {
   };
 
   const handleSubmit = async (data: EnvironmentSubmitData) => {
+    const envData = {
+      name: data.name,
+      slug: data.slug,
+      config_vars: data.configVars,
+      env_secrets: Object.keys(data.secrets).length > 0 ? data.secrets : undefined,
+    };
+
     if (editingEnv) {
-      await updateMutation.mutateAsync({
-        envId: editingEnv.id,
-        data: {
+      // Update: use project-aware mutation for All Projects mode
+      if (selectedProjectId) {
+        await updateMutation.mutateAsync({
+          envId: editingEnv.id,
+          data: envData,
+        });
+      } else {
+        await updateForProjectMutation.mutateAsync({
+          projectId: data.projectId,
+          envId: editingEnv.id,
+          data: envData,
+        });
+      }
+    } else {
+      // Create: use project-aware mutation for All Projects mode
+      if (selectedProjectId) {
+        await createMutation.mutateAsync({
           name: data.name,
           slug: data.slug,
           config_vars: data.configVars,
-          env_secrets: Object.keys(data.secrets).length > 0 ? data.secrets : undefined,
-        },
-      });
-    } else {
-      await createMutation.mutateAsync({
-        name: data.name,
-        slug: data.slug,
-        config_vars: data.configVars,
-        env_secrets: data.secrets,
-      });
+          env_secrets: data.secrets,
+        });
+      } else {
+        await createForProjectMutation.mutateAsync({
+          projectId: data.projectId,
+          data: {
+            name: data.name,
+            slug: data.slug,
+            config_vars: data.configVars,
+            env_secrets: data.secrets,
+          },
+        });
+      }
     }
   };
 
-  const handleDelete = async (envId: string) => {
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
     try {
-      await deleteMutation.mutateAsync(envId);
-      setDeleteConfirmId(null);
+      if (selectedProjectId) {
+        await deleteMutation.mutateAsync(deleteConfirm.envId);
+      } else {
+        await deleteForProjectMutation.mutateAsync({
+          projectId: deleteConfirm.projectId,
+          envId: deleteConfirm.envId,
+        });
+      }
+      setDeleteConfirm(null);
     } catch (err) {
       console.error('Failed to delete environment:', err);
     }
@@ -207,9 +247,15 @@ export function Environments() {
         <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
           <Settings className="w-12 h-12 text-[#999999] mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No environments configured</h3>
-          <p className="text-sm text-[#666666]">
-            Select a project above to create and manage environments.
+          <p className="text-sm text-[#666666] mb-4">
+            Create your first environment to get started.
           </p>
+          <button
+            onClick={openCreateModal}
+            className="text-sm text-black hover:underline"
+          >
+            Create your first environment
+          </button>
         </div>
       );
     }
@@ -258,12 +304,12 @@ export function Environments() {
               isSelected={isSelected}
               secretCount={env.env_secrets_keys.length}
               configVarCount={Object.keys(env.config_vars).length}
+              onEdit={() => openEditModal(env)}
+              onDelete={() => setDeleteConfirm({ envId: env.id, projectId: env.project_id })}
               onSelect={() => handleAllProjectsSelect(env)}
               onClear={() => handleAllProjectsClear(env.project_id)}
               isSelectPending={false}
               isClearPending={false}
-              editDisabled={true}
-              editDisabledReason="Select a project to edit environments"
             />
           );
         })}
@@ -279,6 +325,15 @@ export function Environments() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2>Environments</h2>
+              <button
+                onClick={openCreateModal}
+                disabled={projects.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={projects.length === 0 ? 'Create a project first' : undefined}
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Environment</span>
+              </button>
             </div>
             {renderAllProjectsView()}
           </div>
@@ -321,8 +376,8 @@ export function Environments() {
                     isSelected={selectedEnvironmentId === env.id}
                     secretCount={env.env_secrets_keys.length}
                     configVarCount={Object.keys(env.config_vars).length}
-                    onEdit={() => openEditModal(env)}
-                    onDelete={() => setDeleteConfirmId(env.id)}
+                    onEdit={() => openEditModal({ ...env, projectName: selectedProject?.name ?? '' })}
+                    onDelete={() => setDeleteConfirm({ envId: env.id, projectId: env.project_id })}
                     onSelect={() => handleSelectEnvironment(env.id)}
                     onClear={handleClearEnvironment}
                     isSelectPending={false}
@@ -375,17 +430,26 @@ export function Environments() {
         isOpen={showModal}
         onClose={closeModal}
         onSubmit={handleSubmit}
-        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        isSubmitting={
+          createMutation.isPending ||
+          updateMutation.isPending ||
+          createForProjectMutation.isPending ||
+          updateForProjectMutation.isPending
+        }
+        projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        selectedProjectId={selectedProjectId || undefined}
         existingEnvironment={editingEnv ? {
           name: editingEnv.name,
           slug: editingEnv.slug,
+          projectId: editingEnv.project_id,
+          projectName: editingEnv.projectName,
           configVars: editingEnv.config_vars,
           secretKeys: editingEnv.env_secrets_keys,
         } : undefined}
       />
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirmId && (
+      {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
             <h3 className="mb-4">Delete Environment</h3>
@@ -395,17 +459,19 @@ export function Environments() {
             </p>
             <div className="flex gap-2 justify-end">
               <button
-                onClick={() => setDeleteConfirmId(null)}
+                onClick={() => setDeleteConfirm(null)}
                 className="px-4 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => handleDelete(deleteConfirmId)}
-                disabled={deleteMutation.isPending}
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending || deleteForProjectMutation.isPending}
                 className="px-4 py-2 bg-[#ef0000] text-white rounded-md hover:bg-[#ef0000]/90 transition-colors disabled:opacity-50"
               >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete Environment'}
+                {(deleteMutation.isPending || deleteForProjectMutation.isPending)
+                  ? 'Deleting...'
+                  : 'Delete Environment'}
               </button>
             </div>
           </div>

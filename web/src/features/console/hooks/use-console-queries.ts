@@ -588,6 +588,45 @@ export function useDeleteEnvironment(projectId: string) {
   })
 }
 
+// Project-aware mutations for "All Projects" mode
+// These accept projectId at call time rather than hook creation time
+
+export function useCreateEnvironmentForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: CreateEnvironmentRequest }) =>
+      apiPost<ProjectEnvironment>(`/api/projects/${projectId}/environments`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
+    },
+  })
+}
+
+export function useUpdateEnvironmentForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, envId, data }: { projectId: string; envId: string; data: UpdateEnvironmentRequest }) =>
+      apiPut<ProjectEnvironment>(`/api/projects/${projectId}/environments/${envId}`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
+    },
+  })
+}
+
+export function useDeleteEnvironmentForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, envId }: { projectId: string; envId: string }) =>
+      apiDelete(`/api/projects/${projectId}/environments/${envId}`),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projectEnvironments(projectId) })
+    },
+  })
+}
+
 // CI Token types
 
 export interface CITokenProjectScope {
