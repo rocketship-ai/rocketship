@@ -63,9 +63,6 @@ type dataStore interface {
 	ListEnvironments(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectEnvironment, error)
 	UpdateEnvironment(ctx context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error)
 	DeleteEnvironment(ctx context.Context, projectID, envID uuid.UUID) error
-	// Environment selection (per-user, per-project)
-	GetSelectedEnvironment(ctx context.Context, userID, projectID uuid.UUID) (persistence.ProjectEnvironment, bool, error)
-	SetSelectedEnvironment(ctx context.Context, userID, projectID, environmentID uuid.UUID) error
 
 	// Suite and test management
 	UpsertSuite(ctx context.Context, suite persistence.Suite) (persistence.Suite, error)
@@ -102,7 +99,7 @@ type dataStore interface {
 
 	// Suite run activity queries
 	ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) ([]uuid.UUID, error)
-	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int) ([]persistence.SuiteRunRow, error)
+	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, environmentID uuid.NullUUID) ([]persistence.SuiteRunRow, error)
 
 	// Run detail queries
 	GetRun(ctx context.Context, orgID uuid.UUID, runID string) (persistence.RunRecord, error)

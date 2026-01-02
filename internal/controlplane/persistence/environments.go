@@ -49,14 +49,9 @@ func (s *Store) CreateEnvironment(ctx context.Context, env ProjectEnvironment) (
 		return ProjectEnvironment{}, fmt.Errorf("failed to encode config_vars: %w", err)
 	}
 
-	var desc interface{}
-	if env.Description.Valid {
-		desc = env.Description.String
-	}
-
 	const query = `
-		INSERT INTO project_environments (id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, NOW(), NOW())
+		INSERT INTO project_environments (id, project_id, name, slug, env_secrets, config_vars, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, NOW(), NOW())
 		RETURNING created_at, updated_at
 	`
 
@@ -67,7 +62,7 @@ func (s *Store) CreateEnvironment(ctx context.Context, env ProjectEnvironment) (
 
 	if err := s.db.GetContext(ctx, &dest, query,
 		env.ID, env.ProjectID, env.Name, env.Slug,
-		desc, string(secretsJSON), string(varsJSON)); err != nil {
+		string(secretsJSON), string(varsJSON)); err != nil {
 		if isUniqueViolation(err, "project_environments_project_slug_idx") {
 			return ProjectEnvironment{}, fmt.Errorf("environment slug already exists in project")
 		}
@@ -81,26 +76,24 @@ func (s *Store) CreateEnvironment(ctx context.Context, env ProjectEnvironment) (
 
 // envRow is a helper type for scanning environment rows with JSONB columns
 type envRow struct {
-	ID          uuid.UUID      `db:"id"`
-	ProjectID   uuid.UUID      `db:"project_id"`
-	Name        string         `db:"name"`
-	Slug        string         `db:"slug"`
-	Description sql.NullString `db:"description"`
-	EnvSecrets  []byte         `db:"env_secrets"`
-	ConfigVars  []byte         `db:"config_vars"`
-	CreatedAt   time.Time      `db:"created_at"`
-	UpdatedAt   time.Time      `db:"updated_at"`
+	ID         uuid.UUID `db:"id"`
+	ProjectID  uuid.UUID `db:"project_id"`
+	Name       string    `db:"name"`
+	Slug       string    `db:"slug"`
+	EnvSecrets []byte    `db:"env_secrets"`
+	ConfigVars []byte    `db:"config_vars"`
+	CreatedAt  time.Time `db:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"`
 }
 
 func (r envRow) toEnvironment() (ProjectEnvironment, error) {
 	env := ProjectEnvironment{
-		ID:          r.ID,
-		ProjectID:   r.ProjectID,
-		Name:        r.Name,
-		Slug:        r.Slug,
-		Description: r.Description,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
+		ID:        r.ID,
+		ProjectID: r.ProjectID,
+		Name:      r.Name,
+		Slug:      r.Slug,
+		CreatedAt: r.CreatedAt,
+		UpdatedAt: r.UpdatedAt,
 	}
 
 	// Parse env_secrets
@@ -133,7 +126,7 @@ func (r envRow) toEnvironment() (ProjectEnvironment, error) {
 // GetEnvironment retrieves an environment by ID
 func (s *Store) GetEnvironment(ctx context.Context, projectID, envID uuid.UUID) (ProjectEnvironment, error) {
 	const query = `
-		SELECT id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at
+		SELECT id, project_id, name, slug, env_secrets, config_vars, created_at, updated_at
 		FROM project_environments
 		WHERE project_id = $1 AND id = $2
 	`
@@ -152,7 +145,7 @@ func (s *Store) GetEnvironment(ctx context.Context, projectID, envID uuid.UUID) 
 // ListEnvironments returns all environments for a project
 func (s *Store) ListEnvironments(ctx context.Context, projectID uuid.UUID) ([]ProjectEnvironment, error) {
 	const query = `
-		SELECT id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at
+		SELECT id, project_id, name, slug, env_secrets, config_vars, created_at, updated_at
 		FROM project_environments
 		WHERE project_id = $1
 		ORDER BY name ASC
@@ -205,14 +198,9 @@ func (s *Store) UpdateEnvironment(ctx context.Context, env ProjectEnvironment) (
 		return ProjectEnvironment{}, fmt.Errorf("failed to encode config_vars: %w", err)
 	}
 
-	var desc interface{}
-	if env.Description.Valid {
-		desc = env.Description.String
-	}
-
 	const query = `
 		UPDATE project_environments
-		SET name = $3, slug = $4, description = $5, env_secrets = $6::jsonb, config_vars = $7::jsonb, updated_at = NOW()
+		SET name = $3, slug = $4, env_secrets = $5::jsonb, config_vars = $6::jsonb, updated_at = NOW()
 		WHERE id = $1 AND project_id = $2
 		RETURNING updated_at
 	`
@@ -220,7 +208,7 @@ func (s *Store) UpdateEnvironment(ctx context.Context, env ProjectEnvironment) (
 	var updatedAt time.Time
 	if err := s.db.GetContext(ctx, &updatedAt, query,
 		env.ID, env.ProjectID, env.Name, env.Slug,
-		desc, string(secretsJSON), string(varsJSON)); err != nil {
+		string(secretsJSON), string(varsJSON)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ProjectEnvironment{}, sql.ErrNoRows
 		}
@@ -257,7 +245,7 @@ func (s *Store) DeleteEnvironment(ctx context.Context, projectID, envID uuid.UUI
 // GetEnvironmentBySlug retrieves an environment by its slug within a project
 func (s *Store) GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (ProjectEnvironment, error) {
 	const query = `
-		SELECT id, project_id, name, slug, description, env_secrets, config_vars, created_at, updated_at
+		SELECT id, project_id, name, slug, env_secrets, config_vars, created_at, updated_at
 		FROM project_environments
 		WHERE project_id = $1 AND lower(slug) = lower($2)
 	`
@@ -271,59 +259,4 @@ func (s *Store) GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, s
 	}
 
 	return row.toEnvironment()
-}
-
-// GetSelectedEnvironment retrieves the user's selected environment for a project
-// Returns (env, true, nil) if a selection exists, (zero, false, nil) if no selection
-func (s *Store) GetSelectedEnvironment(ctx context.Context, userID, projectID uuid.UUID) (ProjectEnvironment, bool, error) {
-	const query = `
-		SELECT e.id, e.project_id, e.name, e.slug, e.description, e.env_secrets, e.config_vars, e.created_at, e.updated_at
-		FROM project_environment_selections s
-		JOIN project_environments e ON e.id = s.environment_id
-		WHERE s.user_id = $1 AND s.project_id = $2
-	`
-
-	var row envRow
-	if err := s.db.GetContext(ctx, &row, query, userID, projectID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ProjectEnvironment{}, false, nil
-		}
-		return ProjectEnvironment{}, false, fmt.Errorf("failed to get selected environment: %w", err)
-	}
-
-	env, err := row.toEnvironment()
-	if err != nil {
-		return ProjectEnvironment{}, false, err
-	}
-	return env, true, nil
-}
-
-// SetSelectedEnvironment sets the user's selected environment for a project
-// The environmentID must belong to the specified projectID
-func (s *Store) SetSelectedEnvironment(ctx context.Context, userID, projectID, environmentID uuid.UUID) error {
-	// Validate that the environment belongs to the project in a single query with upsert
-	const query = `
-		INSERT INTO project_environment_selections (user_id, project_id, environment_id, created_at, updated_at)
-		SELECT $1, $2, $3, NOW(), NOW()
-		WHERE EXISTS (
-			SELECT 1 FROM project_environments WHERE id = $3 AND project_id = $2
-		)
-		ON CONFLICT (user_id, project_id) DO UPDATE
-		SET environment_id = EXCLUDED.environment_id, updated_at = NOW()
-	`
-
-	result, err := s.db.ExecContext(ctx, query, userID, projectID, environmentID)
-	if err != nil {
-		return fmt.Errorf("failed to set selected environment: %w", err)
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("environment not found in project")
-	}
-
-	return nil
 }

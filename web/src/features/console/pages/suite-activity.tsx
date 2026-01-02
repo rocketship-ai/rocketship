@@ -1,6 +1,7 @@
 import { FileCode } from 'lucide-react';
 import { useState } from 'react';
 import { useSuiteActivity } from '../hooks/use-console-queries';
+import { useConsoleProjectFilter } from '../hooks/use-console-filters';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { QueryBoundary } from '../components/query-boundary';
 import { Card, EmptyState } from '../components/ui';
@@ -13,6 +14,7 @@ interface SuiteActivityProps {
 export function SuiteActivity({ onSelectSuite }: SuiteActivityProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const query = useSuiteActivity();
+  const { selectedProjectIds } = useConsoleProjectFilter();
 
   return (
     <div className="p-8">
@@ -34,6 +36,11 @@ export function SuiteActivity({ onSelectSuite }: SuiteActivityProps) {
             }
 
             const filteredSuites = suites.filter((suite) => {
+              // Project filter (global sticky filter)
+              if (selectedProjectIds.length > 0 && !selectedProjectIds.includes(suite.project.id)) {
+                return false;
+              }
+              // Search filter
               if (searchQuery && !(
                 suite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (suite.description?.toLowerCase().includes(searchQuery.toLowerCase()))

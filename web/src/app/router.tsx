@@ -176,6 +176,9 @@ const suiteActivityRoute = createRoute({
 const suiteDetailRoute = createRoute({
   getParentRoute: () => consoleLayoutRoute,
   path: '/suites/$suiteId',
+  validateSearch: (search: Record<string, unknown>): { env?: string } => ({
+    env: typeof search.env === 'string' ? search.env : undefined,
+  }),
   component: function SuiteDetailRoute() {
     const { suiteId } = suiteDetailRoute.useParams()
     const navigate = suiteDetailRoute.useNavigate()
@@ -276,47 +279,11 @@ const projectDetailRoute = createRoute({
   },
 })
 
-// Environments
+// Environments - uses global project filter from localStorage
 const environmentsRoute = createRoute({
   getParentRoute: () => consoleLayoutRoute,
   path: '/environments',
-  validateSearch: (search: Record<string, unknown>): { project?: string } => ({
-    project: typeof search.project === 'string' ? search.project : undefined,
-  }),
-  component: function EnvironmentsRoute() {
-    const navigate = environmentsRoute.useNavigate()
-    const { project: projectId } = environmentsRoute.useSearch()
-    return (
-      <Environments
-        selectedProjectId={projectId}
-        onProjectSelect={(id) => {
-          navigate({ search: { project: id } })
-        }}
-        onNavigate={(page, params) => {
-          switch (page) {
-            case 'overview':
-              navigate({ to: '/overview' })
-              break
-            case 'test-health':
-              navigate({ to: '/test-health' })
-              break
-            case 'suite-activity':
-              navigate({ to: '/suite-activity', search: params?.env ? { env: params.env } : undefined })
-              break
-            case 'projects':
-              navigate({ to: '/projects' })
-              break
-            case 'environments':
-              navigate({ to: '/environments' })
-              break
-            case 'profile':
-              navigate({ to: '/profile' })
-              break
-          }
-        }}
-      />
-    )
-  },
+  component: Environments,
 })
 
 // Profile Settings

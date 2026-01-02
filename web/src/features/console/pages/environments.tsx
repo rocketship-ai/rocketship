@@ -1,146 +1,130 @@
-import { Plus, Check, Edit2, Trash2, Lock, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Settings, Loader2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import {
+  useProjects,
   useProjectEnvironments,
   useCreateEnvironment,
   useUpdateEnvironment,
   useDeleteEnvironment,
-  useProjectEnvironmentSelection,
-  useSetProjectEnvironmentSelection,
+  consoleKeys,
 } from '../hooks/use-console-queries';
-import type { ProjectEnvironment } from '../hooks/use-console-queries';
+import {
+  useConsoleProjectFilter,
+  useConsoleEnvironmentFilter,
+  useConsoleEnvironmentSelectionMap,
+} from '../hooks/use-console-filters';
+import type { ProjectEnvironment, ProjectSummary } from '../hooks/use-console-queries';
+import { EnvironmentCard } from '../components/environment-card';
+import { EnvironmentModal, type EnvironmentSubmitData } from '../components/environment-modal';
+import { apiGet } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 
-interface NavigationParams {
-  env?: string;
-  [key: string]: string | undefined;
+// Helper type for All Projects view
+interface EnvWithProject extends ProjectEnvironment {
+  projectName: string;
 }
 
-interface EnvironmentsProps {
-  onNavigate: (page: string, params?: NavigationParams) => void;
-  selectedProjectId?: string;
-  onProjectSelect?: (projectId: string) => void;
-}
-
-interface EnvironmentFormData {
-  name: string;
-  slug: string;
-  description: string;
-  configVarsJson: string;
-  secrets: { key: string; value: string }[];
-}
-
-const emptyFormData: EnvironmentFormData = {
-  name: '',
-  slug: '',
-  description: '',
-  configVarsJson: '{}',
-  secrets: [],
-};
-
-export function Environments({ onNavigate, selectedProjectId = '', onProjectSelect: _onProjectSelect }: EnvironmentsProps) {
+export function Environments() {
+  // Global project filter - derive effective project from it
+  const { selectedProjectIds } = useConsoleProjectFilter();
+  // If exactly one project is selected, use single-project mode; otherwise All Projects
+  const selectedProjectId = selectedProjectIds.length === 1 ? selectedProjectIds[0] : '';
   const [showModal, setShowModal] = useState(false);
   const [editingEnv, setEditingEnv] = useState<ProjectEnvironment | null>(null);
-  const [formData, setFormData] = useState<EnvironmentFormData>(emptyFormData);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Queries - project is now selected via header dropdown
+  // Get all projects for "All Projects" mode
+  const { data: projects = [] } = useProjects();
+
+  // Single project mode queries
   const { data: environments = [], isLoading: envsLoading } = useProjectEnvironments(selectedProjectId);
 
-  // Queries
-  const { data: selection } = useProjectEnvironmentSelection(selectedProjectId);
+  // Local environment selection (from localStorage)
+  const {
+    selectedEnvironmentId,
+    setSelectedEnvironmentId,
+    clearSelectedEnvironmentId,
+  } = useConsoleEnvironmentFilter(selectedProjectId);
 
-  // Mutations
+  // For "All Projects" view, get the full selection map
+  const environmentSelectionMap = useConsoleEnvironmentSelectionMap();
+
+  // Get the selected project name for single project view
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+  // Mutations for single project mode
   const createMutation = useCreateEnvironment(selectedProjectId);
   const updateMutation = useUpdateEnvironment(selectedProjectId);
   const deleteMutation = useDeleteEnvironment(selectedProjectId);
-  const selectMutation = useSetProjectEnvironmentSelection(selectedProjectId);
+
+  // "All Projects" mode: fetch environments for all projects in parallel
+  const allProjectEnvQueries = useQueries({
+    queries: !selectedProjectId
+      ? projects.map((project) => ({
+          queryKey: consoleKeys.projectEnvironments(project.id),
+          queryFn: () => apiGet<ProjectEnvironment[]>(`/api/projects/${project.id}/environments`),
+        }))
+      : [],
+  });
+
+  // Combine all environments with project names for "All Projects" view
+  const allProjectsData = useMemo(() => {
+    if (selectedProjectId || projects.length === 0) return { environments: [], projectMap: new Map<string, ProjectSummary>() };
+
+    const envs: EnvWithProject[] = [];
+    const projectMap = new Map<string, ProjectSummary>();
+
+    projects.forEach((project, index) => {
+      projectMap.set(project.id, project);
+      const envQuery = allProjectEnvQueries[index];
+
+      if (envQuery?.data) {
+        envQuery.data.forEach((env) => {
+          envs.push({ ...env, projectName: project.name });
+        });
+      }
+    });
+
+    return { environments: envs, projectMap };
+  }, [selectedProjectId, projects, allProjectEnvQueries]);
+
+  const isAllProjectsLoading = !selectedProjectId && allProjectEnvQueries.some((q) => q.isLoading);
 
   const openCreateModal = () => {
     setEditingEnv(null);
-    setFormData(emptyFormData);
-    setFormError(null);
     setShowModal(true);
   };
 
   const openEditModal = (env: ProjectEnvironment) => {
     setEditingEnv(env);
-    setFormData({
-      name: env.name,
-      slug: env.slug,
-      description: env.description || '',
-      configVarsJson: JSON.stringify(env.config_vars, null, 2),
-      secrets: env.env_secrets_keys.map(key => ({ key, value: '' })),
-    });
-    setFormError(null);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingEnv(null);
-    setFormData(emptyFormData);
-    setFormError(null);
   };
 
-  const handleSubmit = async () => {
-    setFormError(null);
-
-    // Validate
-    if (!formData.name.trim()) {
-      setFormError('Name is required');
-      return;
-    }
-    if (!formData.slug.trim()) {
-      setFormError('Slug is required');
-      return;
-    }
-
-    // Parse config vars JSON
-    let configVars: Record<string, unknown>;
-    try {
-      configVars = JSON.parse(formData.configVarsJson);
-      if (typeof configVars !== 'object' || Array.isArray(configVars)) {
-        setFormError('Config vars must be a JSON object');
-        return;
-      }
-    } catch {
-      setFormError('Invalid JSON in config vars');
-      return;
-    }
-
-    // Build env_secrets from form (only include non-empty values)
-    const envSecrets: Record<string, string> = {};
-    for (const s of formData.secrets) {
-      if (s.key.trim() && s.value.trim()) {
-        envSecrets[s.key.trim()] = s.value;
-      }
-    }
-
-    try {
-      if (editingEnv) {
-        await updateMutation.mutateAsync({
-          envId: editingEnv.id,
-          data: {
-            name: formData.name.trim(),
-            slug: formData.slug.trim(),
-            description: formData.description.trim() || undefined,
-            config_vars: configVars,
-            env_secrets: Object.keys(envSecrets).length > 0 ? envSecrets : undefined,
-          },
-        });
-      } else {
-        await createMutation.mutateAsync({
-          name: formData.name.trim(),
-          slug: formData.slug.trim(),
-          description: formData.description.trim() || undefined,
-          config_vars: configVars,
-          env_secrets: envSecrets,
-        });
-      }
-      closeModal();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to save environment');
+  const handleSubmit = async (data: EnvironmentSubmitData) => {
+    if (editingEnv) {
+      await updateMutation.mutateAsync({
+        envId: editingEnv.id,
+        data: {
+          name: data.name,
+          slug: data.slug,
+          config_vars: data.configVars,
+          env_secrets: Object.keys(data.secrets).length > 0 ? data.secrets : undefined,
+        },
+      });
+    } else {
+      await createMutation.mutateAsync({
+        name: data.name,
+        slug: data.slug,
+        config_vars: data.configVars,
+        env_secrets: data.secrets,
+      });
     }
   };
 
@@ -153,66 +137,120 @@ export function Environments({ onNavigate, selectedProjectId = '', onProjectSele
     }
   };
 
-  const handleSelectEnvironment = async (envId: string) => {
-    try {
-      await selectMutation.mutateAsync(envId);
-    } catch (err) {
-      console.error('Failed to select environment:', err);
+  const handleSelectEnvironment = (envId: string) => {
+    setSelectedEnvironmentId(envId);
+  };
+
+  const handleClearEnvironment = () => {
+    clearSelectedEnvironmentId();
+  };
+
+  // Render "All Projects" view
+  const renderAllProjectsView = () => {
+    if (isAllProjectsLoading) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-[#666666]" />
+          <span className="ml-3 text-[#666666]">Loading environments...</span>
+        </div>
+      );
     }
-  };
 
-  const addSecretField = () => {
-    setFormData(prev => ({
-      ...prev,
-      secrets: [...prev.secrets, { key: '', value: '' }],
-    }));
-  };
+    if (allProjectsData.environments.length === 0) {
+      return (
+        <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
+          <Settings className="w-12 h-12 text-[#999999] mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No environments configured</h3>
+          <p className="text-sm text-[#666666]">
+            Select a project above to create and manage environments.
+          </p>
+        </div>
+      );
+    }
 
-  const updateSecret = (index: number, field: 'key' | 'value', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      secrets: prev.secrets.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
-    }));
-  };
+    const handleAllProjectsSelect = (env: EnvWithProject) => {
+      // Use the local filter for the env's project
+      const currentFilters = JSON.parse(localStorage.getItem('rocketship.console.filters.v1') || '{}');
+      const newFilters = {
+        ...currentFilters,
+        selectedEnvironmentIdByProjectId: {
+          ...(currentFilters.selectedEnvironmentIdByProjectId || {}),
+          [env.project_id]: env.id,
+        },
+      };
+      localStorage.setItem('rocketship.console.filters.v1', JSON.stringify(newFilters));
+      // Invalidate the filters query to trigger re-render
+      queryClient.invalidateQueries({ queryKey: ['consoleFilters'] });
+    };
 
-  const removeSecret = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      secrets: prev.secrets.filter((_, i) => i !== index),
-    }));
+    const handleAllProjectsClear = (projectId: string) => {
+      // Use the local filter for the project
+      const currentFilters = JSON.parse(localStorage.getItem('rocketship.console.filters.v1') || '{}');
+      const { [projectId]: _, ...rest } = currentFilters.selectedEnvironmentIdByProjectId || {};
+      const newFilters = {
+        ...currentFilters,
+        selectedEnvironmentIdByProjectId: rest,
+      };
+      localStorage.setItem('rocketship.console.filters.v1', JSON.stringify(newFilters));
+      // Invalidate the filters query to trigger re-render
+      queryClient.invalidateQueries({ queryKey: ['consoleFilters'] });
+    };
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {allProjectsData.environments.map((env) => {
+          // Check local selection map for this project
+          const isSelected = environmentSelectionMap[env.project_id] === env.id;
+
+          return (
+            <EnvironmentCard
+              key={env.id}
+              id={env.id}
+              name={env.name}
+              slug={env.slug}
+              projectName={env.projectName}
+              isSelected={isSelected}
+              secretCount={env.env_secrets_keys.length}
+              configVarCount={Object.keys(env.config_vars).length}
+              onSelect={() => handleAllProjectsSelect(env)}
+              onClear={() => handleAllProjectsClear(env.project_id)}
+              isSelectPending={false}
+              isClearPending={false}
+              editDisabled={true}
+              editDisabledReason="Select a project to edit environments"
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        {/* New Environment button - shown when project is selected */}
-        {selectedProjectId && (
-          <div className="flex items-center justify-end">
-            <button
-              onClick={openCreateModal}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Environment</span>
-            </button>
-          </div>
-        )}
-
-        {/* Empty state when no project selected - use header dropdown */}
+        {/* All Projects View */}
         {!selectedProjectId && (
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
-            <Settings className="w-12 h-12 text-[#999999] mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Select a project to manage environments</h3>
-            <p className="text-sm text-[#666666]">
-              Use the project dropdown above to select a project. Environments allow you to configure different settings for staging, production, and other deployment targets.
-            </p>
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2>Environments</h2>
+            </div>
+            {renderAllProjectsView()}
           </div>
         )}
 
-        {/* Environments List */}
+        {/* Single Project View */}
         {selectedProjectId && (
           <div>
-            <h2 className="mb-4">Environments</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2>Environments</h2>
+              <button
+                onClick={openCreateModal}
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Environment</span>
+              </button>
+            </div>
             {envsLoading ? (
               <div className="text-center py-8 text-[#666666]">Loading environments...</div>
             ) : environments.length === 0 ? (
@@ -227,79 +265,24 @@ export function Environments({ onNavigate, selectedProjectId = '', onProjectSele
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {environments.map((env) => {
-                  const isSelected = selection?.environment?.id === env.id;
-                  return (
-                    <div
-                      key={env.id}
-                      className={`bg-white rounded-lg border shadow-sm p-6 ${isSelected ? 'border-black' : 'border-[#e5e5e5]'}`}
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium">{env.name}</h3>
-                            {isSelected && (
-                              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                Current
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-[#666666]">slug: {env.slug}</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => openEditModal(env)}
-                            className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4 text-[#666666]" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(env.id)}
-                            className="p-1.5 hover:bg-[#f5f5f5] rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4 text-[#666666]" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-sm mb-4">
-                        <div className="flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-[#999999]" />
-                          <span className="text-[#666666]">
-                            {env.env_secrets_keys.length} secret{env.env_secrets_keys.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Settings className="w-4 h-4 text-[#999999]" />
-                          <span className="text-[#666666]">
-                            {Object.keys(env.config_vars).length} config var{Object.keys(env.config_vars).length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-4 border-t border-[#e5e5e5]">
-                        {!isSelected && (
-                          <button
-                            onClick={() => handleSelectEnvironment(env.id)}
-                            className="text-sm text-black hover:underline"
-                            disabled={selectMutation.isPending}
-                          >
-                            Use this environment
-                          </button>
-                        )}
-                        <button
-                          onClick={() => onNavigate('suite-activity', { env: env.slug })}
-                          className="text-sm text-black hover:underline ml-auto"
-                        >
-                          View runs
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {environments.map((env) => (
+                  <EnvironmentCard
+                    key={env.id}
+                    id={env.id}
+                    name={env.name}
+                    slug={env.slug}
+                    projectName={selectedProject?.name}
+                    isSelected={selectedEnvironmentId === env.id}
+                    secretCount={env.env_secrets_keys.length}
+                    configVarCount={Object.keys(env.config_vars).length}
+                    onEdit={() => openEditModal(env)}
+                    onDelete={() => setDeleteConfirmId(env.id)}
+                    onSelect={() => handleSelectEnvironment(env.id)}
+                    onClear={handleClearEnvironment}
+                    isSelectPending={false}
+                    isClearPending={false}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -322,137 +305,20 @@ export function Environments({ onNavigate, selectedProjectId = '', onProjectSele
         </div>
       </div>
 
-      {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="mb-6">{editingEnv ? 'Edit Environment' : 'Create Environment'}</h3>
-
-            {formError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
-                {formError}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {/* Name */}
-              <div>
-                <label className="block text-sm text-[#666666] mb-2">Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Production"
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
-                />
-              </div>
-
-              {/* Slug */}
-              <div>
-                <label className="block text-sm text-[#666666] mb-2">Slug * (lowercase, used in CLI)</label>
-                <input
-                  type="text"
-                  value={formData.slug}
-                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '') }))}
-                  placeholder="e.g., production"
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm text-[#666666] mb-2">Description</label>
-                <input
-                  type="text"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Optional description"
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
-                />
-              </div>
-
-              {/* Config Vars (JSON) */}
-              <div>
-                <label className="block text-sm text-[#666666] mb-2">
-                  Config Variables (JSON) - accessed via {'{{ .vars.* }}'}
-                </label>
-                <textarea
-                  value={formData.configVarsJson}
-                  onChange={(e) => setFormData(prev => ({ ...prev, configVarsJson: e.target.value }))}
-                  rows={6}
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5 font-mono text-sm"
-                  placeholder='{"base_url": "https://api.example.com"}'
-                />
-              </div>
-
-              {/* Env Secrets */}
-              <div>
-                <label className="block text-sm text-[#666666] mb-2">
-                  Secrets - accessed via {'{{ .env.* }}'}
-                </label>
-                <div className="space-y-2">
-                  {formData.secrets.map((secret, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <input
-                        type="text"
-                        value={secret.key}
-                        onChange={(e) => updateSecret(idx, 'key', e.target.value)}
-                        placeholder="KEY_NAME"
-                        className="flex-1 px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5 font-mono text-sm"
-                      />
-                      <input
-                        type="password"
-                        value={secret.value}
-                        onChange={(e) => updateSecret(idx, 'value', e.target.value)}
-                        placeholder={editingEnv ? '(unchanged)' : 'secret value'}
-                        className="flex-1 px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
-                      />
-                      <button
-                        onClick={() => removeSecret(idx)}
-                        className="p-2 hover:bg-[#f5f5f5] rounded transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4 text-[#666666]" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={addSecretField}
-                    className="text-sm text-black hover:underline flex items-center gap-1"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add secret
-                  </button>
-                </div>
-                {editingEnv && (
-                  <p className="text-xs text-[#999999] mt-2">
-                    Existing secret values are not displayed. Enter a new value to update a secret.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-[#e5e5e5]">
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={createMutation.isPending || updateMutation.isPending}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50"
-              >
-                {createMutation.isPending || updateMutation.isPending
-                  ? 'Saving...'
-                  : editingEnv
-                  ? 'Update Environment'
-                  : 'Create Environment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Environment Modal (Create/Edit) */}
+      <EnvironmentModal
+        key={editingEnv?.id ?? 'create'}
+        isOpen={showModal}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        existingEnvironment={editingEnv ? {
+          name: editingEnv.name,
+          slug: editingEnv.slug,
+          configVars: editingEnv.config_vars,
+          secretKeys: editingEnv.env_secrets_keys,
+        } : undefined}
+      />
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (

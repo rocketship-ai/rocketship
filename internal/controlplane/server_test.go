@@ -466,14 +466,6 @@ func (f *fakeStore) DeleteEnvironment(_ context.Context, _, _ uuid.UUID) error {
 	return nil
 }
 
-func (f *fakeStore) GetSelectedEnvironment(_ context.Context, _, _ uuid.UUID) (persistence.ProjectEnvironment, bool, error) {
-	return persistence.ProjectEnvironment{}, false, nil
-}
-
-func (f *fakeStore) SetSelectedEnvironment(_ context.Context, _, _, _ uuid.UUID) error {
-	return nil
-}
-
 // Suite methods
 func (f *fakeStore) UpsertSuite(_ context.Context, suite persistence.Suite) (persistence.Suite, error) {
 	return suite, nil
@@ -671,7 +663,7 @@ func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.U
 	return []uuid.UUID{}, nil
 }
 
-func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int) ([]persistence.SuiteRunRow, error) {
+func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int, _ uuid.NullUUID) ([]persistence.SuiteRunRow, error) {
 	return []persistence.SuiteRunRow{}, nil
 }
 

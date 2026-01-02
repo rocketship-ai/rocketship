@@ -3,8 +3,8 @@ import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } fr
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
 import { useMemo, useState } from 'react';
-import { environments } from '../data/mock-data';
-import { useSuite, useSuiteRuns, type SuiteRunSummary } from '../hooks/use-console-queries';
+import { useSuite, useSuiteRuns, useProjectEnvironments, type SuiteRunSummary } from '../hooks/use-console-queries';
+import { useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { LoadingState, ErrorState } from '../components/ui';
 import { formatDuration, formatRelativeTime, mapRunStatus } from '../lib/format';
@@ -28,13 +28,22 @@ function BranchDisplay({ branch }: { branch: string }) {
 
 export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDetailProps) {
   const { data: suite, isLoading, error, refetch } = useSuite(suiteId);
-  const { data: runs, isLoading: runsLoading, error: runsError, refetch: refetchRuns } = useSuiteRuns(suiteId);
+
+  // Get project environments and the local environment filter
+  const projectId = suite?.project?.id || '';
+  const { data: projectEnvironments = [] } = useProjectEnvironments(projectId);
+  const { selectedEnvironmentId } = useConsoleEnvironmentFilter(projectId);
+
+  // Use the local environment filter (from localStorage)
+  const selectedEnvId = selectedEnvironmentId || undefined;
+
+  // Fetch runs filtered by selected environment (or all runs if none selected)
+  const { data: runs, isLoading: runsLoading, error: runsError, refetch: refetchRuns } = useSuiteRuns(suiteId, selectedEnvId);
 
   const [activeTab, setActiveTab] = useState<'activity' | 'tests' | 'schedules' | 'variables' | 'lifecycle-hooks' | 'retry-policy' | 'alerts'>('activity');
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedInitiators, setSelectedInitiators] = useState<string[]>([]);
-  const [_selectedEnvironments, _setSelectedEnvironments] = useState<string[]>([]);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<string | null>(null);
   const [newScheduleEnv, setNewScheduleEnv] = useState('staging');
@@ -562,8 +571,8 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                   onChange={(e) => setNewScheduleEnv(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
                 >
-                  {environments.map((env) => (
-                    <option key={env.name} value={env.name}>
+                  {projectEnvironments.map((env) => (
+                    <option key={env.id} value={env.name}>
                       {env.name}
                     </option>
                   ))}
@@ -651,8 +660,8 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                   onChange={(e) => setNewScheduleEnv(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
                 >
-                  {environments.map((env) => (
-                    <option key={env.name} value={env.name}>
+                  {projectEnvironments.map((env) => (
+                    <option key={env.id} value={env.name}>
                       {env.name}
                     </option>
                   ))}

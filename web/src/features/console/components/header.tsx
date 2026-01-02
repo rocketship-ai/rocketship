@@ -1,6 +1,11 @@
-import { Play, ChevronDown, Check } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
-import { useProjects } from '../hooks/use-console-queries';
+import { Play } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  useProjects,
+  useSuite,
+  useProjectEnvironments,
+} from '../hooks/use-console-queries';
+import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { MultiSelectDropdown } from './multi-select-dropdown';
 
 interface HeaderProps {
@@ -8,13 +13,13 @@ interface HeaderProps {
   activePage: string;
   isDetailView?: boolean;
   detailViewType?: 'suite' | 'test' | 'suite-run' | 'test-run' | 'project' | null;
+  suiteId?: string; // For suite detail view to fetch project environments
   primaryAction?: {
     label: string;
     onClick: () => void;
   };
-  // For pages that need single project selection (e.g., environments)
-  selectedProjectId?: string;
-  onProjectSelect?: (projectId: string) => void;
+  // For environment filtering on suite detail
+  onEnvironmentChange?: (envId: string | undefined) => void;
 }
 
 export function Header({
@@ -22,45 +27,87 @@ export function Header({
   activePage,
   isDetailView = false,
   detailViewType,
+  suiteId,
   primaryAction,
-  selectedProjectId,
-  onProjectSelect,
+  onEnvironmentChange,
 }: HeaderProps) {
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
-  const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showEnvironmentDropdown, setShowEnvironmentDropdown] = useState(false);
-  const [showSingleProjectDropdown, setShowSingleProjectDropdown] = useState(false);
-  const singleProjectDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Global project filter (sticky across pages via localStorage)
+  const { selectedProjectIds, setSelectedProjectIds } = useConsoleProjectFilter();
 
   // Fetch real projects data
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: projects = [] } = useProjects();
 
-  // Close dropdown when clicking outside
+  // For suite detail view: fetch suite to get project ID, then fetch environments
+  const { data: suite } = useSuite(suiteId || '');
+  const projectIdForEnvs = suite?.project?.id || '';
+  const { data: projectEnvironments = [] } = useProjectEnvironments(projectIdForEnvs);
+
+  // Local environment selection for suite's project (sticky per project via localStorage)
+  const {
+    selectedEnvironmentId,
+    setSelectedEnvironmentId,
+    clearSelectedEnvironmentId,
+  } = useConsoleEnvironmentFilter(projectIdForEnvs);
+
+  // Convert env ID to selected environment name for dropdown
+  const selectedEnvName = useMemo(() => {
+    if (!selectedEnvironmentId || projectEnvironments.length === 0) return [];
+    const env = projectEnvironments.find(e => e.id === selectedEnvironmentId);
+    return env ? [env.name] : [];
+  }, [selectedEnvironmentId, projectEnvironments]);
+
+  // Notify parent when environment changes (for backward compatibility)
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (singleProjectDropdownRef.current && !singleProjectDropdownRef.current.contains(event.target as Node)) {
-        setShowSingleProjectDropdown(false);
-      }
+    if (onEnvironmentChange) {
+      onEnvironmentChange(selectedEnvironmentId || undefined);
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [selectedEnvironmentId, onEnvironmentChange]);
 
   // Pages that should show filters - but not if we're in a detail view
-  // Environments page uses single-select project dropdown
-  const showMultiProjectFilter = !isDetailView && ['overview', 'test-health', 'suite-activity'].includes(activePage);
-  const showSingleProjectFilter = !isDetailView && activePage === 'environments';
+  // All list pages including environments use the global multi-select project filter
+  const showProjectFilter = !isDetailView && ['overview', 'test-health', 'suite-activity', 'environments'].includes(activePage);
   const showEnvironmentFilter = (!isDetailView && ['overview', 'test-health'].includes(activePage)) ||
                                  (isDetailView && (detailViewType === 'suite' || detailViewType === 'test'));
 
-  // Get project names for multi-select dropdown
+  // Get project names for dropdowns
   const projectNames = projects.map(p => p.name);
 
-  // Get selected project for single-select
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  // For global multi-select filter: convert IDs to names for display
+  const selectedProjectNamesForFilter = useMemo(() => {
+    return selectedProjectIds
+      .map(id => projects.find(p => p.id === id)?.name)
+      .filter((name): name is string => !!name);
+  }, [selectedProjectIds, projects]);
 
-  const environments = ['Production', 'Staging', 'Development'];
+  // Get environment names for suite detail dropdown
+  const environmentNames = projectEnvironments.map(e => e.name);
+
+  // Handle global project filter selection (multi-select, converts names to IDs)
+  const handleGlobalProjectSelect = (names: string[]) => {
+    const ids = names
+      .map(name => projects.find(p => p.name === name)?.id)
+      .filter((id): id is string => !!id);
+    setSelectedProjectIds(ids);
+  };
+
+  // Handle environment selection (updates local storage filter)
+  const handleEnvironmentSelect = (names: string[]) => {
+    if (names.length > 0) {
+      // Find the env ID from name
+      const envName = names[names.length - 1];
+      const env = projectEnvironments.find(e => e.name === envName);
+      if (env) {
+        // Update local selection
+        setSelectedEnvironmentId(env.id);
+      }
+    } else {
+      // Clear local selection
+      clearSelectedEnvironmentId();
+    }
+  };
 
   return (
     <div className="bg-white border-b border-[#e5e5e5] px-8 py-4 flex items-center justify-between">
@@ -68,16 +115,16 @@ export function Header({
         <h1>{title}</h1>
 
         {/* Project and Environment Selectors */}
-        {(showMultiProjectFilter || showSingleProjectFilter || showEnvironmentFilter) && (
+        {(showProjectFilter || showEnvironmentFilter) && (
           <div className="flex items-center gap-2">
-            {/* Multi-select project dropdown for overview, test-health, suite-activity */}
-            {showMultiProjectFilter && (
+            {/* Global multi-select project dropdown for all list pages */}
+            {showProjectFilter && (
               <div className="min-w-[180px]">
                 <MultiSelectDropdown
                   label="Projects"
                   items={projectNames}
-                  selectedItems={selectedProjects}
-                  onSelectionChange={setSelectedProjects}
+                  selectedItems={selectedProjectNamesForFilter}
+                  onSelectionChange={handleGlobalProjectSelect}
                   isOpen={showProjectDropdown}
                   onToggle={() => {
                     setShowProjectDropdown(!showProjectDropdown);
@@ -87,61 +134,24 @@ export function Header({
               </div>
             )}
 
-            {/* Single-select project dropdown for environments page */}
-            {showSingleProjectFilter && (
-              <div className="relative min-w-[200px]" ref={singleProjectDropdownRef}>
-                <button
-                  onClick={() => setShowSingleProjectDropdown(!showSingleProjectDropdown)}
-                  disabled={projectsLoading}
-                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm hover:border-[#999999] transition-colors focus:outline-none focus:ring-2 focus:ring-black/5"
-                >
-                  <span className={selectedProject ? 'text-black' : 'text-[#999999]'}>
-                    {projectsLoading ? 'Loading...' : selectedProject ? selectedProject.name : 'Select project...'}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 text-[#666666] transition-transform ${showSingleProjectDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showSingleProjectDropdown && !projectsLoading && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#e5e5e5] rounded-md shadow-lg z-50 max-h-[300px] overflow-y-auto">
-                    {projects.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-[#999999]">No projects available</div>
-                    ) : (
-                      projects.map((project) => (
-                        <button
-                          key={project.id}
-                          onClick={() => {
-                            onProjectSelect?.(project.id);
-                            setShowSingleProjectDropdown(false);
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-left hover:bg-[#fafafa] transition-colors"
-                        >
-                          <span>{project.name}</span>
-                          {project.id === selectedProjectId && (
-                            <Check className="w-4 h-4 text-[#4CBB17]" />
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {(showMultiProjectFilter || showSingleProjectFilter) && showEnvironmentFilter && (
+            {showProjectFilter && showEnvironmentFilter && (
               <span className="text-[#999999]">/</span>
             )}
             {showEnvironmentFilter && (
               <div className="min-w-[180px]">
                 <MultiSelectDropdown
                   label="Environments"
-                  items={environments}
-                  selectedItems={selectedEnvironments}
-                  onSelectionChange={setSelectedEnvironments}
+                  items={environmentNames}
+                  selectedItems={selectedEnvName}
+                  onSelectionChange={handleEnvironmentSelect}
                   isOpen={showEnvironmentDropdown}
                   onToggle={() => {
                     setShowEnvironmentDropdown(!showEnvironmentDropdown);
                     setShowProjectDropdown(false);
                   }}
+                  singleSelect={true}
+                  showAllOption={true}
+                  placeholder="All Environments"
                 />
               </div>
             )}

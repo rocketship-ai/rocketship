@@ -248,6 +248,7 @@ func (s *Server) handleSuiteActivity(w http.ResponseWriter, r *http.Request, pri
 
 // handleSuiteRuns handles GET /api/suites/{suiteId}/runs
 // Returns run history for a suite across all branches/refs
+// Optional query param: environment_id - filter runs by environment
 func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, suiteID uuid.UUID) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -257,6 +258,17 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 	if principal.RequiresOrgMembership() {
 		writeError(w, http.StatusForbidden, "organization membership required")
 		return
+	}
+
+	// Parse optional environment_id query param
+	var environmentID uuid.NullUUID
+	if envIDStr := r.URL.Query().Get("environment_id"); envIDStr != "" {
+		envID, err := uuid.Parse(envIDStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid environment_id")
+			return
+		}
+		environmentID = uuid.NullUUID{UUID: envID, Valid: true}
 	}
 
 	// Get suite detail (includes org check)
@@ -288,9 +300,10 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 	}
 
 	// Query runs for these projects + suite name
-	// - Limit to 5 runs per branch (default)
-	// - Only show branches with activity in last 24 hours (except default branch)
-	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, 5)
+	// - Shows up to 3 branches: default + 2 most recently active feature branches
+	// - Limit to 5 runs per branch
+	// - Filter by environment_id if provided
+	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, 5, environmentID)
 	if err != nil {
 		log.Printf("failed to list runs for suite: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list runs")
@@ -497,9 +510,6 @@ func (s *Server) handleConsoleProjectRoutesDispatch(w http.ResponseWriter, r *ht
 	case "environments":
 		// Handle environment management
 		s.handleProjectEnvironments(w, r, principal, projectID, segments[2:])
-	case "environment-selection":
-		// Handle per-user environment selection
-		s.handleProjectEnvironmentSelection(w, r, principal, projectID)
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}
