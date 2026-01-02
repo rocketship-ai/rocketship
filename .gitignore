@@ -42,7 +42,7 @@ cli-introspection.json
 charts/rocketship-internal/
 
 # Plans
-plansv2/
+plans/
 
 #symlinks
 rocketship-internal
