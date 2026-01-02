@@ -492,11 +492,6 @@ func (f *fakeStore) ListEnabledSchedulesByProject(_ context.Context, _ uuid.UUID
 	return nil, nil
 }
 
-// CI token methods
-func (f *fakeStore) ListActiveCITokens(_ context.Context, _ uuid.UUID) ([]persistence.CITokenRecord, error) {
-	return nil, nil
-}
-
 // Count methods for overview
 func (f *fakeStore) CountProjectsForOrg(_ context.Context, _ uuid.UUID) (int, error) {
 	return 0, nil
@@ -721,7 +716,7 @@ func (f *fakeStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.
 }
 
 // CI Token methods (stubs for dataStore interface)
-func (f *fakeStore) ListCITokensForOrg(_ context.Context, _ uuid.UUID) ([]persistence.CITokenRecord, error) {
+func (f *fakeStore) ListCITokensForOrg(_ context.Context, _ uuid.UUID, _ bool) ([]persistence.CITokenRecord, error) {
 	return nil, nil
 }
 

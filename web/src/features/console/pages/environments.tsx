@@ -26,6 +26,7 @@ import { EnvironmentModal, type EnvironmentSubmitData } from '../components/envi
 import { CITokenModal } from '../components/ci-token-modal';
 import { CITokenRevealModal } from '../components/ci-token-reveal-modal';
 import { CITokensTable } from '../components/ci-tokens-table';
+import { ConfirmDialog } from '../components/confirm-dialog';
 import { apiGet } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -49,6 +50,7 @@ export function Environments() {
   const [showTokenReveal, setShowTokenReveal] = useState(false);
   const [revealedToken, setRevealedToken] = useState({ value: '', name: '' });
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
+  const [revokeConfirmTokenId, setRevokeConfirmTokenId] = useState<string | null>(null);
 
   // Get all projects for "All Projects" mode
   const { data: projects = [] } = useProjects();
@@ -80,7 +82,7 @@ export function Environments() {
   const deleteForProjectMutation = useDeleteEnvironmentForProject();
 
   // CI Token queries and mutations
-  const { data: ciTokens = [], isLoading: ciTokensLoading } = useCITokens();
+  const { data: ciTokens = [], isLoading: ciTokensLoading, error: ciTokensError } = useCITokens();
   const createCITokenMutation = useCreateCIToken();
   const revokeCITokenMutation = useRevokeCIToken();
 
@@ -222,10 +224,18 @@ export function Environments() {
     setShowTokenReveal(true);
   };
 
-  const handleRevokeCIToken = async (tokenId: string) => {
-    setRevokingTokenId(tokenId);
+  // Opens the revoke confirmation dialog
+  const handleRevokeCIToken = (tokenId: string) => {
+    setRevokeConfirmTokenId(tokenId);
+  };
+
+  // Actually performs the revoke after confirmation
+  const confirmRevokeCIToken = async () => {
+    if (!revokeConfirmTokenId) return;
+    setRevokingTokenId(revokeConfirmTokenId);
     try {
-      await revokeCITokenMutation.mutateAsync(tokenId);
+      await revokeCITokenMutation.mutateAsync(revokeConfirmTokenId);
+      setRevokeConfirmTokenId(null);
     } finally {
       setRevokingTokenId(null);
     }
@@ -409,6 +419,7 @@ export function Environments() {
           <CITokensTable
             tokens={ciTokens}
             isLoading={ciTokensLoading}
+            error={ciTokensError instanceof Error ? ciTokensError.message : null}
             onRevoke={handleRevokeCIToken}
             isRevoking={revokeCITokenMutation.isPending}
             revokingTokenId={revokingTokenId}
@@ -449,34 +460,28 @@ export function Environments() {
       />
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
-            <h3 className="mb-4">Delete Environment</h3>
-            <p className="text-sm text-[#666666] mb-6">
-              Are you sure you want to delete this environment? This action cannot be undone.
-              All secrets and configuration will be permanently removed.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending || deleteForProjectMutation.isPending}
-                className="px-4 py-2 bg-[#ef0000] text-white rounded-md hover:bg-[#ef0000]/90 transition-colors disabled:opacity-50"
-              >
-                {(deleteMutation.isPending || deleteForProjectMutation.isPending)
-                  ? 'Deleting...'
-                  : 'Delete Environment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        title="Delete Environment"
+        message="Are you sure you want to delete this environment? This action cannot be undone. All secrets and configuration will be permanently removed."
+        confirmLabel="Delete Environment"
+        confirmVariant="danger"
+        isConfirming={deleteMutation.isPending || deleteForProjectMutation.isPending}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDelete}
+      />
+
+      {/* Revoke CI Token Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={!!revokeConfirmTokenId}
+        title="Revoke CI Token"
+        message="Are you sure you want to revoke this CI token? CI jobs using it will fail immediately."
+        confirmLabel="Revoke Token"
+        confirmVariant="danger"
+        isConfirming={revokeCITokenMutation.isPending && revokingTokenId === revokeConfirmTokenId}
+        onCancel={() => setRevokeConfirmTokenId(null)}
+        onConfirm={confirmRevokeCIToken}
+      />
 
       {/* CI Token Create Modal */}
       <CITokenModal

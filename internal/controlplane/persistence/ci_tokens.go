@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // CITokenCreateInput contains the parameters for creating a CI token
@@ -22,20 +23,22 @@ type CITokenCreateInput struct {
 	Projects     []CITokenProjectScope // ProjectID and Scope must be set; ProjectName is optional
 }
 
-// ListCITokensForOrg returns all CI tokens for an organization with their project scopes
-// Tokens are returned with their project associations joined from ci_token_projects
-func (s *Store) ListCITokensForOrg(ctx context.Context, orgID uuid.UUID) ([]CITokenRecord, error) {
+// ListCITokensForOrg returns CI tokens for an organization with their project scopes.
+// When includeRevoked is false (default), only non-revoked tokens are returned.
+// When includeRevoked is true, all tokens including revoked ones are returned.
+func (s *Store) ListCITokensForOrg(ctx context.Context, orgID uuid.UUID, includeRevoked bool) ([]CITokenRecord, error) {
 	const tokensQuery = `
 		SELECT id, organization_id, name, token_hash, never_expires,
 		       expires_at, revoked_at, created_by, last_used_at, revoked_by,
 		       description, created_at, updated_at
 		FROM ci_tokens
 		WHERE organization_id = $1
+		  AND ($2::bool = true OR revoked_at IS NULL)
 		ORDER BY name ASC
 	`
 
 	var tokens []CITokenRecord
-	if err := s.db.SelectContext(ctx, &tokens, tokensQuery, orgID); err != nil {
+	if err := s.db.SelectContext(ctx, &tokens, tokensQuery, orgID, includeRevoked); err != nil {
 		return nil, fmt.Errorf("failed to list ci tokens: %w", err)
 	}
 
@@ -68,7 +71,7 @@ func (s *Store) ListCITokensForOrg(ctx context.Context, orgID uuid.UUID) ([]CITo
 		ProjectName string    `db:"project_name"`
 	}
 	var projectRows []projectRow
-	if err := s.db.SelectContext(ctx, &projectRows, projectsQuery, tokenIDs); err != nil {
+	if err := s.db.SelectContext(ctx, &projectRows, projectsQuery, pq.Array(tokenIDs)); err != nil {
 		return nil, fmt.Errorf("failed to list ci token projects: %w", err)
 	}
 
@@ -149,8 +152,8 @@ func (s *Store) CreateCIToken(ctx context.Context, orgID, createdBy uuid.UUID, i
 		record.Description, record.CreatedAt, record.UpdatedAt,
 	)
 	if err != nil {
-		if isUniqueViolation(err, "ci_tokens_org_name_idx") {
-			return "", CITokenRecord{}, fmt.Errorf("token name already exists in this organization")
+		if isUniqueViolation(err, "ci_tokens_org_active_name_idx") {
+			return "", CITokenRecord{}, fmt.Errorf("an active token with this name already exists; revoke it first to reuse the name")
 		}
 		return "", CITokenRecord{}, fmt.Errorf("failed to insert ci token: %w", err)
 	}

@@ -666,10 +666,14 @@ export interface CreateCITokenResponse {
 
 // CI Token hooks
 
-export function useCITokens() {
+export function useCITokens(options?: { includeRevoked?: boolean }) {
+  const includeRevoked = options?.includeRevoked ?? false
   return useQuery({
-    queryKey: [...consoleKeys.all, 'ci-tokens'] as const,
-    queryFn: () => apiGet<CIToken[]>('/api/ci-tokens'),
+    queryKey: [...consoleKeys.all, 'ci-tokens', { includeRevoked }] as const,
+    queryFn: () => {
+      const url = includeRevoked ? '/api/ci-tokens?include_revoked=true' : '/api/ci-tokens'
+      return apiGet<CIToken[]>(url)
+    },
   })
 }
 

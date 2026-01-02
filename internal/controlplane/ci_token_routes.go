@@ -71,8 +71,12 @@ func (s *Server) handleCITokensDispatch(w http.ResponseWriter, r *http.Request, 
 }
 
 // handleListCITokens handles GET /api/ci-tokens
+// Query params:
+//   - include_revoked: "true" to include revoked tokens, default is false (only active tokens)
 func (s *Server) handleListCITokens(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
-	tokens, err := s.store.ListCITokensForOrg(r.Context(), principal.OrgID)
+	includeRevoked := r.URL.Query().Get("include_revoked") == "true"
+
+	tokens, err := s.store.ListCITokensForOrg(r.Context(), principal.OrgID, includeRevoked)
 	if err != nil {
 		log.Printf("failed to list CI tokens: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list CI tokens")

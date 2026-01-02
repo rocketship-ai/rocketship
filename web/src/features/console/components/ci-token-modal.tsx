@@ -35,6 +35,7 @@ export function CITokenModal({
   const [expiresAt, setExpiresAt] = useState('');
   const [selectedProjects, setSelectedProjects] = useState<ProjectScopeItem[]>([]);
   const [selectedProjectToAdd, setSelectedProjectToAdd] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -67,22 +68,32 @@ export function CITokenModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({
-      name: name.trim(),
-      description: description.trim(),
-      neverExpires,
-      expiresAt: neverExpires ? null : expiresAt || null,
-      projects: selectedProjects.map((p) => ({
-        project_id: p.projectId,
-        scope: p.scope,
-      })),
-    });
-    // Reset form
-    setName('');
-    setDescription('');
-    setNeverExpires(true);
-    setExpiresAt('');
-    setSelectedProjects([]);
+    setError(null);
+    try {
+      await onSubmit({
+        name: name.trim(),
+        description: description.trim(),
+        neverExpires,
+        expiresAt: neverExpires ? null : expiresAt || null,
+        projects: selectedProjects.map((p) => ({
+          project_id: p.projectId,
+          scope: p.scope,
+        })),
+      });
+      // Reset form only on success
+      setName('');
+      setDescription('');
+      setNeverExpires(true);
+      setExpiresAt('');
+      setSelectedProjects([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create token');
+    }
+  };
+
+  const handleClose = () => {
+    setError(null);
+    onClose();
   };
 
   const isValid = name.trim() && selectedProjects.length > 0;
@@ -93,7 +104,7 @@ export function CITokenModal({
         <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
           <h2 className="text-lg font-semibold">Issue New CI Token</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1 hover:bg-[#f5f5f5] rounded-md transition-colors"
           >
             <X className="w-5 h-5 text-[#666666]" />
@@ -101,6 +112,12 @@ export function CITokenModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+              {error}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-1">Name *</label>
             <input
@@ -179,7 +196,7 @@ export function CITokenModal({
                       }
                       className="px-2 py-1 text-sm border border-[#e5e5e5] rounded bg-white"
                     >
-                      <option value="write">Write</option>
+                      <option value="write">Write (includes Read)</option>
                       <option value="read">Read</option>
                     </select>
                     <button
@@ -218,12 +235,16 @@ export function CITokenModal({
                 </button>
               </div>
             )}
+
+            <p className="text-xs text-[#666666] mt-2">
+              Write permission always includes read access.
+            </p>
           </div>
 
           <div className="flex gap-2 pt-4 border-t border-[#e5e5e5]">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
             >
               Cancel

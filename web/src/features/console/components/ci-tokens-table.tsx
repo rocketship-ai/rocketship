@@ -4,6 +4,7 @@ import type { CIToken } from '../hooks/use-console-queries';
 interface CITokensTableProps {
   tokens: CIToken[];
   isLoading: boolean;
+  error?: string | null;
   onRevoke: (tokenId: string) => void;
   isRevoking: boolean;
   revokingTokenId: string | null;
@@ -63,6 +64,7 @@ function getStatusBadge(status: CIToken['status']) {
 export function CITokensTable({
   tokens,
   isLoading,
+  error,
   onRevoke,
   isRevoking,
   revokingTokenId,
@@ -72,6 +74,16 @@ export function CITokensTable({
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-6 h-6 animate-spin text-[#666666]" />
         <span className="ml-3 text-[#666666]">Loading CI tokens...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Key className="w-12 h-12 text-[#999999] mb-4" />
+        <h3 className="text-lg font-medium mb-2">Failed to load CI tokens</h3>
+        <p className="text-sm text-[#666666] max-w-md">{error}</p>
       </div>
     );
   }
@@ -123,7 +135,7 @@ export function CITokensTable({
                           : 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      {proj.project_name}: {proj.scope === 'write' ? 'Write' : 'Read'}
+                      {proj.project_name}: {proj.scope === 'write' ? 'Write/Read' : 'Read'}
                     </span>
                   ))}
                 </div>
