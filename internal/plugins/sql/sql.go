@@ -91,6 +91,10 @@ func (sp *SQLPlugin) Activity(ctx context.Context, p map[string]interface{}) (in
 
 	// Process assertions
 	if assertions, ok := p["assertions"].([]interface{}); ok {
+		vars, _ := p["vars"].(map[string]interface{})
+		if err := applyVariableReplacementToAssertions(assertions, state, env, vars); err != nil {
+			return nil, fmt.Errorf("assertion variable replacement failed: %w", err)
+		}
 		if err := processAssertions(response, assertions); err != nil {
 			return nil, fmt.Errorf("assertion failed: %w", err)
 		}
@@ -164,6 +168,43 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, e
 			return fmt.Errorf("failed to process command template at index %d: %w", i, err)
 		}
 		config.Commands[i] = processedCmd
+	}
+
+	return nil
+}
+
+func applyVariableReplacementToAssertions(assertions []interface{}, state map[string]interface{}, env map[string]string, vars map[string]interface{}) error {
+	// Create template context with runtime variables and env secrets.
+	// Env precedence is handled inside dsl.ProcessTemplate (OS env > env map).
+	context := dsl.TemplateContext{
+		Runtime: state,
+		Env:     env,
+	}
+
+	for _, assertionInterface := range assertions {
+		assertion, ok := assertionInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		expected, ok := assertion["expected"].(string)
+		if !ok || expected == "" {
+			continue
+		}
+
+		if strings.Contains(expected, ".vars.") && vars != nil {
+			processed, err := dsl.ProcessConfigVariablesOnly(expected, vars)
+			if err != nil {
+				return fmt.Errorf("failed to process config vars in assertion expected: %w", err)
+			}
+			expected = processed
+		}
+
+		processed, err := dsl.ProcessTemplate(expected, context)
+		if err != nil {
+			return fmt.Errorf("failed to process assertion expected template: %w", err)
+		}
+		assertion["expected"] = processed
 	}
 
 	return nil

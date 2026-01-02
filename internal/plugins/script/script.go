@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rocketship-ai/rocketship/internal/dsl"
@@ -44,6 +45,15 @@ func (p *ScriptPlugin) Activity(ctx context.Context, params map[string]interface
 	script, err := p.getScriptContent(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get script content: %w", err)
+	}
+
+	// Ensure config variables in script content are resolved (esp. for file-based scripts).
+	if strings.Contains(script, ".vars.") {
+		processed, err := dsl.ProcessConfigVariablesOnly(script, req.Vars)
+		if err != nil {
+			return nil, fmt.Errorf("script config variable processing failed: %w", err)
+		}
+		script = processed
 	}
 
 	// Process runtime ({{ key }}) + env ({{ .env.KEY }}) templates in script content.
