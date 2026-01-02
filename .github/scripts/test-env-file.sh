@@ -4,6 +4,24 @@
 
 set -e  # Exit on any error
 
+run_capture() {
+  local output
+  set +e
+  output=$("$@" 2>&1)
+  local status=$?
+  set -e
+
+  if [ "$status" -ne 0 ]; then
+    echo "❌ Command failed: $*" >&2
+    echo "----- output -----" >&2
+    echo "$output" >&2
+    echo "------------------" >&2
+    return "$status"
+  fi
+
+  printf "%s" "$output"
+}
+
 echo "🚀 Testing --env-file functionality..."
 
 # Test 1: Basic env file loading
@@ -59,7 +77,7 @@ tests:
 EOF
 
 echo "  → Running test with --env-file..."
-OUTPUT=$(rocketship run -af /tmp/test-env/rocketship.yaml --env-file /tmp/test.env)
+OUTPUT=$(run_capture rocketship run -af /tmp/test-env/rocketship.yaml --env-file /tmp/test.env)
 
 # Verify the output contains expected values
 if echo "$OUTPUT" | grep -q "URL: https://test.example.com, Key: test-key-123, Env: testing"; then
@@ -127,7 +145,7 @@ tests:
 EOF
 
 echo "  → Running quotes test..."
-OUTPUT=$(rocketship run -af /tmp/test-quotes/rocketship.yaml --env-file /tmp/test-quotes.env)
+OUTPUT=$(run_capture rocketship run -af /tmp/test-quotes/rocketship.yaml --env-file /tmp/test-quotes.env)
 
 if echo "$OUTPUT" | grep -q "Step completed successfully" && echo "$OUTPUT" | grep -q "passed"; then
     echo "✅ Quotes and special characters handled correctly"
@@ -163,7 +181,7 @@ tests:
 EOF
 
 echo "  → Running precedence test..."
-OUTPUT=$(rocketship run -af /tmp/test-precedence/rocketship.yaml --env-file /tmp/test-precedence.env)
+OUTPUT=$(run_capture rocketship run -af /tmp/test-precedence/rocketship.yaml --env-file /tmp/test-precedence.env)
 
 if echo "$OUTPUT" | grep -q "Precedence: system_value, File only: file_only_value"; then
     echo "✅ System env vars correctly take precedence over file values"

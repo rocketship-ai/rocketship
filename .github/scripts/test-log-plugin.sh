@@ -2,11 +2,29 @@
 
 set -e
 
+run_capture() {
+  local output
+  set +e
+  output=$("$@" 2>&1)
+  local status=$?
+  set -e
+
+  if [ "$status" -ne 0 ]; then
+    echo "❌ Command failed: $*" >&2
+    echo "----- output -----" >&2
+    echo "$output" >&2
+    echo "------------------" >&2
+    return "$status"
+  fi
+
+  printf "%s" "$output"
+}
+
 echo "Testing log plugin functionality..."
 
 # Test 1: Normal logging level
 echo "Running log plugin test with normal logging..."
-OUTPUT=$(rocketship run -af examples/simple-log/rocketship.yaml)
+OUTPUT=$(run_capture rocketship run -af examples/simple-log/rocketship.yaml)
 echo "$OUTPUT"
 
 # Check that specific log messages appear in stdout
@@ -55,7 +73,7 @@ fi
 
 # Test 2: ERROR level logging (to ensure messages still appear)
 echo "Testing log plugin with ERROR level logging (to ensure messages still appear)..."
-OUTPUT=$(ROCKETSHIP_LOG=ERROR rocketship run -af examples/simple-log/rocketship.yaml)
+OUTPUT=$(run_capture env ROCKETSHIP_LOG=ERROR rocketship run -af examples/simple-log/rocketship.yaml)
 echo "$OUTPUT"
 
 # Verify log messages still appear with ERROR level logging

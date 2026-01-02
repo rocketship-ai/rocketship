@@ -4,6 +4,24 @@
 
 set -e  # Exit on any error
 
+run_capture() {
+  local output
+  set +e
+  output=$("$@" 2>&1)
+  local status=$?
+  set -e
+
+  if [ "$status" -ne 0 ]; then
+    echo "❌ Command failed: $*" >&2
+    echo "----- output -----" >&2
+    echo "$output" >&2
+    echo "------------------" >&2
+    return "$status"
+  fi
+
+  printf "%s" "$output"
+}
+
 # Add debug output for CI troubleshooting
 echo "🔧 Debug: Current working directory: $(pwd)"
 echo "🔧 Debug: Available rocketship version: $(rocketship version 2>/dev/null || echo 'not found')"
@@ -21,7 +39,7 @@ echo "✅ Retry policy example validates correctly"
 
 # Test that retry configuration doesn't break normal operation
 echo "  → Running retry policy example (should pass without retries)..."
-OUTPUT=$(rocketship run -af examples/retry-policy/rocketship.yaml)
+OUTPUT=$(run_capture rocketship run -af examples/retry-policy/rocketship.yaml)
 if echo "$OUTPUT" | grep -q "✓ Passed Tests: 4"; then
     echo "✅ Retry policy example runs successfully"
 else

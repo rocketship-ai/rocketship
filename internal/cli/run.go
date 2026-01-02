@@ -450,6 +450,21 @@ func NewRunCmd() *cobra.Command {
 				return err
 			}
 
+			// Load environment variables from file early so auto-mode subprocesses inherit them.
+			envFile, err := cmd.Flags().GetString("env-file")
+			if err != nil {
+				return err
+			}
+			if envFile != "" {
+				envVars, err := loadEnvFile(envFile)
+				if err != nil {
+					return fmt.Errorf("failed to load env file: %w", err)
+				}
+				if err := setEnvironmentVariables(envVars); err != nil {
+					return fmt.Errorf("failed to set environment variables: %w", err)
+				}
+			}
+
 			// Get engine address from flag
 			engineAddr, err := cmd.Flags().GetString("engine")
 			if err != nil {
@@ -528,22 +543,6 @@ func NewRunCmd() *cobra.Command {
 			varFile, err := cmd.Flags().GetString("var-file")
 			if err != nil {
 				return err
-			}
-
-			envFile, err := cmd.Flags().GetString("env-file")
-			if err != nil {
-				return err
-			}
-
-			// Load environment variables from file if specified
-			if envFile != "" {
-				envVars, err := loadEnvFile(envFile)
-				if err != nil {
-					return fmt.Errorf("failed to load env file: %w", err)
-				}
-				if err := setEnvironmentVariables(envVars); err != nil {
-					return fmt.Errorf("failed to set environment variables: %w", err)
-				}
 			}
 
 			// Get timestamp flag

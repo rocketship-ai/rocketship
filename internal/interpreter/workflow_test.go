@@ -88,7 +88,7 @@ func TestHandleDelayStep(t *testing.T) {
 
 			// Run the handleDelayStep function in a test workflow
 			env.ExecuteWorkflow(func(ctx workflow.Context) error {
-				return handleDelayStep(ctx, tt.step, "test-name", "test-run-id")
+				return handleDelayStep(ctx, tt.step, "test-name", "test-run-id", map[string]string{}, map[string]string{})
 			})
 
 			if tt.wantErr {

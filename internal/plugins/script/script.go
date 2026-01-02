@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/executors"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/runtime"
@@ -43,6 +44,19 @@ func (p *ScriptPlugin) Activity(ctx context.Context, params map[string]interface
 	script, err := p.getScriptContent(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get script content: %w", err)
+	}
+
+	// Process runtime ({{ key }}) + env ({{ .env.KEY }}) templates in script content.
+	runtimeVars := make(map[string]interface{}, len(req.State))
+	for key, value := range req.State {
+		runtimeVars[key] = value
+	}
+	script, err = dsl.ProcessTemplate(script, dsl.TemplateContext{
+		Runtime: runtimeVars,
+		Env:     req.Env,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("script template processing failed: %w", err)
 	}
 
 	// Create executor for the specified language
