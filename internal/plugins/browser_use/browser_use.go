@@ -68,7 +68,19 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		state["run"] = runData
 	}
 
-	templateContext := dsl.TemplateContext{Runtime: state}
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	envSecrets := make(map[string]string)
+	if envData, ok := params["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				envSecrets[k] = strVal
+			}
+		}
+	} else if envData, ok := params["env"].(map[string]string); ok {
+		envSecrets = envData
+	}
+
+	templateContext := dsl.TemplateContext{Runtime: state, Env: envSecrets}
 
 	cfg, err := parseConfig(configData, templateContext)
 	if err != nil {
@@ -224,7 +236,7 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		result["saved"] = saved
 	}
 
-	if err := processAssertions(params, result, state); err != nil {
+	if err := processAssertions(params, result, state, envSecrets); err != nil {
 		return nil, err
 	}
 

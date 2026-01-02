@@ -207,8 +207,25 @@ func (pm *processManager) Cleanup() {
 		}
 	}
 
-	// Give processes time to shut down gracefully
-	time.Sleep(2 * time.Second)
+	// Give processes time to shut down gracefully (but don't return while they're still running).
+	waitForExit := func(maxWait time.Duration) {
+		deadline := time.Now().Add(maxWait)
+		for {
+			allStopped := true
+			for _, info := range state.Components {
+				if pm.isProcessRunning(info.PID) {
+					allStopped = false
+					break
+				}
+			}
+			if allStopped || time.Now().After(deadline) {
+				return
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	waitForExit(5 * time.Second)
 
 	// Force kill any remaining processes
 	for component, info := range state.Components {
@@ -219,6 +236,8 @@ func (pm *processManager) Cleanup() {
 			}
 		}
 	}
+
+	waitForExit(3 * time.Second)
 
 	// Remove the state file
 	if err := os.Remove(pm.stateFile); err != nil && !os.IsNotExist(err) {

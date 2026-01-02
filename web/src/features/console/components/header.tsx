@@ -1,5 +1,11 @@
 import { Play } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import {
+  useProjects,
+  useSuite,
+  useProjectEnvironments,
+} from '../hooks/use-console-queries';
+import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { MultiSelectDropdown } from './multi-select-dropdown';
 
 interface HeaderProps {
@@ -7,42 +13,118 @@ interface HeaderProps {
   activePage: string;
   isDetailView?: boolean;
   detailViewType?: 'suite' | 'test' | 'suite-run' | 'test-run' | 'project' | null;
+  suiteId?: string; // For suite detail view to fetch project environments
   primaryAction?: {
     label: string;
     onClick: () => void;
   };
+  // For environment filtering on suite detail
+  onEnvironmentChange?: (envId: string | undefined) => void;
 }
 
-export function Header({ title, activePage, isDetailView = false, detailViewType, primaryAction }: HeaderProps) {
-  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
-  const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([]);
+export function Header({
+  title,
+  activePage,
+  isDetailView = false,
+  detailViewType,
+  suiteId,
+  primaryAction,
+  onEnvironmentChange,
+}: HeaderProps) {
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [showEnvironmentDropdown, setShowEnvironmentDropdown] = useState(false);
 
+  // Global project filter (sticky across pages via localStorage)
+  const { selectedProjectIds, setSelectedProjectIds } = useConsoleProjectFilter();
+
+  // Fetch real projects data
+  const { data: projects = [] } = useProjects();
+
+  // For suite detail view: fetch suite to get project ID, then fetch environments
+  const { data: suite } = useSuite(suiteId || '');
+  const projectIdForEnvs = suite?.project?.id || '';
+  const { data: projectEnvironments = [] } = useProjectEnvironments(projectIdForEnvs);
+
+  // Local environment selection for suite's project (sticky per project via localStorage)
+  const {
+    selectedEnvironmentId,
+    setSelectedEnvironmentId,
+    clearSelectedEnvironmentId,
+  } = useConsoleEnvironmentFilter(projectIdForEnvs);
+
+  // Convert env ID to selected environment name for dropdown
+  const selectedEnvName = useMemo(() => {
+    if (!selectedEnvironmentId || projectEnvironments.length === 0) return [];
+    const env = projectEnvironments.find(e => e.id === selectedEnvironmentId);
+    return env ? [env.name] : [];
+  }, [selectedEnvironmentId, projectEnvironments]);
+
+  // Notify parent when environment changes (for backward compatibility)
+  useEffect(() => {
+    if (onEnvironmentChange) {
+      onEnvironmentChange(selectedEnvironmentId || undefined);
+    }
+  }, [selectedEnvironmentId, onEnvironmentChange]);
+
   // Pages that should show filters - but not if we're in a detail view
-  const showProjectFilter = !isDetailView && ['overview', 'test-health', 'suite-activity'].includes(activePage);
-  const showEnvironmentFilter = (!isDetailView && ['overview', 'test-health'].includes(activePage)) || 
+  // All list pages including environments use the global multi-select project filter
+  const showProjectFilter = !isDetailView && ['overview', 'test-health', 'suite-activity', 'environments'].includes(activePage);
+  const showEnvironmentFilter = (!isDetailView && ['overview', 'test-health'].includes(activePage)) ||
                                  (isDetailView && (detailViewType === 'suite' || detailViewType === 'test'));
-  
-  const projects = ['Frontend', 'Backend'];
-  
-  const environments = ['Production', 'Staging', 'Development'];
+
+  // Get project names for dropdowns
+  const projectNames = projects.map(p => p.name);
+
+  // For global multi-select filter: convert IDs to names for display
+  const selectedProjectNamesForFilter = useMemo(() => {
+    return selectedProjectIds
+      .map(id => projects.find(p => p.id === id)?.name)
+      .filter((name): name is string => !!name);
+  }, [selectedProjectIds, projects]);
+
+  // Get environment names for suite detail dropdown
+  const environmentNames = projectEnvironments.map(e => e.name);
+
+  // Handle global project filter selection (multi-select, converts names to IDs)
+  const handleGlobalProjectSelect = (names: string[]) => {
+    const ids = names
+      .map(name => projects.find(p => p.name === name)?.id)
+      .filter((id): id is string => !!id);
+    setSelectedProjectIds(ids);
+  };
+
+  // Handle environment selection (updates local storage filter)
+  const handleEnvironmentSelect = (names: string[]) => {
+    if (names.length > 0) {
+      // Find the env ID from name
+      const envName = names[names.length - 1];
+      const env = projectEnvironments.find(e => e.name === envName);
+      if (env) {
+        // Update local selection
+        setSelectedEnvironmentId(env.id);
+      }
+    } else {
+      // Clear local selection
+      clearSelectedEnvironmentId();
+    }
+  };
 
   return (
     <div className="bg-white border-b border-[#e5e5e5] px-8 py-4 flex items-center justify-between">
       <div className="flex items-center gap-6">
         <h1>{title}</h1>
-        
+
         {/* Project and Environment Selectors */}
         {(showProjectFilter || showEnvironmentFilter) && (
           <div className="flex items-center gap-2">
+            {/* Global multi-select project dropdown for all list pages */}
             {showProjectFilter && (
               <div className="min-w-[180px]">
                 <MultiSelectDropdown
                   label="Projects"
-                  items={projects}
-                  selectedItems={selectedProjects}
-                  onSelectionChange={setSelectedProjects}
+                  items={projectNames}
+                  selectedItems={selectedProjectNamesForFilter}
+                  onSelectionChange={handleGlobalProjectSelect}
                   isOpen={showProjectDropdown}
                   onToggle={() => {
                     setShowProjectDropdown(!showProjectDropdown);
@@ -51,6 +133,7 @@ export function Header({ title, activePage, isDetailView = false, detailViewType
                 />
               </div>
             )}
+
             {showProjectFilter && showEnvironmentFilter && (
               <span className="text-[#999999]">/</span>
             )}
@@ -58,14 +141,17 @@ export function Header({ title, activePage, isDetailView = false, detailViewType
               <div className="min-w-[180px]">
                 <MultiSelectDropdown
                   label="Environments"
-                  items={environments}
-                  selectedItems={selectedEnvironments}
-                  onSelectionChange={setSelectedEnvironments}
+                  items={environmentNames}
+                  selectedItems={selectedEnvName}
+                  onSelectionChange={handleEnvironmentSelect}
                   isOpen={showEnvironmentDropdown}
                   onToggle={() => {
                     setShowEnvironmentDropdown(!showEnvironmentDropdown);
                     setShowProjectDropdown(false);
                   }}
+                  singleSelect={true}
+                  showAllOption={true}
+                  placeholder="All Environments"
                 />
               </div>
             )}

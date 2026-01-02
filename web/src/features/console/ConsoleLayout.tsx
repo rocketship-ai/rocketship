@@ -55,6 +55,13 @@ export function ConsoleLayout() {
 
   const { activePage, isDetailView, detailViewType } = getActivePageAndDetail()
 
+  // Extract suiteId from pathname for suite detail view
+  const getSuiteId = (): string | undefined => {
+    const suiteMatch = pathname.match(/^\/suites\/([^/]+)/)
+    return suiteMatch ? suiteMatch[1] : undefined
+  }
+  const suiteId = getSuiteId()
+
   // Get page title
   const getPageTitle = (): string => {
     if (isDetailView) {
@@ -134,6 +141,7 @@ export function ConsoleLayout() {
           activePage={activePage}
           isDetailView={isDetailView}
           detailViewType={detailViewType}
+          suiteId={suiteId}
         />
 
         <main>

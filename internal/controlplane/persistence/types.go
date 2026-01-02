@@ -164,15 +164,24 @@ type RunRecord struct {
 
 // ProjectEnvironment represents a deployment environment for a project
 type ProjectEnvironment struct {
-	ID          uuid.UUID         `db:"id"`
-	ProjectID   uuid.UUID         `db:"project_id"`
-	Name        string            `db:"name"`
-	Slug        string            `db:"slug"`
-	Description sql.NullString    `db:"description"`
-	IsDefault   bool              `db:"is_default"`
-	Variables   map[string]string `db:"-"` // Parsed from JSONB
-	CreatedAt   time.Time         `db:"created_at"`
-	UpdatedAt   time.Time         `db:"updated_at"`
+	ID         uuid.UUID              `db:"id"`
+	ProjectID  uuid.UUID              `db:"project_id"`
+	Name       string                 `db:"name"`
+	Slug       string                 `db:"slug"`
+	EnvSecrets map[string]string      `db:"-"` // Parsed from JSONB - accessed via {{ .env.* }}
+	ConfigVars map[string]interface{} `db:"-"` // Parsed from JSONB - accessed via {{ .vars.* }}
+	CreatedAt  time.Time              `db:"created_at"`
+	UpdatedAt  time.Time              `db:"updated_at"`
+}
+
+// ProjectEnvironmentSelection tracks which environment a user has selected for a project
+// This is used by the UI to remember the user's preferred environment
+type ProjectEnvironmentSelection struct {
+	UserID        uuid.UUID `db:"user_id"`
+	ProjectID     uuid.UUID `db:"project_id"`
+	EnvironmentID uuid.UUID `db:"environment_id"`
+	CreatedAt     time.Time `db:"created_at"`
+	UpdatedAt     time.Time `db:"updated_at"`
 }
 
 // Suite represents a test suite definition

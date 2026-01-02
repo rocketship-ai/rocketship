@@ -474,3 +474,255 @@ func TestEnvironmentVariablesWithEscaping(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeInterfaceMaps(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     map[string]interface{}
+		overlay  map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name:     "empty maps",
+			base:     map[string]interface{}{},
+			overlay:  map[string]interface{}{},
+			expected: map[string]interface{}{},
+		},
+		{
+			name: "overlay only (empty base)",
+			base: map[string]interface{}{},
+			overlay: map[string]interface{}{
+				"key": "value",
+			},
+			expected: map[string]interface{}{
+				"key": "value",
+			},
+		},
+		{
+			name: "base only (empty overlay)",
+			base: map[string]interface{}{
+				"key": "value",
+			},
+			overlay:  map[string]interface{}{},
+			expected: map[string]interface{}{"key": "value"},
+		},
+		{
+			name: "simple override",
+			base: map[string]interface{}{
+				"key": "base_value",
+			},
+			overlay: map[string]interface{}{
+				"key": "overlay_value",
+			},
+			expected: map[string]interface{}{
+				"key": "overlay_value",
+			},
+		},
+		{
+			name: "nested merge keeps base keys",
+			base: map[string]interface{}{
+				"api": map[string]interface{}{
+					"base_url": "https://api.example.com",
+					"timeout":  30,
+				},
+			},
+			overlay: map[string]interface{}{
+				"api": map[string]interface{}{
+					"timeout": 60,
+				},
+			},
+			expected: map[string]interface{}{
+				"api": map[string]interface{}{
+					"base_url": "https://api.example.com",
+					"timeout":  60,
+				},
+			},
+		},
+		{
+			name: "deeply nested merge",
+			base: map[string]interface{}{
+				"level1": map[string]interface{}{
+					"level2": map[string]interface{}{
+						"a": "value_a",
+						"b": "value_b",
+					},
+				},
+			},
+			overlay: map[string]interface{}{
+				"level1": map[string]interface{}{
+					"level2": map[string]interface{}{
+						"b": "new_value_b",
+						"c": "value_c",
+					},
+				},
+			},
+			expected: map[string]interface{}{
+				"level1": map[string]interface{}{
+					"level2": map[string]interface{}{
+						"a": "value_a",
+						"b": "new_value_b",
+						"c": "value_c",
+					},
+				},
+			},
+		},
+		{
+			name: "overlay scalar replaces map",
+			base: map[string]interface{}{
+				"key": map[string]interface{}{
+					"nested": "value",
+				},
+			},
+			overlay: map[string]interface{}{
+				"key": "scalar_value",
+			},
+			expected: map[string]interface{}{
+				"key": "scalar_value",
+			},
+		},
+		{
+			name: "overlay map replaces scalar",
+			base: map[string]interface{}{
+				"key": "scalar_value",
+			},
+			overlay: map[string]interface{}{
+				"key": map[string]interface{}{
+					"nested": "value",
+				},
+			},
+			expected: map[string]interface{}{
+				"key": map[string]interface{}{
+					"nested": "value",
+				},
+			},
+		},
+		{
+			name: "arrays replace (no merge)",
+			base: map[string]interface{}{
+				"items": []interface{}{"a", "b", "c"},
+			},
+			overlay: map[string]interface{}{
+				"items": []interface{}{"x", "y"},
+			},
+			expected: map[string]interface{}{
+				"items": []interface{}{"x", "y"},
+			},
+		},
+		{
+			name: "mixed scenario",
+			base: map[string]interface{}{
+				"simple":  "base_simple",
+				"only_in_base": "preserved",
+				"nested": map[string]interface{}{
+					"keep_this": "value",
+					"override":  "base_override",
+				},
+			},
+			overlay: map[string]interface{}{
+				"simple":       "overlay_simple",
+				"only_in_overlay": "added",
+				"nested": map[string]interface{}{
+					"override": "new_value",
+					"new_key":  "also_new",
+				},
+			},
+			expected: map[string]interface{}{
+				"simple":       "overlay_simple",
+				"only_in_base": "preserved",
+				"only_in_overlay": "added",
+				"nested": map[string]interface{}{
+					"keep_this": "value",
+					"override":  "new_value",
+					"new_key":   "also_new",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := MergeInterfaceMaps(tt.base, tt.overlay)
+
+			// Check result matches expected
+			if !mapsEqual(result, tt.expected) {
+				t.Errorf("MergeInterfaceMaps result mismatch:\nexpected: %v\ngot:      %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestMergeInterfaceMaps_NoMutation(t *testing.T) {
+	// Verify that the original maps are not mutated
+	base := map[string]interface{}{
+		"nested": map[string]interface{}{
+			"key": "original_value",
+		},
+	}
+	overlay := map[string]interface{}{
+		"nested": map[string]interface{}{
+			"key": "new_value",
+		},
+	}
+
+	// Store original values
+	originalBaseValue := base["nested"].(map[string]interface{})["key"]
+	originalOverlayValue := overlay["nested"].(map[string]interface{})["key"]
+
+	// Perform merge
+	result := MergeInterfaceMaps(base, overlay)
+
+	// Modify result
+	result["nested"].(map[string]interface{})["key"] = "modified"
+
+	// Check originals are unchanged
+	if base["nested"].(map[string]interface{})["key"] != originalBaseValue {
+		t.Errorf("Base map was mutated")
+	}
+	if overlay["nested"].(map[string]interface{})["key"] != originalOverlayValue {
+		t.Errorf("Overlay map was mutated")
+	}
+}
+
+// Helper function to compare maps for equality
+func mapsEqual(a, b map[string]interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, av := range a {
+		bv, ok := b[k]
+		if !ok {
+			return false
+		}
+		if !valuesEqual(av, bv) {
+			return false
+		}
+	}
+	return true
+}
+
+func valuesEqual(a, b interface{}) bool {
+	switch av := a.(type) {
+	case map[string]interface{}:
+		bv, ok := b.(map[string]interface{})
+		if !ok {
+			return false
+		}
+		return mapsEqual(av, bv)
+	case []interface{}:
+		bv, ok := b.([]interface{})
+		if !ok {
+			return false
+		}
+		if len(av) != len(bv) {
+			return false
+		}
+		for i := range av {
+			if !valuesEqual(av[i], bv[i]) {
+				return false
+			}
+		}
+		return true
+	default:
+		return a == b
+	}
+}

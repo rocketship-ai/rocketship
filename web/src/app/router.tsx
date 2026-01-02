@@ -176,6 +176,9 @@ const suiteActivityRoute = createRoute({
 const suiteDetailRoute = createRoute({
   getParentRoute: () => consoleLayoutRoute,
   path: '/suites/$suiteId',
+  validateSearch: (search: Record<string, unknown>): { env?: string } => ({
+    env: typeof search.env === 'string' ? search.env : undefined,
+  }),
   component: function SuiteDetailRoute() {
     const { suiteId } = suiteDetailRoute.useParams()
     const navigate = suiteDetailRoute.useNavigate()
@@ -276,39 +279,11 @@ const projectDetailRoute = createRoute({
   },
 })
 
-// Environments
+// Environments - uses global project filter from localStorage
 const environmentsRoute = createRoute({
   getParentRoute: () => consoleLayoutRoute,
   path: '/environments',
-  component: function EnvironmentsRoute() {
-    const navigate = environmentsRoute.useNavigate()
-    return (
-      <Environments
-        onNavigate={(page) => {
-          switch (page) {
-            case 'overview':
-              navigate({ to: '/overview' })
-              break
-            case 'test-health':
-              navigate({ to: '/test-health' })
-              break
-            case 'suite-activity':
-              navigate({ to: '/suite-activity' })
-              break
-            case 'projects':
-              navigate({ to: '/projects' })
-              break
-            case 'environments':
-              navigate({ to: '/environments' })
-              break
-            case 'profile':
-              navigate({ to: '/profile' })
-              break
-          }
-        }}
-      />
-    )
-  },
+  component: Environments,
 })
 
 // Profile Settings

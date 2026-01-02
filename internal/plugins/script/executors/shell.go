@@ -144,10 +144,12 @@ func (s *ShellExecutor) processVariables(script string, rtCtx *runtime.Context) 
 		runtime[k] = v
 	}
 
-	// Create template context with runtime variables
+	// Create template context with runtime variables and env secrets
 	// Environment variables ({{ .env.* }}) are handled by DSL template system
+	// with precedence: OS env > project environment secrets from DB
 	context := dsl.TemplateContext{
 		Runtime: runtime,
+		Env:     rtCtx.Env,
 	}
 
 	// Use centralized template processing for consistent variable handling

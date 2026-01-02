@@ -46,6 +46,8 @@ type RunStore interface {
 	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
 	UpdateSuiteLastRun(ctx context.Context, suiteID uuid.UUID, runID, status string, runAt time.Time) error
 	UpdateTestLastRun(ctx context.Context, testID uuid.UUID, runID, status string, runAt time.Time, durationMs int64) error
+	// Environment lookup for run execution
+	GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (persistence.ProjectEnvironment, error)
 }
 
 type RunInfo struct {
@@ -69,6 +71,8 @@ type RunInfo struct {
 	ProjectID uuid.UUID            // Resolved project ID (copied from record for convenience)
 	SuiteID   uuid.UUID            // Resolved suite ID
 	TestIDs   map[string]uuid.UUID // Test name (lowercase) -> discovered test ID
+	// Environment secrets from project environment (for template resolution)
+	EnvSecrets map[string]string
 }
 
 type LogLine struct {

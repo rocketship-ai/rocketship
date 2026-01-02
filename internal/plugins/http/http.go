@@ -37,16 +37,18 @@ type ActivityResponse struct {
 
 // replaceVariables replaces {{ variable }} patterns in the input string with values from the state
 // Now uses DSL template functions to properly handle escaped handlebars
-func replaceVariables(input string, state map[string]string) (string, error) {
+// env parameter provides environment secrets from project environment for {{ .env.* }} resolution
+func replaceVariables(input string, state map[string]string, env map[string]string) (string, error) {
 	// Convert state to interface{} map for DSL functions
 	runtime := make(map[string]interface{})
 	for k, v := range state {
 		runtime[k] = v
 	}
 
-	// Create template context with only runtime variables (config vars already processed by CLI)
+	// Create template context with runtime variables and env secrets
 	context := dsl.TemplateContext{
 		Runtime: runtime,
+		Env:     env,
 	}
 
 	// Use DSL template processing which handles escaped handlebars
@@ -143,6 +145,18 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	}
 	logger.Info(fmt.Sprintf("[DEBUG] Loaded state: %v", state))
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := p["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := p["env"].(map[string]string); ok {
+		env = envData
+	}
+
 	// Parse the plugin configuration
 	configData, ok := p["config"].(map[string]interface{})
 	if !ok {
@@ -163,7 +177,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	if !ok {
 		return nil, fmt.Errorf("url is required")
 	}
-	urlStr, err := replaceVariables(urlStr, state)
+	urlStr, err := replaceVariables(urlStr, state, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to replace variables in URL: %w", err)
 	}
@@ -178,7 +192,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 			switch val := v.(type) {
 			case string:
 				// Apply runtime variable replacement for string values
-				replaced, rerr := replaceVariables(val, state)
+				replaced, rerr := replaceVariables(val, state, env)
 				if rerr != nil {
 					return nil, fmt.Errorf("failed to replace variables in form field %s: %w", k, rerr)
 				}
@@ -188,7 +202,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 					str := fmt.Sprint(elem)
 					// Try replacement on strings only
 					if s, ok := elem.(string); ok {
-						if rep, rerr := replaceVariables(s, state); rerr == nil {
+						if rep, rerr := replaceVariables(s, state, env); rerr == nil {
 							str = rep
 						}
 					}
@@ -203,7 +217,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 		isForm = true
 	} else if bodyStr, ok := configData["body"].(string); ok && bodyStr != "" {
 		// Raw body path
-		bodyStr, err = replaceVariables(bodyStr, state)
+		bodyStr, err = replaceVariables(bodyStr, state, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to replace variables in body: %w", err)
 		}
@@ -225,7 +239,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	if headers, ok := configData["headers"].(map[string]interface{}); ok {
 		for key, value := range headers {
 			if strValue, ok := value.(string); ok {
-				strValue, err = replaceVariables(strValue, state)
+				strValue, err = replaceVariables(strValue, state, env)
 				if err != nil {
 					return nil, fmt.Errorf("failed to replace variables in header %s: %w", key, err)
 				}
@@ -266,7 +280,7 @@ func (hp *HTTPPlugin) Activity(ctx context.Context, p map[string]interface{}) (i
 	logger.Info("=== END HTTP REQUEST DEBUG ===")
 
 	var openapiValidator *openAPIValidator
-	if validator, err := newOpenAPIValidator(ctx, configData, suiteOpenAPI, state); err != nil {
+	if validator, err := newOpenAPIValidator(ctx, configData, suiteOpenAPI, state, env); err != nil {
 		return nil, err
 	} else {
 		openapiValidator = validator
@@ -515,6 +529,18 @@ func (hp *HTTPPlugin) processAssertionsWithResults(p map[string]interface{}, res
 		}
 	}
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := p["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := p["env"].(map[string]string); ok {
+		env = envData
+	}
+
 	var results []HTTPAssertionResult
 	var hasFailed bool
 	var failedMessages []string
@@ -547,7 +573,7 @@ func (hp *HTTPPlugin) processAssertionsWithResults(p map[string]interface{}, res
 		// Replace variables in expected value if it's a string
 		expected := assertionMap["expected"]
 		if expectedStr, ok := expected.(string); ok {
-			if replaced, err := replaceVariables(expectedStr, state); err == nil {
+			if replaced, err := replaceVariables(expectedStr, state, env); err == nil {
 				expected = replaced
 			}
 		}
@@ -604,7 +630,7 @@ func (hp *HTTPPlugin) processAssertionsWithResults(p map[string]interface{}, res
 				result.Message = "path is required for JSONPath assertion"
 			} else {
 				// Replace variables in path
-				if replaced, err := replaceVariables(path, state); err == nil {
+				if replaced, err := replaceVariables(path, state, env); err == nil {
 					path = replaced
 				}
 				result.Path = path

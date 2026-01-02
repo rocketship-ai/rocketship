@@ -15,6 +15,7 @@ func TestWorkflow(
 	runID string,
 	suiteOpenAPI *dsl.OpenAPISuiteConfig,
 	suiteGlobals map[string]string,
+	envSecrets map[string]string,
 ) (map[string]string, error) {
 	logger := workflow.GetLogger(ctx)
 
@@ -35,19 +36,19 @@ func TestWorkflow(
 
 	var primaryErr error
 
-	if err := runStepSequence(ctx, runID, test.Name, phaseInit, test.Init, state, runtimeVars, suiteOpenAPI, nil, true); err != nil {
+	if err := runStepSequence(ctx, runID, test.Name, phaseInit, test.Init, state, runtimeVars, suiteOpenAPI, nil, true, envSecrets); err != nil {
 		primaryErr = err
 	}
 
 	if primaryErr == nil {
-		if err := runStepSequence(ctx, runID, test.Name, phaseMain, test.Steps, state, runtimeVars, suiteOpenAPI, nil, true); err != nil {
+		if err := runStepSequence(ctx, runID, test.Name, phaseMain, test.Steps, state, runtimeVars, suiteOpenAPI, nil, true, envSecrets); err != nil {
 			primaryErr = err
 		}
 	}
 
 	testFailed := primaryErr != nil
 
-	if err := runCleanupSequences(ctx, baseAO, runID, test.Name, test.Cleanup, state, runtimeVars, suiteOpenAPI, testFailed); err != nil {
+	if err := runCleanupSequences(ctx, baseAO, runID, test.Name, test.Cleanup, state, runtimeVars, suiteOpenAPI, testFailed, envSecrets); err != nil {
 		logger.Warn("Cleanup sequence reported errors", "error", err)
 	}
 
@@ -66,6 +67,7 @@ type SuiteCleanupParams struct {
 	SuiteOpenAPI   *dsl.OpenAPISuiteConfig `json:"suite_openapi"`
 	SuiteGlobals   map[string]string       `json:"suite_globals"`
 	TreatAsFailure bool                    `json:"treat_as_failure"`
+	EnvSecrets     map[string]string       `json:"env_secrets"`
 }
 
 func SuiteCleanupWorkflow(ctx workflow.Context, params SuiteCleanupParams) error {
@@ -93,7 +95,7 @@ func SuiteCleanupWorkflow(ctx workflow.Context, params SuiteCleanupParams) error
 		testName = "suite-cleanup"
 	}
 
-	if err := runCleanupSequences(ctx, baseAO, params.RunID, testName, params.Cleanup, state, runtimeVars, params.SuiteOpenAPI, params.TreatAsFailure); err != nil {
+	if err := runCleanupSequences(ctx, baseAO, params.RunID, testName, params.Cleanup, state, runtimeVars, params.SuiteOpenAPI, params.TreatAsFailure, params.EnvSecrets); err != nil {
 		logger.Warn("Suite cleanup encountered errors", "error", err)
 	}
 

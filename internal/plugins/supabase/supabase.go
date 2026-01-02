@@ -55,67 +55,79 @@ func (sp *SupabasePlugin) Activity(ctx context.Context, p map[string]interface{}
 		}
 	}
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := p["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := p["env"].(map[string]string); ok {
+		env = envData
+	}
+
 	config := &SupabaseConfig{}
 	if err := parseConfig(configData, config); err != nil {
 		return nil, fmt.Errorf("failed to parse Supabase config: %w", err)
 	}
 
 	// Process runtime variables in string fields
-	config.URL = replaceVariables(config.URL, state)
-	config.Key = replaceVariables(config.Key, state)
+	config.URL = replaceVariables(config.URL, state, env)
+	config.Key = replaceVariables(config.Key, state, env)
 	if config.Table != "" {
-		config.Table = replaceVariables(config.Table, state)
+		config.Table = replaceVariables(config.Table, state, env)
 	}
 
 	// Process runtime variables in RPC parameters
 	if config.RPC != nil && config.RPC.Params != nil {
-		config.RPC.Params = processVariablesInMap(config.RPC.Params, state)
+		config.RPC.Params = processVariablesInMap(config.RPC.Params, state, env)
 	}
 
 	// Process runtime variables in other operation types
 	if config.Insert != nil {
 		if config.Insert.Data != nil {
 			if dataMap, ok := config.Insert.Data.(map[string]interface{}); ok {
-				config.Insert.Data = processVariablesInMap(dataMap, state)
+				config.Insert.Data = processVariablesInMap(dataMap, state, env)
 			}
 		}
 	}
 
 	if config.Update != nil {
 		if config.Update.Data != nil {
-			config.Update.Data = processVariablesInMap(config.Update.Data, state)
+			config.Update.Data = processVariablesInMap(config.Update.Data, state, env)
 		}
-		config.Update.Filters = processFilters(config.Update.Filters, state)
+		config.Update.Filters = processFilters(config.Update.Filters, state, env)
 	}
 
 	if config.Select != nil {
-		config.Select.Filters = processFilters(config.Select.Filters, state)
+		config.Select.Filters = processFilters(config.Select.Filters, state, env)
 	}
 
 	if config.Delete != nil {
-		config.Delete.Filters = processFilters(config.Delete.Filters, state)
+		config.Delete.Filters = processFilters(config.Delete.Filters, state, env)
 	}
 
 	// Process runtime variables in Auth config
 	if config.Auth != nil {
-		config.Auth.Email = replaceVariables(config.Auth.Email, state)
-		config.Auth.Password = replaceVariables(config.Auth.Password, state)
-		config.Auth.UserID = replaceVariables(config.Auth.UserID, state)
+		config.Auth.Email = replaceVariables(config.Auth.Email, state, env)
+		config.Auth.Password = replaceVariables(config.Auth.Password, state, env)
+		config.Auth.UserID = replaceVariables(config.Auth.UserID, state, env)
 		if config.Auth.UserMetadata != nil {
-			config.Auth.UserMetadata = processVariablesInMap(config.Auth.UserMetadata, state)
+			config.Auth.UserMetadata = processVariablesInMap(config.Auth.UserMetadata, state, env)
 		}
 		if config.Auth.AppMetadata != nil {
-			config.Auth.AppMetadata = processVariablesInMap(config.Auth.AppMetadata, state)
+			config.Auth.AppMetadata = processVariablesInMap(config.Auth.AppMetadata, state, env)
 		}
 	}
 
 	// Process runtime variables in Storage config
 	if config.Storage != nil {
-		config.Storage.Bucket = replaceVariables(config.Storage.Bucket, state)
-		config.Storage.Path = replaceVariables(config.Storage.Path, state)
-		config.Storage.FileContent = replaceVariables(config.Storage.FileContent, state)
-		config.Storage.ContentType = replaceVariables(config.Storage.ContentType, state)
-		config.Storage.CacheControl = replaceVariables(config.Storage.CacheControl, state)
+		config.Storage.Bucket = replaceVariables(config.Storage.Bucket, state, env)
+		config.Storage.Path = replaceVariables(config.Storage.Path, state, env)
+		config.Storage.FileContent = replaceVariables(config.Storage.FileContent, state, env)
+		config.Storage.ContentType = replaceVariables(config.Storage.ContentType, state, env)
+		config.Storage.CacheControl = replaceVariables(config.Storage.CacheControl, state, env)
 	}
 
 	// Log parsed config for debugging

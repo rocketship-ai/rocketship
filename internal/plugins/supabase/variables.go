@@ -5,18 +5,21 @@ import (
 )
 
 // replaceVariables replaces {{variable}} placeholders with values from state using DSL template system
-func replaceVariables(input string, state map[string]string) string {
+// env parameter provides environment secrets from project environment for {{ .env.* }} resolution
+func replaceVariables(input string, state map[string]string, env map[string]string) string {
 	// Convert state to interface{} map for DSL compatibility
 	runtime := make(map[string]interface{})
 	for k, v := range state {
 		runtime[k] = v
 	}
 
-	// Create template context with runtime variables
+	// Create template context with runtime variables and env secrets
 	// Config variables ({{ .vars.* }}) are processed earlier by CLI
 	// Environment variables ({{ .env.* }}) are handled by DSL template system
+	// with precedence: OS env > env secrets from DB
 	context := dsl.TemplateContext{
 		Runtime: runtime,
+		Env:     env,
 	}
 
 	// Use centralized template processing for consistent variable handling
@@ -32,16 +35,18 @@ func replaceVariables(input string, state map[string]string) string {
 }
 
 // processVariablesInMap recursively processes variables in a map structure using DSL template system
-func processVariablesInMap(data map[string]interface{}, state map[string]string) map[string]interface{} {
+// env parameter provides environment secrets from project environment for {{ .env.* }} resolution
+func processVariablesInMap(data map[string]interface{}, state map[string]string, env map[string]string) map[string]interface{} {
 	// Convert state to interface{} map for DSL compatibility
 	runtime := make(map[string]interface{})
 	for k, v := range state {
 		runtime[k] = v
 	}
 
-	// Create template context with runtime variables
+	// Create template context with runtime variables and env secrets
 	context := dsl.TemplateContext{
 		Runtime: runtime,
+		Env:     env,
 	}
 
 	// Use DSL recursive processing which handles all data types consistently
@@ -89,7 +94,8 @@ func processRuntimeVariablesRecursive(data interface{}, context dsl.TemplateCont
 }
 
 // processFilters processes variables in filter configurations using DSL template system
-func processFilters(filters []FilterConfig, state map[string]string) []FilterConfig {
+// env parameter provides environment secrets from project environment for {{ .env.* }} resolution
+func processFilters(filters []FilterConfig, state map[string]string, env map[string]string) []FilterConfig {
 	if filters == nil {
 		return nil
 	}
@@ -100,15 +106,16 @@ func processFilters(filters []FilterConfig, state map[string]string) []FilterCon
 		runtime[k] = v
 	}
 
-	// Create template context with runtime variables
+	// Create template context with runtime variables and env secrets
 	context := dsl.TemplateContext{
 		Runtime: runtime,
+		Env:     env,
 	}
 
 	result := make([]FilterConfig, len(filters))
 	for i, filter := range filters {
 		result[i] = FilterConfig{
-			Column:   replaceVariables(filter.Column, state),
+			Column:   replaceVariables(filter.Column, state, env),
 			Operator: filter.Operator,
 			Value:    processRuntimeVariablesRecursive(filter.Value, context),
 		}

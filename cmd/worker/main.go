@@ -56,6 +56,7 @@ func main() {
 	w.RegisterWorkflow(interpreter.SuiteCleanupWorkflow)
 	w.RegisterActivity(interpreter.LogForwarderActivity)
 	w.RegisterActivity(interpreter.StepReporterActivity)
+	w.RegisterActivity(interpreter.TemplateResolverActivity)
 
 	plugins.RegisterAllWithTemporal(w)
 

@@ -193,3 +193,10 @@ func (s *memoryRunStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persist
 	// No-op for memory store
 	return []persistence.RunStep{}, nil
 }
+
+// Environment lookup methods - no-op for memory store (no project environments in local mode)
+
+func (s *memoryRunStore) GetEnvironmentBySlug(_ context.Context, _ uuid.UUID, _ string) (persistence.ProjectEnvironment, error) {
+	// No-op for memory store - no project environments
+	return persistence.ProjectEnvironment{}, sql.ErrNoRows
+}

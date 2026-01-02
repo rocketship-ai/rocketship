@@ -139,6 +139,7 @@ func runStepSequence(
 	suiteOpenAPI *dsl.OpenAPISuiteConfig,
 	opts *executionOptions,
 	stopOnError bool,
+	envSecrets map[string]string,
 ) error {
 	if len(steps) == 0 {
 		return nil
@@ -146,7 +147,7 @@ func runStepSequence(
 
 	var firstErr error
 	for idx, step := range steps {
-		if err := executeStep(ctx, runID, testName, phase, idx, step, state, vars, suiteOpenAPI, opts); err != nil {
+		if err := executeStep(ctx, runID, testName, phase, idx, step, state, vars, suiteOpenAPI, opts, envSecrets); err != nil {
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -170,6 +171,7 @@ func executeStep(
 	vars map[string]interface{},
 	suiteOpenAPI *dsl.OpenAPISuiteConfig,
 	opts *executionOptions,
+	envSecrets map[string]string,
 ) error {
 	logger := workflow.GetLogger(ctx)
 
@@ -195,10 +197,11 @@ func executeStep(
 
 	var err error
 	var activityResp interface{}
-	if step.Plugin == "delay" {
-		err = handleDelayStep(ctx, step, testName, runID)
+	if resp, handled, stepErr := executeWorkflowBuiltinStep(ctx, step, testName, runID, state, envSecrets); handled {
+		activityResp = resp
+		err = stepErr
 	} else {
-		activityResp, err = executePluginWithResponse(ctx, step, state, vars, runID, testName, suiteOpenAPI, opts)
+		activityResp, err = executePluginWithResponse(ctx, step, state, vars, runID, testName, suiteOpenAPI, opts, envSecrets)
 	}
 
 	// Capture end time and compute duration
@@ -271,6 +274,7 @@ func runCleanupSequences(
 	vars map[string]interface{},
 	suiteOpenAPI *dsl.OpenAPISuiteConfig,
 	testFailed bool,
+	envSecrets map[string]string,
 ) error {
 	if cleanup == nil {
 		return nil
@@ -290,7 +294,7 @@ func runCleanupSequences(
 	var firstErr error
 
 	if testFailed && len(cleanup.OnFailure) > 0 {
-		if err := runStepSequence(disconnected, runID, testName, phaseCleanupFailure, cleanup.OnFailure, state, vars, suiteOpenAPI, opts, false); err != nil {
+		if err := runStepSequence(disconnected, runID, testName, phaseCleanupFailure, cleanup.OnFailure, state, vars, suiteOpenAPI, opts, false, envSecrets); err != nil {
 			logger.Warn("Cleanup on_failure sequence encountered errors", "error", err)
 			if firstErr == nil {
 				firstErr = err
@@ -299,7 +303,7 @@ func runCleanupSequences(
 	}
 
 	if len(cleanup.Always) > 0 {
-		if err := runStepSequence(disconnected, runID, testName, phaseCleanupAlways, cleanup.Always, state, vars, suiteOpenAPI, opts, false); err != nil {
+		if err := runStepSequence(disconnected, runID, testName, phaseCleanupAlways, cleanup.Always, state, vars, suiteOpenAPI, opts, false, envSecrets); err != nil {
 			logger.Warn("Cleanup always sequence encountered errors", "error", err)
 			if firstErr == nil {
 				firstErr = err
@@ -310,26 +314,56 @@ func runCleanupSequences(
 	return firstErr
 }
 
-func handleDelayStep(ctx workflow.Context, step dsl.Step, testName, runID string) error {
+func handleDelayStep(ctx workflow.Context, step dsl.Step, testName, runID string, state map[string]string, envSecrets map[string]string) error {
 	// Extract duration directly from step config
 	durationStr, ok := step.Config["duration"].(string)
 	if !ok {
 		return fmt.Errorf("step %q: duration is required and must be a string", step.Name)
 	}
 
-	duration, err := time.ParseDuration(durationStr)
+	resolvedDurationStr := durationStr
+	if strings.Contains(durationStr, "{{") {
+		ao := workflow.ActivityOptions{
+			StartToCloseTimeout: 10 * time.Second,
+			RetryPolicy: &temporal.RetryPolicy{
+				MaximumAttempts: 1,
+			},
+		}
+		actCtx := workflow.WithActivityOptions(ctx, ao)
+
+		runtime := state
+		if runtime == nil {
+			runtime = map[string]string{}
+		}
+		env := envSecrets
+		if env == nil {
+			env = map[string]string{}
+		}
+
+		var resolved string
+		if err := workflow.ExecuteActivity(actCtx, TemplateResolverActivity, TemplateResolveInput{
+			Template: durationStr,
+			Runtime:  runtime,
+			Env:      env,
+		}).Get(actCtx, &resolved); err != nil {
+			return fmt.Errorf("step %q: failed to resolve duration template: %w", step.Name, err)
+		}
+		resolvedDurationStr = resolved
+	}
+
+	duration, err := time.ParseDuration(resolvedDurationStr)
 	if err != nil {
 		return fmt.Errorf("step %q: invalid duration format: %w", step.Name, err)
 	}
 
 	// Send delay start log
-	sendStepLog(ctx, runID, testName, step.Name, fmt.Sprintf("Delaying for %s", durationStr), "n/a", false)
+	sendStepLog(ctx, runID, testName, step.Name, fmt.Sprintf("Delaying for %s", resolvedDurationStr), "n/a", false)
 
 	return workflow.Sleep(ctx, duration)
 }
 
 // executePluginWithResponse executes any registered plugin and returns the response
-func executePluginWithResponse(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string, suiteOpenAPI *dsl.OpenAPISuiteConfig, opts *executionOptions) (interface{}, error) {
+func executePluginWithResponse(ctx workflow.Context, step dsl.Step, state map[string]string, vars map[string]interface{}, runID, testName string, suiteOpenAPI *dsl.OpenAPISuiteConfig, opts *executionOptions, envSecrets map[string]string) (interface{}, error) {
 	logger := workflow.GetLogger(ctx)
 
 	// Check if plugin is registered
@@ -363,6 +397,10 @@ func executePluginWithResponse(ctx workflow.Context, step dsl.Step, state map[st
 	// Pass vars for script plugin usage (other plugins ignore them since CLI processes config vars)
 	if vars != nil {
 		pluginParams["vars"] = vars
+	}
+	// Pass env secrets for {{ .env.* }} template resolution in plugins
+	if envSecrets != nil {
+		pluginParams["env"] = envSecrets
 	}
 
 	if step.Plugin == "http" && suiteOpenAPI != nil {

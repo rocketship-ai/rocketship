@@ -15,6 +15,7 @@ type ActivityRequest struct {
 	Config map[string]interface{} `json:"config"`
 	State  map[string]string      `json:"state"`
 	Vars   map[string]interface{} `json:"vars"`
+	Env    map[string]string      `json:"env"` // Environment secrets from project environment
 }
 
 // ActivityResponse represents the output from the script activity

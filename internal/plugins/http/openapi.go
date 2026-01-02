@@ -88,8 +88,8 @@ func cacheKeyForOpenAPI(location, version string) string {
 	return fmt.Sprintf("%s::%s", location, version)
 }
 
-func newOpenAPIValidator(ctx context.Context, configData map[string]interface{}, suiteData interface{}, state map[string]string) (*openAPIValidator, error) {
-	cfg, err := parseOpenAPIValidationConfig(configData, suiteData, state)
+func newOpenAPIValidator(ctx context.Context, configData map[string]interface{}, suiteData interface{}, state map[string]string, env map[string]string) (*openAPIValidator, error) {
+	cfg, err := parseOpenAPIValidationConfig(configData, suiteData, state, env)
 	if err != nil || cfg == nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func newOpenAPIValidator(ctx context.Context, configData map[string]interface{},
 	return &openAPIValidator{config: cfg, entry: entry}, nil
 }
 
-func parseOpenAPIValidationConfig(configData map[string]interface{}, suiteData interface{}, state map[string]string) (*openAPIValidationConfig, error) {
+func parseOpenAPIValidationConfig(configData map[string]interface{}, suiteData interface{}, state map[string]string, env map[string]string) (*openAPIValidationConfig, error) {
 	var (
 		suiteMap map[string]interface{}
 		ok       bool
@@ -143,7 +143,7 @@ func parseOpenAPIValidationConfig(configData map[string]interface{}, suiteData i
 			if spec == "" {
 				return nil, fmt.Errorf("openapi.spec must be a non-empty string")
 			}
-			processed, err := replaceVariables(spec, state)
+			processed, err := replaceVariables(spec, state, env)
 			if err != nil {
 				return nil, fmt.Errorf("failed to process openapi.spec template: %w", err)
 			}
@@ -190,7 +190,7 @@ func parseOpenAPIValidationConfig(configData map[string]interface{}, suiteData i
 			if spec == "" {
 				return nil, fmt.Errorf("openapi.spec override must be a non-empty string")
 			}
-			processed, err := replaceVariables(spec, state)
+			processed, err := replaceVariables(spec, state, env)
 			if err != nil {
 				return nil, fmt.Errorf("failed to process openapi.spec template: %w", err)
 			}

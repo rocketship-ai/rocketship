@@ -446,8 +446,24 @@ func (f *fakeStore) CreateEnvironment(_ context.Context, env persistence.Project
 	return env, nil
 }
 
+func (f *fakeStore) GetEnvironment(_ context.Context, _, _ uuid.UUID) (persistence.ProjectEnvironment, error) {
+	return persistence.ProjectEnvironment{}, sql.ErrNoRows
+}
+
+func (f *fakeStore) GetEnvironmentBySlug(_ context.Context, _ uuid.UUID, _ string) (persistence.ProjectEnvironment, error) {
+	return persistence.ProjectEnvironment{}, sql.ErrNoRows
+}
+
 func (f *fakeStore) ListEnvironments(_ context.Context, _ uuid.UUID) ([]persistence.ProjectEnvironment, error) {
 	return nil, nil
+}
+
+func (f *fakeStore) UpdateEnvironment(_ context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error) {
+	return env, nil
+}
+
+func (f *fakeStore) DeleteEnvironment(_ context.Context, _, _ uuid.UUID) error {
+	return nil
 }
 
 // Suite methods
@@ -647,7 +663,7 @@ func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.U
 	return []uuid.UUID{}, nil
 }
 
-func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int) ([]persistence.SuiteRunRow, error) {
+func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int, _ uuid.NullUUID) ([]persistence.SuiteRunRow, error) {
 	return []persistence.SuiteRunRow{}, nil
 }
 

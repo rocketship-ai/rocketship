@@ -87,8 +87,21 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 		state["run"] = runData
 	}
 
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	env := make(map[string]string)
+	if envData, ok := params["env"].(map[string]interface{}); ok {
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				env[k] = strVal
+			}
+		}
+	} else if envData, ok := params["env"].(map[string]string); ok {
+		env = envData
+	}
+
 	templateContext := dsl.TemplateContext{
 		Runtime: state,
+		Env:     env,
 	}
 
 	role, err := getRole(configData)
@@ -147,7 +160,7 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 			result["saved"] = saved
 		}
 
-		if err := processAssertions(params, result, state); err != nil {
+		if err := processAssertions(params, result, state, env); err != nil {
 			return nil, err
 		}
 	}

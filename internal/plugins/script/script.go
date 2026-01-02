@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/rocketship-ai/rocketship/internal/dsl"
 	"github.com/rocketship-ai/rocketship/internal/plugins"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/executors"
 	"github.com/rocketship-ai/rocketship/internal/plugins/script/runtime"
@@ -45,6 +47,28 @@ func (p *ScriptPlugin) Activity(ctx context.Context, params map[string]interface
 		return nil, fmt.Errorf("failed to get script content: %w", err)
 	}
 
+	// Ensure config variables in script content are resolved (esp. for file-based scripts).
+	if strings.Contains(script, ".vars.") {
+		processed, err := dsl.ProcessConfigVariablesOnly(script, req.Vars)
+		if err != nil {
+			return nil, fmt.Errorf("script config variable processing failed: %w", err)
+		}
+		script = processed
+	}
+
+	// Process runtime ({{ key }}) + env ({{ .env.KEY }}) templates in script content.
+	runtimeVars := make(map[string]interface{}, len(req.State))
+	for key, value := range req.State {
+		runtimeVars[key] = value
+	}
+	script, err = dsl.ProcessTemplate(script, dsl.TemplateContext{
+		Runtime: runtimeVars,
+		Env:     req.Env,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("script template processing failed: %w", err)
+	}
+
 	// Create executor for the specified language
 	executor, err := executors.NewExecutor(config.Language)
 	if err != nil {
@@ -57,7 +81,7 @@ func (p *ScriptPlugin) Activity(ctx context.Context, params map[string]interface
 	}
 
 	// Create runtime context
-	rtCtx := runtime.NewContext(req.State, req.Vars)
+	rtCtx := runtime.NewContext(req.State, req.Vars, req.Env)
 
 	// Set up timeout if specified
 	execCtx := ctx
@@ -117,6 +141,20 @@ func (p *ScriptPlugin) parseRequest(params map[string]interface{}) (ActivityRequ
 		req.Vars = vars
 	} else {
 		req.Vars = make(map[string]interface{})
+	}
+
+	// Extract env secrets from params (for {{ .env.* }} template resolution)
+	if envData, ok := params["env"].(map[string]interface{}); ok {
+		req.Env = make(map[string]string)
+		for k, v := range envData {
+			if strVal, ok := v.(string); ok {
+				req.Env[k] = strVal
+			}
+		}
+	} else if envData, ok := params["env"].(map[string]string); ok {
+		req.Env = envData
+	} else {
+		req.Env = make(map[string]string)
 	}
 
 	return req, nil

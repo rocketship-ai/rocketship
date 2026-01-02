@@ -5,6 +5,50 @@ import (
 	"testing"
 )
 
+func TestApplyVariableReplacementToAssertions(t *testing.T) {
+	t.Setenv("USER", "runner")
+
+	assertions := []interface{}{
+		map[string]interface{}{
+			"type":     "column_value",
+			"expected": "System User: {{ .env.USER }}",
+		},
+		map[string]interface{}{
+			"type":     "column_value",
+			"expected": "Config: {{ .vars.service }}",
+		},
+		map[string]interface{}{
+			"type":     "column_value",
+			"expected": "Escaped literal: {{ placeholder }}",
+		},
+	}
+
+	state := map[string]interface{}{}
+	env := map[string]string{}
+	vars := map[string]interface{}{
+		"service": "sql",
+	}
+
+	if err := applyVariableReplacementToAssertions(assertions, state, env, vars); err != nil {
+		t.Fatalf("applyVariableReplacementToAssertions() error = %v", err)
+	}
+
+	got0 := assertions[0].(map[string]interface{})["expected"].(string)
+	if got0 != "System User: runner" {
+		t.Fatalf("expected env substitution, got %q", got0)
+	}
+
+	got1 := assertions[1].(map[string]interface{})["expected"].(string)
+	if got1 != "Config: sql" {
+		t.Fatalf("expected vars substitution, got %q", got1)
+	}
+
+	got2 := assertions[2].(map[string]interface{})["expected"].(string)
+	if got2 != "Escaped literal: {{ placeholder }}" {
+		t.Fatalf("expected literal handlebars to remain unchanged, got %q", got2)
+	}
+}
+
 func TestParseSQLFile(t *testing.T) {
 	tests := []struct {
 		name     string

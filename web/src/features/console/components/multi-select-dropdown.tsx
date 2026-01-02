@@ -9,6 +9,12 @@ interface MultiSelectDropdownProps {
   isOpen: boolean;
   onToggle: () => void;
   renderIcon?: (item: string) => React.ReactNode;
+  /** When true, only allows single selection and closes dropdown on select */
+  singleSelect?: boolean;
+  /** Placeholder text when nothing is selected (for singleSelect mode) */
+  placeholder?: string;
+  /** Show "All X" option even in singleSelect mode. Defaults to true for multi-select, false for single-select */
+  showAllOption?: boolean;
 }
 
 export function MultiSelectDropdown({
@@ -19,14 +25,25 @@ export function MultiSelectDropdown({
   isOpen,
   onToggle,
   renderIcon,
+  singleSelect = false,
+  placeholder,
+  showAllOption,
 }: MultiSelectDropdownProps) {
+  // Default showAllOption: true for multi-select, false for single-select (unless explicitly set)
+  const shouldShowAllOption = showAllOption !== undefined ? showAllOption : !singleSelect;
   const [searchQuery, setSearchQuery] = useState('');
 
   const toggleItem = (item: string) => {
-    const newSelection = selectedItems.includes(item)
-      ? selectedItems.filter((i) => i !== item)
-      : [...selectedItems, item];
-    onSelectionChange(newSelection);
+    if (singleSelect) {
+      // In single-select mode, replace selection and close dropdown
+      onSelectionChange([item]);
+      onToggle(); // Close dropdown
+    } else {
+      const newSelection = selectedItems.includes(item)
+        ? selectedItems.filter((i) => i !== item)
+        : [...selectedItems, item];
+      onSelectionChange(newSelection);
+    }
   };
 
   const clearAll = () => {
@@ -39,7 +56,7 @@ export function MultiSelectDropdown({
 
   const buttonLabel =
     selectedItems.length === 0
-      ? `All ${label}`
+      ? (singleSelect ? (placeholder || `Select ${label.toLowerCase()}...`) : `All ${label}`)
       : selectedItems.length === 1
       ? selectedItems[0]
       : `${selectedItems.length} ${label.toLowerCase()}`;
@@ -83,17 +100,25 @@ export function MultiSelectDropdown({
               </div>
             </div>
 
-            {/* "All" option */}
-            <label className="flex items-center gap-2 px-3 py-2 hover:bg-[#fafafa] cursor-pointer border-b border-[#e5e5e5]">
-              <input
-                type="checkbox"
-                checked={selectedItems.length === 0}
-                onChange={clearAll}
-                className="rounded border-[#e5e5e5] accent-black"
-                style={{ colorScheme: 'light' }}
-              />
-              <span className="text-sm">All {label}</span>
-            </label>
+            {/* "All" option - show when showAllOption is true */}
+            {shouldShowAllOption && (
+              <label className="flex items-center gap-2 px-3 py-2 hover:bg-[#fafafa] cursor-pointer border-b border-[#e5e5e5]">
+                <input
+                  type={singleSelect ? 'radio' : 'checkbox'}
+                  name={singleSelect ? `${label}-select` : undefined}
+                  checked={selectedItems.length === 0}
+                  onChange={() => {
+                    clearAll();
+                    if (singleSelect) {
+                      onToggle(); // Close dropdown when selecting "All" in single-select mode
+                    }
+                  }}
+                  className="rounded border-[#e5e5e5] accent-black"
+                  style={{ colorScheme: 'light' }}
+                />
+                <span className="text-sm">All {label}</span>
+              </label>
+            )}
 
             {/* Individual items */}
             <div className="max-h-64 overflow-y-scroll [scrollbar-width:thin] [scrollbar-color:#d4d4d4_white]">
@@ -103,7 +128,8 @@ export function MultiSelectDropdown({
                   className="flex items-center gap-2 px-3 py-2 hover:bg-[#fafafa] cursor-pointer"
                 >
                   <input
-                    type="checkbox"
+                    type={singleSelect ? 'radio' : 'checkbox'}
+                    name={singleSelect ? `${label}-select` : undefined}
                     checked={selectedItems.includes(item)}
                     onChange={() => toggleItem(item)}
                     className="rounded border-[#e5e5e5] accent-black"

@@ -41,6 +41,9 @@ cli-introspection.json
 # rocketship-internal code
 charts/rocketship-internal/
 
+# Plans
+plansv2/
+
 #symlinks
 rocketship-internal
 chickenfarm
