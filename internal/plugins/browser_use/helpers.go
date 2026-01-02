@@ -129,7 +129,7 @@ func processSaves(params map[string]interface{}, result map[string]interface{}, 
 	return nil
 }
 
-func processAssertions(params map[string]interface{}, result map[string]interface{}, state map[string]interface{}) error {
+func processAssertions(params map[string]interface{}, result map[string]interface{}, state map[string]interface{}, envSecrets map[string]string) error {
 	assertions, ok := params["assertions"].([]interface{})
 	if !ok {
 		return nil
@@ -190,7 +190,7 @@ func processAssertions(params map[string]interface{}, result map[string]interfac
 			if expectedRaw, ok := assertion["expected"]; ok {
 				expected := expectedRaw
 				if expectedStr, ok := expectedRaw.(string); ok {
-					rendered, err := dsl.ProcessTemplate(expectedStr, dsl.TemplateContext{Runtime: state})
+					rendered, err := dsl.ProcessTemplate(expectedStr, dsl.TemplateContext{Runtime: state, Env: envSecrets})
 					if err != nil {
 						return fmt.Errorf("failed to process expected template: %w", err)
 					}

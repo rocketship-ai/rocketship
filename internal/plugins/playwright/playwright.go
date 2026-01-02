@@ -160,7 +160,7 @@ func (p *Plugin) Activity(ctx context.Context, params map[string]interface{}) (i
 			result["saved"] = saved
 		}
 
-		if err := processAssertions(params, result, state); err != nil {
+		if err := processAssertions(params, result, state, env); err != nil {
 			return nil, err
 		}
 	}
