@@ -600,10 +600,10 @@ func NewRunCmd() *cobra.Command {
 				}
 				// Auto-set source and trigger if not explicitly provided
 				if source == "" {
-					source = "ci-branch"
+					source = "github-actions"
 				}
 				if trigger == "" {
-					trigger = "webhook"
+					trigger = "ci"
 				}
 				// Get commit message from git if we have a commit SHA
 				if commit != "" {
@@ -845,10 +845,10 @@ func NewRunCmd() *cobra.Command {
 
 	// Context flags for enhanced metadata tracking
 	cmd.Flags().String("project-id", "", "Project identifier for test run tracking")
-	cmd.Flags().String("source", "", "Run source: cli-local, ci-branch, ci-main, scheduled")
+	cmd.Flags().String("source", "", "Run source: cli-local, github-actions, ci-token, scheduler")
 	cmd.Flags().String("branch", "", "Git branch name (auto-detected if not specified)")
 	cmd.Flags().String("commit", "", "Git commit SHA (auto-detected if not specified)")
-	cmd.Flags().String("trigger", "", "Trigger type: manual, webhook, schedule")
+	cmd.Flags().String("trigger", "", "Trigger type: manual, ci, schedule")
 	cmd.Flags().String("schedule-name", "", "Schedule name for scheduled runs")
 	cmd.Flags().StringToString("metadata", nil, "Additional metadata key=value pairs")
 	cmd.Flags().String("environment", "", "Project environment slug for secrets and config vars")

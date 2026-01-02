@@ -67,8 +67,8 @@ func detectSource() string {
 		cmd := exec.Command("sh", "-c", fmt.Sprintf("echo $%s", envVar))
 		output, err := cmd.Output()
 		if err == nil && strings.TrimSpace(string(output)) != "" {
-			slog.Debug("Detected CI environment", "source", "ci-branch")
-			return "ci-branch"
+			slog.Debug("Detected CI environment", "source", "github-actions")
+			return "github-actions"
 		}
 	}
 
@@ -107,8 +107,8 @@ func detectCommitSHA() string {
 }
 
 func detectTrigger() string {
-	if detectSource() == "ci-branch" {
-		return "webhook"
+	if detectSource() == "github-actions" {
+		return "ci"
 	}
 	return "manual"
 }
@@ -117,15 +117,22 @@ func determineInitiator(principal *Principal) string {
 	if principal == nil {
 		return "unknown"
 	}
-	// Prefer GitHub username (for manual runs) over email
+
+	// CI token principals: ci_token:<uuid>
+	if principal.IsCIToken {
+		return "ci_token:" + principal.CITokenID.String()
+	}
+
+	// User principals: user:<github_username>
+	// Prefer GitHub username over email for consistency
 	if username := strings.TrimSpace(principal.Username); username != "" {
-		return username
+		return "user:" + username
 	}
 	if email := strings.TrimSpace(principal.Email); email != "" {
-		return email
+		return "user:" + email
 	}
 	if subject := strings.TrimSpace(principal.Subject); subject != "" {
-		return subject
+		return "user:" + subject
 	}
 	return "unknown"
 }

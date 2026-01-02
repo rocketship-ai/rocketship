@@ -43,7 +43,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   const [activeTab, setActiveTab] = useState<'activity' | 'tests' | 'schedules' | 'variables' | 'lifecycle-hooks' | 'retry-policy' | 'alerts'>('activity');
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedInitiators, setSelectedInitiators] = useState<string[]>([]);
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<string | null>(null);
   const [newScheduleEnv, setNewScheduleEnv] = useState('staging');
@@ -321,16 +321,16 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                       />
                     </div>
 
-                    {/* Initiator filter */}
+                    {/* Trigger filter */}
                     <div>
-                      <label className="text-xs text-[#999999] mb-1 block">Initiator</label>
+                      <label className="text-xs text-[#999999] mb-1 block">Trigger</label>
                       <MultiSelectDropdown
-                        label="Initiators"
+                        label="Triggers"
                         items={['ci', 'manual', 'schedule']}
-                        selectedItems={selectedInitiators}
-                        onSelectionChange={setSelectedInitiators}
-                        isOpen={openDropdown === 'initiators'}
-                        onToggle={() => setOpenDropdown(openDropdown === 'initiators' ? null : 'initiators')}
+                        selectedItems={selectedTriggers}
+                        onSelectionChange={setSelectedTriggers}
+                        isOpen={openDropdown === 'triggers'}
+                        onToggle={() => setOpenDropdown(openDropdown === 'triggers' ? null : 'triggers')}
                       />
                     </div>
                   </div>
@@ -342,10 +342,10 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                     if (selectedBranches.length > 0 && !selectedBranches.includes(branch)) return null;
                     const branchRuns = runsByBranch[branch] || [];
 
-                    // Filter runs based on search and initiator
+                    // Filter runs based on search and trigger
                     const filteredRuns = branchRuns.filter((run) => {
-                      // Initiator filter
-                      if (selectedInitiators.length > 0 && !selectedInitiators.includes(run.initiator_type)) {
+                      // Trigger filter
+                      if (selectedTriggers.length > 0 && !selectedTriggers.includes(run.initiator_type)) {
                         return false;
                       }
                       // Search filter (commit_message or commit_sha)

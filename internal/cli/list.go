@@ -64,7 +64,7 @@ Examples:
 
 	// Filtering flags
 	cmd.Flags().StringVar(&flags.ProjectID, "project-id", "", "Filter by project ID")
-	cmd.Flags().StringVar(&flags.Source, "source", "", "Filter by source (cli-local, ci-branch, ci-main, scheduled)")
+	cmd.Flags().StringVar(&flags.Source, "source", "", "Filter by source (cli-local, github-actions, ci-token, scheduler)")
 	cmd.Flags().StringVar(&flags.Branch, "branch", "", "Filter by git branch")
 	cmd.Flags().StringVar(&flags.Status, "status", "", "Filter by status (PENDING, RUNNING, PASSED, FAILED, TIMEOUT)")
 	cmd.Flags().StringVar(&flags.ScheduleName, "schedule-name", "", "Filter by schedule name")

@@ -59,7 +59,7 @@ func (e *Engine) CreateRun(ctx context.Context, req *generated.CreateRunRequest)
 
 	// For CI token principals, override source and trigger
 	if principal != nil && principal.IsCIToken {
-		runContext.Source = "ci"
+		runContext.Source = "ci-token"
 		runContext.Trigger = "ci"
 	}
 

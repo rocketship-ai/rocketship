@@ -510,20 +510,18 @@ func buildRunPayload(run persistence.RunRecord) map[string]interface{} {
 		payload["duration_ms"] = run.EndedAt.Time.Sub(run.StartedAt.Time).Milliseconds()
 	}
 
-	// Derive initiator_type
-	var initiatorType string
-	if run.ScheduleID.Valid || run.ScheduleName != "" {
-		initiatorType = "schedule"
-	} else if run.Trigger == "webhook" || run.Source == "ci-branch" {
-		initiatorType = "ci"
-	} else {
-		initiatorType = "manual"
+	// initiator_type is now the authoritative trigger value from DB
+	// After migration 0029, trigger is always one of: 'manual', 'ci', 'schedule'
+	initiatorType := run.Trigger
+	if initiatorType == "" {
+		initiatorType = "manual" // fallback for very old runs before trigger was set
 	}
 	payload["initiator_type"] = initiatorType
 
-	// For manual runs, include the initiator name
+	// For manual runs, parse initiator to extract username
+	// New format: "user:<github_username>" → extract just the username
 	if initiatorType == "manual" && run.Initiator != "" {
-		payload["initiator_name"] = run.Initiator
+		payload["initiator_name"] = strings.TrimPrefix(run.Initiator, "user:")
 	}
 
 	return payload

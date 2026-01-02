@@ -76,10 +76,10 @@ func (x *CreateRunRequest) GetContext() *RunContext {
 type RunContext struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`                                                        // For multi-tenancy
-	Source        string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`                                                                               // "cli-local" | "ci-branch" | "ci-main" | "scheduled"
+	Source        string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`                                                                               // "cli-local" | "github-actions" | "ci-token" | "scheduler"
 	Branch        string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`                                                                               // Git branch name
 	CommitSha     string                 `protobuf:"bytes,4,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`                                                        // Git commit SHA
-	Trigger       string                 `protobuf:"bytes,5,opt,name=trigger,proto3" json:"trigger,omitempty"`                                                                             // "manual" | "webhook" | "schedule"
+	Trigger       string                 `protobuf:"bytes,5,opt,name=trigger,proto3" json:"trigger,omitempty"`                                                                             // "manual" | "ci" | "schedule"
 	ScheduleName  string                 `protobuf:"bytes,6,opt,name=schedule_name,json=scheduleName,proto3" json:"schedule_name,omitempty"`                                               // For scheduled runs
 	Metadata      map[string]string      `protobuf:"bytes,7,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // Additional context (PR number, etc.)
 	unknownFields protoimpl.UnknownFields

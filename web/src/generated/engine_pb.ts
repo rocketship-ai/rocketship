@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file engine.proto.
  */
 export const file_engine: GenFile = /*@__PURE__*/
-  fileDesc("CgxlbmdpbmUucHJvdG8SDXJvY2tldHNoaXAudjEiVAoQQ3JlYXRlUnVuUmVxdWVzdBIUCgx5YW1sX3BheWxvYWQYASABKAwSKgoHY29udGV4dBgCIAEoCzIZLnJvY2tldHNoaXAudjEuUnVuQ29udGV4dCLoAQoKUnVuQ29udGV4dBISCgpwcm9qZWN0X2lkGAEgASgJEg4KBnNvdXJjZRgCIAEoCRIOCgZicmFuY2gYAyABKAkSEgoKY29tbWl0X3NoYRgEIAEoCRIPCgd0cmlnZ2VyGAUgASgJEhUKDXNjaGVkdWxlX25hbWUYBiABKAkSOQoIbWV0YWRhdGEYByADKAsyJy5yb2NrZXRzaGlwLnYxLlJ1bkNvbnRleHQuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiIwoRQ3JlYXRlUnVuUmVzcG9uc2USDgoGcnVuX2lkGAEgASgJIiIKEExvZ1N0cmVhbVJlcXVlc3QSDgoGcnVuX2lkGAEgASgJImUKB0xvZ0xpbmUSCgoCdHMYASABKAkSCwoDbXNnGAIgASgJEg0KBWNvbG9yGAMgASgJEgwKBGJvbGQYBCABKAgSEQoJdGVzdF9uYW1lGAUgASgJEhEKCXN0ZXBfbmFtZRgGIAEoCSKxAQoPTGlzdFJ1bnNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDgoGc291cmNlGAIgASgJEg4KBmJyYW5jaBgDIAEoCRIOCgZzdGF0dXMYBCABKAkSFQoNc2NoZWR1bGVfbmFtZRgFIAEoCRINCgVsaW1pdBgGIAEoBRIOCgZjdXJzb3IYByABKAkSEAoIb3JkZXJfYnkYCCABKAkSEgoKZGVzY2VuZGluZxgJIAEoCCJlChBMaXN0UnVuc1Jlc3BvbnNlEicKBHJ1bnMYASADKAsyGS5yb2NrZXRzaGlwLnYxLlJ1blN1bW1hcnkSEwoLbmV4dF9jdXJzb3IYAiABKAkSEwoLdG90YWxfY291bnQYAyABKAUi/wEKClJ1blN1bW1hcnkSDgoGcnVuX2lkGAEgASgJEhIKCnN1aXRlX25hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhIKCnN0YXJ0ZWRfYXQYBCABKAkSEAoIZW5kZWRfYXQYBSABKAkSEwoLZHVyYXRpb25fbXMYBiABKAMSEwoLdG90YWxfdGVzdHMYByABKAUSFAoMcGFzc2VkX3Rlc3RzGAggASgFEhQKDGZhaWxlZF90ZXN0cxgJIAEoBRIVCg10aW1lb3V0X3Rlc3RzGAogASgFEioKB2NvbnRleHQYCyABKAsyGS5yb2NrZXRzaGlwLnYxLlJ1bkNvbnRleHQiHwoNR2V0UnVuUmVxdWVzdBIOCgZydW5faWQYASABKAkiOAoOR2V0UnVuUmVzcG9uc2USJgoDcnVuGAEgASgLMhkucm9ja2V0c2hpcC52MS5SdW5EZXRhaWxzItIBCgpSdW5EZXRhaWxzEg4KBnJ1bl9pZBgBIAEoCRISCgpzdWl0ZV9uYW1lGAIgASgJEg4KBnN0YXR1cxgDIAEoCRISCgpzdGFydGVkX2F0GAQgASgJEhAKCGVuZGVkX2F0GAUgASgJEhMKC2R1cmF0aW9uX21zGAYgASgDEioKB2NvbnRleHQYByABKAsyGS5yb2NrZXRzaGlwLnYxLlJ1bkNvbnRleHQSKQoFdGVzdHMYCCADKAsyGi5yb2NrZXRzaGlwLnYxLlRlc3REZXRhaWxzIo4BCgtUZXN0RGV0YWlscxIPCgd0ZXN0X2lkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhIKCnN0YXJ0ZWRfYXQYBCABKAkSEAoIZW5kZWRfYXQYBSABKAkSEwoLZHVyYXRpb25fbXMYBiABKAMSFQoNZXJyb3JfbWVzc2FnZRgHIAEoCSKIAQoNQWRkTG9nUmVxdWVzdBIOCgZydW5faWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSDwoHbWVzc2FnZRgDIAEoCRINCgVjb2xvchgEIAEoCRIMCgRib2xkGAUgASgIEhEKCXRlc3RfbmFtZRgGIAEoCRIRCglzdGVwX25hbWUYByABKAkiEAoOQWRkTG9nUmVzcG9uc2UiIgoQQ2FuY2VsUnVuUmVxdWVzdBIOCgZydW5faWQYASABKAkiNQoRQ2FuY2VsUnVuUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJIg8KDUhlYWx0aFJlcXVlc3QiIAoOSGVhbHRoUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIhYKFEdldFNlcnZlckluZm9SZXF1ZXN0Ii8KDlNlcnZlckVuZHBvaW50EgwKBHR5cGUYASABKAkSDwoHYWRkcmVzcxgCIAEoCSK0AgoVR2V0U2VydmVySW5mb1Jlc3BvbnNlEg8KB3ZlcnNpb24YASABKAkSFAoMYXV0aF9lbmFibGVkGAIgASgIEhEKCWF1dGhfdHlwZRgDIAEoCRIVCg1hdXRoX2VuZHBvaW50GAQgASgJEhQKDGNhcGFiaWxpdGllcxgFIAMoCRIwCgllbmRwb2ludHMYBiADKAsyHS5yb2NrZXRzaGlwLnYxLlNlcnZlckVuZHBvaW50EiUKHWRldmljZV9hdXRob3JpemF0aW9uX2VuZHBvaW50GAcgASgJEhYKDnRva2VuX2VuZHBvaW50GAggASgJEg4KBmlzc3VlchgJIAEoCRIQCghhdWRpZW5jZRgKIAEoCRIOCgZzY29wZXMYCyADKAkSEQoJY2xpZW50X2lkGAwgASgJIjAKFVdhaXRGb3JDbGVhbnVwUmVxdWVzdBIXCg90aW1lb3V0X3NlY29uZHMYASABKAUiKwoWV2FpdEZvckNsZWFudXBSZXNwb25zZRIRCgljb21wbGV0ZWQYASABKAgyzgUKBkVuZ2luZRJOCglDcmVhdGVSdW4SHy5yb2NrZXRzaGlwLnYxLkNyZWF0ZVJ1blJlcXVlc3QaIC5yb2NrZXRzaGlwLnYxLkNyZWF0ZVJ1blJlc3BvbnNlEkcKClN0cmVhbUxvZ3MSHy5yb2NrZXRzaGlwLnYxLkxvZ1N0cmVhbVJlcXVlc3QaFi5yb2NrZXRzaGlwLnYxLkxvZ0xpbmUwARJFCgZBZGRMb2cSHC5yb2NrZXRzaGlwLnYxLkFkZExvZ1JlcXVlc3QaHS5yb2NrZXRzaGlwLnYxLkFkZExvZ1Jlc3BvbnNlEksKCExpc3RSdW5zEh4ucm9ja2V0c2hpcC52MS5MaXN0UnVuc1JlcXVlc3QaHy5yb2NrZXRzaGlwLnYxLkxpc3RSdW5zUmVzcG9uc2USRQoGR2V0UnVuEhwucm9ja2V0c2hpcC52MS5HZXRSdW5SZXF1ZXN0Gh0ucm9ja2V0c2hpcC52MS5HZXRSdW5SZXNwb25zZRJOCglDYW5jZWxSdW4SHy5yb2NrZXRzaGlwLnYxLkNhbmNlbFJ1blJlcXVlc3QaIC5yb2NrZXRzaGlwLnYxLkNhbmNlbFJ1blJlc3BvbnNlEkUKBkhlYWx0aBIcLnJvY2tldHNoaXAudjEuSGVhbHRoUmVxdWVzdBodLnJvY2tldHNoaXAudjEuSGVhbHRoUmVzcG9uc2USXQoOV2FpdEZvckNsZWFudXASJC5yb2NrZXRzaGlwLnYxLldhaXRGb3JDbGVhbnVwUmVxdWVzdBolLnJvY2tldHNoaXAudjEuV2FpdEZvckNsZWFudXBSZXNwb25zZRJaCg1HZXRTZXJ2ZXJJbmZvEiMucm9ja2V0c2hpcC52MS5HZXRTZXJ2ZXJJbmZvUmVxdWVzdBokLnJvY2tldHNoaXAudjEuR2V0U2VydmVySW5mb1Jlc3BvbnNlQjlaN2dpdGh1Yi5jb20vcm9ja2V0c2hpcC9yb2NrZXRzaGlwL2ludGVybmFsL2FwaS9nZW5lcmF0ZWRiBnByb3RvMw");
+  fileDesc("CgxlbmdpbmUucHJvdG8SDXJvY2tldHNoaXAudjEiVAoQQ3JlYXRlUnVuUmVxdWVzdBIUCgx5YW1sX3BheWxvYWQYASABKAwSKgoHY29udGV4dBgCIAEoCzIZLnJvY2tldHNoaXAudjEuUnVuQ29udGV4dCLoAQoKUnVuQ29udGV4dBISCgpwcm9qZWN0X2lkGAEgASgJEg4KBnNvdXJjZRgCIAEoCRIOCgZicmFuY2gYAyABKAkSEgoKY29tbWl0X3NoYRgEIAEoCRIPCgd0cmlnZ2VyGAUgASgJEhUKDXNjaGVkdWxlX25hbWUYBiABKAkSOQoIbWV0YWRhdGEYByADKAsyJy5yb2NrZXRzaGlwLnYxLlJ1bkNvbnRleHQuTWV0YWRhdGFFbnRyeRovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiIwoRQ3JlYXRlUnVuUmVzcG9uc2USDgoGcnVuX2lkGAEgASgJIiIKEExvZ1N0cmVhbVJlcXVlc3QSDgoGcnVuX2lkGAEgASgJImUKB0xvZ0xpbmUSCgoCdHMYASABKAkSCwoDbXNnGAIgASgJEg0KBWNvbG9yGAMgASgJEgwKBGJvbGQYBCABKAgSEQoJdGVzdF9uYW1lGAUgASgJEhEKCXN0ZXBfbmFtZRgGIAEoCSKxAQoPTGlzdFJ1bnNSZXF1ZXN0EhIKCnByb2plY3RfaWQYASABKAkSDgoGc291cmNlGAIgASgJEg4KBmJyYW5jaBgDIAEoCRIOCgZzdGF0dXMYBCABKAkSFQoNc2NoZWR1bGVfbmFtZRgFIAEoCRINCgVsaW1pdBgGIAEoBRIOCgZjdXJzb3IYByABKAkSEAoIb3JkZXJfYnkYCCABKAkSEgoKZGVzY2VuZGluZxgJIAEoCCJlChBMaXN0UnVuc1Jlc3BvbnNlEicKBHJ1bnMYASADKAsyGS5yb2NrZXRzaGlwLnYxLlJ1blN1bW1hcnkSEwoLbmV4dF9jdXJzb3IYAiABKAkSEwoLdG90YWxfY291bnQYAyABKAUi/wEKClJ1blN1bW1hcnkSDgoGcnVuX2lkGAEgASgJEhIKCnN1aXRlX25hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhIKCnN0YXJ0ZWRfYXQYBCABKAkSEAoIZW5kZWRfYXQYBSABKAkSEwoLZHVyYXRpb25fbXMYBiABKAMSEwoLdG90YWxfdGVzdHMYByABKAUSFAoMcGFzc2VkX3Rlc3RzGAggASgFEhQKDGZhaWxlZF90ZXN0cxgJIAEoBRIVCg10aW1lb3V0X3Rlc3RzGAogASgFEioKB2NvbnRleHQYCyABKAsyGS5yb2NrZXRzaGlwLnYxLlJ1bkNvbnRleHQiHwoNR2V0UnVuUmVxdWVzdBIOCgZydW5faWQYASABKAkiOAoOR2V0UnVuUmVzcG9uc2USJgoDcnVuGAEgASgLMhkucm9ja2V0c2hpcC52MS5SdW5EZXRhaWxzItIBCgpSdW5EZXRhaWxzEg4KBnJ1bl9pZBgBIAEoCRISCgpzdWl0ZV9uYW1lGAIgASgJEg4KBnN0YXR1cxgDIAEoCRISCgpzdGFydGVkX2F0GAQgASgJEhAKCGVuZGVkX2F0GAUgASgJEhMKC2R1cmF0aW9uX21zGAYgASgDEioKB2NvbnRleHQYByABKAsyGS5yb2NrZXRzaGlwLnYxLlJ1bkNvbnRleHQSKQoFdGVzdHMYCCADKAsyGi5yb2NrZXRzaGlwLnYxLlRlc3REZXRhaWxzIo4BCgtUZXN0RGV0YWlscxIPCgd0ZXN0X2lkGAEgASgJEgwKBG5hbWUYAiABKAkSDgoGc3RhdHVzGAMgASgJEhIKCnN0YXJ0ZWRfYXQYBCABKAkSEAoIZW5kZWRfYXQYBSABKAkSEwoLZHVyYXRpb25fbXMYBiABKAMSFQoNZXJyb3JfbWVzc2FnZRgHIAEoCSKIAQoNQWRkTG9nUmVxdWVzdBIOCgZydW5faWQYASABKAkSEwoLd29ya2Zsb3dfaWQYAiABKAkSDwoHbWVzc2FnZRgDIAEoCRINCgVjb2xvchgEIAEoCRIMCgRib2xkGAUgASgIEhEKCXRlc3RfbmFtZRgGIAEoCRIRCglzdGVwX25hbWUYByABKAkiEAoOQWRkTG9nUmVzcG9uc2UiIgoQQ2FuY2VsUnVuUmVxdWVzdBIOCgZydW5faWQYASABKAkiNQoRQ2FuY2VsUnVuUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBIPCgdtZXNzYWdlGAIgASgJIg8KDUhlYWx0aFJlcXVlc3QiIAoOSGVhbHRoUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIhYKFEdldFNlcnZlckluZm9SZXF1ZXN0Ii8KDlNlcnZlckVuZHBvaW50EgwKBHR5cGUYASABKAkSDwoHYWRkcmVzcxgCIAEoCSK0AgoVR2V0U2VydmVySW5mb1Jlc3BvbnNlEg8KB3ZlcnNpb24YASABKAkSFAoMYXV0aF9lbmFibGVkGAIgASgIEhEKCWF1dGhfdHlwZRgDIAEoCRIVCg1hdXRoX2VuZHBvaW50GAQgASgJEhQKDGNhcGFiaWxpdGllcxgFIAMoCRIwCgllbmRwb2ludHMYBiADKAsyHS5yb2NrZXRzaGlwLnYxLlNlcnZlckVuZHBvaW50EiUKHWRldmljZV9hdXRob3JpemF0aW9uX2VuZHBvaW50GAcgASgJEhYKDnRva2VuX2VuZHBvaW50GAggASgJEg4KBmlzc3VlchgJIAEoCRIQCghhdWRpZW5jZRgKIAEoCRIOCgZzY29wZXMYCyADKAkSEQoJY2xpZW50X2lkGAwgASgJIjAKFVdhaXRGb3JDbGVhbnVwUmVxdWVzdBIXCg90aW1lb3V0X3NlY29uZHMYASABKAUiKwoWV2FpdEZvckNsZWFudXBSZXNwb25zZRIRCgljb21wbGV0ZWQYASABKAgiggMKFFVwc2VydFJ1blN0ZXBSZXF1ZXN0Eg4KBnJ1bl9pZBgBIAEoCRITCgt3b3JrZmxvd19pZBgCIAEoCRISCgpzdGVwX2luZGV4GAMgASgFEhEKCXN0ZXBfbmFtZRgEIAEoCRIOCgZwbHVnaW4YBSABKAkSDgoGc3RhdHVzGAYgASgJEhUKDWVycm9yX21lc3NhZ2UYByABKAkSEgoKc3RhcnRlZF9hdBgIIAEoCRIQCghlbmRlZF9hdBgJIAEoCRITCgtkdXJhdGlvbl9tcxgKIAEoAxIZChFhc3NlcnRpb25zX3Bhc3NlZBgLIAEoBRIZChFhc3NlcnRpb25zX2ZhaWxlZBgMIAEoBRIUCgxyZXF1ZXN0X2pzb24YDSABKAwSFQoNcmVzcG9uc2VfanNvbhgOIAEoDBIXCg9hc3NlcnRpb25zX2pzb24YDyABKAwSFgoOdmFyaWFibGVzX2pzb24YECABKAwSGAoQc3RlcF9jb25maWdfanNvbhgRIAEoDCIoChVVcHNlcnRSdW5TdGVwUmVzcG9uc2USDwoHc3RlcF9pZBgBIAEoCTKqBgoGRW5naW5lEk4KCUNyZWF0ZVJ1bhIfLnJvY2tldHNoaXAudjEuQ3JlYXRlUnVuUmVxdWVzdBogLnJvY2tldHNoaXAudjEuQ3JlYXRlUnVuUmVzcG9uc2USRwoKU3RyZWFtTG9ncxIfLnJvY2tldHNoaXAudjEuTG9nU3RyZWFtUmVxdWVzdBoWLnJvY2tldHNoaXAudjEuTG9nTGluZTABEkUKBkFkZExvZxIcLnJvY2tldHNoaXAudjEuQWRkTG9nUmVxdWVzdBodLnJvY2tldHNoaXAudjEuQWRkTG9nUmVzcG9uc2USSwoITGlzdFJ1bnMSHi5yb2NrZXRzaGlwLnYxLkxpc3RSdW5zUmVxdWVzdBofLnJvY2tldHNoaXAudjEuTGlzdFJ1bnNSZXNwb25zZRJFCgZHZXRSdW4SHC5yb2NrZXRzaGlwLnYxLkdldFJ1blJlcXVlc3QaHS5yb2NrZXRzaGlwLnYxLkdldFJ1blJlc3BvbnNlEk4KCUNhbmNlbFJ1bhIfLnJvY2tldHNoaXAudjEuQ2FuY2VsUnVuUmVxdWVzdBogLnJvY2tldHNoaXAudjEuQ2FuY2VsUnVuUmVzcG9uc2USRQoGSGVhbHRoEhwucm9ja2V0c2hpcC52MS5IZWFsdGhSZXF1ZXN0Gh0ucm9ja2V0c2hpcC52MS5IZWFsdGhSZXNwb25zZRJdCg5XYWl0Rm9yQ2xlYW51cBIkLnJvY2tldHNoaXAudjEuV2FpdEZvckNsZWFudXBSZXF1ZXN0GiUucm9ja2V0c2hpcC52MS5XYWl0Rm9yQ2xlYW51cFJlc3BvbnNlEloKDVVwc2VydFJ1blN0ZXASIy5yb2NrZXRzaGlwLnYxLlVwc2VydFJ1blN0ZXBSZXF1ZXN0GiQucm9ja2V0c2hpcC52MS5VcHNlcnRSdW5TdGVwUmVzcG9uc2USWgoNR2V0U2VydmVySW5mbxIjLnJvY2tldHNoaXAudjEuR2V0U2VydmVySW5mb1JlcXVlc3QaJC5yb2NrZXRzaGlwLnYxLkdldFNlcnZlckluZm9SZXNwb25zZUI5WjdnaXRodWIuY29tL3JvY2tldHNoaXAvcm9ja2V0c2hpcC9pbnRlcm5hbC9hcGkvZ2VuZXJhdGVkYgZwcm90bzM");
 
 /**
  * @generated from message rocketship.v1.CreateRunRequest
@@ -46,7 +46,7 @@ export type RunContext = Message<"rocketship.v1.RunContext"> & {
   projectId: string;
 
   /**
-   * "cli-local" | "ci-branch" | "ci-main" | "scheduled"
+   * "cli-local" | "github-actions" | "ci-token" | "scheduler"
    *
    * @generated from field: string source = 2;
    */
@@ -67,7 +67,7 @@ export type RunContext = Message<"rocketship.v1.RunContext"> & {
   commitSha: string;
 
   /**
-   * "manual" | "webhook" | "schedule"
+   * "manual" | "ci" | "schedule"
    *
    * @generated from field: string trigger = 5;
    */
@@ -776,6 +776,154 @@ export const WaitForCleanupResponseSchema: GenMessage<WaitForCleanupResponse> = 
   messageDesc(file_engine, 22);
 
 /**
+ * Step reporting messages
+ *
+ * @generated from message rocketship.v1.UpsertRunStepRequest
+ */
+export type UpsertRunStepRequest = Message<"rocketship.v1.UpsertRunStepRequest"> & {
+  /**
+   * The run ID
+   *
+   * @generated from field: string run_id = 1;
+   */
+  runId: string;
+
+  /**
+   * The workflow ID (used to resolve run_test_id)
+   *
+   * @generated from field: string workflow_id = 2;
+   */
+  workflowId: string;
+
+  /**
+   * Zero-based step index
+   *
+   * @generated from field: int32 step_index = 3;
+   */
+  stepIndex: number;
+
+  /**
+   * Step name from DSL
+   *
+   * @generated from field: string step_name = 4;
+   */
+  stepName: string;
+
+  /**
+   * Plugin type (http, delay, log, etc.)
+   *
+   * @generated from field: string plugin = 5;
+   */
+  plugin: string;
+
+  /**
+   * PENDING, RUNNING, PASSED, FAILED
+   *
+   * @generated from field: string status = 6;
+   */
+  status: string;
+
+  /**
+   * Error message if failed
+   *
+   * @generated from field: string error_message = 7;
+   */
+  errorMessage: string;
+
+  /**
+   * ISO8601 timestamp
+   *
+   * @generated from field: string started_at = 8;
+   */
+  startedAt: string;
+
+  /**
+   * ISO8601 timestamp
+   *
+   * @generated from field: string ended_at = 9;
+   */
+  endedAt: string;
+
+  /**
+   * Duration in milliseconds
+   *
+   * @generated from field: int64 duration_ms = 10;
+   */
+  durationMs: bigint;
+
+  /**
+   * @generated from field: int32 assertions_passed = 11;
+   */
+  assertionsPassed: number;
+
+  /**
+   * @generated from field: int32 assertions_failed = 12;
+   */
+  assertionsFailed: number;
+
+  /**
+   * JSON-encoded request data (for HTTP plugin)
+   *
+   * @generated from field: bytes request_json = 13;
+   */
+  requestJson: Uint8Array;
+
+  /**
+   * JSON-encoded response data (for HTTP plugin)
+   *
+   * @generated from field: bytes response_json = 14;
+   */
+  responseJson: Uint8Array;
+
+  /**
+   * JSON-encoded array of assertion results
+   *
+   * @generated from field: bytes assertions_json = 15;
+   */
+  assertionsJson: Uint8Array;
+
+  /**
+   * JSON-encoded array of saved variables
+   *
+   * @generated from field: bytes variables_json = 16;
+   */
+  variablesJson: Uint8Array;
+
+  /**
+   * JSON-encoded step configuration snapshot
+   *
+   * @generated from field: bytes step_config_json = 17;
+   */
+  stepConfigJson: Uint8Array;
+};
+
+/**
+ * Describes the message rocketship.v1.UpsertRunStepRequest.
+ * Use `create(UpsertRunStepRequestSchema)` to create a new message.
+ */
+export const UpsertRunStepRequestSchema: GenMessage<UpsertRunStepRequest> = /*@__PURE__*/
+  messageDesc(file_engine, 23);
+
+/**
+ * @generated from message rocketship.v1.UpsertRunStepResponse
+ */
+export type UpsertRunStepResponse = Message<"rocketship.v1.UpsertRunStepResponse"> & {
+  /**
+   * The created/updated step ID
+   *
+   * @generated from field: string step_id = 1;
+   */
+  stepId: string;
+};
+
+/**
+ * Describes the message rocketship.v1.UpsertRunStepResponse.
+ * Use `create(UpsertRunStepResponseSchema)` to create a new message.
+ */
+export const UpsertRunStepResponseSchema: GenMessage<UpsertRunStepResponse> = /*@__PURE__*/
+  messageDesc(file_engine, 24);
+
+/**
  * @generated from service rocketship.v1.Engine
  */
 export const Engine: GenService<{
@@ -842,6 +990,14 @@ export const Engine: GenService<{
     methodKind: "unary";
     input: typeof WaitForCleanupRequestSchema;
     output: typeof WaitForCleanupResponseSchema;
+  },
+  /**
+   * @generated from rpc rocketship.v1.Engine.UpsertRunStep
+   */
+  upsertRunStep: {
+    methodKind: "unary";
+    input: typeof UpsertRunStepRequestSchema;
+    output: typeof UpsertRunStepResponseSchema;
   },
   /**
    * Server Discovery
