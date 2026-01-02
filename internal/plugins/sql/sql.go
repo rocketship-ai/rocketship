@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -174,11 +175,49 @@ func applyVariableReplacement(config *SQLConfig, state map[string]interface{}, e
 }
 
 func applyVariableReplacementToAssertions(assertions []interface{}, state map[string]interface{}, env map[string]string, vars map[string]interface{}) error {
-	// Create template context with runtime variables and env secrets.
-	// Env precedence is handled inside dsl.ProcessTemplate (OS env > env map).
-	context := dsl.TemplateContext{
-		Runtime: state,
-		Env:     env,
+	// We intentionally avoid Go template execution for assertions because users may
+	// legitimately assert on literal handlebars strings (e.g. "{{ placeholder }}").
+	// We do targeted substitution for .vars.*, .env.*, and known runtime vars only,
+	// while leaving unknown handlebars untouched.
+
+	envRegex := regexp.MustCompile(`\{\{\s*\.env\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}`)
+	runtimeRegex := regexp.MustCompile(`\{\{\s*([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)\s*\}\}`)
+
+	replaceUnescaped := func(input string, re *regexp.Regexp, replacer func(groups []string, match string) string) string {
+		locs := re.FindAllStringSubmatchIndex(input, -1)
+		if len(locs) == 0 {
+			return input
+		}
+
+		var out strings.Builder
+		out.Grow(len(input))
+		last := 0
+
+		for _, loc := range locs {
+			start, end := loc[0], loc[1]
+			// If the handlebars are escaped like \{{ ... }}, leave untouched.
+			if start > 0 && input[start-1] == '\\' {
+				continue
+			}
+
+			out.WriteString(input[last:start])
+
+			groups := make([]string, 0, (len(loc)-2)/2)
+			for i := 2; i < len(loc); i += 2 {
+				si, ei := loc[i], loc[i+1]
+				if si == -1 || ei == -1 {
+					groups = append(groups, "")
+					continue
+				}
+				groups = append(groups, input[si:ei])
+			}
+
+			out.WriteString(replacer(groups, input[start:end]))
+			last = end
+		}
+
+		out.WriteString(input[last:])
+		return out.String()
 	}
 
 	for _, assertionInterface := range assertions {
@@ -200,11 +239,38 @@ func applyVariableReplacementToAssertions(assertions []interface{}, state map[st
 			expected = processed
 		}
 
-		processed, err := dsl.ProcessTemplate(expected, context)
-		if err != nil {
-			return fmt.Errorf("failed to process assertion expected template: %w", err)
-		}
-		assertion["expected"] = processed
+		// Replace .env.* with precedence: OS env > env secrets map (DB).
+		expected = replaceUnescaped(expected, envRegex, func(groups []string, match string) string {
+			if len(groups) < 1 {
+				return match
+			}
+			key := groups[0]
+			if value, ok := os.LookupEnv(key); ok {
+				return value
+			}
+			if value, ok := env[key]; ok {
+				return value
+			}
+			return "<no value>"
+		})
+
+		// Replace runtime vars only when they exist in the state map.
+		expected = replaceUnescaped(expected, runtimeRegex, func(groups []string, match string) string {
+			if len(groups) < 1 {
+				return match
+			}
+			key := groups[0]
+			// Avoid consuming .env.* and .vars.* which may remain as literals.
+			if strings.HasPrefix(key, ".env.") || strings.HasPrefix(key, ".vars.") {
+				return match
+			}
+			if value, ok := state[key]; ok {
+				return fmt.Sprintf("%v", value)
+			}
+			return match
+		})
+
+		assertion["expected"] = expected
 	}
 
 	return nil

@@ -17,6 +17,10 @@ func TestApplyVariableReplacementToAssertions(t *testing.T) {
 			"type":     "column_value",
 			"expected": "Config: {{ .vars.service }}",
 		},
+		map[string]interface{}{
+			"type":     "column_value",
+			"expected": "Escaped literal: {{ placeholder }}",
+		},
 	}
 
 	state := map[string]interface{}{}
@@ -37,6 +41,11 @@ func TestApplyVariableReplacementToAssertions(t *testing.T) {
 	got1 := assertions[1].(map[string]interface{})["expected"].(string)
 	if got1 != "Config: sql" {
 		t.Fatalf("expected vars substitution, got %q", got1)
+	}
+
+	got2 := assertions[2].(map[string]interface{})["expected"].(string)
+	if got2 != "Escaped literal: {{ placeholder }}" {
+		t.Fatalf("expected literal handlebars to remain unchanged, got %q", got2)
 	}
 }
 
