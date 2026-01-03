@@ -1,13 +1,14 @@
-import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
-import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from '../components/status-badge';
+import { ArrowLeft, Search, GitBranch, Clock, Plus, X, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
+import { SuiteRunRow } from '../components/suite-run-row';
+import { ScheduleCard, type ScheduleCardData } from '../components/schedule-card';
 import { useMemo, useState } from 'react';
 import { useSuite, useSuiteRuns, useProjectEnvironments, useProjectSchedules, useCreateProjectSchedule, useUpdateProjectSchedule, useDeleteProjectSchedule, type SuiteRunSummary, type ProjectSchedule } from '../hooks/use-console-queries';
 import { useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { LoadingState, ErrorState } from '../components/ui';
-import { formatDuration, formatRelativeTime, mapRunStatus } from '../lib/format';
+import { formatRelativeTime } from '../lib/format';
 
 interface SuiteDetailProps {
   suiteId: string;
@@ -16,15 +17,6 @@ interface SuiteDetailProps {
   onViewTest?: (testId: string) => void;
 }
 
-// Helper to display branch name
-function BranchDisplay({ branch }: { branch: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
-      <GitBranch className="w-3 h-3" />
-      {branch}
-    </span>
-  );
-}
 
 export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDetailProps) {
   const { data: suite, isLoading, error, refetch } = useSuite(suiteId);
@@ -76,7 +68,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   // Map schedules to display format
-  const schedules = projectSchedules.map((s: ProjectSchedule) => ({
+  const schedules: (ScheduleCardData & { envId: string })[] = projectSchedules.map((s: ProjectSchedule) => ({
     id: s.id,
     env: s.environment_slug,
     envId: s.environment_id,
@@ -380,71 +372,13 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
 
                         {/* Runs list */}
                         <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm divide-y divide-[#e5e5e5]">
-                          {filteredRuns.map((run) => {
-                            const status = mapRunStatus(run.status);
-                            // Prefer commit message, then "Commit <sha>", then "Manual run"
-                            const title = run.commit_message
-                              || (run.commit_sha ? `Commit ${run.commit_sha.slice(0, 7)}` : 'Manual run');
-
-                            return (
-                              <div
-                                key={run.id}
-                                onClick={() => onViewRun(run.id)}
-                                className="p-4 hover:bg-[#fafafa] transition-colors cursor-pointer"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-4 flex-1">
-                                    {/* Status icon */}
-                                    <div>
-                                      {status === 'success' && (
-                                        <CheckCircle2 className="w-5 h-5 text-[#4CBB17]" />
-                                      )}
-                                      {status === 'failed' && (
-                                        <XCircle className="w-5 h-5 text-[#ef0000]" />
-                                      )}
-                                      {status === 'running' && (
-                                        <Loader2 className="w-5 h-5 text-[#4CBB17] animate-spin" />
-                                      )}
-                                    </div>
-
-                                    {/* Run info */}
-                                    <div className="flex-1">
-                                      <p className="text-sm mb-1 truncate max-w-lg">{title}</p>
-                                      <div className="flex items-center gap-3 flex-wrap">
-                                        <BranchDisplay branch={run.branch} />
-                                        {/* For uncommitted runs: show Uncommitted badge, no commit SHA */}
-                                        {/* For repo_commit runs: show commit SHA, no badge */}
-                                        {run.config_source === 'uncommitted' ? (
-                                          <ConfigSourceBadge type="uncommitted" />
-                                        ) : (
-                                          run.commit_sha && (
-                                            <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
-                                              <Hash className="w-3 h-3" />
-                                              {run.commit_sha.slice(0, 7)}
-                                            </span>
-                                          )
-                                        )}
-                                        <BadgeDot />
-                                        {run.environment && <EnvBadge env={run.environment} />}
-                                        <TriggerBadge trigger={run.initiator_type} />
-                                        {run.initiator_type === 'manual' && run.initiator_name && (
-                                          <UsernameBadge username={run.initiator_name} />
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* Metadata */}
-                                    <div className="flex items-center gap-4 text-sm text-[#666666]">
-                                      <span>{formatRelativeTime(run.created_at)}</span>
-                                      {run.duration_ms !== undefined && (
-                                        <span>{formatDuration(run.duration_ms)}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {filteredRuns.map((run) => (
+                            <SuiteRunRow
+                              key={run.id}
+                              run={run}
+                              onClick={onViewRun}
+                            />
+                          ))}
                         </div>
                       </div>
                     );
@@ -491,77 +425,29 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
             ) : schedules.length > 0 ? (
               <div className="space-y-3">
                 {schedules.map((schedule) => (
-                  <div
+                  <ScheduleCard
                     key={schedule.id}
-                    className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="font-medium">{schedule.name}</span>
-                          <EnvBadge env={schedule.env} />
-                          <code className="text-sm font-mono px-2 py-1 bg-[#fafafa] rounded border border-[#e5e5e5]">
-                            {schedule.cron}
-                          </code>
-                          <span className="text-xs text-[#999999]">{schedule.timezone}</span>
-                          <span className={`text-sm px-2 py-1 rounded border ${
-                            schedule.enabled
-                              ? 'bg-green-50 text-green-700 border-green-200'
-                              : 'bg-gray-50 text-gray-700 border-gray-200'
-                          }`}>
-                            {schedule.enabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-[#666666]">
-                          <span>Last run: {schedule.lastRun}</span>
-                          {schedule.lastRunStatus && (
-                            <>
-                              <span>•</span>
-                              <span className={schedule.lastRunStatus === 'PASSED' ? 'text-green-600' : schedule.lastRunStatus === 'FAILED' ? 'text-red-600' : ''}>
-                                {schedule.lastRunStatus}
-                              </span>
-                            </>
-                          )}
-                          {schedule.enabled && (
-                            <>
-                              <span>•</span>
-                              <span>Next run: {schedule.nextRun}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingSchedule(schedule.id);
-                            setNewScheduleName(schedule.name);
-                            const env = projectEnvironments.find(e => e.slug === schedule.env);
-                            setNewScheduleEnv(env?.id || schedule.envId);
-                            setNewScheduleCron(schedule.cron);
-                            setNewScheduleTimezone(schedule.timezone);
-                            setNewScheduleEnabled(schedule.enabled);
-                            setScheduleError(null);
-                          }}
-                          className="p-2 text-[#666666] hover:text-black transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this schedule?')) {
-                              deleteScheduleMutation.mutate(schedule.id, {
-                                onSuccess: () => refetchSchedules(),
-                              });
-                            }
-                          }}
-                          className="p-2 text-[#666666] hover:text-red-600 transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                    schedule={schedule}
+                    onEdit={(scheduleId) => {
+                      const s = schedules.find(x => x.id === scheduleId);
+                      if (!s) return;
+                      setEditingSchedule(s.id);
+                      setNewScheduleName(s.name);
+                      const env = projectEnvironments.find(e => e.slug === s.env);
+                      setNewScheduleEnv(env?.id || s.envId);
+                      setNewScheduleCron(s.cron);
+                      setNewScheduleTimezone(s.timezone);
+                      setNewScheduleEnabled(s.enabled);
+                      setScheduleError(null);
+                    }}
+                    onDelete={(scheduleId) => {
+                      if (confirm('Are you sure you want to delete this schedule?')) {
+                        deleteScheduleMutation.mutate(scheduleId, {
+                          onSuccess: () => refetchSchedules(),
+                        });
+                      }
+                    }}
+                  />
                 ))}
               </div>
             ) : (
