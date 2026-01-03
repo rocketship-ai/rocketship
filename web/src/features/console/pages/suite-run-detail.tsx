@@ -4,6 +4,7 @@ import { TestItem } from '../components/test-item';
 import { LogsPanel } from '../components/logs-panel';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
+import { useLiveDurationMs } from '../hooks/use-live-duration';
 import { LoadingState, ErrorState } from '../components/ui';
 import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary, isLiveRunStatus } from '../lib/format';
 
@@ -41,6 +42,14 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
   // Check if run is live for log polling
   const isRunLive = runData ? isLiveRunStatus(runData.status) : false;
   const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId, { isRunLive });
+
+  // Live duration - updates while run is in progress
+  const liveDurationMs = useLiveDurationMs({
+    startedAt: runData?.started_at ?? runData?.created_at,
+    endedAt: runData?.ended_at,
+    isLive: isRunLive,
+    durationMs: runData?.duration_ms,
+  });
 
   // Back button component (shared across states)
   const BackButton = () => (
@@ -93,7 +102,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
       type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: runData.commit_sha || runData.bundle_sha || '',
     },
-    duration: formatDuration(runData.duration_ms),
+    duration: formatDuration(liveDurationMs),
     started: formatDateTime(runData.started_at),
     ended: formatDateTime(runData.ended_at),
     branch: runData.branch || 'main',

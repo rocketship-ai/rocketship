@@ -2,6 +2,7 @@ import { ArrowLeft, Play, AlertCircle, Edit3, Loader2 } from 'lucide-react';
 import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { useState } from 'react';
 import { useTestRun, useTestRunLogs, useTestRunSteps } from '../hooks/use-console-queries';
+import { useLiveDurationMs } from '../hooks/use-live-duration';
 import { RunStepCard } from '../components/run-steps';
 import { LogsPanel } from '../components/logs-panel';
 import { formatDuration, formatDateTime, isLiveTestStatus } from '../lib/format';
@@ -37,6 +38,14 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
   const isTestLive = testRunData ? isLiveTestStatus(testRunData.test.status) : false;
   const { data: logsData, isLoading: logsLoading } = useTestRunLogs(testRunId, { isTestLive });
   const { data: stepsData, isLoading: stepsLoading } = useTestRunSteps(testRunId, { isTestLive });
+
+  // Live duration - updates while test is in progress
+  const liveDurationMs = useLiveDurationMs({
+    startedAt: testRunData?.test.started_at ?? testRunData?.run.started_at ?? testRunData?.run.created_at,
+    endedAt: testRunData?.test.ended_at ?? testRunData?.run.ended_at,
+    isLive: isTestLive,
+    durationMs: testRunData?.test.duration_ms,
+  });
 
   // Loading state
   if (testRunLoading) {
@@ -86,7 +95,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
       type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: run.commit_sha || run.bundle_sha || '',
     },
-    duration: formatDuration(test.duration_ms),
+    duration: formatDuration(liveDurationMs),
     started: formatDateTime(test.started_at),
     ended: formatDateTime(test.ended_at),
     branch: run.branch || 'main',
@@ -128,7 +137,7 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
             <div>
               <h1 className="mb-2">{testRun.testName}</h1>
               <div className="flex items-center gap-3 flex-wrap">
-                <StatusBadge status={testRun.status} />
+                <StatusBadge status={testRun.status} isLive={isTestLive} />
                 {testRun.env && <EnvBadge env={testRun.env} />}
                 {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant */}
                 {testRun.isUncommitted && (
@@ -300,3 +309,4 @@ function StepSkeleton({ stepNumber }: { stepNumber: number }) {
     </div>
   );
 }
+

@@ -2,11 +2,13 @@ interface StatusBadgeProps {
   status: 'success' | 'running' | 'failed' | 'pending';
   showLabel?: boolean;
   size?: 'sm' | 'md';
+  /** When true, shows pulsing green dot regardless of status */
+  isLive?: boolean;
 }
 
-export function StatusBadge({ status, showLabel = false, size = 'md' }: StatusBadgeProps) {
+export function StatusBadge({ status, showLabel = false, size = 'md', isLive = false }: StatusBadgeProps) {
   const dotSize = size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5';
-  
+
   const config = {
     success: {
       color: '#4CBB17',
@@ -28,20 +30,24 @@ export function StatusBadge({ status, showLabel = false, size = 'md' }: StatusBa
 
   const { color, label } = config[status];
 
+  // When live, override to pulsing green
+  const displayColor = isLive ? '#4CBB17' : color;
+  const pulseClass = isLive ? 'animate-pulse' : '';
+
   if (showLabel) {
     return (
       <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-[#fafafa] border border-[#e5e5e5]">
-        <div className={`${dotSize} rounded-full`} style={{ backgroundColor: color }} />
-        <span className="text-sm text-[#666666]">{label}</span>
+        <div className={`${dotSize} rounded-full ${pulseClass}`} style={{ backgroundColor: displayColor }} />
+        <span className="text-sm text-[#666666]">{isLive ? 'Live' : label}</span>
       </div>
     );
   }
 
   return (
     <div
-      className={`${dotSize} rounded-full`}
-      style={{ backgroundColor: color }}
-      title={label}
+      className={`${dotSize} rounded-full ${pulseClass}`}
+      style={{ backgroundColor: displayColor }}
+      title={isLive ? 'Live' : label}
     />
   );
 }
