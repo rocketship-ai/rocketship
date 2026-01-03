@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '@/lib/api'
+import { isLiveRunStatus, isLiveTestStatus, isLiveStepStatus } from '../lib/format'
 
 // Types matching the API response shapes
 
@@ -428,6 +429,14 @@ export function useSuiteRuns(suiteId: string, environmentId?: string) {
       return apiGet<SuiteRunSummary[]>(url)
     },
     enabled: !!suiteId,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 3s if any run is live (RUNNING or PENDING)
+      const hasLiveRun = data.some((run) => isLiveRunStatus(run.status))
+      return hasLiveRun ? 3000 : false
+    },
   })
 }
 
@@ -458,6 +467,12 @@ export function useRun(runId: string) {
     queryKey: consoleKeys.run(runId),
     queryFn: () => apiGet<RunDetail>(`/api/runs/${runId}`),
     enabled: !!runId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 2s while run is live
+      return isLiveRunStatus(data.status) ? 2000 : false
+    },
   })
 }
 
@@ -466,14 +481,25 @@ export function useRunTests(runId: string) {
     queryKey: consoleKeys.runTests(runId),
     queryFn: () => apiGet<RunTest[]>(`/api/runs/${runId}/tests`),
     enabled: !!runId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 2s if any test is live (PENDING or RUNNING)
+      const hasLiveTest = data.some((test) => isLiveTestStatus(test.status))
+      return hasLiveTest ? 2000 : false
+    },
   })
 }
 
-export function useRunLogs(runId: string, limit = 500) {
+export function useRunLogs(runId: string, options?: { limit?: number; isRunLive?: boolean }) {
+  const limit = options?.limit ?? 500
+  const isRunLive = options?.isRunLive ?? false
   return useQuery({
     queryKey: consoleKeys.runLogs(runId),
     queryFn: () => apiGet<RunLog[]>(`/api/runs/${runId}/logs?limit=${limit}`),
     enabled: !!runId,
+    // Poll every 2s while run is live to stream logs
+    refetchInterval: isRunLive ? 2000 : false,
   })
 }
 
@@ -482,22 +508,41 @@ export function useTestRun(testRunId: string) {
     queryKey: consoleKeys.testRun(testRunId),
     queryFn: () => apiGet<TestRunDetail>(`/api/test-runs/${testRunId}`),
     enabled: !!testRunId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 2s while test is live
+      return isLiveTestStatus(data.test.status) ? 2000 : false
+    },
   })
 }
 
-export function useTestRunLogs(testRunId: string, limit = 500) {
+export function useTestRunLogs(testRunId: string, options?: { limit?: number; isTestLive?: boolean }) {
+  const limit = options?.limit ?? 500
+  const isTestLive = options?.isTestLive ?? false
   return useQuery({
     queryKey: consoleKeys.testRunLogs(testRunId),
     queryFn: () => apiGet<RunLog[]>(`/api/test-runs/${testRunId}/logs?limit=${limit}`),
     enabled: !!testRunId,
+    // Poll every 2s while test is live to stream logs
+    refetchInterval: isTestLive ? 2000 : false,
   })
 }
 
-export function useTestRunSteps(testRunId: string) {
+export function useTestRunSteps(testRunId: string, options?: { isTestLive?: boolean }) {
+  const isTestLive = options?.isTestLive ?? false
   return useQuery({
     queryKey: consoleKeys.testRunSteps(testRunId),
     queryFn: () => apiGet<RunStep[]>(`/api/test-runs/${testRunId}/steps`),
     enabled: !!testRunId,
+    refetchInterval: (query) => {
+      // Poll if test is live (passed from parent) OR if any step is still live
+      if (isTestLive) return 2000
+      const data = query.state.data
+      if (!data) return false
+      const hasLiveStep = data.some((step) => isLiveStepStatus(step.status))
+      return hasLiveStep ? 2000 : false
+    },
   })
 }
 

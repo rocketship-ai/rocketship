@@ -5,7 +5,7 @@ import { LogsPanel } from '../components/logs-panel';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
 import { LoadingState, ErrorState } from '../components/ui';
-import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary } from '../lib/format';
+import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary, isLiveRunStatus } from '../lib/format';
 
 interface SuiteRunDetailProps {
   suiteRunId: string;
@@ -37,7 +37,10 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
   // Fetch run data from API
   const { data: runData, isLoading: runLoading, error: runError } = useRun(suiteRunId);
   const { data: testsData, isLoading: testsLoading } = useRunTests(suiteRunId);
-  const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId);
+
+  // Check if run is live for log polling
+  const isRunLive = runData ? isLiveRunStatus(runData.status) : false;
+  const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId, { isRunLive });
 
   // Back button component (shared across states)
   const BackButton = () => (

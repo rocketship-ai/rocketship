@@ -1,6 +1,6 @@
 import { CheckCircle2, XCircle, Loader2, GitBranch, Hash } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from './status-badge';
-import { formatRelativeTime, formatDuration, mapRunStatus } from '../lib/format';
+import { formatRelativeTime, formatDuration, mapRunStatus, isLiveRunStatus } from '../lib/format';
 
 export interface SuiteRunRowData {
   id: string;
@@ -31,6 +31,7 @@ interface SuiteRunRowProps {
  */
 export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) {
   const status = mapRunStatus(run.status);
+  const isLive = isLiveRunStatus(run.status);
 
   // Prefer commit message, then "Commit <sha>", then "Manual run"
   const title = run.commit_message
@@ -40,15 +41,23 @@ export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) 
     onClick?.(run.id);
   };
 
+  // Live styling: green left border and subtle background
+  const liveClasses = isLive
+    ? 'border-l-4 border-l-[#4CBB17] bg-[#f8fff5]'
+    : '';
+
   return (
     <div
       onClick={handleClick}
-      className={`p-4 hover:bg-[#fafafa] transition-colors cursor-pointer ${className}`}
+      className={`p-4 hover:bg-[#fafafa] transition-colors cursor-pointer ${liveClasses} ${className}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
-          {/* Status icon */}
-          <RunStatusIcon status={status} />
+          {/* Status icon and LIVE pill */}
+          <div className="flex items-center gap-2">
+            <RunStatusIcon status={status} />
+            {isLive && <LivePill />}
+          </div>
 
           {/* Run info */}
           <div className="flex-1">
@@ -111,6 +120,17 @@ function BranchDisplay({ branch }: { branch: string }) {
     <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
       <GitBranch className="w-3 h-3" />
       {branch}
+    </span>
+  );
+}
+
+/**
+ * Small "LIVE" pill with subtle pulse animation
+ */
+function LivePill() {
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide bg-[#4CBB17]/10 text-[#4CBB17] rounded animate-pulse">
+      Live
     </span>
   );
 }

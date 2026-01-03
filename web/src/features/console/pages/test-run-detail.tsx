@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTestRun, useTestRunLogs, useTestRunSteps } from '../hooks/use-console-queries';
 import { RunStepCard } from '../components/run-steps';
 import { LogsPanel } from '../components/logs-panel';
-import { formatDuration, formatDateTime } from '../lib/format';
+import { formatDuration, formatDateTime, isLiveTestStatus } from '../lib/format';
 
 interface TestRunDetailProps {
   testRunId: string;
@@ -32,8 +32,11 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
 
   // Fetch test run data from API
   const { data: testRunData, isLoading: testRunLoading, error: testRunError } = useTestRun(testRunId);
-  const { data: logsData, isLoading: logsLoading } = useTestRunLogs(testRunId);
-  const { data: stepsData, isLoading: stepsLoading } = useTestRunSteps(testRunId);
+
+  // Check if test is live for step/log polling
+  const isTestLive = testRunData ? isLiveTestStatus(testRunData.test.status) : false;
+  const { data: logsData, isLoading: logsLoading } = useTestRunLogs(testRunId, { isTestLive });
+  const { data: stepsData, isLoading: stepsLoading } = useTestRunSteps(testRunId, { isTestLive });
 
   // Loading state
   if (testRunLoading) {
@@ -230,18 +233,35 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
                 <span className="ml-2 text-[#666666]">Loading steps...</span>
               </div>
             ) : !stepsData || stepsData.length === 0 ? (
-              <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-8 text-center">
-                <p className="text-[#666666] mb-2">No step data available</p>
-                <p className="text-sm text-[#999999]">
-                  {totalSteps > 0
-                    ? `This test has ${totalSteps} steps (${passedCount} passed, ${failedCount} failed)`
-                    : 'No step information available'}
-                </p>
-              </div>
+              isTestLive && totalSteps > 0 ? (
+                // Test is live but no steps yet - show skeleton placeholders
+                <div className="space-y-3">
+                  {Array.from({ length: totalSteps }).map((_, i) => (
+                    <StepSkeleton key={i} stepNumber={i + 1} />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-8 text-center">
+                  <p className="text-[#666666] mb-2">No step data available</p>
+                  <p className="text-sm text-[#999999]">
+                    {totalSteps > 0
+                      ? `This test has ${totalSteps} steps (${passedCount} passed, ${failedCount} failed)`
+                      : 'No step information available'}
+                  </p>
+                </div>
+              )
             ) : (
-              stepsData.map((step, index) => (
-                <RunStepCard key={step.id} step={step} stepNumber={(step.step_index ?? index) + 1} />
-              ))
+              <>
+                {stepsData.map((step, index) => (
+                  <RunStepCard key={step.id} step={step} stepNumber={(step.step_index ?? index) + 1} />
+                ))}
+                {/* Show skeleton placeholders for remaining steps while test is live */}
+                {isTestLive && stepsData.length < totalSteps && (
+                  Array.from({ length: totalSteps - stepsData.length }).map((_, i) => (
+                    <StepSkeleton key={`skeleton-${i}`} stepNumber={stepsData.length + i + 1} />
+                  ))
+                )}
+              </>
             )}
           </div>
         )}
@@ -255,6 +275,27 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
             <p className="text-sm text-[#666666]">Artifacts tab is disabled</p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton placeholder for a step that hasn't been reported yet
+ */
+function StepSkeleton({ stepNumber }: { stepNumber: number }) {
+  return (
+    <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[#f5f5f5] text-[#999999] text-xs font-medium">
+          {stepNumber}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-[#999999]" />
+            <span className="text-sm text-[#999999]">Waiting for step data...</span>
+          </div>
+        </div>
       </div>
     </div>
   );
