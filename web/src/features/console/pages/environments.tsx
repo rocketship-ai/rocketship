@@ -16,6 +16,7 @@ import {
   useProfile,
   useOrgOwners,
   useAllProjectMembers,
+  useProjectMembers,
   useUpdateProjectMemberRoleForProject,
   useRemoveProjectMemberForProject,
   useProjectInvites,
@@ -28,7 +29,7 @@ import {
   useConsoleEnvironmentFilter,
   useConsoleEnvironmentSelectionMap,
 } from '../hooks/use-console-filters';
-import type { ProjectEnvironment, ProjectSummary } from '../hooks/use-console-queries';
+import type { ProjectEnvironment, ProjectSummary, ProjectMember } from '../hooks/use-console-queries';
 import { EnvironmentCard } from '../components/environment-card';
 import { EnvironmentModal, type EnvironmentSubmitData } from '../components/environment-modal';
 import { CITokenModal } from '../components/ci-token-modal';
@@ -119,9 +120,65 @@ export function Environments() {
   // Access Control queries and mutations
   const { data: profile } = useProfile();
   const orgId = profile?.organization?.id ?? '';
+  const isOrgOwner = profile?.organization?.role === 'admin';
   const { data: orgOwners = [], isLoading: ownersLoading } = useOrgOwners(orgId);
-  const { data: allProjectMembers = [], isLoading: membersLoading } = useAllProjectMembers(orgId);
-  const { data: projectInvites = [], isLoading: invitesLoading, error: invitesError } = useProjectInvites();
+  // For owners: use org-wide endpoint; for non-owners in single project mode: use per-project endpoint
+  // Only call owner-only endpoints when user is an org owner to avoid 403 errors
+  const { data: allProjectMembers = [], isLoading: allMembersLoading, error: allMembersError } = useAllProjectMembers(orgId, { enabled: isOrgOwner });
+  const { data: projectMembers = [], isLoading: projectMembersLoading } = useProjectMembers(selectedProjectId);
+  const { data: projectInvites = [], isLoading: invitesLoading, error: invitesError } = useProjectInvites({ enabled: isOrgOwner });
+
+  // For non-owners in "All Projects" mode: fetch members from each accessible project in parallel
+  const allProjectMemberQueries = useQueries({
+    queries: !isOrgOwner && !selectedProjectId && projects.length > 0
+      ? projects.map((project) => ({
+          queryKey: [...consoleKeys.all, 'project', project.id, 'members'] as const,
+          queryFn: () => apiGet<ProjectMember[]>(`/api/projects/${project.id}/members`),
+        }))
+      : [],
+  });
+
+  // Determine which members data to use based on user role and selection
+  const membersData = useMemo(() => {
+    if (isOrgOwner) {
+      // Owners use org-wide endpoint - filter by selected project if needed
+      if (selectedProjectId) {
+        return allProjectMembers.filter((m) => m.project_id === selectedProjectId);
+      }
+      return allProjectMembers;
+    }
+    // Non-owners in single project mode: use per-project endpoint
+    if (selectedProjectId) {
+      return projectMembers.map((m) => ({
+        ...m,
+        project_id: selectedProjectId,
+        project_name: selectedProject?.name ?? '',
+      }));
+    }
+    // Non-owners in all projects mode: aggregate members from all accessible projects
+    const aggregated: { project_id: string; project_name: string; user_id: string; username: string; email: string; name: string; role: 'read' | 'write' }[] = [];
+    projects.forEach((project, index) => {
+      const query = allProjectMemberQueries[index];
+      if (query?.data) {
+        query.data.forEach((m) => {
+          aggregated.push({
+            ...m,
+            project_id: project.id,
+            project_name: project.name,
+          });
+        });
+      }
+    });
+    return aggregated;
+  }, [isOrgOwner, selectedProjectId, allProjectMembers, projectMembers, selectedProject, projects, allProjectMemberQueries]);
+
+  // Loading state: for non-owners in All Projects mode, check if any aggregated query is loading
+  const aggregatedMembersLoading = !isOrgOwner && !selectedProjectId && allProjectMemberQueries.some((q) => q.isLoading);
+  const membersLoading = isOrgOwner ? allMembersLoading : (selectedProjectId ? projectMembersLoading : aggregatedMembersLoading);
+  // Track if any aggregated member queries failed (for error banner)
+  const aggregatedMembersErrors = !isOrgOwner && !selectedProjectId
+    ? allProjectMemberQueries.filter((q) => q.isError).length
+    : 0;
   const createInviteMutation = useCreateProjectInvite();
   const revokeInviteMutation = useRevokeProjectInvite();
   const updateRoleMutation = useUpdateProjectMemberRoleForProject();
@@ -284,12 +341,9 @@ export function Environments() {
 
   // Access Control handlers
   const filteredMembers = useMemo(() => {
-    // First filter by selected project if single project mode
-    let members = allProjectMembers;
-    if (selectedProjectId) {
-      members = members.filter((m) => m.project_id === selectedProjectId);
-    }
-    // Then apply search filter
+    // Use the determined members data (already filtered by project if needed)
+    let members = membersData;
+    // Apply search filter
     if (!memberSearchTerm.trim()) return members;
     const term = memberSearchTerm.toLowerCase();
     return members.filter(
@@ -299,7 +353,7 @@ export function Environments() {
         m.name.toLowerCase().includes(term) ||
         m.project_name.toLowerCase().includes(term)
     );
-  }, [allProjectMembers, memberSearchTerm, selectedProjectId]);
+  }, [membersData, memberSearchTerm]);
 
   // Pending invites (not accepted, not revoked, not expired) - filtered by project if single project mode
   const pendingInvites = useMemo(() => {
@@ -624,23 +678,25 @@ export function Environments() {
                 <Users className="w-5 h-5 text-[#666666]" />
                 <h3>Project Members</h3>
               </div>
-              <button
-                onClick={() => {
-                  setShowInviteModal(true);
-                  setInviteError(null);
-                  setInviteEmail('');
-                  setInviteProjects([]);
-                }}
-                disabled={projects.length === 0}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Mail className="w-4 h-4" />
-                <span>Invite Member</span>
-              </button>
+              {isOrgOwner && (
+                <button
+                  onClick={() => {
+                    setShowInviteModal(true);
+                    setInviteError(null);
+                    setInviteEmail('');
+                    setInviteProjects([]);
+                  }}
+                  disabled={projects.length === 0}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Invite Member</span>
+                </button>
+              )}
             </div>
 
-            {/* Pending Invites */}
-            {invitesError ? (
+            {/* Pending Invites - only visible to org owners */}
+            {isOrgOwner && invitesError ? (
               <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
                 <div className="flex items-center gap-2">
                   <X className="w-4 h-4 text-red-600" />
@@ -649,14 +705,14 @@ export function Environments() {
                   </span>
                 </div>
               </div>
-            ) : invitesLoading ? (
+            ) : isOrgOwner && invitesLoading ? (
               <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
                   <span className="text-sm text-amber-700">Loading pending invites...</span>
                 </div>
               </div>
-            ) : pendingInvites.length > 0 ? (
+            ) : isOrgOwner && pendingInvites.length > 0 ? (
               <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 text-amber-600" />
@@ -725,6 +781,18 @@ export function Environments() {
               </div>
             </div>
 
+            {/* Error banner for aggregated member query failures */}
+            {aggregatedMembersErrors > 0 && (
+              <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
+                <div className="flex items-center gap-2">
+                  <X className="w-4 h-4 text-red-600" />
+                  <span className="text-sm text-red-700">
+                    Failed to load members for {aggregatedMembersErrors} project{aggregatedMembersErrors > 1 ? 's' : ''}.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Members Table */}
             <div className="overflow-x-auto">
               {membersLoading ? (
@@ -743,7 +811,9 @@ export function Environments() {
                       <th className="text-left py-3 px-4 font-medium">User</th>
                       <th className="text-left py-3 px-4 font-medium">Project</th>
                       <th className="text-left py-3 px-4 font-medium">Role</th>
-                      <th className="text-right py-3 px-4 font-medium">Actions</th>
+                      {isOrgOwner && (
+                        <th className="text-right py-3 px-4 font-medium">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -769,42 +839,56 @@ export function Environments() {
                           <span className="text-sm">{member.project_name}</span>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="relative inline-block">
-                            <select
-                              value={member.role}
-                              onChange={(e) =>
-                                handleUpdateRole(
-                                  member.project_id,
-                                  member.user_id,
-                                  e.target.value as 'read' | 'write'
-                                )
-                              }
-                              disabled={updateRoleMutation.isPending}
-                              className={`appearance-none text-sm px-2 py-1 pr-7 border rounded-md focus:outline-none focus:ring-1 focus:ring-black ${
+                          {isOrgOwner ? (
+                            <div className="relative inline-block">
+                              <select
+                                value={member.role}
+                                onChange={(e) =>
+                                  handleUpdateRole(
+                                    member.project_id,
+                                    member.user_id,
+                                    e.target.value as 'read' | 'write'
+                                  )
+                                }
+                                disabled={updateRoleMutation.isPending}
+                                className={`appearance-none text-sm px-2 py-1 pr-7 border rounded-md focus:outline-none focus:ring-1 focus:ring-black ${
+                                  member.role === 'write'
+                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                    : 'bg-blue-50 border-blue-200 text-blue-700'
+                                }`}
+                              >
+                                <option value="read">Read</option>
+                                <option value="write">Write</option>
+                              </select>
+                              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[#666666]" />
+                            </div>
+                          ) : (
+                            <span
+                              className={`text-sm px-2 py-1 rounded-full ${
                                 member.role === 'write'
-                                  ? 'bg-green-50 border-green-200 text-green-700'
-                                  : 'bg-blue-50 border-blue-200 text-blue-700'
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-blue-50 text-blue-700'
                               }`}
                             >
-                              <option value="read">Read</option>
-                              <option value="write">Write</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[#666666]" />
-                          </div>
+                              {member.role === 'write' ? 'Write' : 'Read'}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() =>
-                              setRemoveMemberConfirm({
-                                projectId: member.project_id,
-                                userId: member.user_id,
-                                username: member.username || member.email,
-                              })
-                            }
-                            className="text-xs text-red-600 hover:text-red-700 hover:underline"
-                          >
-                            Remove
-                          </button>
+                          {isOrgOwner && (
+                            <button
+                              onClick={() =>
+                                setRemoveMemberConfirm({
+                                  projectId: member.project_id,
+                                  userId: member.user_id,
+                                  username: member.username || member.email,
+                                })
+                              }
+                              className="text-xs text-red-600 hover:text-red-700 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -47,6 +47,7 @@ func (s *Server) handleOrgRoutes(w http.ResponseWriter, r *http.Request, princip
 }
 
 // handleOrgOwners lists organization owners
+// Any authenticated org member can view the owners list (read-only)
 func (s *Server) handleOrgOwners(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, orgID uuid.UUID, tail []string) {
 	if len(tail) > 0 {
 		writeError(w, http.StatusNotFound, "resource not found")
@@ -57,20 +58,17 @@ func (s *Server) handleOrgOwners(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
+	// Verify user has org membership
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+	if principal.OrgID != orgID {
+		writeError(w, http.StatusForbidden, "organization access required")
+		return
+	}
+
 	ctx := r.Context()
-
-	// Verify the requesting user is an org owner
-	isOwner, err := s.store.IsOrganizationOwner(ctx, orgID, principal.UserID)
-	if err != nil {
-		log.Printf("failed to check org owner: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to authorize request")
-		return
-	}
-	if !isOwner {
-		writeError(w, http.StatusForbidden, "owner role required")
-		return
-	}
-
 	owners, err := s.store.ListOrganizationOwners(ctx, orgID)
 	if err != nil {
 		log.Printf("failed to list org owners: %v", err)

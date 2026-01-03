@@ -13,6 +13,7 @@ import (
 )
 
 // handleProjectRoutes dispatches project-scoped API requests to appropriate handlers
+// For member listing (GET), requires project access; for management (PUT/DELETE), requires org owner
 func (s *Server) handleProjectRoutes(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
 	if !strings.HasPrefix(r.URL.Path, "/api/projects/") {
 		writeError(w, http.StatusNotFound, "not found")
@@ -37,25 +38,9 @@ func (s *Server) handleProjectRoutes(w http.ResponseWriter, r *http.Request, pri
 		return
 	}
 
-	orgID, err := s.store.ProjectOrganizationID(r.Context(), projectID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "project not found")
-			return
-		}
-		log.Printf("failed to resolve project organization: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to resolve project")
-		return
-	}
-
-	isAdmin, err := s.store.IsOrganizationOwner(r.Context(), orgID, principal.UserID)
-	if err != nil {
-		log.Printf("failed to verify organization admin: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to authorize request")
-		return
-	}
-	if !isAdmin {
-		writeError(w, http.StatusForbidden, "owner role required for target organization")
+	// Verify user has org membership
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
 		return
 	}
 
@@ -68,8 +53,50 @@ func (s *Server) handleProjectRoutes(w http.ResponseWriter, r *http.Request, pri
 }
 
 // handleProjectMembers manages project membership (list, update role, remove members)
+// GET: Requires project access (read or write)
+// PUT/DELETE: Requires org owner
 // Note: Adding members is done via the invite flow (POST /api/project-invites)
 func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID, remainder []string) {
+	ctx := r.Context()
+
+	// For GET requests, verify project access
+	// For management requests, verify org owner
+	if r.Method == http.MethodGet {
+		canAccess, err := s.store.UserCanAccessProject(ctx, principal.OrgID, principal.UserID, projectID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "project not found")
+			return
+		}
+	} else {
+		// PUT/DELETE require org owner
+		orgID, err := s.store.ProjectOrganizationID(ctx, projectID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, "project not found")
+				return
+			}
+			log.Printf("failed to resolve project organization: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to resolve project")
+			return
+		}
+
+		isOwner, err := s.store.IsOrganizationOwner(ctx, orgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to verify organization owner: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to authorize request")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusForbidden, "owner role required")
+			return
+		}
+	}
+
 	if len(remainder) == 0 {
 		switch r.Method {
 		case http.MethodGet:
@@ -93,10 +120,6 @@ func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, pr
 
 	switch r.Method {
 	case http.MethodPut:
-		if !principal.HasRole("owner") {
-			writeError(w, http.StatusForbidden, "owner role required")
-			return
-		}
 		var body struct {
 			Role string `json:"role"`
 		}
@@ -104,7 +127,7 @@ func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, pr
 			writeError(w, http.StatusBadRequest, "invalid json payload")
 			return
 		}
-		if err := s.store.SetProjectMemberRole(r.Context(), projectID, userID, body.Role); err != nil {
+		if err := s.store.SetProjectMemberRole(ctx, projectID, userID, body.Role); err != nil {
 			switch {
 			case errors.Is(err, sql.ErrNoRows):
 				writeError(w, http.StatusNotFound, "membership not found")
@@ -116,11 +139,7 @@ func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, pr
 		}
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodDelete:
-		if !principal.HasRole("owner") {
-			writeError(w, http.StatusForbidden, "owner role required")
-			return
-		}
-		if err := s.store.RemoveProjectMember(r.Context(), projectID, userID); err != nil {
+		if err := s.store.RemoveProjectMember(ctx, projectID, userID); err != nil {
 			switch {
 			case errors.Is(err, sql.ErrNoRows):
 				writeError(w, http.StatusNotFound, "membership not found")
@@ -137,12 +156,8 @@ func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, pr
 }
 
 // handleListProjectMembers lists all members of a project
-func (s *Server) handleListProjectMembers(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID) {
-	if !principal.HasRole("owner") {
-		writeError(w, http.StatusForbidden, "owner role required")
-		return
-	}
-
+// Note: Access is verified in handleProjectMembers; any user with project access can view members
+func (s *Server) handleListProjectMembers(w http.ResponseWriter, r *http.Request, _ brokerPrincipal, projectID uuid.UUID) {
 	members, err := s.store.ListProjectMembers(r.Context(), projectID)
 	if err != nil {
 		log.Printf("failed to list project members: %v", err)

@@ -762,11 +762,11 @@ export function useProjectMembers(projectId: string) {
   })
 }
 
-export function useAllProjectMembers(orgId: string) {
+export function useAllProjectMembers(orgId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...consoleKeys.all, 'org', orgId, 'project-members'] as const,
     queryFn: () => apiGet<OrgProjectMember[]>(`/api/orgs/${orgId}/project-members`),
-    enabled: !!orgId,
+    enabled: (options?.enabled ?? true) && !!orgId,
   })
 }
 
@@ -895,10 +895,11 @@ export interface CreateProjectInviteRequest {
 
 // Project Invite hooks
 
-export function useProjectInvites() {
+export function useProjectInvites(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...consoleKeys.all, 'project-invites'] as const,
     queryFn: () => apiGet<ProjectInvite[]>('/api/project-invites'),
+    enabled: options?.enabled ?? true,
   })
 }
 

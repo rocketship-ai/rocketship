@@ -1204,6 +1204,7 @@ func TestProjectMembersScopedToOrganization(t *testing.T) {
 
 	principal := brokerPrincipal{
 		UserID: store.user.ID,
+		OrgID:  store.primaryOrg,
 		Roles:  []string{"owner"},
 	}
 
@@ -1221,11 +1222,12 @@ func TestProjectMembersScopedToOrganization(t *testing.T) {
 	store.members[otherProject] = nil
 	store.mu.Unlock()
 
+	// User from primaryOrg can't access project from otherOrg - returns 404 (not found to hide existence)
 	req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/projects/%s/members", otherProject), nil)
 	rec = httptest.NewRecorder()
 	srv.handleProjectRoutes(rec, req, principal)
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("expected forbidden for cross-org access, got %d", rec.Code)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected not found for cross-org access, got %d", rec.Code)
 	}
 }
 
