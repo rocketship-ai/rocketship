@@ -66,7 +66,7 @@ export function ScheduleCard({
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <span className="font-medium">{schedule.name}</span>
             <EnvBadge env={schedule.env} />
-            <code className="text-sm font-mono px-2 py-1 bg-[#fafafa] rounded border border-[#e5e5e5]">
+            <code className="text-xs font-mono px-2 py-0.5 bg-[#fafafa] rounded border border-[#e5e5e5] text-[#666666]">
               {schedule.cron}
             </code>
             <span className="text-xs text-[#999999]">{schedule.timezone}</span>
@@ -127,7 +127,7 @@ export function ScheduleCard({
 function EnabledBadge({ enabled }: { enabled: boolean }) {
   return (
     <span
-      className={`text-sm px-2 py-1 rounded border ${
+      className={`text-xs px-2 py-0.5 rounded border ${
         enabled
           ? 'bg-green-50 text-green-700 border-green-200'
           : 'bg-gray-50 text-gray-700 border-gray-200'
