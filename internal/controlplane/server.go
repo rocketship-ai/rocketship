@@ -137,6 +137,7 @@ func (s *Server) routes() {
 
 	// API endpoints
 	s.mux.HandleFunc("/api/users/me", s.requireAuth(s.handleCurrentUser))
+	s.mux.HandleFunc("/api/profile/name", s.requireAuth(s.handleUpdateProfileName))
 	s.mux.HandleFunc("/api/profile", s.requireAuth(s.handleProfile))
 	s.mux.HandleFunc("/api/orgs/registration/start", s.requireAuth(s.handleOrgRegistrationStart))
 	s.mux.HandleFunc("/api/orgs/registration/resend", s.requireAuth(s.handleOrgRegistrationResend))

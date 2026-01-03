@@ -1,8 +1,10 @@
-import { User, Mail, Github, Shield, Check, LogOut } from 'lucide-react';
-import { useProfile } from '../hooks/use-console-queries';
+import { useState } from 'react';
+import { User, Mail, Github, Shield, Check, LogOut, Pencil } from 'lucide-react';
+import { useProfile, useUpdateProfileName } from '../hooks/use-console-queries';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { ApiError } from '@/lib/api';
 import { LoadingState, ErrorState } from '../components/ui';
+import { useAuth } from '@/features/auth/AuthContext';
 
 interface ProfileSettingsProps {
   onLogout?: () => void;
@@ -10,6 +12,44 @@ interface ProfileSettingsProps {
 
 export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
   const { data: profile, isLoading, error } = useProfile();
+  const { checkAuth } = useAuth();
+  const updateNameMutation = useUpdateProfileName();
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const handleEditName = () => {
+    setEditedName(profile?.user.name || '');
+    setNameError(null);
+    setIsEditingName(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setEditedName('');
+    setNameError(null);
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = editedName.trim();
+    if (!trimmedName) {
+      setNameError('Name cannot be empty');
+      return;
+    }
+
+    try {
+      await updateNameMutation.mutateAsync(trimmedName);
+      // Refresh the auth context to update sidebar
+      await checkAuth();
+      setIsEditingName(false);
+      setEditedName('');
+      setNameError(null);
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to update name';
+      setNameError(errorMessage);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -49,10 +89,51 @@ export function ProfileSettings({ onLogout }: ProfileSettingsProps) {
           </h2>
 
           <div className="space-y-6">
-            {/* Name Field - Read-only for v1 */}
+            {/* Name Field */}
             <div>
               <label className="block text-sm text-[#666666] mb-2">Name</label>
-              <span className="text-[#000000]">{user.name || 'Not set'}</span>
+              {isEditingName ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    className="w-full max-w-sm px-3 py-2 border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Enter your name"
+                    autoFocus
+                  />
+                  {nameError && (
+                    <p className="text-sm text-red-600">{nameError}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveName}
+                      disabled={updateNameMutation.isPending}
+                      className="px-3 py-1.5 bg-black text-white text-sm rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {updateNameMutation.isPending ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={updateNameMutation.isPending}
+                      className="px-3 py-1.5 text-sm text-[#666666] hover:text-[#000000]"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-[#000000]">{user.name || 'Add your name'}</span>
+                  <button
+                    onClick={handleEditName}
+                    className="p-1 text-[#666666] hover:text-[#000000] hover:bg-[#fafafa] rounded transition-colors"
+                    title="Edit name"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Email */}

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '@/lib/api'
 
 // Types matching the API response shapes
 
@@ -435,6 +435,19 @@ export function useProfile() {
   return useQuery({
     queryKey: consoleKeys.profile(),
     queryFn: () => apiGet<ProfileData>('/api/profile'),
+  })
+}
+
+export function useUpdateProfileName() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (name: string) =>
+      apiPatch<{ name: string }>('/api/profile/name', { name }),
+    onSuccess: () => {
+      // Invalidate profile to refresh the profile page
+      queryClient.invalidateQueries({ queryKey: consoleKeys.profile() })
+    },
   })
 }
 

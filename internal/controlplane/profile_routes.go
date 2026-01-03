@@ -1,9 +1,11 @@
 package controlplane
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 )
@@ -23,6 +25,14 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request, principal
 	}
 
 	ctx := r.Context()
+
+	// Get user details from database (for latest name)
+	user, err := s.store.GetUserByID(ctx, principal.UserID)
+	if err != nil {
+		log.Printf("failed to get user: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to load user")
+		return
+	}
 
 	// Get organization details
 	org, err := s.store.GetOrganizationByID(ctx, principal.OrgID)
@@ -84,7 +94,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request, principal
 		"user": map[string]string{
 			"id":       principal.UserID.String(),
 			"email":    principal.Email,
-			"name":     principal.Name,
+			"name":     user.Name, // Use database value, not JWT claims
 			"username": principal.Username,
 		},
 		"organization": map[string]string{
@@ -98,4 +108,43 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request, principal
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// handleUpdateProfileName updates the current user's name.
+// PATCH /api/profile/name
+func (s *Server) handleUpdateProfileName(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodPatch {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Name can be updated even by pending users (they might not have org membership yet)
+	// Only requirement is that they're authenticated
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Trim whitespace and validate
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeError(w, http.StatusBadRequest, "name cannot be empty")
+		return
+	}
+
+	ctx := r.Context()
+
+	if err := s.store.UpdateUserName(ctx, principal.UserID, name); err != nil {
+		log.Printf("failed to update user name: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to update name")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"name": name,
+	})
 }

@@ -1421,3 +1421,168 @@ func TestProfileEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func TestUpdateProfileNameEndpoint(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+	signer, err := buildSigner(key, "test-key")
+	if err != nil {
+		t.Fatalf("failed to build signer: %v", err)
+	}
+
+	cfg := Config{
+		Issuer:          "https://cli.test",
+		Audience:        "rocketship-cli",
+		ClientID:        "rocketship-cli",
+		AccessTokenTTL:  time.Minute,
+		RefreshTokenTTL: time.Hour,
+		GitHub:          GitHubConfig{ClientID: "gh", ClientSecret: "secret"},
+	}
+
+	t.Run("updates name successfully", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		principal := brokerPrincipal{
+			UserID: store.user.ID,
+			OrgID:  store.primaryOrg,
+			Roles:  []string{"owner"},
+		}
+
+		body := strings.NewReader(`{"name": "New Name"}`)
+		req := httptest.NewRequest(http.MethodPatch, "/api/profile/name", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		srv.handleUpdateProfileName(rec, req, principal)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+
+		// Verify response
+		var resp map[string]string
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp["name"] != "New Name" {
+			t.Fatalf("expected name 'New Name', got '%s'", resp["name"])
+		}
+
+		// Verify it was persisted
+		if store.user.Name != "New Name" {
+			t.Fatalf("expected store.user.Name 'New Name', got '%s'", store.user.Name)
+		}
+	})
+
+	t.Run("trims whitespace from name", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		principal := brokerPrincipal{
+			UserID: store.user.ID,
+			OrgID:  store.primaryOrg,
+			Roles:  []string{"owner"},
+		}
+
+		body := strings.NewReader(`{"name": "  Trimmed Name  "}`)
+		req := httptest.NewRequest(http.MethodPatch, "/api/profile/name", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		srv.handleUpdateProfileName(rec, req, principal)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+
+		var resp map[string]string
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp["name"] != "Trimmed Name" {
+			t.Fatalf("expected name 'Trimmed Name', got '%s'", resp["name"])
+		}
+	})
+
+	t.Run("rejects empty name", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		principal := brokerPrincipal{
+			UserID: store.user.ID,
+			OrgID:  store.primaryOrg,
+			Roles:  []string{"owner"},
+		}
+
+		body := strings.NewReader(`{"name": ""}`)
+		req := httptest.NewRequest(http.MethodPatch, "/api/profile/name", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		srv.handleUpdateProfileName(rec, req, principal)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 for empty name, got %d", rec.Code)
+		}
+	})
+
+	t.Run("rejects whitespace-only name", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		principal := brokerPrincipal{
+			UserID: store.user.ID,
+			OrgID:  store.primaryOrg,
+			Roles:  []string{"owner"},
+		}
+
+		body := strings.NewReader(`{"name": "   "}`)
+		req := httptest.NewRequest(http.MethodPatch, "/api/profile/name", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		srv.handleUpdateProfileName(rec, req, principal)
+
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 for whitespace-only name, got %d", rec.Code)
+		}
+	})
+
+	t.Run("rejects non-PATCH methods", func(t *testing.T) {
+		store := newFakeStore()
+
+		srv, err := newServerWithComponents(cfg, signer, &fakeGitHub{}, nil, store, &stubMailer{})
+		if err != nil {
+			t.Fatalf("failed to create server: %v", err)
+		}
+
+		principal := brokerPrincipal{
+			UserID: store.user.ID,
+			OrgID:  store.primaryOrg,
+			Roles:  []string{"owner"},
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/api/profile/name", nil)
+		rec := httptest.NewRecorder()
+		srv.handleUpdateProfileName(rec, req, principal)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("expected 405 for GET, got %d", rec.Code)
+		}
+	})
+}
