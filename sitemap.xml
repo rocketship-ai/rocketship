@@ -2,222 +2,222 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docs.rocketship.sh/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/contributing/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/deploy-on-your-cloud/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/installation/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/mcp-server/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/quickstart/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/deploy/digitalocean/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/deploy/minikube/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/features/lifecycle-hooks/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/features/retry-policies/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/features/variables/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/agent/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/browser-use/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/delay/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/http/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/log/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/playwright/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/script/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/sql/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/supabase/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/plugins/browser/persistent-sessions/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_doctor/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_get/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_list/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_login/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_logout/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_profile/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_profile_create/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_profile_delete/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_profile_list/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_profile_show/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_profile_use/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_run/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_start/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_start_server/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_status/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_stop/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_stop_server/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_validate/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/reference/rocketship_version/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/yaml-reference/lifecycle-hooks/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://docs.rocketship.sh/yaml-reference/plugin-reference/</loc>
-         <lastmod>2026-01-02</lastmod>
+         <lastmod>2026-01-03</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
