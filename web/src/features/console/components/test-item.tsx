@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 
 interface TestItemProps {
   test: {
@@ -12,24 +12,45 @@ interface TestItemProps {
       plugin?: string;
       status?: 'success' | 'failed' | 'pending';
     }>;
+    /** Expected total steps from YAML (may differ from steps.length while test is running) */
+    expectedStepCount?: number;
   };
+  /** Whether the test is currently running/pending (enables placeholder steps) */
+  isLive?: boolean;
   onClick?: () => void;
 }
 
-export function TestItem({ test, onClick }: TestItemProps) {
-  const displaySteps = test.steps.slice(0, 5);
-  const remainingSteps = test.steps.length - 5;
-  
+export function TestItem({ test, isLive = false, onClick }: TestItemProps) {
+  // Use expected step count if available, otherwise fall back to reported steps length
+  const expectedStepCount = test.expectedStepCount ?? test.steps.length;
+  const reportedStepCount = test.steps.length;
+
+  // Create combined steps array: real steps + placeholders for pending steps
+  const allSteps = [...test.steps];
+  if (isLive && reportedStepCount < expectedStepCount) {
+    // Add placeholder steps for steps not yet reported
+    for (let i = reportedStepCount; i < expectedStepCount; i++) {
+      allSteps.push({
+        name: `Step ${i + 1}`,
+        plugin: 'pending',
+        status: 'pending' as const,
+      });
+    }
+  }
+
+  const displaySteps = allSteps.slice(0, 5);
+  const remainingSteps = allSteps.length - 5;
+
   // Find the first failed step for test runs
   const firstFailedStepIndex = test.steps.findIndex(s => s.status === 'failed');
   const failedStepNumber = firstFailedStepIndex !== -1 ? firstFailedStepIndex + 1 : null;
-  
+
   // Determine border color based on status (for test runs) or default gray (for test definitions)
-  const borderColorClass = 
-    test.status === 'success' 
-      ? 'border-l-[#4CBB17]' 
-      : test.status === 'failed' 
-      ? 'border-l-[#ef0000]' 
+  const borderColorClass =
+    test.status === 'success'
+      ? 'border-l-[#4CBB17]'
+      : test.status === 'failed'
+      ? 'border-l-[#ef0000]'
       : test.status === 'pending'
       ? 'border-l-[#999999]'
       : 'border-l-[#666666]'; // default for test definitions
@@ -50,7 +71,7 @@ export function TestItem({ test, onClick }: TestItemProps) {
                 <span>•</span>
               </>
             )}
-            <span>{test.steps.length} {test.steps.length === 1 ? 'step' : 'steps'}</span>
+            <span>{expectedStepCount} {expectedStepCount === 1 ? 'step' : 'steps'}</span>
             
             {/* Show which step failed for test runs */}
             {failedStepNumber && (
@@ -65,14 +86,24 @@ export function TestItem({ test, onClick }: TestItemProps) {
         {/* HTTP Steps flow */}
         <div className="flex items-center gap-2 flex-wrap">
           {displaySteps.map((step, idx) => {
+            const isPending = step.plugin === 'pending';
             const pluginName = step.plugin || 'HTTP';
-            
+
             return (
               <div key={idx} className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-[#f5f5f5] rounded border border-[#e5e5e5]">
-                  <span className="text-xs font-mono text-[#666666]">{pluginName}</span>
-                  <span className="text-xs text-[#999999]">{step.name}</span>
-                </div>
+                {isPending ? (
+                  // Placeholder step chip for steps not yet reported
+                  <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-[#fafafa] rounded border border-dashed border-[#d5d5d5]">
+                    <Loader2 className="w-3 h-3 animate-spin text-[#999999]" />
+                    <span className="text-xs text-[#999999]">{step.name}</span>
+                  </div>
+                ) : (
+                  // Normal step chip
+                  <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-[#f5f5f5] rounded border border-[#e5e5e5]">
+                    <span className="text-xs font-mono text-[#666666]">{pluginName}</span>
+                    <span className="text-xs text-[#999999]">{step.name}</span>
+                  </div>
+                )}
                 {idx < displaySteps.length - 1 && (
                   <ArrowRight className="w-3 h-3 text-[#999999]" />
                 )}

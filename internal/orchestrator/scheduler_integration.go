@@ -329,7 +329,7 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 			TestID:     discoveredTestID,
 		}
 
-		// Persist run_test record
+		// Persist run_test record and pre-create placeholder steps
 		if e.runStore != nil {
 			runTest := persistence.RunTest{
 				RunID:      runID,
@@ -342,8 +342,33 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 			if discoveredTestID != uuid.Nil {
 				runTest.TestID = uuid.NullUUID{UUID: discoveredTestID, Valid: true}
 			}
-			if _, err := e.runStore.InsertRunTest(ctx, runTest); err != nil {
+			insertedRunTest, err := e.runStore.InsertRunTest(ctx, runTest)
+			if err != nil {
 				slog.Error("createRunInternal: failed to persist run_test", "run_id", runID, "workflow_id", testID, "error", err)
+			} else {
+				// Pre-create placeholder run_steps for all steps so UI has full step metadata immediately
+				for idx, step := range test.Steps {
+					placeholderStep := persistence.RunStep{
+						RunTestID:  insertedRunTest.ID,
+						StepIndex:  idx,
+						Name:       step.Name,
+						Plugin:     step.Plugin,
+						Status:     "PENDING",
+						StepConfig: BuildStepConfig(step),
+					}
+					if _, stepErr := e.runStore.UpsertRunStep(ctx, placeholderStep); stepErr != nil {
+						slog.Error("createRunInternal: failed to pre-create placeholder step",
+							"run_id", runID,
+							"workflow_id", testID,
+							"step_index", idx,
+							"step_name", step.Name,
+							"error", stepErr)
+					}
+				}
+				slog.Debug("createRunInternal: pre-created placeholder steps",
+					"run_id", runID,
+					"workflow_id", testID,
+					"step_count", len(test.Steps))
 			}
 		}
 

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
 import { useLiveDurationMs } from '../hooks/use-live-duration';
 import { LoadingState, ErrorState } from '../components/ui';
-import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary, isLiveRunStatus } from '../lib/format';
+import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary, isLiveRunStatus, isLiveTestStatus } from '../lib/format';
 
 interface SuiteRunDetailProps {
   suiteRunId: string;
@@ -29,6 +29,10 @@ function transformTestRun(test: RunTest) {
     status: mapTestStatus(test.status),
     duration: formatDuration(test.duration_ms),
     steps,
+    // Pass expected step count for placeholder rendering
+    expectedStepCount: test.step_count,
+    // Keep raw status for isLive check
+    rawStatus: test.status,
   };
 }
 
@@ -260,6 +264,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                 <TestItem
                   key={testRun.id}
                   test={testRun}
+                  isLive={isLiveTestStatus(testRun.rawStatus)}
                   onClick={() => onViewTestRun(testRun.id)}
                 />
               ))

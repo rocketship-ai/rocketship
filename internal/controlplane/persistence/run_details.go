@@ -775,7 +775,8 @@ func (s *Store) UpsertRunStep(ctx context.Context, step RunStep) (RunStep, error
 	return step, nil
 }
 
-// UpdateRunTestStepCounts recomputes and updates step counts for a run test based on run_steps
+// UpdateRunTestStepCounts recomputes and updates passed/failed step counts for a run test based on run_steps.
+// Note: step_count is NOT updated here - it represents the expected total steps from YAML and is set at insert time.
 func (s *Store) UpdateRunTestStepCounts(ctx context.Context, runTestID uuid.UUID) error {
 	if runTestID == uuid.Nil {
 		return errors.New("run test id required")
@@ -783,7 +784,6 @@ func (s *Store) UpdateRunTestStepCounts(ctx context.Context, runTestID uuid.UUID
 
 	const query = `
         UPDATE run_tests SET
-            step_count = (SELECT COUNT(*) FROM run_steps WHERE run_test_id = $1),
             passed_steps = (SELECT COUNT(*) FROM run_steps WHERE run_test_id = $1 AND status = 'PASSED'),
             failed_steps = (SELECT COUNT(*) FROM run_steps WHERE run_test_id = $1 AND status = 'FAILED')
         WHERE id = $1
