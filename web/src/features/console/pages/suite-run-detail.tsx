@@ -1,4 +1,4 @@
-import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
 import { LogsPanel } from '../components/logs-panel';
@@ -137,7 +137,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                     <XCircle className="w-5 h-5 text-[#ef0000]" />
                   )}
                   {suiteRun.status === 'running' && (
-                    <Clock className="w-5 h-5 text-[#4CBB17] animate-spin" />
+                    <Loader2 className="w-5 h-5 text-[#4CBB17] animate-spin" />
                   )}
                 </div>
                 {suiteRun.env && <EnvBadge env={suiteRun.env} />}
