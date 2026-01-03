@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ToggleRight, ToggleLeft, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 
 export interface ScheduleFormData {
   name: string;
@@ -220,16 +220,19 @@ export function ScheduleFormModal({
           <div className="flex items-center justify-between">
             <label className="text-sm">Enabled</label>
             <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
               onClick={() => setEnabled(!enabled)}
-              className={`p-2 rounded transition-colors ${
-                enabled ? 'text-[#4CBB17]' : 'text-[#999999]'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-black/5 ${
+                enabled ? 'bg-[#4CBB17]' : 'bg-[#e5e5e5]'
               }`}
             >
-              {enabled ? (
-                <ToggleRight className="w-6 h-6" />
-              ) : (
-                <ToggleLeft className="w-6 h-6" />
-              )}
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                  enabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
             </button>
           </div>
         </div>
