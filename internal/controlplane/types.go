@@ -21,8 +21,12 @@ type dataStore interface {
 	ListProjectMembers(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectMember, error)
 	SetProjectMemberRole(ctx context.Context, projectID, userID uuid.UUID, role string) error
 	RemoveProjectMember(ctx context.Context, projectID, userID uuid.UUID) error
+	AddProjectMember(ctx context.Context, projectID, userID uuid.UUID, role string) (persistence.ProjectMember, error)
+	ListAllProjectMembers(ctx context.Context, orgID uuid.UUID) ([]persistence.OrgProjectMember, error)
 	ProjectOrganizationID(ctx context.Context, projectID uuid.UUID) (uuid.UUID, error)
-	IsOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) (bool, error)
+	IsOrganizationOwner(ctx context.Context, orgID, userID uuid.UUID) (bool, error)
+	ListOrganizationOwners(ctx context.Context, orgID uuid.UUID) ([]persistence.OrganizationOwner, error)
+	GetUserByUsername(ctx context.Context, username string) (persistence.User, error)
 	DeleteOrgRegistrationsForUser(ctx context.Context, userID uuid.UUID) error
 	CreateOrgRegistration(ctx context.Context, rec persistence.OrganizationRegistration) (persistence.OrganizationRegistration, error)
 	GetOrgRegistration(ctx context.Context, id uuid.UUID) (persistence.OrganizationRegistration, error)
@@ -32,10 +36,20 @@ type dataStore interface {
 	DeleteOrgRegistration(ctx context.Context, id uuid.UUID) error
 	CreateOrganization(ctx context.Context, userID uuid.UUID, name, slug string) (persistence.Organization, error)
 	OrganizationSlugExists(ctx context.Context, slug string) (bool, error)
-	AddOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) error
+	AddOrganizationOwner(ctx context.Context, orgID, userID uuid.UUID) error
 	CreateOrgInvite(ctx context.Context, invite persistence.OrganizationInvite) (persistence.OrganizationInvite, error)
 	FindPendingOrgInvites(ctx context.Context, email string) ([]persistence.OrganizationInvite, error)
 	MarkOrgInviteAccepted(ctx context.Context, inviteID, userID uuid.UUID) error
+
+	// Project invite management (email-based project access invites)
+	CreateProjectInvite(ctx context.Context, input persistence.ProjectInviteInput) (persistence.ProjectInvite, error)
+	GetProjectInvite(ctx context.Context, inviteID uuid.UUID) (persistence.ProjectInvite, error)
+	ListProjectInvitesForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.ProjectInvite, error)
+	ListProjectInvitesByCreator(ctx context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectInvite, error)
+	FindPendingProjectInvitesByEmail(ctx context.Context, email string) ([]persistence.ProjectInvite, error)
+	AcceptProjectInvite(ctx context.Context, inviteID, userID uuid.UUID) error
+	RevokeProjectInvite(ctx context.Context, inviteID, revokedBy uuid.UUID) error
+	CanUserInviteToProjects(ctx context.Context, orgID, userID uuid.UUID, projectIDs []uuid.UUID) (bool, error)
 
 	// GitHub App installation management
 	UpsertGitHubAppInstallation(ctx context.Context, orgID uuid.UUID, installationID int64, installedBy uuid.UUID, accountLogin, accountType string) error
@@ -75,7 +89,13 @@ type dataStore interface {
 	ListEnabledSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.SuiteSchedule, error)
 
 	// CI Token management
-	ListActiveCITokens(ctx context.Context, projectID uuid.UUID) ([]persistence.CITokenRecord, error)
+	ListCITokensForOrg(ctx context.Context, orgID uuid.UUID, includeRevoked bool) ([]persistence.CITokenRecord, error)
+	CreateCIToken(ctx context.Context, orgID, createdBy uuid.UUID, input persistence.CITokenCreateInput) (string, persistence.CITokenRecord, error)
+	RevokeCIToken(ctx context.Context, orgID, tokenID, revokedBy uuid.UUID) error
+	GetCIToken(ctx context.Context, orgID, tokenID uuid.UUID) (persistence.CITokenRecord, error)
+	FindCITokenByPlaintext(ctx context.Context, tokenPlaintext string) (*persistence.CITokenLookupResult, error)
+	UpdateCITokenLastUsed(ctx context.Context, tokenID uuid.UUID) error
+	VerifyUserHasWriteOnProjects(ctx context.Context, orgID, userID uuid.UUID, projectIDs []uuid.UUID) error
 
 	// Overview setup counts
 	CountProjectsForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
@@ -87,11 +107,17 @@ type dataStore interface {
 
 	// Console hydration queries
 	ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.ProjectSummary, error)
+	ListProjectSummariesForUser(ctx context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectSummary, error)
 	GetProjectWithOrgCheck(ctx context.Context, orgID, projectID uuid.UUID) (persistence.Project, error)
 	GetLatestScanForProject(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef string) (*persistence.ScanSummary, error)
 	ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]persistence.SuiteActivityRow, error)
+	ListSuitesForUserProjects(ctx context.Context, orgID, userID uuid.UUID, limit int) ([]persistence.SuiteActivityRow, error)
 	GetSuiteDetail(ctx context.Context, orgID, suiteID uuid.UUID) (persistence.SuiteDetail, error)
 	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
+
+	// Project access control
+	ListAccessibleProjectIDs(ctx context.Context, orgID, userID uuid.UUID) ([]uuid.UUID, error)
+	UserCanAccessProject(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error)
 
 	// Profile hydration queries
 	GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (persistence.Organization, error)

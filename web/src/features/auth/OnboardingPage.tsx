@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { RainbowButton } from '@/components/ui/rainbow-button'
 import { useAuth } from './AuthContext'
 import { tokenManager } from './tokenManager'
 
@@ -99,11 +100,22 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-4">
           <h1 className="text-2xl font-bold tracking-tight">Rocketship Cloud</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Agentic coding QA testing platform
           </p>
+        </div>
+
+        <div className="flex justify-center mb-6">
+          <RainbowButton
+            type="button"
+            size="sm"
+            className="px-3"
+            onClick={() => navigate({ to: '/invites/accept' })}
+          >
+            Have an invite code?
+          </RainbowButton>
         </div>
 
         {/* Progress indicator */}

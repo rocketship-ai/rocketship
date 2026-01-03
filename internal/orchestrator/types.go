@@ -48,6 +48,9 @@ type RunStore interface {
 	UpdateTestLastRun(ctx context.Context, testID uuid.UUID, runID, status string, runAt time.Time, durationMs int64) error
 	// Environment lookup for run execution
 	GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (persistence.ProjectEnvironment, error)
+	// CI Token authentication
+	FindCITokenByPlaintext(ctx context.Context, tokenPlaintext string) (*persistence.CITokenLookupResult, error)
+	UpdateCITokenLastUsed(ctx context.Context, tokenID uuid.UUID) error
 }
 
 type RunInfo struct {

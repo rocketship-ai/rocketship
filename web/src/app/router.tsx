@@ -9,11 +9,15 @@ import {
 
 import { AuthProvider, useAuth } from '@/features/auth/AuthContext'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
+import { AuthOnlyRoute } from '@/features/auth/AuthOnlyRoute'
 import LoginPage from '@/features/auth/LoginPage'
 import SignupPage from '@/features/auth/SignupPage'
 import OnboardingPage from '@/features/auth/OnboardingPage'
 import { ConsoleLayout } from '@/features/console/ConsoleLayout'
 import { NotFoundPage } from './NotFoundPage'
+
+// Hooks
+import { usePendingProjectInvites } from '@/features/console/hooks/use-console-queries'
 
 // Page components
 import { Overview } from '@/features/console/pages/overview'
@@ -27,10 +31,17 @@ import { Projects } from '@/features/console/pages/projects'
 import { ProjectDetail } from '@/features/console/pages/project-detail'
 import { Environments } from '@/features/console/pages/environments'
 import { ProfileSettings } from '@/features/console/pages/profile-settings'
+import { AcceptInvite } from '@/features/console/pages/accept-invite'
 
 // Root redirect component
 function RootRedirect() {
   const { isAuthenticated, isLoading, userData } = useAuth()
+  const isPending = userData?.status === 'pending'
+
+  // Only check for pending invites if user is pending
+  const { data: pendingInvites, isLoading: invitesLoading } = usePendingProjectInvites({
+    enabled: isAuthenticated && isPending,
+  })
 
   if (isLoading) {
     return (
@@ -44,7 +55,22 @@ function RootRedirect() {
     return <Navigate to="/login" replace />
   }
 
-  if (userData?.status === 'pending') {
+  if (isPending) {
+    // Wait for pending invites to load
+    if (invitesLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      )
+    }
+
+    // If user has pending invites, redirect to accept invite page
+    if (pendingInvites && pendingInvites.length > 0) {
+      return <Navigate to="/invites/accept" replace />
+    }
+
+    // No pending invites, redirect to onboarding
     return <Navigate to="/onboarding" replace />
   }
 
@@ -77,6 +103,9 @@ const indexRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
+  validateSearch: (search: Record<string, unknown>): { returnTo?: string } => ({
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+  }),
   component: LoginPage,
 })
 
@@ -296,12 +325,27 @@ const profileRoute = createRoute({
   },
 })
 
+// Accept Invite - Top-level route that allows pending users
+const acceptInviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/invites/accept',
+  component: function AcceptInviteRoute() {
+    const navigate = acceptInviteRoute.useNavigate()
+    return (
+      <AuthOnlyRoute>
+        <AcceptInvite onComplete={() => navigate({ to: '/overview' })} />
+      </AuthOnlyRoute>
+    )
+  },
+})
+
 // Build the route tree
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   signupRoute,
   onboardingRoute,
+  acceptInviteRoute, // Top-level route for invite acceptance (allows pending users)
   consoleLayoutRoute.addChildren([
     overviewRoute,
     testHealthRoute,

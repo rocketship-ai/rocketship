@@ -23,13 +23,13 @@ trap cleanup EXIT
 # Run tests with different contexts to generate test data
 echo "Running tests with different contexts..."
 
-echo "  → Running test with ci-branch context..."
+echo "  → Running test with github-actions context..."
 rocketship run -f examples/simple-delay/rocketship.yaml \
   --engine localhost:7700 \
   --project-id "test-project-a" \
-  --source "ci-branch" \
+  --source "github-actions" \
   --branch "feature/persistence" \
-  --trigger "webhook" \
+  --trigger "ci" \
   --metadata "env=ci" \
   --metadata "team=backend"
 
@@ -86,14 +86,14 @@ echo "✅ Project filtering works"
 # Test filtering by source
 echo "  → Testing source filtering..."
 CLI_OUTPUT=$(rocketship list --engine localhost:7700 --source "cli-local")
-CI_OUTPUT=$(rocketship list --engine localhost:7700 --source "ci-branch")
+CI_OUTPUT=$(rocketship list --engine localhost:7700 --source "github-actions")
 
 if ! echo "$CLI_OUTPUT" | grep -q "cli-local"; then
   echo "❌ CLI source filtering failed"
   exit 1
 fi
 
-if ! echo "$CI_OUTPUT" | grep -q "ci-branch"; then
+if ! echo "$CI_OUTPUT" | grep -q "github-actions"; then
   echo "❌ CI source filtering failed"
   exit 1
 fi
@@ -174,7 +174,7 @@ echo "✅ Get command with truncated ID works"
 
 # Test combined filtering
 echo "  → Testing combined filtering..."
-COMBINED_OUTPUT=$(rocketship list --engine localhost:7700 --project-id "test-project-a" --source "ci-branch")
+COMBINED_OUTPUT=$(rocketship list --engine localhost:7700 --project-id "test-project-a" --source "github-actions")
 
 if ! echo "$COMBINED_OUTPUT" | grep -q "test-project-a"; then
   echo "❌ Combined filtering failed"

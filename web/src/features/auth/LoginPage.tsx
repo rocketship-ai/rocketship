@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate, Link, useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoImage from "@/assets/black-logo-transparent.png";
@@ -41,16 +41,30 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const hasProcessedCallback = useRef(false);
+  // Get returnTo from search params (supports /login?returnTo=...)
+  const search = useSearch({ strict: false }) as { returnTo?: string };
+  const returnTo = search?.returnTo;
 
-  // Redirect to overview if already authenticated
+  // Redirect to returnTo or overview if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      const storedReturnTo = sessionStorage.getItem("rocketship.returnTo");
+      if (storedReturnTo) {
+        sessionStorage.removeItem("rocketship.returnTo");
+        window.location.href = storedReturnTo;
+        return;
+      }
+      if (returnTo) {
+        window.location.href = returnTo;
+        return;
+      }
       navigate({ to: "/overview", replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, returnTo]);
 
   // Check for OAuth callback on mount
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
     const handleCallback = async () => {
       // Prevent double execution in React StrictMode
       if (hasProcessedCallback.current) {
@@ -59,7 +73,6 @@ export default function LoginPage() {
         );
         return;
       }
-      const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       const state = params.get("state");
       const errorParam = params.get("error");
@@ -138,8 +151,18 @@ export default function LoginPage() {
             sessionStorage.removeItem("oauth_code_verifier");
             sessionStorage.removeItem("oauth_redirect_uri");
 
+            const storedReturnTo = sessionStorage.getItem("rocketship.returnTo");
+            if (storedReturnTo) {
+              sessionStorage.removeItem("rocketship.returnTo");
+              window.location.href = storedReturnTo;
+              return;
+            }
+            if (returnTo) {
+              window.location.href = returnTo;
+              return;
+            }
             // Navigate to root - let RootRedirect check status and route appropriately
-            // (either to /onboarding if pending, or /dashboard if ready)
+            // (either to /onboarding if pending, or /overview if ready)
             navigate({ to: "/", replace: true });
           } else {
             throw new Error("No access token received");
@@ -160,7 +183,7 @@ export default function LoginPage() {
     };
 
     handleCallback();
-  }, []);
+  }, [navigate, returnTo]);
 
   const handleLogin = async () => {
     console.log("[LoginPage] Login button clicked, starting OAuth flow...");
@@ -183,6 +206,12 @@ export default function LoginPage() {
       sessionStorage.setItem("oauth_state", state);
       sessionStorage.setItem("oauth_code_verifier", codeVerifier);
       sessionStorage.setItem("oauth_redirect_uri", redirectUri);
+      // Store returnTo for post-login redirect (prefer query param, keep existing if set)
+      if (returnTo) {
+        sessionStorage.setItem("rocketship.returnTo", returnTo);
+      } else if (!sessionStorage.getItem("rocketship.returnTo")) {
+        sessionStorage.removeItem("rocketship.returnTo");
+      }
 
       // Build authorization URL
       const params = new URLSearchParams({

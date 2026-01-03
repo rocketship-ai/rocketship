@@ -11,9 +11,16 @@ import (
 	"time"
 )
 
+// ProjectInviteProject is a lightweight struct for project+role in email context
+type ProjectInviteProject struct {
+	ProjectName string
+	Role        string
+}
+
 type mailer interface {
 	SendOrgVerification(ctx context.Context, toEmail, orgName, code string, expiresAt time.Time) error
 	SendOrgInvite(ctx context.Context, toEmail, orgName, code string, expiresAt time.Time, inviter string) error
+	SendProjectInvite(ctx context.Context, toEmail, orgName string, projects []ProjectInviteProject, code string, expiresAt time.Time, inviter, acceptURL string) error
 }
 
 type postmarkMailer struct {
@@ -81,6 +88,53 @@ func (m *postmarkMailer) SendOrgInvite(ctx context.Context, toEmail, orgName, co
 	builder.WriteString(" within ")
 	builder.WriteString(duration.String())
 	builder.WriteString(" to accept.")
+
+	return m.send(ctx, toEmail, subject, builder.String())
+}
+
+func (m *postmarkMailer) SendProjectInvite(ctx context.Context, toEmail, orgName string, projects []ProjectInviteProject, code string, expiresAt time.Time, inviter, acceptURL string) error {
+	duration := time.Until(expiresAt).Round(time.Minute)
+	if duration < 0 {
+		duration = 0
+	}
+
+	subject := "You've been invited to Rocketship projects"
+	var builder strings.Builder
+
+	if inviter = strings.TrimSpace(inviter); inviter != "" {
+		builder.WriteString(inviter)
+		builder.WriteString(" invited you to access projects in ")
+	} else {
+		builder.WriteString("You've been invited to access projects in ")
+	}
+	builder.WriteString(strings.TrimSpace(orgName))
+	builder.WriteString(" on Rocketship.\n\n")
+
+	builder.WriteString("Projects:\n")
+	for _, p := range projects {
+		builder.WriteString("  - ")
+		builder.WriteString(p.ProjectName)
+		builder.WriteString(" (")
+		builder.WriteString(p.Role)
+		builder.WriteString(")\n")
+	}
+	builder.WriteString("\n")
+
+	// Include the clickable accept link
+	if acceptURL = strings.TrimSpace(acceptURL); acceptURL != "" {
+		builder.WriteString("Click here to accept: ")
+		builder.WriteString(acceptURL)
+		builder.WriteString("\n\n")
+		builder.WriteString("Or enter code ")
+	} else {
+		builder.WriteString("Enter code ")
+	}
+	builder.WriteString(strings.TrimSpace(code))
+	builder.WriteString(" within ")
+	builder.WriteString(duration.String())
+	builder.WriteString(" to accept.\n\n")
+
+	builder.WriteString("If you don't have an account, sign in with GitHub first, then accept the invite.")
 
 	return m.send(ctx, toEmail, subject, builder.String())
 }

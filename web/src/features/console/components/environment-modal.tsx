@@ -8,15 +8,26 @@ interface SecretField {
   isExisting: boolean; // true if this secret already exists in the environment
 }
 
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
 interface EnvironmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: EnvironmentSubmitData) => Promise<void>;
   isSubmitting: boolean;
+  // Projects list for project selection (All Projects mode)
+  projects?: ProjectOption[];
+  // Pre-selected project ID (locked when exactly 1 project is globally selected, or for edit mode)
+  selectedProjectId?: string;
   // For edit mode - pass the existing environment data
   existingEnvironment?: {
     name: string;
     slug: string;
+    projectId: string;
+    projectName?: string;
     configVars: Record<string, unknown>;
     secretKeys: string[];
   };
@@ -25,6 +36,7 @@ interface EnvironmentModalProps {
 export interface EnvironmentSubmitData {
   name: string;
   slug: string;
+  projectId: string;
   configVars: Record<string, unknown>;
   secrets: Record<string, string>;
 }
@@ -53,6 +65,8 @@ export function EnvironmentModal({
   onClose,
   onSubmit,
   isSubmitting,
+  projects = [],
+  selectedProjectId,
   existingEnvironment,
 }: EnvironmentModalProps) {
   const isEditMode = !!existingEnvironment;
@@ -67,14 +81,32 @@ export function EnvironmentModal({
   );
   const [error, setError] = useState<string | null>(null);
 
+  // Project selection state - defaults to locked project ID or existing env's project, or empty
+  const [projectId, setProjectId] = useState(
+    selectedProjectId ?? existingEnvironment?.projectId ?? ''
+  );
+
+  // Determine if project selection should be locked
+  // Locked when: single project selected globally, or in edit mode (can't move env between projects)
+  const isProjectLocked = !!selectedProjectId || isEditMode;
+
   // Compute slug from name in real-time
   const slug = useMemo(() => nameToSlug(name), [name]);
+
+  // Get the display name for the locked project
+  const lockedProjectName = useMemo(() => {
+    if (!isProjectLocked) return undefined;
+    if (existingEnvironment?.projectName) return existingEnvironment.projectName;
+    const effectiveProjectId = selectedProjectId ?? existingEnvironment?.projectId;
+    return projects.find(p => p.id === effectiveProjectId)?.name;
+  }, [isProjectLocked, selectedProjectId, existingEnvironment, projects]);
 
   // Reset form when modal opens/closes or environment changes
   const resetForm = () => {
     setName(existingEnvironment?.name ?? '');
     setConfigVarsYaml(existingEnvironment ? configVarsToYaml(existingEnvironment.configVars) : '');
     setSecrets(existingEnvironment?.secretKeys.map(key => ({ key, value: '', isExisting: true })) ?? []);
+    setProjectId(selectedProjectId ?? existingEnvironment?.projectId ?? '');
     setError(null);
   };
 
@@ -85,6 +117,15 @@ export function EnvironmentModal({
 
   const handleSubmit = async () => {
     setError(null);
+
+    // Validate project selection
+    const effectiveProjectId = isProjectLocked
+      ? (selectedProjectId ?? existingEnvironment?.projectId ?? '')
+      : projectId;
+    if (!effectiveProjectId) {
+      setError('Please select a project');
+      return;
+    }
 
     // Validate name
     if (!name.trim()) {
@@ -129,6 +170,7 @@ export function EnvironmentModal({
       await onSubmit({
         name: name.trim(),
         slug,
+        projectId: effectiveProjectId,
         configVars,
         secrets: secretsMap,
       });
@@ -164,6 +206,33 @@ export function EnvironmentModal({
         )}
 
         <div className="space-y-4">
+          {/* Project Selection (shown only in All Projects mode) */}
+          {projects.length > 0 && (
+            <div>
+              <label className="block text-sm text-[#666666] mb-2">Project *</label>
+              {isProjectLocked ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-[#f5f5f5] border border-[#e5e5e5] rounded-md">
+                  <span className="text-sm text-[#333333]">
+                    {lockedProjectName || 'Loading...'}
+                  </span>
+                </div>
+              ) : (
+                <select
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/5"
+                >
+                  <option value="">Select a project...</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label className="block text-sm text-[#666666] mb-2">Name *</label>

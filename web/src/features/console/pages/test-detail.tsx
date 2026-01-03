@@ -13,8 +13,8 @@ interface TestDetailProps {
 
 export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetailProps) {
   const [activeTab, setActiveTab] = useState<'runHistory' | 'steps' | 'schedules'>('steps');
-  const [selectedInitiators, setSelectedInitiators] = useState<string[]>(['schedule']);
-  const [showInitiatorDropdown, setShowInitiatorDropdown] = useState(false);
+  const [selectedTriggers, setSelectedTriggers] = useState<string[]>(['schedule']);
+  const [showTriggerDropdown, setShowTriggerDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const runsPerPage = 10;
 
@@ -374,16 +374,16 @@ export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetai
           <div className="p-4 border-b border-[#e5e5e5]">
             <h3 className="mb-3">Recent Runs</h3>
             
-            {/* Initiator Filter */}
+            {/* Trigger Filter */}
             <div>
-              <label className="text-xs text-[#999999] mb-1 block">Initiator</label>
+              <label className="text-xs text-[#999999] mb-1 block">Trigger</label>
               <MultiSelectDropdown
-                label="Initiators"
+                label="Triggers"
                 items={['ci', 'manual', 'schedule']}
-                selectedItems={selectedInitiators}
-                onSelectionChange={setSelectedInitiators}
-                isOpen={showInitiatorDropdown}
-                onToggle={() => setShowInitiatorDropdown(!showInitiatorDropdown)}
+                selectedItems={selectedTriggers}
+                onSelectionChange={setSelectedTriggers}
+                isOpen={showTriggerDropdown}
+                onToggle={() => setShowTriggerDropdown(!showTriggerDropdown)}
               />
             </div>
           </div>
@@ -391,7 +391,7 @@ export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetai
           {/* Recent runs list */}
           <div>
             {activity
-              .filter(run => selectedInitiators.length === 0 || selectedInitiators.includes(run.initiator))
+              .filter(run => selectedTriggers.length === 0 || selectedTriggers.includes(run.initiator))
               .slice((currentPage - 1) * runsPerPage, currentPage * runsPerPage)
               .map((run) => (
                 <div
@@ -441,11 +441,11 @@ export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetai
                 Previous
               </button>
               <span className="text-xs text-[#666666]">
-                Page {currentPage} of {Math.ceil(activity.filter(run => selectedInitiators.length === 0 || selectedInitiators.includes(run.initiator)).length / runsPerPage)}
+                Page {currentPage} of {Math.ceil(activity.filter(run => selectedTriggers.length === 0 || selectedTriggers.includes(run.initiator)).length / runsPerPage)}
               </span>
               <button
-                onClick={() => setCurrentPage(Math.min(Math.ceil(activity.filter(run => selectedInitiators.length === 0 || selectedInitiators.includes(run.initiator)).length / runsPerPage), currentPage + 1))}
-                disabled={currentPage >= Math.ceil(activity.filter(run => selectedInitiators.length === 0 || selectedInitiators.includes(run.initiator)).length / runsPerPage)}
+                onClick={() => setCurrentPage(Math.min(Math.ceil(activity.filter(run => selectedTriggers.length === 0 || selectedTriggers.includes(run.initiator)).length / runsPerPage), currentPage + 1))}
+                disabled={currentPage >= Math.ceil(activity.filter(run => selectedTriggers.length === 0 || selectedTriggers.includes(run.initiator)).length / runsPerPage)}
                 className="text-xs px-3 py-1.5 bg-white border border-[#e5e5e5] rounded hover:bg-[#fafafa] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next

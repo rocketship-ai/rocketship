@@ -25,10 +25,10 @@ message CreateRunRequest {
 
 message RunContext {
   string project_id = 1;          // For multi-tenancy
-  string source = 2;              // "cli-local" | "ci-branch" | "ci-main" | "scheduled"
+  string source = 2;              // "cli-local" | "github-actions" | "ci-token" | "scheduler"
   string branch = 3;              // Git branch name
   string commit_sha = 4;          // Git commit SHA
-  string trigger = 5;             // "manual" | "webhook" | "schedule"
+  string trigger = 5;             // "manual" | "ci" | "schedule"
   string schedule_name = 6;       // For scheduled runs
   map<string, string> metadata = 7; // Additional context (PR number, etc.)
 }

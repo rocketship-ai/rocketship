@@ -5,38 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
 )
-
-// ListActiveCITokens returns all active (non-revoked) CI tokens for a project
-func (s *Store) ListActiveCITokens(ctx context.Context, projectID uuid.UUID) ([]CITokenRecord, error) {
-	const query = `
-		SELECT id, project_id, name, token_hash, scopes, never_expires,
-		       expires_at, revoked_at, created_by, last_used_at, revoked_by,
-		       description, created_at, updated_at
-		FROM ci_tokens
-		WHERE project_id = $1 AND revoked_at IS NULL
-		ORDER BY name ASC
-	`
-
-	rows := []struct {
-		CITokenRecord
-		Scopes pq.StringArray `db:"scopes"`
-	}{}
-
-	if err := s.db.SelectContext(ctx, &rows, query, projectID); err != nil {
-		return nil, fmt.Errorf("failed to list active ci tokens: %w", err)
-	}
-
-	tokens := make([]CITokenRecord, 0, len(rows))
-	for _, r := range rows {
-		t := r.CITokenRecord
-		t.Scopes = []string(r.Scopes)
-		tokens = append(tokens, t)
-	}
-
-	return tokens, nil
-}
 
 // CountProjectsForOrg returns the number of projects in an organization
 func (s *Store) CountProjectsForOrg(ctx context.Context, orgID uuid.UUID) (int, error) {
@@ -110,13 +79,12 @@ func (s *Store) CountEnabledSchedulesForOrg(ctx context.Context, orgID uuid.UUID
 	return count, nil
 }
 
-// CountActiveCITokensForOrg returns the number of active (non-revoked) CI tokens across all projects in an organization
+// CountActiveCITokensForOrg returns the number of active (non-revoked) CI tokens for an organization
 func (s *Store) CountActiveCITokensForOrg(ctx context.Context, orgID uuid.UUID) (int, error) {
 	const query = `
 		SELECT COUNT(*)
-		FROM ci_tokens t
-		JOIN projects p ON p.id = t.project_id
-		WHERE p.organization_id = $1 AND t.revoked_at IS NULL
+		FROM ci_tokens
+		WHERE organization_id = $1 AND revoked_at IS NULL
 	`
 	var count int
 	if err := s.db.GetContext(ctx, &count, query, orgID); err != nil {

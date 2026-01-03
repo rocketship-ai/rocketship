@@ -1,7 +1,7 @@
-import { ArrowLeft, FolderOpen, ExternalLink, GitBranch, FileCode, Key, Users } from 'lucide-react';
-import { useProject, useProjectSuites } from '../hooks/use-console-queries';
+import { ArrowLeft, FolderOpen, ExternalLink, GitBranch, FileCode, Layers } from 'lucide-react';
+import { useProject, useProjectSuites, useProjectEnvironments } from '../hooks/use-console-queries';
 import { SourceRefBadge } from '../components/SourceRefBadge';
-import { LoadingState, ErrorState, Card, EmptyState } from '../components/ui';
+import { LoadingState, ErrorState, Card } from '../components/ui';
 
 interface ProjectDetailProps {
   projectId: string;
@@ -12,6 +12,7 @@ interface ProjectDetailProps {
 export function ProjectDetail({ projectId, onBack, onViewSuite }: ProjectDetailProps) {
   const { data: project, isLoading: projectLoading, error: projectError, refetch: refetchProject } = useProject(projectId);
   const { data: suites, isLoading: suitesLoading, error: suitesError, refetch: refetchSuites } = useProjectSuites(projectId);
+  const { data: environments } = useProjectEnvironments(projectId);
 
   const isLoading = projectLoading || suitesLoading;
   const error = projectError || suitesError;
@@ -134,10 +135,10 @@ export function ProjectDetail({ projectId, onBack, onViewSuite }: ProjectDetailP
 
           <Card>
             <div className="flex items-center gap-2 mb-2">
-              <Key className="w-4 h-4 text-[#666666]" />
-              <span className="text-sm text-[#999999]">CI Tokens</span>
+              <Layers className="w-4 h-4 text-[#666666]" />
+              <span className="text-sm text-[#999999]">Environments</span>
             </div>
-            <div className="text-2xl text-[#999999]">-</div>
+            <div className="text-2xl">{environments?.length ?? 0}</div>
           </Card>
         </div>
 
@@ -179,28 +180,6 @@ export function ProjectDetail({ projectId, onBack, onViewSuite }: ProjectDetailP
           )}
         </div>
 
-        {/* Access Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* CI Tokens */}
-          <div>
-            <h3 className="mb-4">CI Tokens</h3>
-            <EmptyState
-              icon={<Key className="w-8 h-8" />}
-              title="No tokens linked yet"
-              className="p-6"
-            />
-          </div>
-
-          {/* Users with Access */}
-          <div>
-            <h3 className="mb-4">Users with Access</h3>
-            <EmptyState
-              icon={<Users className="w-8 h-8" />}
-              title="No users yet"
-              className="p-6"
-            />
-          </div>
-        </div>
       </div>
     </div>
   );

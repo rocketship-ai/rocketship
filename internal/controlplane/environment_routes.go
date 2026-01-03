@@ -36,15 +36,15 @@ func (s *Server) handleProjectEnvironments(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Verify project belongs to org
-	_, err := s.store.GetProjectWithOrgCheck(r.Context(), principal.OrgID, projectID)
+	// Check project access
+	canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "project not found")
-			return
-		}
-		log.Printf("failed to get project: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to get project")
+		log.Printf("failed to check project access: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to check access")
+		return
+	}
+	if !canAccess {
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 

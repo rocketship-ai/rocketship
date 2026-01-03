@@ -100,6 +100,21 @@ export function apiPut<T = unknown>(
 }
 
 /**
+ * PATCH request helper
+ */
+export function apiPatch<T = unknown>(
+  url: string,
+  body?: unknown,
+  options?: RequestOptions
+): Promise<T> {
+  return apiFetch<T>(url, {
+    ...options,
+    method: 'PATCH',
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
+/**
  * DELETE request helper
  */
 export function apiDelete<T = unknown>(url: string, options?: RequestOptions): Promise<T> {

@@ -137,12 +137,16 @@ func (s *Server) routes() {
 
 	// API endpoints
 	s.mux.HandleFunc("/api/users/me", s.requireAuth(s.handleCurrentUser))
+	s.mux.HandleFunc("/api/profile/name", s.requireAuth(s.handleUpdateProfileName))
 	s.mux.HandleFunc("/api/profile", s.requireAuth(s.handleProfile))
 	s.mux.HandleFunc("/api/orgs/registration/start", s.requireAuth(s.handleOrgRegistrationStart))
 	s.mux.HandleFunc("/api/orgs/registration/resend", s.requireAuth(s.handleOrgRegistrationResend))
 	s.mux.HandleFunc("/api/orgs/registration/complete", s.requireAuth(s.handleOrgRegistrationComplete))
 	s.mux.HandleFunc("/api/orgs/invites/accept", s.requireAuth(s.handleOrgInviteAccept))
 	s.mux.HandleFunc("/api/orgs/", s.requireAuth(s.handleOrgRoutes))
+	s.mux.HandleFunc("/api/project-invites/pending", s.requireAuth(s.handlePendingProjectInvites))
+	s.mux.HandleFunc("/api/project-invites/", s.requireAuth(s.handleProjectInvites))
+	s.mux.HandleFunc("/api/project-invites", s.requireAuth(s.handleProjectInvites))
 	s.mux.HandleFunc("/api/projects", s.requireAuth(s.handleConsoleProjectRoutesDispatch))
 	s.mux.HandleFunc("/api/projects/", s.requireAuth(s.handleConsoleProjectRoutesDispatch))
 	s.mux.HandleFunc("/api/suites/", s.requireAuth(s.handleConsoleSuiteRoutesDispatch))
@@ -151,6 +155,10 @@ func (s *Server) routes() {
 
 	// Onboarding API
 	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))
+
+	// CI Token management
+	s.mux.HandleFunc("/api/ci-tokens", s.requireAuth(s.handleCITokensDispatch))
+	s.mux.HandleFunc("/api/ci-tokens/", s.requireAuth(s.handleCITokensDispatch))
 
 	// GitHub App routes (for repo access)
 	s.mux.HandleFunc("/api/github/app/status", s.requireAuth(s.handleGitHubAppStatus))

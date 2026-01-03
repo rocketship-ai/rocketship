@@ -200,3 +200,15 @@ func (s *memoryRunStore) GetEnvironmentBySlug(_ context.Context, _ uuid.UUID, _ 
 	// No-op for memory store - no project environments
 	return persistence.ProjectEnvironment{}, sql.ErrNoRows
 }
+
+// CI Token methods - no-op for memory store (CI tokens require database)
+
+func (s *memoryRunStore) FindCITokenByPlaintext(_ context.Context, _ string) (*persistence.CITokenLookupResult, error) {
+	// No-op for memory store - CI tokens require database
+	return nil, nil
+}
+
+func (s *memoryRunStore) UpdateCITokenLastUsed(_ context.Context, _ uuid.UUID) error {
+	// No-op for memory store
+	return nil
+}

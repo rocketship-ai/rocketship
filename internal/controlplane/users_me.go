@@ -19,6 +19,15 @@ func (s *Server) handleCurrentUser(w http.ResponseWriter, r *http.Request, princ
 	}
 
 	ctx := r.Context()
+
+	// Get user details from database (for latest name)
+	user, err := s.store.GetUserByID(ctx, principal.UserID)
+	if err != nil {
+		log.Printf("failed to get user: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to load user")
+		return
+	}
+
 	summary, err := s.store.RoleSummary(ctx, principal.UserID)
 	if err != nil {
 		log.Printf("failed to load role summary: %v", err)
@@ -36,7 +45,7 @@ func (s *Server) handleCurrentUser(w http.ResponseWriter, r *http.Request, princ
 		"user": map[string]string{
 			"id":       principal.UserID.String(),
 			"email":    principal.Email,
-			"name":     principal.Name,
+			"name":     user.Name, // Use database value, not JWT claims
 			"username": principal.Username,
 		},
 		"roles":  roles,

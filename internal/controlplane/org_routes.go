@@ -1,8 +1,10 @@
 package controlplane
 
 import (
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -35,7 +37,105 @@ func (s *Server) handleOrgRoutes(w http.ResponseWriter, r *http.Request, princip
 	switch segments[1] {
 	case "invites":
 		s.handleOrgInvites(w, r, principal, orgID, segments[2:])
+	case "owners":
+		s.handleOrgOwners(w, r, principal, orgID, segments[2:])
+	case "project-members":
+		s.handleOrgProjectMembers(w, r, principal, orgID, segments[2:])
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}
+}
+
+// handleOrgOwners lists organization owners
+// Any authenticated org member can view the owners list (read-only)
+func (s *Server) handleOrgOwners(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, orgID uuid.UUID, tail []string) {
+	if len(tail) > 0 {
+		writeError(w, http.StatusNotFound, "resource not found")
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Verify user has org membership
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+	if principal.OrgID != orgID {
+		writeError(w, http.StatusForbidden, "organization access required")
+		return
+	}
+
+	ctx := r.Context()
+	owners, err := s.store.ListOrganizationOwners(ctx, orgID)
+	if err != nil {
+		log.Printf("failed to list org owners: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to list owners")
+		return
+	}
+
+	// Convert to JSON-friendly format
+	payload := make([]map[string]interface{}, 0, len(owners))
+	for _, o := range owners {
+		payload = append(payload, map[string]interface{}{
+			"user_id":  o.UserID.String(),
+			"email":    o.Email,
+			"name":     o.Name,
+			"username": o.Username,
+			"added_at": o.AddedAt.Format(time.RFC3339),
+		})
+	}
+
+	writeJSON(w, http.StatusOK, payload)
+}
+
+// handleOrgProjectMembers lists all project members across an organization
+func (s *Server) handleOrgProjectMembers(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, orgID uuid.UUID, tail []string) {
+	if len(tail) > 0 {
+		writeError(w, http.StatusNotFound, "resource not found")
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	ctx := r.Context()
+
+	// Verify the requesting user is an org owner
+	isOwner, err := s.store.IsOrganizationOwner(ctx, orgID, principal.UserID)
+	if err != nil {
+		log.Printf("failed to check org owner: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to authorize request")
+		return
+	}
+	if !isOwner {
+		writeError(w, http.StatusForbidden, "owner role required")
+		return
+	}
+
+	members, err := s.store.ListAllProjectMembers(ctx, orgID)
+	if err != nil {
+		log.Printf("failed to list all project members: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to list members")
+		return
+	}
+
+	// Convert to JSON-friendly format
+	payload := make([]map[string]interface{}, 0, len(members))
+	for _, m := range members {
+		payload = append(payload, map[string]interface{}{
+			"project_id":   m.ProjectID.String(),
+			"project_name": m.ProjectName,
+			"user_id":      m.UserID.String(),
+			"username":     m.Username,
+			"email":        m.Email,
+			"name":         m.Name,
+			"role":         m.Role,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, payload)
 }

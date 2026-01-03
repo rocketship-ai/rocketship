@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// handleConsoleProjects handles GET /api/projects (list all projects for the org)
+// handleConsoleProjects handles GET /api/projects (list projects the user can access)
 func (s *Server) handleConsoleProjects(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -23,7 +23,8 @@ func (s *Server) handleConsoleProjects(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
-	projects, err := s.store.ListProjectSummariesForOrg(r.Context(), principal.OrgID)
+	// Use scoped query - only returns projects user can access
+	projects, err := s.store.ListProjectSummariesForUser(r.Context(), principal.OrgID, principal.UserID)
 	if err != nil {
 		log.Printf("failed to list project summaries: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list projects")
@@ -69,6 +70,18 @@ func (s *Server) handleConsoleProjectDetail(w http.ResponseWriter, r *http.Reque
 
 	if principal.RequiresOrgMembership() {
 		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	// Check project access
+	canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, projectID)
+	if err != nil {
+		log.Printf("failed to check project access: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to check access")
+		return
+	}
+	if !canAccess {
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
@@ -143,15 +156,15 @@ func (s *Server) handleConsoleProjectSuites(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Verify project belongs to org
-	_, err := s.store.GetProjectWithOrgCheck(r.Context(), principal.OrgID, projectID)
+	// Check project access
+	canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, projectID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "project not found")
-			return
-		}
-		log.Printf("failed to verify project: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to verify project")
+		log.Printf("failed to check project access: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to check access")
+		return
+	}
+	if !canAccess {
+		writeError(w, http.StatusNotFound, "project not found")
 		return
 	}
 
@@ -201,7 +214,8 @@ func (s *Server) handleSuiteActivity(w http.ResponseWriter, r *http.Request, pri
 		return
 	}
 
-	suites, err := s.store.ListSuitesForOrg(r.Context(), principal.OrgID, 100)
+	// Use scoped query - only returns suites from projects user can access
+	suites, err := s.store.ListSuitesForUserProjects(r.Context(), principal.OrgID, principal.UserID, 100)
 	if err != nil {
 		log.Printf("failed to list suites for org: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list suites")
@@ -283,6 +297,18 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
+	// Check project access for the suite's project
+	canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, suite.ProjectID)
+	if err != nil {
+		log.Printf("failed to check project access: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to check access")
+		return
+	}
+	if !canAccess {
+		writeError(w, http.StatusNotFound, "suite not found")
+		return
+	}
+
 	// Get project to obtain repo_url and path_scope
 	project, err := s.store.GetProjectWithOrgCheck(r.Context(), principal.OrgID, suite.ProjectID)
 	if err != nil {
@@ -346,23 +372,18 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 			item["duration_ms"] = run.EndedAt.Time.Sub(run.StartedAt.Time).Milliseconds()
 		}
 
-		// Derive initiator_type:
-		// - if schedule_id not null OR schedule_name != "" => "schedule"
-		// - else if trigger == "webhook" OR source == "ci-branch" => "ci"
-		// - else "manual"
-		var initiatorType string
-		if run.ScheduleID.Valid || run.ScheduleName != "" {
-			initiatorType = "schedule"
-		} else if run.Trigger == "webhook" || run.Source == "ci-branch" {
-			initiatorType = "ci"
-		} else {
-			initiatorType = "manual"
+		// initiator_type is now the authoritative trigger value from DB
+		// After migration 0029, trigger is always one of: 'manual', 'ci', 'schedule'
+		initiatorType := run.Trigger
+		if initiatorType == "" {
+			initiatorType = "manual" // fallback for very old runs before trigger was set
 		}
 		item["initiator_type"] = initiatorType
 
-		// For manual runs, include the initiator name
+		// For manual runs, parse initiator to extract username
+		// New format: "user:<github_username>" → extract just the username
 		if initiatorType == "manual" && run.Initiator != "" {
-			item["initiator_name"] = run.Initiator
+			item["initiator_name"] = strings.TrimPrefix(run.Initiator, "user:")
 		}
 
 		payload = append(payload, item)
@@ -391,6 +412,18 @@ func (s *Server) handleSuiteDetail(w http.ResponseWriter, r *http.Request, princ
 		}
 		log.Printf("failed to get suite detail: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to get suite")
+		return
+	}
+
+	// Check project access for the suite's project
+	canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, suite.ProjectID)
+	if err != nil {
+		log.Printf("failed to check project access: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to check access")
+		return
+	}
+	if !canAccess {
+		writeError(w, http.StatusNotFound, "suite not found")
 		return
 	}
 

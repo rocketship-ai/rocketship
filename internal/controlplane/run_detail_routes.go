@@ -36,6 +36,32 @@ func (s *Server) handleRunDetail(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
+	// Check project access if run has a project_id
+	if run.ProjectID.Valid {
+		canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, run.ProjectID.UUID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "run not found")
+			return
+		}
+	} else {
+		// Runs without project_id: only org owners can access
+		isOwner, err := s.store.IsOrganizationOwner(r.Context(), principal.OrgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to check org ownership: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusNotFound, "run not found")
+			return
+		}
+	}
+
 	payload := buildRunPayload(run)
 	writeJSON(w, http.StatusOK, payload)
 }
@@ -53,7 +79,7 @@ func (s *Server) handleRunTests(w http.ResponseWriter, r *http.Request, principa
 	}
 
 	// Verify run belongs to org
-	_, err := s.store.GetRun(r.Context(), principal.OrgID, runID)
+	run, err := s.store.GetRun(r.Context(), principal.OrgID, runID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "run not found")
@@ -62,6 +88,31 @@ func (s *Server) handleRunTests(w http.ResponseWriter, r *http.Request, principa
 		log.Printf("failed to verify run: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to verify run")
 		return
+	}
+
+	// Check project access
+	if run.ProjectID.Valid {
+		canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, run.ProjectID.UUID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "run not found")
+			return
+		}
+	} else {
+		isOwner, err := s.store.IsOrganizationOwner(r.Context(), principal.OrgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to check org ownership: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusNotFound, "run not found")
+			return
+		}
 	}
 
 	tests, err := s.store.ListRunTests(r.Context(), runID)
@@ -137,7 +188,7 @@ func (s *Server) handleRunLogs(w http.ResponseWriter, r *http.Request, principal
 	}
 
 	// Verify run belongs to org
-	_, err := s.store.GetRun(r.Context(), principal.OrgID, runID)
+	run, err := s.store.GetRun(r.Context(), principal.OrgID, runID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "run not found")
@@ -146,6 +197,31 @@ func (s *Server) handleRunLogs(w http.ResponseWriter, r *http.Request, principal
 		log.Printf("failed to verify run: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to verify run")
 		return
+	}
+
+	// Check project access
+	if run.ProjectID.Valid {
+		canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, run.ProjectID.UUID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "run not found")
+			return
+		}
+	} else {
+		isOwner, err := s.store.IsOrganizationOwner(r.Context(), principal.OrgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to check org ownership: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusNotFound, "run not found")
+			return
+		}
 	}
 
 	limit := 500
@@ -212,6 +288,31 @@ func (s *Server) handleTestRunDetail(w http.ResponseWriter, r *http.Request, pri
 	test := result.RunTest
 	run := result.Run
 
+	// Check project access
+	if run.ProjectID.Valid {
+		canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, run.ProjectID.UUID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+	} else {
+		isOwner, err := s.store.IsOrganizationOwner(r.Context(), principal.OrgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to check org ownership: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+	}
+
 	testPayload := map[string]interface{}{
 		"id":           test.ID.String(),
 		"run_id":       test.RunID,
@@ -270,7 +371,32 @@ func (s *Server) handleTestRunLogs(w http.ResponseWriter, r *http.Request, princ
 		writeError(w, http.StatusInternalServerError, "failed to verify test run")
 		return
 	}
-	_ = result // org check passed
+
+	// Check project access
+	run := result.Run
+	if run.ProjectID.Valid {
+		canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, run.ProjectID.UUID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+	} else {
+		isOwner, err := s.store.IsOrganizationOwner(r.Context(), principal.OrgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to check org ownership: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+	}
 
 	limit := 500
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
@@ -364,7 +490,32 @@ func (s *Server) handleTestRunSteps(w http.ResponseWriter, r *http.Request, prin
 		writeError(w, http.StatusInternalServerError, "failed to verify test run")
 		return
 	}
-	_ = result // org check passed
+
+	// Check project access
+	run := result.Run
+	if run.ProjectID.Valid {
+		canAccess, err := s.store.UserCanAccessProject(r.Context(), principal.OrgID, principal.UserID, run.ProjectID.UUID)
+		if err != nil {
+			log.Printf("failed to check project access: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !canAccess {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+	} else {
+		isOwner, err := s.store.IsOrganizationOwner(r.Context(), principal.OrgID, principal.UserID)
+		if err != nil {
+			log.Printf("failed to check org ownership: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to check access")
+			return
+		}
+		if !isOwner {
+			writeError(w, http.StatusNotFound, "test run not found")
+			return
+		}
+	}
 
 	steps, err := s.store.ListRunSteps(r.Context(), runTestID)
 	if err != nil {
@@ -510,20 +661,18 @@ func buildRunPayload(run persistence.RunRecord) map[string]interface{} {
 		payload["duration_ms"] = run.EndedAt.Time.Sub(run.StartedAt.Time).Milliseconds()
 	}
 
-	// Derive initiator_type
-	var initiatorType string
-	if run.ScheduleID.Valid || run.ScheduleName != "" {
-		initiatorType = "schedule"
-	} else if run.Trigger == "webhook" || run.Source == "ci-branch" {
-		initiatorType = "ci"
-	} else {
-		initiatorType = "manual"
+	// initiator_type is now the authoritative trigger value from DB
+	// After migration 0029, trigger is always one of: 'manual', 'ci', 'schedule'
+	initiatorType := run.Trigger
+	if initiatorType == "" {
+		initiatorType = "manual" // fallback for very old runs before trigger was set
 	}
 	payload["initiator_type"] = initiatorType
 
-	// For manual runs, include the initiator name
+	// For manual runs, parse initiator to extract username
+	// New format: "user:<github_username>" → extract just the username
 	if initiatorType == "manual" && run.Initiator != "" {
-		payload["initiator_name"] = run.Initiator
+		payload["initiator_name"] = strings.TrimPrefix(run.Initiator, "user:")
 	}
 
 	return payload

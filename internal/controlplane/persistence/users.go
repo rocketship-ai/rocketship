@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -107,11 +108,35 @@ func (s *Store) GetUserByID(ctx context.Context, userID uuid.UUID) (User, error)
 	return user, nil
 }
 
+// ErrUserNotFound is returned when a user lookup fails
+var ErrUserNotFound = errors.New("user not found")
+
+// GetUserByUsername retrieves a user by their GitHub username (case-insensitive)
+func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return User{}, errors.New("username required")
+	}
+	const query = `
+        SELECT id, github_user_id, email, COALESCE(name, '') as name, username, created_at, updated_at
+        FROM users
+        WHERE lower(username) = lower($1)
+    `
+	var user User
+	if err := s.db.GetContext(ctx, &user, query, username); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return User{}, ErrUserNotFound
+		}
+		return User{}, fmt.Errorf("failed to get user by username: %w", err)
+	}
+	return user, nil
+}
+
 // RoleSummary returns aggregated user membership information
 func (s *Store) RoleSummary(ctx context.Context, userID uuid.UUID) (RoleSummary, error) {
 	summary := RoleSummary{}
 
-	const adminQuery = `SELECT organization_id FROM organization_admins WHERE user_id = $1`
+	const adminQuery = `SELECT organization_id FROM organization_owners WHERE user_id = $1`
 	var adminOrgIDs []uuid.UUID
 	if err := s.db.SelectContext(ctx, &adminOrgIDs, adminQuery, userID); err != nil {
 		return RoleSummary{}, fmt.Errorf("failed to load organization admins: %w", err)
