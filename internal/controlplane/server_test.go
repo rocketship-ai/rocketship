@@ -652,11 +652,48 @@ func (f *fakeStore) ListSuitesForOrg(_ context.Context, _ uuid.UUID, _ int) ([]p
 	return nil, nil
 }
 
+func (f *fakeStore) ListSuitesForUserProjects(_ context.Context, _, _ uuid.UUID, _ int) ([]persistence.SuiteActivityRow, error) {
+	return nil, nil
+}
+
 func (f *fakeStore) GetSuiteDetail(_ context.Context, _, _ uuid.UUID) (persistence.SuiteDetail, error) {
 	return persistence.SuiteDetail{}, sql.ErrNoRows
 }
 
 func (f *fakeStore) ListTestsBySuite(_ context.Context, _ uuid.UUID) ([]persistence.Test, error) {
+	return nil, nil
+}
+
+// Project access control methods
+func (f *fakeStore) ListAccessibleProjectIDs(_ context.Context, orgID, userID uuid.UUID) ([]uuid.UUID, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// Org owner sees all projects
+	if orgID == f.primaryOrg && f.user.ID == userID {
+		ids := make([]uuid.UUID, 0, len(f.projectOrg))
+		for pid, org := range f.projectOrg {
+			if org == orgID {
+				ids = append(ids, pid)
+			}
+		}
+		return ids, nil
+	}
+	return []uuid.UUID{}, nil
+}
+
+func (f *fakeStore) UserCanAccessProject(_ context.Context, orgID, userID, projectID uuid.UUID) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// Org owner can access all projects
+	if orgID == f.primaryOrg && f.user.ID == userID {
+		if org, ok := f.projectOrg[projectID]; ok && org == orgID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (f *fakeStore) ListProjectSummariesForUser(_ context.Context, _, _ uuid.UUID) ([]persistence.ProjectSummary, error) {
 	return nil, nil
 }
 

@@ -517,6 +517,83 @@ func (s *Store) FindProjectByRepoAndPathScope(ctx context.Context, orgID uuid.UU
 	return project, true, nil
 }
 
+// ListAccessibleProjectIDs returns the project IDs that a user can access within an organization.
+// Org owners can access all active projects; non-owners can only access projects they're members of.
+func (s *Store) ListAccessibleProjectIDs(ctx context.Context, orgID, userID uuid.UUID) ([]uuid.UUID, error) {
+	// Check if user is org owner
+	isOwner, err := s.IsOrganizationOwner(ctx, orgID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check org ownership: %w", err)
+	}
+
+	if isOwner {
+		// Org owner: return all active projects
+		const query = `
+			SELECT id FROM projects
+			WHERE organization_id = $1 AND is_active = true
+		`
+		var ids []uuid.UUID
+		if err := s.db.SelectContext(ctx, &ids, query, orgID); err != nil {
+			return nil, fmt.Errorf("failed to list all project IDs: %w", err)
+		}
+		if ids == nil {
+			ids = []uuid.UUID{}
+		}
+		return ids, nil
+	}
+
+	// Non-owner: return only projects they're a member of
+	const query = `
+		SELECT p.id FROM projects p
+		JOIN project_members pm ON pm.project_id = p.id
+		WHERE p.organization_id = $1 AND pm.user_id = $2 AND p.is_active = true
+	`
+	var ids []uuid.UUID
+	if err := s.db.SelectContext(ctx, &ids, query, orgID, userID); err != nil {
+		return nil, fmt.Errorf("failed to list accessible project IDs: %w", err)
+	}
+	if ids == nil {
+		ids = []uuid.UUID{}
+	}
+	return ids, nil
+}
+
+// UserCanAccessProject checks if a user can access a specific project.
+// Org owners can access all active projects; non-owners must be project members.
+func (s *Store) UserCanAccessProject(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error) {
+	// Check if user is org owner
+	isOwner, err := s.IsOrganizationOwner(ctx, orgID, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check org ownership: %w", err)
+	}
+
+	if isOwner {
+		// Verify project exists and belongs to org
+		const query = `
+			SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND organization_id = $2 AND is_active = true)
+		`
+		var exists bool
+		if err := s.db.GetContext(ctx, &exists, query, projectID, orgID); err != nil {
+			return false, fmt.Errorf("failed to check project existence: %w", err)
+		}
+		return exists, nil
+	}
+
+	// Non-owner: check if they're a member of the project
+	const query = `
+		SELECT EXISTS(
+			SELECT 1 FROM project_members pm
+			JOIN projects p ON p.id = pm.project_id
+			WHERE pm.project_id = $1 AND pm.user_id = $2 AND p.organization_id = $3 AND p.is_active = true
+		)
+	`
+	var exists bool
+	if err := s.db.GetContext(ctx, &exists, query, projectID, userID, orgID); err != nil {
+		return false, fmt.Errorf("failed to check project membership: %w", err)
+	}
+	return exists, nil
+}
+
 // FindDefaultBranchProject looks up a project where source_ref matches default_branch.
 // This is used during PR scans to reuse existing default-branch projects instead of creating branch variants.
 // Returns (project, found, error) - found is true if a matching default-branch project exists.

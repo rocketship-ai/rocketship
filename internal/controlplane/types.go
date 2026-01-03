@@ -107,11 +107,17 @@ type dataStore interface {
 
 	// Console hydration queries
 	ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.ProjectSummary, error)
+	ListProjectSummariesForUser(ctx context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectSummary, error)
 	GetProjectWithOrgCheck(ctx context.Context, orgID, projectID uuid.UUID) (persistence.Project, error)
 	GetLatestScanForProject(ctx context.Context, orgID uuid.UUID, repoURL, sourceRef string) (*persistence.ScanSummary, error)
 	ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]persistence.SuiteActivityRow, error)
+	ListSuitesForUserProjects(ctx context.Context, orgID, userID uuid.UUID, limit int) ([]persistence.SuiteActivityRow, error)
 	GetSuiteDetail(ctx context.Context, orgID, suiteID uuid.UUID) (persistence.SuiteDetail, error)
 	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
+
+	// Project access control
+	ListAccessibleProjectIDs(ctx context.Context, orgID, userID uuid.UUID) ([]uuid.UUID, error)
+	UserCanAccessProject(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error)
 
 	// Profile hydration queries
 	GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (persistence.Organization, error)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // RepoURLToFullName converts a full repo URL to owner/repo format.
@@ -182,6 +183,110 @@ func (s *Store) getLatestScansForProjects(ctx context.Context, orgID uuid.UUID, 
 	return result, nil
 }
 
+// ListProjectSummariesForUser returns active projects the user can access with counts and last scan info.
+// Org owners see all projects; non-owners see only projects they're members of.
+func (s *Store) ListProjectSummariesForUser(ctx context.Context, orgID, userID uuid.UUID) ([]ProjectSummary, error) {
+	// Check if user is org owner
+	isOwner, err := s.IsOrganizationOwner(ctx, orgID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check org ownership: %w", err)
+	}
+
+	var projectQuery string
+	var args []interface{}
+
+	if isOwner {
+		// Org owner: return all active projects
+		projectQuery = `
+			SELECT
+				p.id,
+				p.name,
+				p.repo_url,
+				p.default_branch,
+				p.path_scope,
+				p.source_ref,
+				p.created_at,
+				COALESCE((SELECT COUNT(*) FROM suites WHERE project_id = p.id AND is_active = true), 0) AS suite_count,
+				COALESCE((SELECT COUNT(*) FROM tests WHERE project_id = p.id AND is_active = true), 0) AS test_count
+			FROM projects p
+			WHERE p.organization_id = $1 AND p.is_active = true
+			ORDER BY p.name ASC, p.source_ref ASC
+		`
+		args = []interface{}{orgID}
+	} else {
+		// Non-owner: return only projects they're a member of
+		projectQuery = `
+			SELECT
+				p.id,
+				p.name,
+				p.repo_url,
+				p.default_branch,
+				p.path_scope,
+				p.source_ref,
+				p.created_at,
+				COALESCE((SELECT COUNT(*) FROM suites WHERE project_id = p.id AND is_active = true), 0) AS suite_count,
+				COALESCE((SELECT COUNT(*) FROM tests WHERE project_id = p.id AND is_active = true), 0) AS test_count
+			FROM projects p
+			JOIN project_members pm ON pm.project_id = p.id
+			WHERE p.organization_id = $1 AND pm.user_id = $2 AND p.is_active = true
+			ORDER BY p.name ASC, p.source_ref ASC
+		`
+		args = []interface{}{orgID, userID}
+	}
+
+	rows := []struct {
+		ID            uuid.UUID `db:"id"`
+		Name          string    `db:"name"`
+		RepoURL       string    `db:"repo_url"`
+		DefaultBranch string    `db:"default_branch"`
+		PathScope     string    `db:"path_scope"`
+		SourceRef     string    `db:"source_ref"`
+		CreatedAt     time.Time `db:"created_at"`
+		SuiteCount    int       `db:"suite_count"`
+		TestCount     int       `db:"test_count"`
+	}{}
+
+	if err := s.db.SelectContext(ctx, &rows, projectQuery, args...); err != nil {
+		return nil, fmt.Errorf("failed to list project summaries for user: %w", err)
+	}
+
+	projects := make([]ProjectSummary, 0, len(rows))
+	for _, r := range rows {
+		p := ProjectSummary{
+			ID:            r.ID,
+			Name:          r.Name,
+			RepoURL:       r.RepoURL,
+			DefaultBranch: r.DefaultBranch,
+			SourceRef:     r.SourceRef,
+			SuiteCount:    r.SuiteCount,
+			TestCount:     r.TestCount,
+			CreatedAt:     r.CreatedAt,
+		}
+		if r.PathScope != "" {
+			if err := json.Unmarshal([]byte(r.PathScope), &p.PathScope); err != nil {
+				return nil, fmt.Errorf("failed to parse path_scope: %w", err)
+			}
+		}
+		projects = append(projects, p)
+	}
+
+	// Fetch latest scan for each project (batched)
+	if len(projects) > 0 {
+		scans, err := s.getLatestScansForProjects(ctx, orgID, projects)
+		if err != nil {
+			return nil, err
+		}
+		for i := range projects {
+			key := RepoURLToFullName(projects[i].RepoURL) + "|" + projects[i].SourceRef
+			if scan, ok := scans[key]; ok {
+				projects[i].LastScan = &scan
+			}
+		}
+	}
+
+	return projects, nil
+}
+
 // SuiteActivityRow represents a suite with project info for activity list
 type SuiteActivityRow struct {
 	SuiteID       uuid.UUID      `db:"suite_id"`
@@ -259,6 +364,85 @@ func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int
 	var rows []SuiteActivityRow
 	if err := s.db.SelectContext(ctx, &rows, query, orgID, limit); err != nil {
 		return nil, fmt.Errorf("failed to list suites for org: %w", err)
+	}
+	if rows == nil {
+		rows = []SuiteActivityRow{}
+	}
+
+	return rows, nil
+}
+
+// ListSuitesForUserProjects returns active suites across projects the user can access.
+// Deduplicates suites by (project_id, file_path), preferring the default branch version.
+// Suites that only exist on a PR branch (no default branch version) are also shown.
+func (s *Store) ListSuitesForUserProjects(ctx context.Context, orgID, userID uuid.UUID, limit int) ([]SuiteActivityRow, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
+
+	// Get accessible project IDs first
+	accessibleIDs, err := s.ListAccessibleProjectIDs(ctx, orgID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get accessible project IDs: %w", err)
+	}
+
+	if len(accessibleIDs) == 0 {
+		return []SuiteActivityRow{}, nil
+	}
+
+	// Use a CTE with ROW_NUMBER to deduplicate suites by (project_id, file_path).
+	// Prefer suites where source_ref matches the project's default_branch.
+	const query = `
+		WITH ranked_suites AS (
+			SELECT
+				s.id AS suite_id,
+				s.name AS suite_name,
+				s.description,
+				s.file_path,
+				s.source_ref,
+				s.test_count,
+				s.last_run_status,
+				s.last_run_at,
+				p.id AS project_id,
+				p.name AS project_name,
+				p.repo_url,
+				p.default_branch,
+				ROW_NUMBER() OVER (
+					PARTITION BY p.id, s.file_path
+					ORDER BY
+						-- Prefer default branch first
+						CASE WHEN s.source_ref = p.default_branch THEN 0 ELSE 1 END,
+						-- Then by most recently updated
+						s.updated_at DESC
+				) AS rn
+			FROM suites s
+			JOIN projects p ON p.id = s.project_id
+			WHERE p.id = ANY($1) AND p.is_active = true AND s.is_active = true
+		)
+		SELECT
+			suite_id,
+			suite_name,
+			description,
+			file_path,
+			source_ref,
+			test_count,
+			last_run_status,
+			last_run_at,
+			project_id,
+			project_name,
+			repo_url
+		FROM ranked_suites
+		WHERE rn = 1
+		ORDER BY suite_name ASC, source_ref ASC
+		LIMIT $2
+	`
+
+	var rows []SuiteActivityRow
+	if err := s.db.SelectContext(ctx, &rows, query, pq.Array(accessibleIDs), limit); err != nil {
+		return nil, fmt.Errorf("failed to list suites for user projects: %w", err)
 	}
 	if rows == nil {
 		rows = []SuiteActivityRow{}
