@@ -41,10 +41,8 @@ export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) 
     onClick?.(run.id);
   };
 
-  // Live styling: green left border and subtle background
-  const liveClasses = isLive
-    ? 'border-l-4 border-l-[#4CBB17] bg-[#f8fff5]'
-    : '';
+  // Live styling: subtle green background (LIVE pill provides clear indicator)
+  const liveClasses = isLive ? 'bg-[#f8fff5]' : '';
 
   return (
     <div

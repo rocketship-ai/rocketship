@@ -145,11 +145,10 @@ function LastRunStatus({ status }: { status: string }) {
   const getStatusClass = () => {
     switch (status.toUpperCase()) {
       case 'PASSED':
+      case 'RUNNING':
         return 'text-green-600';
       case 'FAILED':
         return 'text-red-600';
-      case 'RUNNING':
-        return 'text-yellow-600';
       default:
         return 'text-[#666666]';
     }
