@@ -88,6 +88,13 @@ type dataStore interface {
 	// Schedule management
 	ListEnabledSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.SuiteSchedule, error)
 
+	// Project schedule management
+	CreateProjectSchedule(ctx context.Context, input persistence.CreateProjectScheduleInput) (persistence.ProjectSchedule, error)
+	GetProjectSchedule(ctx context.Context, scheduleID uuid.UUID) (persistence.ProjectSchedule, error)
+	ListProjectSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectSchedule, error)
+	UpdateProjectSchedule(ctx context.Context, scheduleID uuid.UUID, input persistence.UpdateProjectScheduleInput) (persistence.ProjectSchedule, error)
+	DeleteProjectSchedule(ctx context.Context, scheduleID uuid.UUID) error
+
 	// CI Token management
 	ListCITokensForOrg(ctx context.Context, orgID uuid.UUID, includeRevoked bool) ([]persistence.CITokenRecord, error)
 	CreateCIToken(ctx context.Context, orgID, createdBy uuid.UUID, input persistence.CITokenCreateInput) (string, persistence.CITokenRecord, error)
@@ -118,6 +125,7 @@ type dataStore interface {
 	// Project access control
 	ListAccessibleProjectIDs(ctx context.Context, orgID, userID uuid.UUID) ([]uuid.UUID, error)
 	UserCanAccessProject(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error)
+	UserHasProjectWriteAccess(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error)
 
 	// Profile hydration queries
 	GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (persistence.Organization, error)

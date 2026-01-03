@@ -309,13 +309,14 @@ func (s *Scanner) processSuiteFile(ctx context.Context, input ScanInput, project
 	// Note: We're not using a separate config column for suites/tests currently,
 	// but if needed we could add it later
 
-	// Upsert suite
+	// Upsert suite with raw YAML payload for scheduled runs
 	suite := persistence.Suite{
 		ProjectID:   project.ID,
 		Name:        config.Name,
 		Description: sql.NullString{String: config.Description, Valid: config.Description != ""},
 		FilePath:    sql.NullString{String: filePath, Valid: true},
 		SourceRef:   input.SourceRef.Ref,
+		YamlPayload: string(content), // Store raw YAML for scheduled runs
 		TestCount:   len(config.Tests),
 	}
 

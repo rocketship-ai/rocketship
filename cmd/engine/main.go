@@ -5,16 +5,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"github.com/rocketship-ai/rocketship/internal/api/generated"
-	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 	"github.com/rocketship-ai/rocketship/internal/cli"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 	"github.com/rocketship-ai/rocketship/internal/orchestrator"
 	"go.temporal.io/sdk/client"
 	"golang.org/x/net/http2"
@@ -83,6 +86,30 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("authentication configured", "mode", engine.AuthMode())
+
+	// Start the scheduler if we have a database store that supports scheduling
+	var scheduler *orchestrator.Scheduler
+	if schedulerStore, ok := runStore.(orchestrator.SchedulerStore); ok {
+		schedLogger := slog.Default().With("component", "scheduler")
+		scheduler = orchestrator.NewScheduler(engine, schedulerStore, schedLogger)
+		scheduler.Start()
+		logger.Info("scheduler started")
+	} else {
+		logger.Debug("scheduler disabled (no database store)")
+	}
+
+	// Set up signal handling for graceful shutdown
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		logger.Info("received shutdown signal", "signal", sig)
+		if scheduler != nil {
+			scheduler.Stop()
+		}
+		os.Exit(0)
+	}()
+
 	startHealthServer()
 	startGRPCServer(engine)
 }

@@ -142,6 +142,7 @@ type RunRecord struct {
 	Initiator      string         `db:"initiator"`
 	Trigger        string         `db:"trigger"`
 	ScheduleName   string         `db:"schedule_name"`
+	ScheduleType   sql.NullString `db:"schedule_type"` // "project" or "suite"
 	ConfigSource   string         `db:"config_source"`
 	Source         string         `db:"source"`
 	Branch         string         `db:"branch"`
@@ -192,6 +193,7 @@ type Suite struct {
 	Description   sql.NullString `db:"description"`
 	FilePath      sql.NullString `db:"file_path"`
 	SourceRef     string         `db:"source_ref"` // Branch/ref this suite was discovered from
+	YamlPayload   string         `db:"yaml_payload"` // Raw YAML content for scheduled runs
 	TestCount     int            `db:"test_count"`
 	LastRunID     sql.NullString `db:"last_run_id"`
 	LastRunStatus sql.NullString `db:"last_run_status"`
@@ -227,7 +229,7 @@ type Test struct {
 	UpdatedAt     time.Time       `db:"updated_at"`
 }
 
-// SuiteSchedule represents a scheduled test run
+// SuiteSchedule represents a scheduled test run (suite-level override)
 type SuiteSchedule struct {
 	ID             uuid.UUID      `db:"id"`
 	SuiteID        uuid.UUID      `db:"suite_id"`
@@ -245,6 +247,28 @@ type SuiteSchedule struct {
 	CreatedBy      uuid.NullUUID  `db:"created_by"`
 	CreatedAt      time.Time      `db:"created_at"`
 	UpdatedAt      time.Time      `db:"updated_at"`
+}
+
+// ProjectSchedule represents a project-level scheduled run
+// Each schedule is environment-scoped: at most 1 schedule per (project, environment)
+type ProjectSchedule struct {
+	ID             uuid.UUID      `db:"id"`
+	ProjectID      uuid.UUID      `db:"project_id"`
+	EnvironmentID  uuid.UUID      `db:"environment_id"`
+	Name           string         `db:"name"`
+	CronExpression string         `db:"cron_expression"`
+	Timezone       string         `db:"timezone"`
+	Enabled        bool           `db:"enabled"`
+	NextRunAt      sql.NullTime   `db:"next_run_at"`
+	LastRunAt      sql.NullTime   `db:"last_run_at"`
+	LastRunID      sql.NullString `db:"last_run_id"`
+	LastRunStatus  sql.NullString `db:"last_run_status"`
+	CreatedBy      uuid.NullUUID  `db:"created_by"`
+	CreatedAt      time.Time      `db:"created_at"`
+	UpdatedAt      time.Time      `db:"updated_at"`
+	// Joined fields for API responses
+	EnvironmentName string `db:"-"`
+	EnvironmentSlug string `db:"-"`
 }
 
 // RunTest represents an individual test result within a run

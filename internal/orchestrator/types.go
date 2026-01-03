@@ -51,6 +51,8 @@ type RunStore interface {
 	// CI Token authentication
 	FindCITokenByPlaintext(ctx context.Context, tokenPlaintext string) (*persistence.CITokenLookupResult, error)
 	UpdateCITokenLastUsed(ctx context.Context, tokenID uuid.UUID) error
+	// Schedule last run updates
+	UpdateProjectScheduleLastRun(ctx context.Context, scheduleID uuid.UUID, runID, status string, runAt time.Time) error
 }
 
 type RunInfo struct {
@@ -76,6 +78,9 @@ type RunInfo struct {
 	TestIDs   map[string]uuid.UUID // Test name (lowercase) -> discovered test ID
 	// Environment secrets from project environment (for template resolution)
 	EnvSecrets map[string]string
+	// Schedule linking for updating last_run_status on completion
+	ScheduleID   uuid.UUID // Schedule that triggered this run (if any)
+	ScheduleType string    // "project" or "suite" (if scheduled)
 }
 
 type LogLine struct {

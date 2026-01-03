@@ -3,7 +3,7 @@ import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } fr
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
 import { useMemo, useState } from 'react';
-import { useSuite, useSuiteRuns, useProjectEnvironments, type SuiteRunSummary } from '../hooks/use-console-queries';
+import { useSuite, useSuiteRuns, useProjectEnvironments, useProjectSchedules, useCreateProjectSchedule, useUpdateProjectSchedule, useDeleteProjectSchedule, type SuiteRunSummary, type ProjectSchedule } from '../hooks/use-console-queries';
 import { useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { LoadingState, ErrorState } from '../components/ui';
@@ -55,32 +55,39 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   const tabs = [
     { id: 'activity', label: 'Activity', enabled: true },
     { id: 'tests', label: 'Tests', enabled: true },
-    { id: 'schedules', label: 'Schedules', enabled: false },
+    { id: 'schedules', label: 'Schedules', enabled: true },
     { id: 'variables', label: 'Variables', enabled: false },
     { id: 'lifecycle-hooks', label: 'Lifecycle Hooks', enabled: false },
     { id: 'retry-policy', label: 'Retry Policy', enabled: false },
     { id: 'alerts', label: 'Alerts & Notifications', enabled: false },
   ] as const;
 
-  // Suite schedules - placeholder (no DB persistence yet)
-  const schedules = [
-    {
-      id: 'sched-1',
-      env: 'staging',
-      cron: '*/30 * * * *',
-      enabled: false,
-      lastRun: '15 minutes ago',
-      nextRun: 'in 15 minutes',
-    },
-    {
-      id: 'sched-2',
-      env: 'production',
-      cron: '0 */6 * * *',
-      enabled: true,
-      lastRun: '2 hours ago',
-      nextRun: 'in 4 hours',
-    },
-  ];
+  // Fetch project schedules from API
+  const { data: projectSchedules = [], isLoading: schedulesLoading, refetch: refetchSchedules } = useProjectSchedules(projectId, { enabled: !!projectId });
+
+  // Schedule mutations
+  const createScheduleMutation = useCreateProjectSchedule(projectId);
+  const updateScheduleMutation = useUpdateProjectSchedule();
+  const deleteScheduleMutation = useDeleteProjectSchedule();
+
+  // State for new schedule form
+  const [newScheduleName, setNewScheduleName] = useState('');
+  const [newScheduleTimezone, setNewScheduleTimezone] = useState('UTC');
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  // Map schedules to display format
+  const schedules = projectSchedules.map((s: ProjectSchedule) => ({
+    id: s.id,
+    env: s.environment_slug,
+    envId: s.environment_id,
+    name: s.name,
+    cron: s.cron_expression,
+    timezone: s.timezone,
+    enabled: s.enabled,
+    lastRun: s.last_run_at ? formatRelativeTime(s.last_run_at) : 'Never',
+    nextRun: s.next_run_at ? formatRelativeTime(s.next_run_at) : 'Not scheduled',
+    lastRunStatus: s.last_run_status,
+  }));
 
   // Convert suite tests to the format expected by TestItem component
   const suiteTests = (suite?.tests || []).map((test) => {
@@ -476,7 +483,12 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
         {/* Schedules Tab */}
         {activeTab === 'schedules' && (
           <div>
-            {schedules.length > 0 ? (
+            {schedulesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-[#666666]" />
+                <span className="ml-3 text-[#666666]">Loading schedules...</span>
+              </div>
+            ) : schedules.length > 0 ? (
               <div className="space-y-3">
                 {schedules.map((schedule) => (
                   <div
@@ -486,15 +498,15 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <span className="text-sm px-2 py-1 bg-[#fafafa] rounded border border-[#e5e5e5] text-[#666666]">
-                            {schedule.env}
-                          </span>
+                          <span className="font-medium">{schedule.name}</span>
+                          <EnvBadge env={schedule.env} />
                           <code className="text-sm font-mono px-2 py-1 bg-[#fafafa] rounded border border-[#e5e5e5]">
                             {schedule.cron}
                           </code>
+                          <span className="text-xs text-[#999999]">{schedule.timezone}</span>
                           <span className={`text-sm px-2 py-1 rounded border ${
-                            schedule.enabled 
-                              ? 'bg-green-50 text-green-700 border-green-200' 
+                            schedule.enabled
+                              ? 'bg-green-50 text-green-700 border-green-200'
                               : 'bg-gray-50 text-gray-700 border-gray-200'
                           }`}>
                             {schedule.enabled ? 'Enabled' : 'Disabled'}
@@ -502,6 +514,14 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                         </div>
                         <div className="flex items-center gap-4 text-sm text-[#666666]">
                           <span>Last run: {schedule.lastRun}</span>
+                          {schedule.lastRunStatus && (
+                            <>
+                              <span>•</span>
+                              <span className={schedule.lastRunStatus === 'PASSED' ? 'text-green-600' : schedule.lastRunStatus === 'FAILED' ? 'text-red-600' : ''}>
+                                {schedule.lastRunStatus}
+                              </span>
+                            </>
+                          )}
                           {schedule.enabled && (
                             <>
                               <span>•</span>
@@ -511,31 +531,61 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                         </div>
                       </div>
 
-                      <button 
-                        onClick={() => {
-                          setEditingSchedule(schedule.id);
-                          setNewScheduleEnv(schedule.env);
-                          setNewScheduleCron(schedule.cron);
-                          setNewScheduleEnabled(schedule.enabled);
-                        }}
-                        className="p-2 text-[#666666] hover:text-black transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingSchedule(schedule.id);
+                            setNewScheduleName(schedule.name);
+                            const env = projectEnvironments.find(e => e.slug === schedule.env);
+                            setNewScheduleEnv(env?.id || schedule.envId);
+                            setNewScheduleCron(schedule.cron);
+                            setNewScheduleTimezone(schedule.timezone);
+                            setNewScheduleEnabled(schedule.enabled);
+                            setScheduleError(null);
+                          }}
+                          className="p-2 text-[#666666] hover:text-black transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this schedule?')) {
+                              deleteScheduleMutation.mutate(schedule.id, {
+                                onSuccess: () => refetchSchedules(),
+                              });
+                            }
+                          }}
+                          className="p-2 text-[#666666] hover:text-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
-                <p className="text-[#666666]">No schedules configured for this suite</p>
+                <Clock className="w-12 h-12 text-[#999999] mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No schedules configured</h3>
+                <p className="text-[#666666] text-sm mb-4">
+                  Create a schedule to run this project's tests automatically.
+                </p>
               </div>
             )}
 
             {/* Add Schedule Button - moved to bottom right */}
             <div className="mt-4 flex justify-end">
               <button
-                onClick={() => setShowAddScheduleModal(true)}
+                onClick={() => {
+                  setShowAddScheduleModal(true);
+                  setNewScheduleName('');
+                  setNewScheduleEnv(projectEnvironments[0]?.id || '');
+                  setNewScheduleCron('');
+                  setNewScheduleTimezone('UTC');
+                  setNewScheduleEnabled(true);
+                  setScheduleError(null);
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -563,6 +613,25 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
 
             {/* Modal Body */}
             <div className="p-6 space-y-4">
+              {/* Error message */}
+              {scheduleError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+                  {scheduleError}
+                </div>
+              )}
+
+              {/* Schedule Name */}
+              <div>
+                <label className="text-sm mb-2 block">Schedule Name</label>
+                <input
+                  type="text"
+                  value={newScheduleName}
+                  onChange={(e) => setNewScheduleName(e.target.value)}
+                  placeholder="e.g., Daily Staging Tests"
+                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                />
+              </div>
+
               {/* Environment */}
               <div>
                 <label className="text-sm mb-2 block">Environment</label>
@@ -572,7 +641,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                   className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
                 >
                   {projectEnvironments.map((env) => (
-                    <option key={env.id} value={env.name}>
+                    <option key={env.id} value={env.id}>
                       {env.name}
                     </option>
                   ))}
@@ -592,6 +661,26 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                 <p className="text-xs text-[#999999] mt-1">
                   Example: */30 * * * * (every 30 minutes)
                 </p>
+              </div>
+
+              {/* Timezone */}
+              <div>
+                <label className="text-sm mb-2 block">Timezone</label>
+                <select
+                  value={newScheduleTimezone}
+                  onChange={(e) => setNewScheduleTimezone(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">America/New_York</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles</option>
+                  <option value="America/Chicago">America/Chicago</option>
+                  <option value="Europe/London">Europe/London</option>
+                  <option value="Europe/Paris">Europe/Paris</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo</option>
+                  <option value="Asia/Shanghai">Asia/Shanghai</option>
+                  <option value="Australia/Sydney">Australia/Sydney</option>
+                </select>
               </div>
 
               {/* Enabled Toggle */}
@@ -621,13 +710,40 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                 Cancel
               </button>
               <button
+                disabled={createScheduleMutation.isPending}
                 onClick={() => {
-                  // TODO: Add schedule logic
-                  setShowAddScheduleModal(false);
-                  setNewScheduleCron('');
+                  if (!newScheduleName.trim()) {
+                    setScheduleError('Schedule name is required');
+                    return;
+                  }
+                  if (!newScheduleEnv) {
+                    setScheduleError('Environment is required');
+                    return;
+                  }
+                  if (!newScheduleCron.trim()) {
+                    setScheduleError('Cron expression is required');
+                    return;
+                  }
+                  setScheduleError(null);
+                  createScheduleMutation.mutate({
+                    environment_id: newScheduleEnv,
+                    name: newScheduleName.trim(),
+                    cron_expression: newScheduleCron.trim(),
+                    timezone: newScheduleTimezone,
+                    enabled: newScheduleEnabled,
+                  }, {
+                    onSuccess: () => {
+                      setShowAddScheduleModal(false);
+                      refetchSchedules();
+                    },
+                    onError: (error) => {
+                      setScheduleError(error instanceof Error ? error.message : 'Failed to create schedule');
+                    },
+                  });
                 }}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
+                {createScheduleMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 Add Schedule
               </button>
             </div>
@@ -652,20 +768,42 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
 
             {/* Modal Body */}
             <div className="p-6 space-y-4">
-              {/* Environment */}
+              {/* Error message */}
+              {scheduleError && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+                  {scheduleError}
+                </div>
+              )}
+
+              {/* Schedule Name */}
+              <div>
+                <label className="text-sm mb-2 block">Schedule Name</label>
+                <input
+                  type="text"
+                  value={newScheduleName}
+                  onChange={(e) => setNewScheduleName(e.target.value)}
+                  placeholder="e.g., Daily Staging Tests"
+                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                />
+              </div>
+
+              {/* Environment - read only for edit */}
               <div>
                 <label className="text-sm mb-2 block">Environment</label>
                 <select
                   value={newScheduleEnv}
-                  onChange={(e) => setNewScheduleEnv(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                  disabled
+                  className="w-full px-3 py-2 bg-[#fafafa] border border-[#e5e5e5] rounded-md text-sm text-[#666666] cursor-not-allowed"
                 >
                   {projectEnvironments.map((env) => (
-                    <option key={env.id} value={env.name}>
+                    <option key={env.id} value={env.id}>
                       {env.name}
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-[#999999] mt-1">
+                  Environment cannot be changed. Delete and recreate to use a different environment.
+                </p>
               </div>
 
               {/* Cron Expression */}
@@ -681,6 +819,26 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                 <p className="text-xs text-[#999999] mt-1">
                   Example: */30 * * * * (every 30 minutes)
                 </p>
+              </div>
+
+              {/* Timezone */}
+              <div>
+                <label className="text-sm mb-2 block">Timezone</label>
+                <select
+                  value={newScheduleTimezone}
+                  onChange={(e) => setNewScheduleTimezone(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">America/New_York</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles</option>
+                  <option value="America/Chicago">America/Chicago</option>
+                  <option value="Europe/London">Europe/London</option>
+                  <option value="Europe/Paris">Europe/Paris</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo</option>
+                  <option value="Asia/Shanghai">Asia/Shanghai</option>
+                  <option value="Australia/Sydney">Australia/Sydney</option>
+                </select>
               </div>
 
               {/* Enabled Toggle */}
@@ -710,12 +868,38 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                 Cancel
               </button>
               <button
+                disabled={updateScheduleMutation.isPending}
                 onClick={() => {
-                  // TODO: Save schedule changes
-                  setEditingSchedule(null);
+                  if (!newScheduleName.trim()) {
+                    setScheduleError('Schedule name is required');
+                    return;
+                  }
+                  if (!newScheduleCron.trim()) {
+                    setScheduleError('Cron expression is required');
+                    return;
+                  }
+                  setScheduleError(null);
+                  updateScheduleMutation.mutate({
+                    scheduleId: editingSchedule,
+                    data: {
+                      name: newScheduleName.trim(),
+                      cron_expression: newScheduleCron.trim(),
+                      timezone: newScheduleTimezone,
+                      enabled: newScheduleEnabled,
+                    },
+                  }, {
+                    onSuccess: () => {
+                      setEditingSchedule(null);
+                      refetchSchedules();
+                    },
+                    onError: (error) => {
+                      setScheduleError(error instanceof Error ? error.message : 'Failed to update schedule');
+                    },
+                  });
                 }}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
+                {updateScheduleMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 Save Changes
               </button>
             </div>

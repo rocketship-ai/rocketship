@@ -963,3 +963,86 @@ export function useRevokeProjectInvite() {
     },
   })
 }
+
+// ============================================
+// Project Schedule Types and Hooks
+// ============================================
+
+export interface ProjectSchedule {
+  id: string
+  project_id: string
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+  next_run_at: string | null
+  last_run_at: string | null
+  last_run_id: string | null
+  last_run_status: string | null
+  created_at: string
+  updated_at: string
+  environment_name: string
+  environment_slug: string
+}
+
+export interface CreateProjectScheduleRequest {
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+}
+
+export interface UpdateProjectScheduleRequest {
+  name?: string
+  cron_expression?: string
+  timezone?: string
+  enabled?: boolean
+}
+
+export function useProjectSchedules(projectId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'project', projectId, 'schedules'] as const,
+    queryFn: () => apiGet<ProjectSchedule[]>(`/api/projects/${projectId}/schedules`),
+    enabled: (options?.enabled ?? true) && !!projectId,
+  })
+}
+
+export function useCreateProjectSchedule(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateProjectScheduleRequest) =>
+      apiPost<ProjectSchedule>(`/api/projects/${projectId}/project-schedules`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'schedules'] })
+    },
+  })
+}
+
+export function useUpdateProjectSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ scheduleId, data }: { scheduleId: string; data: UpdateProjectScheduleRequest }) =>
+      apiPut<ProjectSchedule>(`/api/project-schedules/${scheduleId}`, data),
+    onSuccess: () => {
+      // Invalidate all project schedule queries since we don't know the project ID here
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}
+
+export function useDeleteProjectSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (scheduleId: string) =>
+      apiDelete(`/api/project-schedules/${scheduleId}`),
+    onSuccess: () => {
+      // Invalidate all project schedule queries
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}

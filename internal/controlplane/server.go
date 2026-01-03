@@ -167,6 +167,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/github/app/sync", s.requireAuth(s.handleGitHubAppSync))
 	s.mux.HandleFunc("/github-app/callback", s.handleGitHubAppCallback)
 	s.mux.HandleFunc("/github-app/webhook", s.handleGitHubAppWebhook)
+
+	// Schedule management routes
+	s.mux.HandleFunc("/api/project-schedules/", s.requireAuth(s.handleProjectSchedulesDispatch))
 }
 
 // ServeHTTP satisfies http.Handler with CORS support.

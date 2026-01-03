@@ -40,7 +40,7 @@ func (s *Store) InsertRun(ctx context.Context, run RunRecord) (RunRecord, error)
 		endedAt = run.EndedAt.Time
 	}
 
-	var environmentID, scheduleID, commitMessage interface{}
+	var environmentID, scheduleID, commitMessage, scheduleType interface{}
 	if run.EnvironmentID.Valid {
 		environmentID = run.EnvironmentID.UUID
 	}
@@ -50,16 +50,19 @@ func (s *Store) InsertRun(ctx context.Context, run RunRecord) (RunRecord, error)
 	if run.CommitMessage.Valid {
 		commitMessage = run.CommitMessage.String
 	}
+	if run.ScheduleType.Valid {
+		scheduleType = run.ScheduleType.String
+	}
 
 	const query = `
         INSERT INTO runs (
-            id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
+            id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, schedule_type,
             config_source, source, branch, environment, commit_sha, bundle_sha,
             total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
             environment_id, schedule_id, commit_message,
             created_at, updated_at, started_at, ended_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW(), $23, $24)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), NOW(), $24, $25)
         RETURNING created_at, updated_at
     `
 
@@ -70,7 +73,7 @@ func (s *Store) InsertRun(ctx context.Context, run RunRecord) (RunRecord, error)
 
 	if err := s.db.GetContext(ctx, &dest, query,
 		run.ID, run.OrganizationID, projectID, run.Status, run.SuiteName,
-		run.Initiator, run.Trigger, run.ScheduleName, run.ConfigSource,
+		run.Initiator, run.Trigger, run.ScheduleName, scheduleType, run.ConfigSource,
 		run.Source, run.Branch, run.Environment, commitSHA, bundleSHA,
 		run.TotalTests, run.PassedTests, run.FailedTests, run.TimeoutTests, run.SkippedTests,
 		environmentID, scheduleID, commitMessage,
@@ -144,7 +147,7 @@ func (s *Store) UpdateRun(ctx context.Context, update RunUpdate) (RunRecord, err
         UPDATE runs
         SET %s, updated_at = NOW()
         WHERE id = $1 AND organization_id = $2
-        RETURNING id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
+        RETURNING id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, schedule_type,
                   config_source, source, branch, environment, commit_sha, bundle_sha,
                   total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
                   environment_id, schedule_id, commit_message,
@@ -164,7 +167,7 @@ func (s *Store) UpdateRun(ctx context.Context, update RunUpdate) (RunRecord, err
 // GetRun retrieves a test run by ID
 func (s *Store) GetRun(ctx context.Context, orgID uuid.UUID, runID string) (RunRecord, error) {
 	const query = `
-        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
+        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, schedule_type,
                config_source, source, branch, environment, commit_sha, bundle_sha,
                total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
                environment_id, schedule_id, commit_message,
@@ -192,7 +195,7 @@ func (s *Store) ListRuns(ctx context.Context, orgID uuid.UUID, limit int) ([]Run
 	}
 
 	const query = `
-        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
+        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, schedule_type,
                config_source, source, branch, environment, commit_sha, bundle_sha,
                total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
                environment_id, schedule_id, commit_message,
@@ -222,7 +225,7 @@ func (s *Store) ListRunsByProject(ctx context.Context, projectID uuid.UUID, limi
 	}
 
 	const query = `
-        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name,
+        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, schedule_type,
                config_source, source, branch, environment, commit_sha, bundle_sha,
                total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
                environment_id, schedule_id, commit_message,

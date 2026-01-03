@@ -212,3 +212,10 @@ func (s *memoryRunStore) UpdateCITokenLastUsed(_ context.Context, _ uuid.UUID) e
 	// No-op for memory store
 	return nil
 }
+
+// Schedule last run updates - no-op for memory store (no schedules in local mode)
+
+func (s *memoryRunStore) UpdateProjectScheduleLastRun(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	// No-op for memory store - no project schedules
+	return nil
+}
