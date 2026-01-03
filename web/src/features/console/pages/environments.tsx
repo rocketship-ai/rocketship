@@ -36,6 +36,7 @@ import { CITokenModal } from '../components/ci-token-modal';
 import { CITokenRevealModal } from '../components/ci-token-reveal-modal';
 import { CITokensTable } from '../components/ci-tokens-table';
 import { ConfirmDialog } from '../components/confirm-dialog';
+import { Button } from '../components/ui';
 import { apiGet } from '@/lib/api';
 
 // Helper type for All Projects view
@@ -84,6 +85,14 @@ export function Environments() {
   // Get all projects for "All Projects" mode
   const { data: projects = [] } = useProjects();
 
+  // Apply the global project filter to this page's data.
+  // Empty selection means "All Projects"; otherwise restrict to the selected subset.
+  const filteredProjects = useMemo(() => {
+    if (selectedProjectIds.length === 0) return projects;
+    const selected = new Set(selectedProjectIds);
+    return projects.filter((p) => selected.has(p.id));
+  }, [projects, selectedProjectIds]);
+
   // Single project mode queries
   const { data: environments = [], isLoading: envsLoading } = useProjectEnvironments(selectedProjectId);
 
@@ -115,17 +124,32 @@ export function Environments() {
   const { data: profile } = useProfile();
   const orgId = profile?.organization?.id ?? '';
   const isOrgOwner = profile?.organization?.role === 'admin';
+
+  // Compute which projects the current user has write access to
+  const writeProjectIds = useMemo(() => {
+    if (!profile?.project_permissions) return new Set<string>();
+    return new Set(
+      profile.project_permissions
+        .filter((p) => p.permissions.includes('write'))
+        .map((p) => p.project_id)
+    );
+  }, [profile?.project_permissions]);
+
+  // Non-owners with write access to at least one project can invite to those projects
+  const canInvite = isOrgOwner || writeProjectIds.size > 0;
+
   const { data: orgOwners = [], isLoading: ownersLoading } = useOrgOwners(orgId);
   // For owners: use org-wide endpoint; for non-owners in single project mode: use per-project endpoint
   // Only call owner-only endpoints when user is an org owner to avoid 403 errors
-  const { data: allProjectMembers = [], isLoading: allMembersLoading, error: allMembersError } = useAllProjectMembers(orgId, { enabled: isOrgOwner });
+  const { data: allProjectMembers = [], isLoading: allMembersLoading } = useAllProjectMembers(orgId, { enabled: isOrgOwner });
   const { data: projectMembers = [], isLoading: projectMembersLoading } = useProjectMembers(selectedProjectId);
-  const { data: projectInvites = [], isLoading: invitesLoading, error: invitesError } = useProjectInvites({ enabled: isOrgOwner });
+  // Allow non-owners with write access to see their sent invites
+  const { data: projectInvites = [], isLoading: invitesLoading, error: invitesError } = useProjectInvites({ enabled: canInvite });
 
   // For non-owners in "All Projects" mode: fetch members from each accessible project in parallel
   const allProjectMemberQueries = useQueries({
     queries: !isOrgOwner && !selectedProjectId && projects.length > 0
-      ? projects.map((project) => ({
+      ? filteredProjects.map((project) => ({
           queryKey: [...consoleKeys.all, 'project', project.id, 'members'] as const,
           queryFn: () => apiGet<ProjectMember[]>(`/api/projects/${project.id}/members`),
         }))
@@ -135,9 +159,13 @@ export function Environments() {
   // Determine which members data to use based on user role and selection
   const membersData = useMemo(() => {
     if (isOrgOwner) {
-      // Owners use org-wide endpoint - filter by selected project if needed
+      // Owners use org-wide endpoint - apply project filter if set.
       if (selectedProjectId) {
         return allProjectMembers.filter((m) => m.project_id === selectedProjectId);
+      }
+      if (selectedProjectIds.length > 0) {
+        const selected = new Set(selectedProjectIds);
+        return allProjectMembers.filter((m) => selected.has(m.project_id));
       }
       return allProjectMembers;
     }
@@ -151,7 +179,7 @@ export function Environments() {
     }
     // Non-owners in all projects mode: aggregate members from all accessible projects
     const aggregated: { project_id: string; project_name: string; user_id: string; username: string; email: string; name: string; role: 'read' | 'write' }[] = [];
-    projects.forEach((project, index) => {
+    filteredProjects.forEach((project, index) => {
       const query = allProjectMemberQueries[index];
       if (query?.data) {
         query.data.forEach((m) => {
@@ -164,7 +192,7 @@ export function Environments() {
       }
     });
     return aggregated;
-  }, [isOrgOwner, selectedProjectId, allProjectMembers, projectMembers, selectedProject, projects, allProjectMemberQueries]);
+  }, [isOrgOwner, selectedProjectId, selectedProjectIds, allProjectMembers, projectMembers, selectedProject, filteredProjects, allProjectMemberQueries]);
 
   // Loading state: for non-owners in All Projects mode, check if any aggregated query is loading
   const aggregatedMembersLoading = !isOrgOwner && !selectedProjectId && allProjectMemberQueries.some((q) => q.isLoading);
@@ -181,7 +209,7 @@ export function Environments() {
   // "All Projects" mode: fetch environments for all projects in parallel
   const allProjectEnvQueries = useQueries({
     queries: !selectedProjectId
-      ? projects.map((project) => ({
+      ? filteredProjects.map((project) => ({
           queryKey: consoleKeys.projectEnvironments(project.id),
           queryFn: () => apiGet<ProjectEnvironment[]>(`/api/projects/${project.id}/environments`),
         }))
@@ -190,12 +218,14 @@ export function Environments() {
 
   // Combine all environments with project names for "All Projects" view
   const allProjectsData = useMemo(() => {
-    if (selectedProjectId || projects.length === 0) return { environments: [], projectMap: new Map<string, ProjectSummary>() };
+    if (selectedProjectId || filteredProjects.length === 0) {
+      return { environments: [], projectMap: new Map<string, ProjectSummary>() };
+    }
 
     const envs: EnvWithProject[] = [];
     const projectMap = new Map<string, ProjectSummary>();
 
-    projects.forEach((project, index) => {
+    filteredProjects.forEach((project, index) => {
       projectMap.set(project.id, project);
       const envQuery = allProjectEnvQueries[index];
 
@@ -207,7 +237,7 @@ export function Environments() {
     });
 
     return { environments: envs, projectMap };
-  }, [selectedProjectId, projects, allProjectEnvQueries]);
+  }, [selectedProjectId, filteredProjects, allProjectEnvQueries]);
 
   const isAllProjectsLoading = !selectedProjectId && allProjectEnvQueries.some((q) => q.isLoading);
 
@@ -328,7 +358,7 @@ export function Environments() {
   // Access Control handlers
   const filteredMembers = useMemo(() => {
     // Use the determined members data (already filtered by project if needed)
-    let members = membersData;
+    const members = membersData;
     // Apply search filter
     if (!memberSearchTerm.trim()) return members;
     const term = memberSearchTerm.toLowerCase();
@@ -344,12 +374,19 @@ export function Environments() {
   // Pending invites (not accepted, not revoked, not expired) - filtered by project if single project mode
   const pendingInvites = useMemo(() => {
     const pending = projectInvites.filter((inv) => inv.status === 'pending');
-    if (!selectedProjectId) return pending;
-    // Filter to invites that include the selected project
-    return pending.filter((inv) =>
-      inv.projects.some((p) => p.project_id === selectedProjectId)
-    );
-  }, [projectInvites, selectedProjectId]);
+    if (selectedProjectIds.length === 0) return pending;
+    if (selectedProjectId) {
+      return pending.filter((inv) => inv.projects.some((p) => p.project_id === selectedProjectId));
+    }
+    const selected = new Set(selectedProjectIds);
+    return pending.filter((inv) => inv.projects.some((p) => selected.has(p.project_id)));
+  }, [projectInvites, selectedProjectId, selectedProjectIds]);
+
+  // Projects the current user can invite to: org owners can invite to all, others only to projects with write access
+  const invitableProjects = useMemo(() => {
+    if (isOrgOwner) return projects;
+    return projects.filter((p) => writeProjectIds.has(p.id));
+  }, [isOrgOwner, projects, writeProjectIds]);
 
   const handleInviteMember = async () => {
     if (!inviteEmail.trim() || inviteProjects.length === 0) {
@@ -488,15 +525,14 @@ export function Environments() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2>Environments</h2>
-              <button
+              <Button
                 onClick={openCreateModal}
                 disabled={projects.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                leftIcon={<Plus className="w-4 h-4" />}
                 title={projects.length === 0 ? 'Create a project first' : undefined}
               >
-                <Plus className="w-4 h-4" />
-                <span>New Environment</span>
-              </button>
+                New Environment
+              </Button>
             </div>
             {renderAllProjectsView()}
           </div>
@@ -507,13 +543,12 @@ export function Environments() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2>Environments</h2>
-              <button
+              <Button
                 onClick={openCreateModal}
-                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
+                leftIcon={<Plus className="w-4 h-4" />}
               >
-                <Plus className="w-4 h-4" />
-                <span>New Environment</span>
-              </button>
+                New Environment
+              </Button>
             </div>
             {envsLoading ? (
               <div className="text-center py-8 text-[#666666]">Loading environments...</div>
@@ -555,15 +590,14 @@ export function Environments() {
               <Key className="w-5 h-5 text-[#666666]" />
               <h3>CI Tokens</h3>
             </div>
-            <button
+            <Button
               onClick={() => setShowCITokenModal(true)}
               disabled={projects.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              leftIcon={<Plus className="w-4 h-4" />}
               title={projects.length === 0 ? 'Create a project first' : undefined}
             >
-              <Plus className="w-4 h-4" />
-              <span>New Token</span>
-            </button>
+              New Token
+            </Button>
           </div>
           <CITokensTable
             tokens={ciTokens}
@@ -626,8 +660,8 @@ export function Environments() {
                 <Users className="w-5 h-5 text-[#666666]" />
                 <h3>Project Members</h3>
               </div>
-              {isOrgOwner && (
-                <button
+              {canInvite && (
+                <Button
                   onClick={() => {
                     setShowInviteModal(true);
                     setInviteError(null);
@@ -635,16 +669,15 @@ export function Environments() {
                     setInviteProjects([]);
                   }}
                   disabled={projects.length === 0}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  leftIcon={<Mail className="w-4 h-4" />}
                 >
-                  <Mail className="w-4 h-4" />
-                  <span>Invite Member</span>
-                </button>
+                  Invite Member
+                </Button>
               )}
             </div>
 
-            {/* Pending Invites - only visible to org owners */}
-            {isOrgOwner && invitesError ? (
+            {/* Pending Invites - visible to anyone who can invite */}
+            {canInvite && invitesError ? (
               <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
                 <div className="flex items-center gap-2">
                   <X className="w-4 h-4 text-red-600" />
@@ -653,14 +686,14 @@ export function Environments() {
                   </span>
                 </div>
               </div>
-            ) : isOrgOwner && invitesLoading ? (
+            ) : canInvite && invitesLoading ? (
               <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
                   <span className="text-sm text-amber-700">Loading pending invites...</span>
                 </div>
               </div>
-            ) : isOrgOwner && pendingInvites.length > 0 ? (
+            ) : canInvite && pendingInvites.length > 0 ? (
               <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 text-amber-600" />
@@ -979,8 +1012,13 @@ export function Environments() {
                 <label className="block text-sm font-medium mb-2">
                   Select Projects & Roles
                 </label>
+                {!isOrgOwner && (
+                  <p className="text-xs text-[#666666] mb-2">
+                    You can only invite to projects where you have Write access.
+                  </p>
+                )}
                 <div className="border border-[#e5e5e5] rounded-md max-h-48 overflow-y-auto">
-                  {projects.map((project) => {
+                  {invitableProjects.map((project) => {
                     const selected = inviteProjects.find((p) => p.projectId === project.id);
                     return (
                       <div
@@ -1014,9 +1052,11 @@ export function Environments() {
                     );
                   })}
                 </div>
-                {projects.length === 0 && (
+                {invitableProjects.length === 0 && (
                   <p className="text-sm text-[#666666] text-center py-4">
-                    No projects available. Create a project first.
+                    {isOrgOwner
+                      ? 'No projects available. Create a project first.'
+                      : 'You don\'t have Write access to any projects.'}
                   </p>
                 )}
               </div>
