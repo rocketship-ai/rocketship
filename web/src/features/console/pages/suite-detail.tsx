@@ -70,7 +70,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   // Map schedules to display format
   const schedules: (ScheduleCardData & { envId: string })[] = projectSchedules.map((s: ProjectSchedule) => ({
     id: s.id,
-    env: s.environment_slug,
+    env: s.environment.slug,
     envId: s.environment_id,
     name: s.name,
     cron: s.cron_expression,

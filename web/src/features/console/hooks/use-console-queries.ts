@@ -982,8 +982,10 @@ export interface ProjectSchedule {
   last_run_status: string | null
   created_at: string
   updated_at: string
-  environment_name: string
-  environment_slug: string
+  environment: {
+    name: string
+    slug: string
+  }
 }
 
 export interface CreateProjectScheduleRequest {

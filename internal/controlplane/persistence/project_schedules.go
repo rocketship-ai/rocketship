@@ -276,8 +276,33 @@ func (s *Store) DeleteProjectSchedule(ctx context.Context, scheduleID uuid.UUID)
 	return nil
 }
 
-// ListDueProjectSchedules returns enabled project schedules that are due to run
-// Uses FOR UPDATE SKIP LOCKED to prevent double-firing in multi-instance deployments
+// ListDueProjectScheduleIDs returns IDs of enabled project schedules that are due to run.
+// This is a lightweight query intended for the scheduler's discovery phase.
+// Actual claiming is done atomically via ClaimDueProjectSchedule.
+func (s *Store) ListDueProjectScheduleIDs(ctx context.Context, before time.Time, limit int) ([]uuid.UUID, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+
+	const query = `
+		SELECT id
+		FROM project_schedules
+		WHERE enabled = true AND next_run_at IS NOT NULL AND next_run_at <= $1
+		ORDER BY next_run_at ASC
+		LIMIT $2
+	`
+
+	var ids []uuid.UUID
+	if err := s.db.SelectContext(ctx, &ids, query, before, limit); err != nil {
+		return nil, fmt.Errorf("failed to list due project schedule IDs: %w", err)
+	}
+
+	return ids, nil
+}
+
+// ListDueProjectSchedules returns enabled project schedules that are due to run.
+// Note: This no longer uses row locking since ClaimDueProjectSchedule provides
+// atomic claiming that's safe in HA deployments.
 func (s *Store) ListDueProjectSchedules(ctx context.Context, before time.Time, limit int) ([]ProjectSchedule, error) {
 	if limit <= 0 {
 		limit = 100
@@ -293,7 +318,6 @@ func (s *Store) ListDueProjectSchedules(ctx context.Context, before time.Time, l
 		WHERE ps.enabled = true AND ps.next_run_at IS NOT NULL AND ps.next_run_at <= $1
 		ORDER BY ps.next_run_at ASC
 		LIMIT $2
-		FOR UPDATE OF ps SKIP LOCKED
 	`
 
 	type row struct {
