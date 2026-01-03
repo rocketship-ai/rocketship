@@ -36,6 +36,11 @@ func (m *stubMailer) SendOrgInvite(_ context.Context, email, org, code string, _
 	return nil
 }
 
+func (m *stubMailer) SendProjectInvite(_ context.Context, email, org string, _ []ProjectInviteProject, code string, _ time.Time, _, _ string) error {
+	m.invites = append(m.invites, struct{ email, org, code string }{email: email, org: org, code: code})
+	return nil
+}
+
 type fakeGitHub struct {
 	deviceResp DeviceCodeResponse
 	tokenResp  TokenResponse
@@ -345,7 +350,7 @@ func (f *fakeStore) OrganizationSlugExists(_ context.Context, slug string) (bool
 	return exists, nil
 }
 
-func (f *fakeStore) AddOrganizationAdmin(_ context.Context, orgID, userID uuid.UUID) error {
+func (f *fakeStore) AddOrganizationOwner(_ context.Context, orgID, userID uuid.UUID) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, org := range f.summary.Organizations {
@@ -526,7 +531,7 @@ func (f *fakeStore) ProjectOrganizationID(_ context.Context, projectID uuid.UUID
 	return uuid.Nil, sql.ErrNoRows
 }
 
-func (f *fakeStore) IsOrganizationAdmin(_ context.Context, orgID, userID uuid.UUID) (bool, error) {
+func (f *fakeStore) IsOrganizationOwner(_ context.Context, orgID, userID uuid.UUID) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return orgID == f.primaryOrg && f.user.ID == userID, nil
@@ -583,6 +588,39 @@ func (f *fakeStore) RemoveProjectMember(_ context.Context, projectID, userID uui
 	}
 	f.members[projectID] = updated
 	return nil
+}
+
+func (f *fakeStore) AddProjectMember(_ context.Context, projectID, userID uuid.UUID, role string) (persistence.ProjectMember, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	now := time.Now()
+	member := persistence.ProjectMember{
+		UserID:    userID,
+		Email:     "test@example.com",
+		Name:      "Test User",
+		Username:  "testuser",
+		Role:      role,
+		JoinedAt:  now,
+		UpdatedAt: now,
+	}
+	f.members[projectID] = append(f.members[projectID], member)
+	return member, nil
+}
+
+func (f *fakeStore) ListAllProjectMembers(_ context.Context, _ uuid.UUID) ([]persistence.OrgProjectMember, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ListOrganizationOwners(_ context.Context, _ uuid.UUID) ([]persistence.OrganizationOwner, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetUserByUsername(_ context.Context, username string) (persistence.User, error) {
+	return persistence.User{
+		ID:       uuid.New(),
+		Username: username,
+		Email:    username + "@example.com",
+	}, nil
 }
 
 func (f *fakeStore) InsertWebhookDelivery(_ context.Context, _, _, _, _, _ string) error {
@@ -742,6 +780,42 @@ func (f *fakeStore) UpdateCITokenLastUsed(_ context.Context, _ uuid.UUID) error 
 
 func (f *fakeStore) VerifyUserHasWriteOnProjects(_ context.Context, _, _ uuid.UUID, _ []uuid.UUID) error {
 	return nil
+}
+
+// Project invite methods (stubs for dataStore interface)
+func (f *fakeStore) CreateProjectInvite(_ context.Context, _ persistence.ProjectInviteInput) (persistence.ProjectInvite, error) {
+	return persistence.ProjectInvite{
+		ID:        uuid.New(),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}, nil
+}
+
+func (f *fakeStore) GetProjectInvite(_ context.Context, _ uuid.UUID) (persistence.ProjectInvite, error) {
+	return persistence.ProjectInvite{}, nil
+}
+
+func (f *fakeStore) ListProjectInvitesForOrg(_ context.Context, _ uuid.UUID) ([]persistence.ProjectInvite, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) ListProjectInvitesByCreator(_ context.Context, _, _ uuid.UUID) ([]persistence.ProjectInvite, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) FindPendingProjectInvitesByEmail(_ context.Context, _ string) ([]persistence.ProjectInvite, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) AcceptProjectInvite(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (f *fakeStore) RevokeProjectInvite(_ context.Context, _, _ uuid.UUID) error {
+	return nil
+}
+
+func (f *fakeStore) CanUserInviteToProjects(_ context.Context, _, _ uuid.UUID, _ []uuid.UUID) (bool, error) {
+	return true, nil
 }
 
 func TestServerDeviceFlowAndRefresh(t *testing.T) {

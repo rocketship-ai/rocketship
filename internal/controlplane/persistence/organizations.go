@@ -11,12 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// IsOrganizationAdmin checks if a user is an admin of an organization
-func (s *Store) IsOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	const query = `SELECT COUNT(1) FROM organization_admins WHERE organization_id = $1 AND user_id = $2`
+// IsOrganizationOwner checks if a user is an owner of an organization
+func (s *Store) IsOrganizationOwner(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
+	const query = `SELECT COUNT(1) FROM organization_owners WHERE organization_id = $1 AND user_id = $2`
 	var count int
 	if err := s.db.GetContext(ctx, &count, query, orgID, userID); err != nil {
-		return false, fmt.Errorf("failed to check organization admin: %w", err)
+		return false, fmt.Errorf("failed to check organization owner: %w", err)
 	}
 	return count > 0, nil
 }
@@ -71,13 +71,13 @@ func (s *Store) CreateOrganizationWithProject(ctx context.Context, userID uuid.U
 		return Organization{}, Project{}, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	const insertAdmin = `
-        INSERT INTO organization_admins (organization_id, user_id, created_at)
+	const insertOwner = `
+        INSERT INTO organization_owners (organization_id, user_id, created_at)
         VALUES ($1, $2, NOW())
         ON CONFLICT DO NOTHING
     `
-	if _, err = tx.ExecContext(ctx, insertAdmin, orgID, userID); err != nil {
-		return Organization{}, Project{}, fmt.Errorf("failed to add organization admin: %w", err)
+	if _, err = tx.ExecContext(ctx, insertOwner, orgID, userID); err != nil {
+		return Organization{}, Project{}, fmt.Errorf("failed to add organization owner: %w", err)
 	}
 
 	const insertProject = `
@@ -158,13 +158,13 @@ func (s *Store) CreateOrganization(ctx context.Context, userID uuid.UUID, name, 
 		return Organization{}, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	const insertAdmin = `
-        INSERT INTO organization_admins (organization_id, user_id, created_at)
+	const insertOwner = `
+        INSERT INTO organization_owners (organization_id, user_id, created_at)
         VALUES ($1, $2, NOW())
         ON CONFLICT DO NOTHING
     `
-	if _, err = tx.ExecContext(ctx, insertAdmin, orgID, userID); err != nil {
-		return Organization{}, fmt.Errorf("failed to add organization admin: %w", err)
+	if _, err = tx.ExecContext(ctx, insertOwner, orgID, userID); err != nil {
+		return Organization{}, fmt.Errorf("failed to add organization owner: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -189,15 +189,40 @@ func (s *Store) OrganizationSlugExists(ctx context.Context, slug string) (bool, 
 	return count > 0, nil
 }
 
-// AddOrganizationAdmin adds a user as an organization admin
-func (s *Store) AddOrganizationAdmin(ctx context.Context, orgID, userID uuid.UUID) error {
+// AddOrganizationOwner adds a user as an organization owner
+func (s *Store) AddOrganizationOwner(ctx context.Context, orgID, userID uuid.UUID) error {
 	const query = `
-        INSERT INTO organization_admins (organization_id, user_id, created_at)
+        INSERT INTO organization_owners (organization_id, user_id, created_at)
         VALUES ($1, $2, NOW())
         ON CONFLICT DO NOTHING
     `
 	if _, err := s.db.ExecContext(ctx, query, orgID, userID); err != nil {
-		return fmt.Errorf("failed to add organization admin: %w", err)
+		return fmt.Errorf("failed to add organization owner: %w", err)
 	}
 	return nil
+}
+
+// OrganizationOwner represents an owner of an organization with user details
+type OrganizationOwner struct {
+	UserID   uuid.UUID `db:"user_id" json:"user_id"`
+	Email    string    `db:"email" json:"email"`
+	Name     string    `db:"name" json:"name"`
+	Username string    `db:"username" json:"username"`
+	AddedAt  time.Time `db:"added_at" json:"added_at"`
+}
+
+// ListOrganizationOwners returns all owners of an organization with user details
+func (s *Store) ListOrganizationOwners(ctx context.Context, orgID uuid.UUID) ([]OrganizationOwner, error) {
+	const query = `
+		SELECT oo.user_id, u.email, COALESCE(u.name, '') as name, COALESCE(u.username, '') as username, oo.created_at as added_at
+		FROM organization_owners oo
+		JOIN users u ON u.id = oo.user_id
+		WHERE oo.organization_id = $1
+		ORDER BY oo.created_at ASC
+	`
+	var owners []OrganizationOwner
+	if err := s.db.SelectContext(ctx, &owners, query, orgID); err != nil {
+		return nil, fmt.Errorf("failed to list organization owners: %w", err)
+	}
+	return owners, nil
 }

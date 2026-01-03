@@ -330,8 +330,8 @@ func (s *Store) GetCIToken(ctx context.Context, orgID, tokenID uuid.UUID) (CITok
 // VerifyUserHasWriteOnProjects checks if a user has write permission on all specified projects
 // Returns error if user lacks write permission on any project
 func (s *Store) VerifyUserHasWriteOnProjects(ctx context.Context, orgID, userID uuid.UUID, projectIDs []uuid.UUID) error {
-	// First check if user is org admin (org admins have implicit write on all projects)
-	isAdmin, err := s.IsOrganizationAdmin(ctx, orgID, userID)
+	// First check if user is org owner (org owners have implicit write on all projects)
+	isAdmin, err := s.IsOrganizationOwner(ctx, orgID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to check org admin status: %w", err)
 	}

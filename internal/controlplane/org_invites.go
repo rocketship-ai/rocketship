@@ -63,8 +63,8 @@ func (s *Server) handleOrgInviteAccept(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 
-	if err := s.store.AddOrganizationAdmin(ctx, matched.OrganizationID, principal.UserID); err != nil {
-		log.Printf("failed to add organization admin: %v", err)
+	if err := s.store.AddOrganizationOwner(ctx, matched.OrganizationID, principal.UserID); err != nil {
+		log.Printf("failed to add organization owner: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to apply invite")
 		return
 	}
@@ -109,9 +109,9 @@ func (s *Server) handleOrgInvites(w http.ResponseWriter, r *http.Request, princi
 	}
 
 	ctx := r.Context()
-	isAdmin, err := s.store.IsOrganizationAdmin(ctx, orgID, principal.UserID)
+	isAdmin, err := s.store.IsOrganizationOwner(ctx, orgID, principal.UserID)
 	if err != nil {
-		log.Printf("failed to check org admin: %v", err)
+		log.Printf("failed to check org owner: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to authorize request")
 		return
 	}
@@ -139,10 +139,10 @@ func (s *Server) handleOrgInvites(w http.ResponseWriter, r *http.Request, princi
 	}
 	role := strings.ToLower(strings.TrimSpace(req.Role))
 	if role == "" {
-		role = "admin"
+		role = "owner"
 	}
-	if role != "admin" {
-		writeError(w, http.StatusBadRequest, "only admin role is supported for invites")
+	if role != "owner" {
+		writeError(w, http.StatusBadRequest, "only owner role is supported for invites")
 		return
 	}
 

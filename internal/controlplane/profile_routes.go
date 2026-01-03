@@ -33,7 +33,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request, principal
 	}
 
 	// Determine user's role in the organization
-	isAdmin, err := s.store.IsOrganizationAdmin(ctx, principal.OrgID, principal.UserID)
+	isAdmin, err := s.store.IsOrganizationOwner(ctx, principal.OrgID, principal.UserID)
 	if err != nil {
 		log.Printf("failed to check admin status: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to determine role")

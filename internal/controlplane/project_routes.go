@@ -48,7 +48,7 @@ func (s *Server) handleProjectRoutes(w http.ResponseWriter, r *http.Request, pri
 		return
 	}
 
-	isAdmin, err := s.store.IsOrganizationAdmin(r.Context(), orgID, principal.UserID)
+	isAdmin, err := s.store.IsOrganizationOwner(r.Context(), orgID, principal.UserID)
 	if err != nil {
 		log.Printf("failed to verify organization admin: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to authorize request")
@@ -67,39 +67,16 @@ func (s *Server) handleProjectRoutes(w http.ResponseWriter, r *http.Request, pri
 	}
 }
 
-// handleProjectMembers manages project membership (list, add, update role, remove members)
+// handleProjectMembers manages project membership (list, update role, remove members)
+// Note: Adding members is done via the invite flow (POST /api/project-invites)
 func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID, remainder []string) {
 	if len(remainder) == 0 {
-		if r.Method != http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
+			s.handleListProjectMembers(w, r, principal, projectID)
+		default:
 			writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-			return
 		}
-		if !principal.HasRole("owner") {
-			writeError(w, http.StatusForbidden, "owner role required")
-			return
-		}
-
-		members, err := s.store.ListProjectMembers(r.Context(), projectID)
-		if err != nil {
-			log.Printf("failed to list project members: %v", err)
-			writeError(w, http.StatusInternalServerError, "failed to list members")
-			return
-		}
-
-		payload := make([]map[string]interface{}, 0, len(members))
-		for _, m := range members {
-			payload = append(payload, map[string]interface{}{
-				"user_id":    m.UserID.String(),
-				"email":      m.Email,
-				"name":       m.Name,
-				"username":   m.Username,
-				"role":       m.Role,
-				"joined_at":  m.JoinedAt.Format(time.RFC3339),
-				"updated_at": m.UpdatedAt.Format(time.RFC3339),
-			})
-		}
-
-		writeJSON(w, http.StatusOK, payload)
 		return
 	}
 
@@ -158,3 +135,34 @@ func (s *Server) handleProjectMembers(w http.ResponseWriter, r *http.Request, pr
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 	}
 }
+
+// handleListProjectMembers lists all members of a project
+func (s *Server) handleListProjectMembers(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, projectID uuid.UUID) {
+	if !principal.HasRole("owner") {
+		writeError(w, http.StatusForbidden, "owner role required")
+		return
+	}
+
+	members, err := s.store.ListProjectMembers(r.Context(), projectID)
+	if err != nil {
+		log.Printf("failed to list project members: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to list members")
+		return
+	}
+
+	payload := make([]map[string]interface{}, 0, len(members))
+	for _, m := range members {
+		payload = append(payload, map[string]interface{}{
+			"user_id":    m.UserID.String(),
+			"email":      m.Email,
+			"name":       m.Name,
+			"username":   m.Username,
+			"role":       m.Role,
+			"joined_at":  m.JoinedAt.Format(time.RFC3339),
+			"updated_at": m.UpdatedAt.Format(time.RFC3339),
+		})
+	}
+
+	writeJSON(w, http.StatusOK, payload)
+}
+

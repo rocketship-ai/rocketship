@@ -339,6 +339,33 @@ type CITokenProjectScope struct {
 	Scope       string    `db:"scope" json:"scope"` // "read" or "write"
 }
 
+// ProjectInviteProject represents a project+role in an invite
+type ProjectInviteProject struct {
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	ProjectName string    `db:"project_name" json:"project_name"`
+	Role        string    `db:"role" json:"role"` // "read" or "write"
+}
+
+// ProjectInvite tracks pending project invitations (email-based)
+type ProjectInvite struct {
+	ID               uuid.UUID              `db:"id" json:"id"`
+	OrganizationID   uuid.UUID              `db:"organization_id" json:"organization_id"`
+	OrganizationName string                 `db:"organization_name" json:"organization_name"`
+	Email            string                 `db:"email" json:"email"`
+	InvitedBy        uuid.UUID              `db:"invited_by" json:"invited_by"`
+	InviterName      string                 `db:"inviter_name" json:"inviter_name"`
+	CodeHash         []byte                 `db:"code_hash" json:"-"`
+	CodeSalt         []byte                 `db:"code_salt" json:"-"`
+	ExpiresAt        time.Time              `db:"expires_at" json:"expires_at"`
+	AcceptedAt       sql.NullTime           `db:"accepted_at" json:"accepted_at,omitempty"`
+	AcceptedBy       uuid.NullUUID          `db:"accepted_by" json:"accepted_by,omitempty"`
+	RevokedAt        sql.NullTime           `db:"revoked_at" json:"revoked_at,omitempty"`
+	RevokedBy        uuid.NullUUID          `db:"revoked_by" json:"revoked_by,omitempty"`
+	CreatedAt        time.Time              `db:"created_at" json:"created_at"`
+	UpdatedAt        time.Time              `db:"updated_at" json:"updated_at"`
+	Projects         []ProjectInviteProject `db:"-" json:"projects"` // Assembled from join table
+}
+
 // CITokenRecord represents a CI token with audit fields
 type CITokenRecord struct {
 	ID             uuid.UUID             `db:"id"`

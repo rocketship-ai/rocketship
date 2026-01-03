@@ -102,6 +102,80 @@ func (s *Store) RemoveProjectMember(ctx context.Context, projectID, userID uuid.
 	return nil
 }
 
+// AddProjectMember adds a user to a project with the specified role
+// Uses upsert semantics - if the user already exists, updates their role
+func (s *Store) AddProjectMember(ctx context.Context, projectID, userID uuid.UUID, role string) (ProjectMember, error) {
+	role = strings.ToLower(strings.TrimSpace(role))
+	if role != "read" && role != "write" {
+		return ProjectMember{}, errors.New("role must be read or write")
+	}
+
+	const query = `
+		INSERT INTO project_members (project_id, user_id, role, created_at, updated_at)
+		VALUES ($1, $2, $3, NOW(), NOW())
+		ON CONFLICT (project_id, user_id)
+		DO UPDATE SET role = EXCLUDED.role, updated_at = NOW()
+		RETURNING created_at, updated_at
+	`
+	var joinedAt, updatedAt time.Time
+	if err := s.db.QueryRowxContext(ctx, query, projectID, userID, role).Scan(&joinedAt, &updatedAt); err != nil {
+		return ProjectMember{}, fmt.Errorf("failed to add project member: %w", err)
+	}
+
+	// Fetch user details to return complete ProjectMember
+	const userQuery = `SELECT email, COALESCE(name, '') as name, COALESCE(username, '') as username FROM users WHERE id = $1`
+	var email, name, username string
+	if err := s.db.QueryRowxContext(ctx, userQuery, userID).Scan(&email, &name, &username); err != nil {
+		return ProjectMember{}, fmt.Errorf("failed to fetch user details: %w", err)
+	}
+
+	return ProjectMember{
+		UserID:    userID,
+		Email:     email,
+		Name:      name,
+		Username:  username,
+		Role:      role,
+		JoinedAt:  joinedAt,
+		UpdatedAt: updatedAt,
+	}, nil
+}
+
+// OrgProjectMember represents a project member with project context for org-wide views
+type OrgProjectMember struct {
+	ProjectID   uuid.UUID `db:"project_id" json:"project_id"`
+	ProjectName string    `db:"project_name" json:"project_name"`
+	UserID      uuid.UUID `db:"user_id" json:"user_id"`
+	Username    string    `db:"username" json:"username"`
+	Email       string    `db:"email" json:"email"`
+	Name        string    `db:"name" json:"name"`
+	Role        string    `db:"role" json:"role"`
+}
+
+// ListAllProjectMembers returns all project members across an organization
+// Results are sorted by project name, then username/email
+func (s *Store) ListAllProjectMembers(ctx context.Context, orgID uuid.UUID) ([]OrgProjectMember, error) {
+	const query = `
+		SELECT
+			pm.project_id,
+			p.name as project_name,
+			pm.user_id,
+			COALESCE(u.username, '') as username,
+			u.email,
+			COALESCE(u.name, '') as name,
+			pm.role
+		FROM project_members pm
+		JOIN projects p ON p.id = pm.project_id
+		JOIN users u ON u.id = pm.user_id
+		WHERE p.organization_id = $1 AND p.is_active = true
+		ORDER BY p.name ASC, COALESCE(u.username, u.email) ASC
+	`
+	var members []OrgProjectMember
+	if err := s.db.SelectContext(ctx, &members, query, orgID); err != nil {
+		return nil, fmt.Errorf("failed to list all project members: %w", err)
+	}
+	return members, nil
+}
+
 // CreateProject creates a new project
 func (s *Store) CreateProject(ctx context.Context, project Project) (Project, error) {
 	if project.OrganizationID == uuid.Nil {

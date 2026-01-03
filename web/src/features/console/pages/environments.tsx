@@ -1,4 +1,4 @@
-import { Plus, Settings, Loader2, Key } from 'lucide-react';
+import { Plus, Settings, Loader2, Key, Users, Crown, Search, X, ChevronDown, Mail, Clock, Send } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -13,6 +13,14 @@ import {
   useCITokens,
   useCreateCIToken,
   useRevokeCIToken,
+  useProfile,
+  useOrgOwners,
+  useAllProjectMembers,
+  useUpdateProjectMemberRoleForProject,
+  useRemoveProjectMemberForProject,
+  useProjectInvites,
+  useCreateProjectInvite,
+  useRevokeProjectInvite,
   consoleKeys,
 } from '../hooks/use-console-queries';
 import {
@@ -65,6 +73,15 @@ export function Environments() {
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
   const [revokeConfirmTokenId, setRevokeConfirmTokenId] = useState<string | null>(null);
 
+  // Access Control state
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteProjects, setInviteProjects] = useState<{ projectId: string; role: 'read' | 'write' }[]>([]);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{ projectId: string; userId: string; username: string } | null>(null);
+  const [revokeInviteConfirm, setRevokeInviteConfirm] = useState<string | null>(null);
+
   // Get all projects for "All Projects" mode
   const { data: projects = [] } = useProjects();
 
@@ -98,6 +115,17 @@ export function Environments() {
   const { data: ciTokens = [], isLoading: ciTokensLoading, error: ciTokensError } = useCITokens();
   const createCITokenMutation = useCreateCIToken();
   const revokeCITokenMutation = useRevokeCIToken();
+
+  // Access Control queries and mutations
+  const { data: profile } = useProfile();
+  const orgId = profile?.organization?.id ?? '';
+  const { data: orgOwners = [], isLoading: ownersLoading } = useOrgOwners(orgId);
+  const { data: allProjectMembers = [], isLoading: membersLoading } = useAllProjectMembers(orgId);
+  const { data: projectInvites = [], isLoading: invitesLoading, error: invitesError } = useProjectInvites();
+  const createInviteMutation = useCreateProjectInvite();
+  const revokeInviteMutation = useRevokeProjectInvite();
+  const updateRoleMutation = useUpdateProjectMemberRoleForProject();
+  const removeMemberMutation = useRemoveProjectMemberForProject();
 
   // "All Projects" mode: fetch environments for all projects in parallel
   const allProjectEnvQueries = useQueries({
@@ -254,6 +282,110 @@ export function Environments() {
     }
   };
 
+  // Access Control handlers
+  const filteredMembers = useMemo(() => {
+    // First filter by selected project if single project mode
+    let members = allProjectMembers;
+    if (selectedProjectId) {
+      members = members.filter((m) => m.project_id === selectedProjectId);
+    }
+    // Then apply search filter
+    if (!memberSearchTerm.trim()) return members;
+    const term = memberSearchTerm.toLowerCase();
+    return members.filter(
+      (m) =>
+        m.username.toLowerCase().includes(term) ||
+        m.email.toLowerCase().includes(term) ||
+        m.name.toLowerCase().includes(term) ||
+        m.project_name.toLowerCase().includes(term)
+    );
+  }, [allProjectMembers, memberSearchTerm, selectedProjectId]);
+
+  // Pending invites (not accepted, not revoked, not expired) - filtered by project if single project mode
+  const pendingInvites = useMemo(() => {
+    const pending = projectInvites.filter((inv) => inv.status === 'pending');
+    if (!selectedProjectId) return pending;
+    // Filter to invites that include the selected project
+    return pending.filter((inv) =>
+      inv.projects.some((p) => p.project_id === selectedProjectId)
+    );
+  }, [projectInvites, selectedProjectId]);
+
+  const handleInviteMember = async () => {
+    if (!inviteEmail.trim() || inviteProjects.length === 0) {
+      setInviteError('Email and at least one project are required');
+      return;
+    }
+    if (!inviteEmail.includes('@')) {
+      setInviteError('Please enter a valid email address');
+      return;
+    }
+    setInviteError(null);
+    try {
+      await createInviteMutation.mutateAsync({
+        email: inviteEmail.trim(),
+        projects: inviteProjects.map((p) => ({ project_id: p.projectId, role: p.role })),
+      });
+      // Reset form and close modal
+      setInviteEmail('');
+      setInviteProjects([]);
+      setShowInviteModal(false);
+    } catch (err) {
+      if (err instanceof Error) {
+        setInviteError(err.message);
+      } else {
+        setInviteError('Failed to send invite');
+      }
+    }
+  };
+
+  const handleRevokeInvite = async () => {
+    if (!revokeInviteConfirm) return;
+    try {
+      await revokeInviteMutation.mutateAsync(revokeInviteConfirm);
+      setRevokeInviteConfirm(null);
+    } catch (err) {
+      console.error('Failed to revoke invite:', err);
+    }
+  };
+
+  const toggleInviteProject = (projectId: string) => {
+    setInviteProjects((prev) => {
+      const existing = prev.find((p) => p.projectId === projectId);
+      if (existing) {
+        return prev.filter((p) => p.projectId !== projectId);
+      }
+      return [...prev, { projectId, role: 'read' as const }];
+    });
+  };
+
+  const setInviteProjectRole = (projectId: string, role: 'read' | 'write') => {
+    setInviteProjects((prev) =>
+      prev.map((p) => (p.projectId === projectId ? { ...p, role } : p))
+    );
+  };
+
+  const handleUpdateRole = async (projectId: string, userId: string, role: 'read' | 'write') => {
+    try {
+      await updateRoleMutation.mutateAsync({ projectId, userId, role });
+    } catch (err) {
+      console.error('Failed to update role:', err);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!removeMemberConfirm) return;
+    try {
+      await removeMemberMutation.mutateAsync({
+        projectId: removeMemberConfirm.projectId,
+        userId: removeMemberConfirm.userId,
+      });
+      setRemoveMemberConfirm(null);
+    } catch (err) {
+      console.error('Failed to remove member:', err);
+    }
+  };
+
   // Render "All Projects" view
   const renderAllProjectsView = () => {
     if (isAllProjectsLoading) {
@@ -301,7 +433,9 @@ export function Environments() {
     const handleAllProjectsClear = (projectId: string) => {
       // Use the local filter for the project
       const currentFilters = JSON.parse(localStorage.getItem('rocketship.console.filters.v1') || '{}');
-      const { [projectId]: _, ...rest } = currentFilters.selectedEnvironmentIdByProjectId || {};
+      const existingMap = currentFilters.selectedEnvironmentIdByProjectId || {};
+      const { [projectId]: _removed, ...rest } = existingMap;
+      void _removed; // Unused but required for destructuring
       const newFilters = {
         ...currentFilters,
         selectedEnvironmentIdByProjectId: rest,
@@ -439,12 +573,246 @@ export function Environments() {
           />
         </div>
 
-        {/* Access Control Coming Soon */}
-        <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6 opacity-60">
-          <h3 className="mb-2">Access Control</h3>
-          <p className="text-sm text-[#666666]">
-            Coming soon: Manage team member access and permissions.
-          </p>
+        {/* Access Control Section */}
+        <div className="space-y-6">
+          {/* Organization Owners */}
+          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm">
+            <div className="flex items-center gap-2 p-4 border-b border-[#e5e5e5]">
+              <Crown className="w-5 h-5 text-amber-500" />
+              <h3>Organization Owners</h3>
+            </div>
+            <div className="p-4">
+              {ownersLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                  <span className="ml-2 text-sm text-[#666666]">Loading owners...</span>
+                </div>
+              ) : orgOwners.length === 0 ? (
+                <p className="text-sm text-[#666666] text-center py-4">No owners found.</p>
+              ) : (
+                <div className="space-y-2">
+                  {orgOwners.map((owner) => (
+                    <div
+                      key={owner.user_id}
+                      className="flex items-center justify-between py-2 px-3 bg-[#fafafa] rounded-md"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                          <span className="text-amber-700 text-sm font-medium">
+                            {(owner.name || owner.username || owner.email)[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{owner.name || owner.username}</p>
+                          <p className="text-xs text-[#666666]">{owner.email}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                        Owner
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Project Members */}
+          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm">
+            <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#666666]" />
+                <h3>Project Members</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowInviteModal(true);
+                  setInviteError(null);
+                  setInviteEmail('');
+                  setInviteProjects([]);
+                }}
+                disabled={projects.length === 0}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Invite Member</span>
+              </button>
+            </div>
+
+            {/* Pending Invites */}
+            {invitesError ? (
+              <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
+                <div className="flex items-center gap-2">
+                  <X className="w-4 h-4 text-red-600" />
+                  <span className="text-sm text-red-700">
+                    Failed to load invites: {invitesError instanceof Error ? invitesError.message : 'Unknown error'}
+                  </span>
+                </div>
+              </div>
+            ) : invitesLoading ? (
+              <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                  <span className="text-sm text-amber-700">Loading pending invites...</span>
+                </div>
+              </div>
+            ) : pendingInvites.length > 0 ? (
+              <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-700">
+                    {pendingInvites.length} Pending Invite{pendingInvites.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {pendingInvites.map((invite) => (
+                    <div
+                      key={invite.id}
+                      className="flex items-center justify-between p-3 bg-white rounded-md border border-amber-200"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{invite.email}</p>
+                        <p className="text-xs text-[#666666]">
+                          Invited by {invite.inviter_name} · Expires{' '}
+                          {new Date(invite.expires_at).toLocaleDateString()}
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {invite.projects.map((p) => (
+                            <span
+                              key={p.project_id}
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                p.role === 'write'
+                                  ? 'bg-green-50 text-green-700'
+                                  : 'bg-blue-50 text-blue-700'
+                              }`}
+                            >
+                              {p.project_name} ({p.role})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setRevokeInviteConfirm(invite.id)}
+                        className="text-xs text-red-600 hover:text-red-700 hover:underline"
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Search */}
+            <div className="p-4 border-b border-[#e5e5e5]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999999]" />
+                <input
+                  type="text"
+                  value={memberSearchTerm}
+                  onChange={(e) => setMemberSearchTerm(e.target.value)}
+                  placeholder="Search by username, email, or project..."
+                  className="w-full pl-10 pr-4 py-2 text-sm border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+                {memberSearchTerm && (
+                  <button
+                    onClick={() => setMemberSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#666666]"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Members Table */}
+            <div className="overflow-x-auto">
+              {membersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                  <span className="ml-2 text-sm text-[#666666]">Loading members...</span>
+                </div>
+              ) : filteredMembers.length === 0 ? (
+                <p className="text-sm text-[#666666] text-center py-8">
+                  {memberSearchTerm ? 'No members match your search.' : 'No project members yet.'}
+                </p>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-xs text-[#666666] border-b border-[#e5e5e5]">
+                      <th className="text-left py-3 px-4 font-medium">User</th>
+                      <th className="text-left py-3 px-4 font-medium">Project</th>
+                      <th className="text-left py-3 px-4 font-medium">Role</th>
+                      <th className="text-right py-3 px-4 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMembers.map((member) => (
+                      <tr
+                        key={`${member.project_id}-${member.user_id}`}
+                        className="border-b border-[#e5e5e5] last:border-b-0 hover:bg-[#fafafa]"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-[#e5e5e5] flex items-center justify-center">
+                              <span className="text-[#666666] text-sm font-medium">
+                                {(member.name || member.username || member.email)[0].toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{member.name || member.username}</p>
+                              <p className="text-xs text-[#666666]">{member.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm">{member.project_name}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="relative inline-block">
+                            <select
+                              value={member.role}
+                              onChange={(e) =>
+                                handleUpdateRole(
+                                  member.project_id,
+                                  member.user_id,
+                                  e.target.value as 'read' | 'write'
+                                )
+                              }
+                              disabled={updateRoleMutation.isPending}
+                              className={`appearance-none text-sm px-2 py-1 pr-7 border rounded-md focus:outline-none focus:ring-1 focus:ring-black ${
+                                member.role === 'write'
+                                  ? 'bg-green-50 border-green-200 text-green-700'
+                                  : 'bg-blue-50 border-blue-200 text-blue-700'
+                              }`}
+                            >
+                              <option value="read">Read</option>
+                              <option value="write">Write</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[#666666]" />
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() =>
+                              setRemoveMemberConfirm({
+                                projectId: member.project_id,
+                                userId: member.user_id,
+                                username: member.username || member.email,
+                              })
+                            }
+                            className="text-xs text-red-600 hover:text-red-700 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -515,6 +883,147 @@ export function Environments() {
         tokenValue={revealedToken.value}
         tokenName={revealedToken.name}
       />
+
+      {/* Remove Project Member Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={!!removeMemberConfirm}
+        title="Remove Project Member"
+        message={`Are you sure you want to remove ${removeMemberConfirm?.username} from this project? They will lose access immediately.`}
+        confirmLabel="Remove Member"
+        confirmVariant="danger"
+        isConfirming={removeMemberMutation.isPending}
+        onCancel={() => setRemoveMemberConfirm(null)}
+        onConfirm={handleRemoveMember}
+      />
+
+      {/* Revoke Invite Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={!!revokeInviteConfirm}
+        title="Revoke Invite"
+        message="Are you sure you want to revoke this invite? The recipient will no longer be able to join using this invite code."
+        confirmLabel="Revoke Invite"
+        confirmVariant="danger"
+        isConfirming={revokeInviteMutation.isPending}
+        onCancel={() => setRevokeInviteConfirm(null)}
+        onConfirm={handleRevokeInvite}
+      />
+
+      {/* Invite Member Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowInviteModal(false)}
+          />
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
+              <div className="flex items-center gap-2">
+                <Send className="w-5 h-5 text-[#666666]" />
+                <h3 className="font-semibold">Invite Member</h3>
+              </div>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="text-[#666666] hover:text-black"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Email Input */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@example.com"
+                  className="w-full px-3 py-2 border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/20"
+                />
+              </div>
+
+              {/* Project Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Select Projects & Roles
+                </label>
+                <div className="border border-[#e5e5e5] rounded-md max-h-48 overflow-y-auto">
+                  {projects.map((project) => {
+                    const selected = inviteProjects.find((p) => p.projectId === project.id);
+                    return (
+                      <div
+                        key={project.id}
+                        className={`flex items-center justify-between p-3 border-b border-[#e5e5e5] last:border-b-0 ${
+                          selected ? 'bg-blue-50' : 'hover:bg-[#fafafa]'
+                        }`}
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer flex-1">
+                          <input
+                            type="checkbox"
+                            checked={!!selected}
+                            onChange={() => toggleInviteProject(project.id)}
+                            className="w-4 h-4 rounded border-[#e5e5e5] text-black focus:ring-black"
+                          />
+                          <span className="text-sm">{project.name}</span>
+                        </label>
+                        {selected && (
+                          <select
+                            value={selected.role}
+                            onChange={(e) =>
+                              setInviteProjectRole(project.id, e.target.value as 'read' | 'write')
+                            }
+                            className="text-sm px-2 py-1 border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                          >
+                            <option value="read">Read</option>
+                            <option value="write">Write</option>
+                          </select>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {projects.length === 0 && (
+                  <p className="text-sm text-[#666666] text-center py-4">
+                    No projects available. Create a project first.
+                  </p>
+                )}
+              </div>
+
+              {inviteError && (
+                <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">
+                  {inviteError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-[#e5e5e5]">
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="px-4 py-2 text-sm border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInviteMember}
+                disabled={createInviteMutation.isPending || !inviteEmail.trim() || inviteProjects.length === 0}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {createInviteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Invite
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

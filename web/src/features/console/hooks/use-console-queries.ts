@@ -700,3 +700,252 @@ export function useRevokeCIToken() {
     },
   })
 }
+
+// Access Control types
+
+export interface OrganizationOwner {
+  user_id: string
+  email: string
+  name: string
+  username: string
+  added_at: string
+}
+
+export interface ProjectMember {
+  user_id: string
+  email: string
+  name: string
+  username: string
+  role: 'read' | 'write'
+  joined_at: string
+  updated_at: string
+}
+
+export interface OrgProjectMember {
+  project_id: string
+  project_name: string
+  user_id: string
+  username: string
+  email: string
+  name: string
+  role: 'read' | 'write'
+}
+
+// Access Control hooks
+
+export function useOrgOwners(orgId: string) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'org', orgId, 'owners'] as const,
+    queryFn: () => apiGet<OrganizationOwner[]>(`/api/orgs/${orgId}/owners`),
+    enabled: !!orgId,
+  })
+}
+
+export function useProjectMembers(projectId: string) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'project', projectId, 'members'] as const,
+    queryFn: () => apiGet<ProjectMember[]>(`/api/projects/${projectId}/members`),
+    enabled: !!projectId,
+  })
+}
+
+export function useAllProjectMembers(orgId: string) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'org', orgId, 'project-members'] as const,
+    queryFn: () => apiGet<OrgProjectMember[]>(`/api/orgs/${orgId}/project-members`),
+    enabled: !!orgId,
+  })
+}
+
+export function useAddProjectMember(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: { username: string; role: 'read' | 'write' }) =>
+      apiPost<ProjectMember>(`/api/projects/${projectId}/members`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'members'] })
+      // Also invalidate org-wide members list
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'org'] })
+    },
+  })
+}
+
+export function useAddProjectMemberForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: { username: string; role: 'read' | 'write' } }) =>
+      apiPost<ProjectMember>(`/api/projects/${projectId}/members`, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'members'] })
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'org'] })
+    },
+  })
+}
+
+export function useUpdateProjectMemberRole(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: 'read' | 'write' }) =>
+      apiPut<void>(`/api/projects/${projectId}/members/${userId}`, { role }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'members'] })
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'org'] })
+    },
+  })
+}
+
+export function useUpdateProjectMemberRoleForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, userId, role }: { projectId: string; userId: string; role: 'read' | 'write' }) =>
+      apiPut<void>(`/api/projects/${projectId}/members/${userId}`, { role }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'members'] })
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'org'] })
+    },
+  })
+}
+
+export function useRemoveProjectMember(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiDelete(`/api/projects/${projectId}/members/${userId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'members'] })
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'org'] })
+    },
+  })
+}
+
+export function useRemoveProjectMemberForProject() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, userId }: { projectId: string; userId: string }) =>
+      apiDelete(`/api/projects/${projectId}/members/${userId}`),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'members'] })
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'org'] })
+    },
+  })
+}
+
+// Project Invite types
+
+export interface ProjectInviteProject {
+  project_id: string
+  project_name: string
+  role: 'read' | 'write'
+}
+
+export interface ProjectInvite {
+  id: string
+  email: string
+  invited_by: string
+  inviter_name: string
+  status: 'pending' | 'accepted' | 'revoked' | 'expired'
+  expires_at: string
+  created_at: string
+  projects: ProjectInviteProject[]
+}
+
+export interface PendingProjectInvite {
+  id: string
+  organization_id: string
+  organization_name: string
+  inviter_name: string
+  expires_at: string
+  created_at: string
+  projects: ProjectInviteProject[]
+}
+
+export interface ProjectInvitePreview {
+  id: string
+  organization_id: string
+  organization_name: string
+  inviter_name: string
+  expires_at: string
+  created_at: string
+  projects: ProjectInviteProject[]
+}
+
+export interface CreateProjectInviteRequest {
+  email: string
+  projects: { project_id: string; role: 'read' | 'write' }[]
+}
+
+// Project Invite hooks
+
+export function useProjectInvites() {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'project-invites'] as const,
+    queryFn: () => apiGet<ProjectInvite[]>('/api/project-invites'),
+  })
+}
+
+export function usePendingProjectInvites(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'project-invites', 'pending'] as const,
+    queryFn: () => apiGet<PendingProjectInvite[]>('/api/project-invites/pending'),
+    enabled: options?.enabled ?? true,
+  })
+}
+
+export function useProjectInvitePreview(inviteId: string | null, code: string | null, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'project-invites', 'preview', inviteId, code] as const,
+    queryFn: () =>
+      apiGet<ProjectInvitePreview>(
+        `/api/project-invites/preview?invite=${encodeURIComponent(inviteId || '')}&code=${encodeURIComponent(code || '')}`
+      ),
+    enabled: enabled && !!inviteId && !!code,
+  })
+}
+
+export function useCreateProjectInvite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateProjectInviteRequest) =>
+      apiPost<{ invite_id: string; email: string; expires_at: string }>('/api/project-invites', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project-invites'] })
+    },
+  })
+}
+
+export function useAcceptProjectInvite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { invite_id: string; code: string }) =>
+      apiPost<{ organization: { id: string; name: string }; projects: ProjectInviteProject[] }>(
+        '/api/project-invites/accept',
+        input
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project-invites'] })
+      queryClient.invalidateQueries({ queryKey: consoleKeys.profile() })
+      queryClient.invalidateQueries({ queryKey: consoleKeys.projects() })
+    },
+  })
+}
+
+export function useRevokeProjectInvite() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (inviteId: string) =>
+      apiPost<void>(`/api/project-invites/${inviteId}/revoke`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project-invites'] })
+    },
+  })
+}

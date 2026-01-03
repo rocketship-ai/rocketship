@@ -41,8 +41,8 @@ func (s *Store) GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (Organ
 // Results are deduped by (repo_url, path_scope), preferring the default branch version.
 // Only returns active projects.
 func (s *Store) ListProjectPermissionsForUser(ctx context.Context, orgID, userID uuid.UUID) ([]ProjectPermissionRow, error) {
-	// First check if user is org admin
-	isAdmin, err := s.IsOrganizationAdmin(ctx, orgID, userID)
+	// First check if user is org owner
+	isAdmin, err := s.IsOrganizationOwner(ctx, orgID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check admin status: %w", err)
 	}
