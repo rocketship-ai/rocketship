@@ -37,7 +37,6 @@ import { CITokenRevealModal } from '../components/ci-token-reveal-modal';
 import { CITokensTable } from '../components/ci-tokens-table';
 import { ConfirmDialog } from '../components/confirm-dialog';
 import { apiGet } from '@/lib/api';
-import { useQueryClient } from '@tanstack/react-query';
 
 // Helper type for All Projects view
 interface EnvWithProject extends ProjectEnvironment {
@@ -65,7 +64,6 @@ export function Environments() {
   const [showModal, setShowModal] = useState(false);
   const [editingEnv, setEditingEnv] = useState<EnvWithProject | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ envId: string; projectId: string } | null>(null);
-  const queryClient = useQueryClient();
 
   // CI Token state
   const [showCITokenModal, setShowCITokenModal] = useState(false);
@@ -90,11 +88,7 @@ export function Environments() {
   const { data: environments = [], isLoading: envsLoading } = useProjectEnvironments(selectedProjectId);
 
   // Local environment selection (from localStorage)
-  const {
-    selectedEnvironmentId,
-    setSelectedEnvironmentId,
-    clearSelectedEnvironmentId,
-  } = useConsoleEnvironmentFilter(selectedProjectId);
+  const { selectedEnvironmentId } = useConsoleEnvironmentFilter(selectedProjectId);
 
   // For "All Projects" view, get the full selection map
   const environmentSelectionMap = useConsoleEnvironmentSelectionMap();
@@ -294,14 +288,6 @@ export function Environments() {
     }
   };
 
-  const handleSelectEnvironment = (envId: string) => {
-    setSelectedEnvironmentId(envId);
-  };
-
-  const handleClearEnvironment = () => {
-    clearSelectedEnvironmentId();
-  };
-
   // CI Token handlers
   const handleCreateCIToken = async (data: {
     name: string;
@@ -469,36 +455,6 @@ export function Environments() {
       );
     }
 
-    const handleAllProjectsSelect = (env: EnvWithProject) => {
-      // Use the local filter for the env's project
-      const currentFilters = JSON.parse(localStorage.getItem('rocketship.console.filters.v1') || '{}');
-      const newFilters = {
-        ...currentFilters,
-        selectedEnvironmentIdByProjectId: {
-          ...(currentFilters.selectedEnvironmentIdByProjectId || {}),
-          [env.project_id]: env.id,
-        },
-      };
-      localStorage.setItem('rocketship.console.filters.v1', JSON.stringify(newFilters));
-      // Invalidate the filters query to trigger re-render
-      queryClient.invalidateQueries({ queryKey: ['consoleFilters'] });
-    };
-
-    const handleAllProjectsClear = (projectId: string) => {
-      // Use the local filter for the project
-      const currentFilters = JSON.parse(localStorage.getItem('rocketship.console.filters.v1') || '{}');
-      const existingMap = currentFilters.selectedEnvironmentIdByProjectId || {};
-      const { [projectId]: _removed, ...rest } = existingMap;
-      void _removed; // Unused but required for destructuring
-      const newFilters = {
-        ...currentFilters,
-        selectedEnvironmentIdByProjectId: rest,
-      };
-      localStorage.setItem('rocketship.console.filters.v1', JSON.stringify(newFilters));
-      // Invalidate the filters query to trigger re-render
-      queryClient.invalidateQueries({ queryKey: ['consoleFilters'] });
-    };
-
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {allProjectsData.environments.map((env) => {
@@ -517,10 +473,6 @@ export function Environments() {
               configVarCount={countConfigVarLeaves(env.config_vars)}
               onEdit={() => openEditModal(env)}
               onDelete={() => setDeleteConfirm({ envId: env.id, projectId: env.project_id })}
-              onSelect={() => handleAllProjectsSelect(env)}
-              onClear={() => handleAllProjectsClear(env.project_id)}
-              isSelectPending={false}
-              isClearPending={false}
             />
           );
         })}
@@ -589,10 +541,6 @@ export function Environments() {
                     configVarCount={countConfigVarLeaves(env.config_vars)}
                     onEdit={() => openEditModal({ ...env, projectName: selectedProject?.name ?? '' })}
                     onDelete={() => setDeleteConfirm({ envId: env.id, projectId: env.project_id })}
-                    onSelect={() => handleSelectEnvironment(env.id)}
-                    onClear={handleClearEnvironment}
-                    isSelectPending={false}
-                    isClearPending={false}
                   />
                 ))}
               </div>

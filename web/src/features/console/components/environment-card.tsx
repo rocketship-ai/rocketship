@@ -10,10 +10,6 @@ interface EnvironmentCardProps {
   configVarCount: number;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSelect: () => void;
-  onClear?: () => void;
-  isSelectPending?: boolean;
-  isClearPending?: boolean;
   editDisabled?: boolean;
   editDisabledReason?: string;
 }
@@ -27,10 +23,6 @@ export function EnvironmentCard({
   configVarCount,
   onEdit,
   onDelete,
-  onSelect,
-  onClear,
-  isSelectPending = false,
-  isClearPending = false,
   editDisabled = false,
   editDisabledReason,
 }: EnvironmentCardProps) {
@@ -75,7 +67,7 @@ export function EnvironmentCard({
         </div>
       </div>
 
-      <div className="space-y-2 text-sm mb-4">
+      <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">
           <Lock className="w-4 h-4 text-[#999999]" />
           <span className="text-[#666666]">
@@ -88,26 +80,6 @@ export function EnvironmentCard({
             {configVarCount} config var{configVarCount !== 1 ? 's' : ''}
           </span>
         </div>
-      </div>
-
-      <div className="flex items-center justify-end pt-4 border-t border-[#e5e5e5]">
-        {isSelected ? (
-          <button
-            onClick={onClear}
-            className="text-sm text-[#666666] hover:text-black transition-colors"
-            disabled={isClearPending}
-          >
-            {isClearPending ? 'Removing filter...' : `Remove ${name} filter`}
-          </button>
-        ) : (
-          <button
-            onClick={onSelect}
-            className="text-sm text-black hover:underline"
-            disabled={isSelectPending}
-          >
-            {isSelectPending ? 'Setting filter...' : `Filter by ${name}`}
-          </button>
-        )}
       </div>
     </div>
   );
