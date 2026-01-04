@@ -138,6 +138,22 @@ export function mapTestStatus(status: string): 'success' | 'failed' | 'pending' 
   }
 }
 
+/** Map API status to TestItem status with live running state */
+export function mapTestStatusLive(status: string): 'success' | 'failed' | 'pending' | 'running' {
+  switch (status.toUpperCase()) {
+    case 'PASSED':
+      return 'success';
+    case 'FAILED':
+    case 'CANCELLED':
+    case 'TIMEOUT':
+      return 'failed';
+    case 'RUNNING':
+      return 'running';
+    default:
+      return 'pending';
+  }
+}
+
 /**
  * Map step status for summary display (e.g., test item chips).
  * Returns only success/failed/pending - no running state.

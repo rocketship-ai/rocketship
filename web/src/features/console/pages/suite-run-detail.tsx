@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
 import { useLiveDurationMs } from '../hooks/use-live-duration';
 import { LoadingState, ErrorState } from '../components/ui';
-import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary, isLiveRunStatus, isLiveTestStatus } from '../lib/format';
+import { formatDuration, formatDateTime, mapRunStatus, mapTestStatusLive, mapStepStatusForSummary, isLiveRunStatus, isLiveTestStatus } from '../lib/format';
 
 interface SuiteRunDetailProps {
   suiteRunId: string;
@@ -26,7 +26,7 @@ function transformTestRun(test: RunTest) {
   return {
     id: test.id,
     name: test.name,
-    status: mapTestStatus(test.status),
+    status: mapTestStatusLive(test.status),
     duration: formatDuration(test.duration_ms),
     steps,
     // Pass expected step count for placeholder rendering

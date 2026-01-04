@@ -189,6 +189,11 @@ func (s *memoryRunStore) UpdateRunTestStepCounts(_ context.Context, _ uuid.UUID)
 	return nil
 }
 
+func (s *memoryRunStore) SetRunTestRunning(_ context.Context, _ uuid.UUID) error {
+	// No-op for memory store - test status is tracked via Engine.runs
+	return nil
+}
+
 func (s *memoryRunStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.RunStep, error) {
 	// No-op for memory store
 	return []persistence.RunStep{}, nil

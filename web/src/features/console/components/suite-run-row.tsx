@@ -33,21 +33,30 @@ export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) 
   const status = mapRunStatus(run.status);
   const isLive = isLiveRunStatus(run.status);
 
-  // Prefer commit message, then "Commit <sha>", then "Manual run"
+  // Prefer commit message, then "Commit <sha>", then fallback based on trigger type
+  const getFallbackTitle = () => {
+    switch (run.initiator_type) {
+      case 'schedule':
+        return 'Scheduled run';
+      case 'ci':
+        return 'CI run';
+      case 'manual':
+      default:
+        return 'Manual run';
+    }
+  };
+
   const title = run.commit_message
-    || (run.commit_sha ? `Commit ${run.commit_sha.slice(0, 7)}` : 'Manual run');
+    || (run.commit_sha ? `Commit ${run.commit_sha.slice(0, 7)}` : getFallbackTitle());
 
   const handleClick = () => {
     onClick?.(run.id);
   };
 
-  // Live styling: subtle green background (LIVE pill provides clear indicator)
-  const liveClasses = isLive ? 'bg-[#f8fff5]' : '';
-
   return (
     <div
       onClick={handleClick}
-      className={`p-4 hover:bg-[#fafafa] transition-colors cursor-pointer ${liveClasses} ${className}`}
+      className={`p-4 hover:bg-[#fafafa] transition-colors cursor-pointer ${className}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">

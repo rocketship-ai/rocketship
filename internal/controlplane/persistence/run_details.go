@@ -775,6 +775,29 @@ func (s *Store) UpsertRunStep(ctx context.Context, step RunStep) (RunStep, error
 	return step, nil
 }
 
+// SetRunTestRunning updates a run_test status to RUNNING if it's currently PENDING.
+// This is called when the first step of a test starts executing.
+func (s *Store) SetRunTestRunning(ctx context.Context, runTestID uuid.UUID) error {
+	if runTestID == uuid.Nil {
+		return errors.New("run test id required")
+	}
+
+	const query = `
+        UPDATE run_tests
+        SET status = 'RUNNING'
+        WHERE id = $1 AND status = 'PENDING'
+    `
+
+	// Note: We don't check rows affected because it's fine if the status
+	// is already RUNNING (subsequent steps can trigger this call)
+	_, err := s.db.ExecContext(ctx, query, runTestID)
+	if err != nil {
+		return fmt.Errorf("failed to set run test running: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateRunTestStepCounts recomputes and updates passed/failed step counts for a run test based on run_steps.
 // Note: step_count is NOT updated here - it represents the expected total steps from YAML and is set at insert time.
 func (s *Store) UpdateRunTestStepCounts(ctx context.Context, runTestID uuid.UUID) error {

@@ -4,7 +4,7 @@ interface TestItemProps {
   test: {
     id: string;
     name: string;
-    status?: 'success' | 'failed' | 'pending';
+    status?: 'success' | 'failed' | 'pending' | 'running';
     duration?: string;
     steps: Array<{
       name: string;
@@ -46,14 +46,19 @@ export function TestItem({ test, isLive = false, onClick }: TestItemProps) {
   const failedStepNumber = firstFailedStepIndex !== -1 ? firstFailedStepIndex + 1 : null;
 
   // Determine border color based on status (for test runs) or default gray (for test definitions)
+  // Running tests get light gray border (like pending) - the pulsating dot indicates activity
   const borderColorClass =
     test.status === 'success'
       ? 'border-l-[#4CBB17]'
       : test.status === 'failed'
       ? 'border-l-[#ef0000]'
+      : test.status === 'running'
+      ? 'border-l-[#d4d4d4]'
       : test.status === 'pending'
-      ? 'border-l-[#999999]'
+      ? 'border-l-[#d4d4d4]'
       : 'border-l-[#666666]'; // default for test definitions
+
+  const isRunning = test.status === 'running';
 
   return (
     <div
@@ -63,7 +68,15 @@ export function TestItem({ test, isLive = false, onClick }: TestItemProps) {
       <div className="flex flex-col gap-3">
         {/* Test name and metadata */}
         <div>
-          <p className="text-base mb-1">{test.name}</p>
+          <div className="flex items-center gap-2 mb-1">
+            {isRunning && (
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4CBB17] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4CBB17]"></span>
+              </span>
+            )}
+            <p className="text-base">{test.name}</p>
+          </div>
           <div className="flex items-center gap-3 text-sm text-[#666666]">
             {test.duration && (
               <>

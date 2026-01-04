@@ -39,6 +39,8 @@ type RunStore interface {
 	UpsertRunStep(ctx context.Context, step persistence.RunStep) (persistence.RunStep, error)
 	UpdateRunTestStepCounts(ctx context.Context, runTestID uuid.UUID) error
 	ListRunSteps(ctx context.Context, runTestID uuid.UUID) ([]persistence.RunStep, error)
+	// Set run_test status to RUNNING when first step starts
+	SetRunTestRunning(ctx context.Context, runTestID uuid.UUID) error
 	// Project lookup for run association
 	FindProjectByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) (persistence.Project, bool, error)
 	// Suite/test lookup for run linking

@@ -164,9 +164,10 @@ function getBorderColor(status: StepUIStatus): string {
     case 'failed':
       return 'border-l-[#ef0000]';
     case 'running':
-      return 'border-l-[#4CBB17]';
+      // Light gray border for running - spinning icon indicates activity
+      return 'border-l-[#d4d4d4]';
     case 'pending':
     default:
-      return 'border-l-[#999999]';
+      return 'border-l-[#d4d4d4]';
   }
 }

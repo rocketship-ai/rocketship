@@ -145,6 +145,14 @@ func (e *Engine) UpsertRunStep(ctx context.Context, req *generated.UpsertRunStep
 		return nil, fmt.Errorf("failed to upsert run step: %w", err)
 	}
 
+	// If step is RUNNING, update the run_test status to RUNNING (from PENDING)
+	// This ensures the UI shows the test as actively running
+	if req.Status == "RUNNING" {
+		if err := e.runStore.SetRunTestRunning(ctx, runTest.ID); err != nil {
+			slog.Warn("UpsertRunStep: failed to set run_test to RUNNING", "run_test_id", runTest.ID, "error", err)
+		}
+	}
+
 	// Update step counts on the run test
 	if err := e.runStore.UpdateRunTestStepCounts(ctx, runTest.ID); err != nil {
 		slog.Warn("UpsertRunStep: failed to update step counts", "run_test_id", runTest.ID, "error", err)
