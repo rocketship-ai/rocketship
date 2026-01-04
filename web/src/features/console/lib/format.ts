@@ -138,6 +138,22 @@ export function mapTestStatus(status: string): 'success' | 'failed' | 'pending' 
   }
 }
 
+/** Map API status to TestItem status with live running state */
+export function mapTestStatusLive(status: string): 'success' | 'failed' | 'pending' | 'running' {
+  switch (status.toUpperCase()) {
+    case 'PASSED':
+      return 'success';
+    case 'FAILED':
+    case 'CANCELLED':
+    case 'TIMEOUT':
+      return 'failed';
+    case 'RUNNING':
+      return 'running';
+    default:
+      return 'pending';
+  }
+}
+
 /**
  * Map step status for summary display (e.g., test item chips).
  * Returns only success/failed/pending - no running state.
@@ -154,5 +170,36 @@ export function mapStepStatusForSummary(status: string): 'success' | 'failed' | 
     default:
       return 'pending';
   }
+}
+
+// =============================================================================
+// Live Status Helpers (for polling logic)
+// =============================================================================
+
+/**
+ * Returns true if a run status indicates the run is still active (should poll).
+ * RUNNING and PENDING are live states.
+ */
+export function isLiveRunStatus(status: string): boolean {
+  const upper = status.toUpperCase();
+  return upper === 'RUNNING' || upper === 'PENDING';
+}
+
+/**
+ * Returns true if a test status indicates the test is still active (should poll).
+ * PENDING and RUNNING are live states for tests.
+ */
+export function isLiveTestStatus(status: string): boolean {
+  const upper = status.toUpperCase();
+  return upper === 'PENDING' || upper === 'RUNNING';
+}
+
+/**
+ * Returns true if a step status indicates the step is still active (should poll).
+ * PENDING and RUNNING are live states for steps.
+ */
+export function isLiveStepStatus(status: string): boolean {
+  const upper = status.toUpperCase();
+  return upper === 'PENDING' || upper === 'RUNNING';
 }
 

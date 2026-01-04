@@ -543,6 +543,12 @@ func (s *Server) handleConsoleProjectRoutesDispatch(w http.ResponseWriter, r *ht
 	case "environments":
 		// Handle environment management
 		s.handleProjectEnvironments(w, r, principal, projectID, segments[2:])
+	case "schedules":
+		// List all project schedules
+		s.handleProjectSchedules(w, r, principal, projectID)
+	case "project-schedules":
+		// Create project schedule
+		s.handleCreateProjectSchedule(w, r, principal, projectID)
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}
@@ -585,6 +591,8 @@ func (s *Server) handleConsoleSuiteRoutesDispatch(w http.ResponseWriter, r *http
 	switch segments[1] {
 	case "runs":
 		s.handleSuiteRuns(w, r, principal, suiteID)
+	case "schedules":
+		s.handleSuiteSchedules(w, r, principal, suiteID)
 	case "tests":
 		// Could add /api/suites/{id}/tests later if needed
 		writeError(w, http.StatusNotFound, "resource not found")

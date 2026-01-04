@@ -594,6 +594,84 @@ func (s *Store) UserCanAccessProject(ctx context.Context, orgID, userID, project
 	return exists, nil
 }
 
+// UserHasProjectWriteAccess checks if a user has write access to a specific project.
+// Org owners have write access to all active projects; non-owners must be project members with write role.
+func (s *Store) UserHasProjectWriteAccess(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error) {
+	// Check if user is org owner
+	isOwner, err := s.IsOrganizationOwner(ctx, orgID, userID)
+	if err != nil {
+		return false, fmt.Errorf("failed to check org ownership: %w", err)
+	}
+
+	if isOwner {
+		// Verify project exists and belongs to org
+		const query = `
+			SELECT EXISTS(SELECT 1 FROM projects WHERE id = $1 AND organization_id = $2 AND is_active = true)
+		`
+		var exists bool
+		if err := s.db.GetContext(ctx, &exists, query, projectID, orgID); err != nil {
+			return false, fmt.Errorf("failed to check project existence: %w", err)
+		}
+		return exists, nil
+	}
+
+	// Non-owner: check if they're a member of the project with write role
+	const query = `
+		SELECT EXISTS(
+			SELECT 1 FROM project_members pm
+			JOIN projects p ON p.id = pm.project_id
+			WHERE pm.project_id = $1 AND pm.user_id = $2 AND p.organization_id = $3 AND p.is_active = true
+			  AND lower(pm.role) = 'write'
+		)
+	`
+	var exists bool
+	if err := s.db.GetContext(ctx, &exists, query, projectID, userID, orgID); err != nil {
+		return false, fmt.Errorf("failed to check project membership: %w", err)
+	}
+	return exists, nil
+}
+
+// UpdateProjectDefaultBranchHead updates the default branch HEAD commit info for a project.
+// This is called by the scanner when scanning the default branch.
+func (s *Store) UpdateProjectDefaultBranchHead(ctx context.Context, projectID uuid.UUID, sha, message string, at time.Time) error {
+	const query = `
+		UPDATE projects
+		SET default_branch_head_sha = $2, default_branch_head_message = $3, default_branch_head_at = $4, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	res, err := s.db.ExecContext(ctx, query, projectID, sha, message, at)
+	if err != nil {
+		return fmt.Errorf("failed to update project default branch head: %w", err)
+	}
+
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// UpdateProjectsDefaultBranchHeadForRepo updates the default branch HEAD metadata for all active
+// projects in a repo that are on the default branch (source_ref = defaultBranch).
+// This is called by the webhook handler on every default-branch push to keep scheduler metadata fresh.
+// Returns the number of rows updated.
+func (s *Store) UpdateProjectsDefaultBranchHeadForRepo(ctx context.Context, orgID uuid.UUID, repoURL, defaultBranch, sha, message string, at time.Time) (int64, error) {
+	const query = `
+		UPDATE projects
+		SET default_branch_head_sha = $4, default_branch_head_message = $5, default_branch_head_at = $6, updated_at = NOW()
+		WHERE organization_id = $1 AND repo_url = $2 AND source_ref = $3 AND is_active = true
+	`
+
+	res, err := s.db.ExecContext(ctx, query, orgID, repoURL, defaultBranch, sha, message, at)
+	if err != nil {
+		return 0, fmt.Errorf("failed to update projects default branch head: %w", err)
+	}
+
+	rows, _ := res.RowsAffected()
+	return rows, nil
+}
+
 // FindDefaultBranchProject looks up a project where source_ref matches default_branch.
 // This is used during PR scans to reuse existing default-branch projects instead of creating branch variants.
 // Returns (project, found, error) - found is true if a matching default-branch project exists.

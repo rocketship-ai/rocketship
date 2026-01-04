@@ -69,6 +69,8 @@ type dataStore interface {
 	GetProject(ctx context.Context, projectID uuid.UUID) (persistence.Project, error)
 	ListProjects(ctx context.Context, orgID uuid.UUID) ([]persistence.Project, error)
 	ProjectNameExists(ctx context.Context, orgID uuid.UUID, name, sourceRef string) (bool, error)
+	UpdateProjectDefaultBranchHead(ctx context.Context, projectID uuid.UUID, sha, message string, at time.Time) error
+	UpdateProjectsDefaultBranchHeadForRepo(ctx context.Context, orgID uuid.UUID, repoURL, defaultBranch, sha, message string, at time.Time) (int64, error)
 
 	// Environment management
 	CreateEnvironment(ctx context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error)
@@ -87,6 +89,21 @@ type dataStore interface {
 
 	// Schedule management
 	ListEnabledSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.SuiteSchedule, error)
+
+	// Project schedule management
+	CreateProjectSchedule(ctx context.Context, input persistence.CreateProjectScheduleInput) (persistence.ProjectSchedule, error)
+	GetProjectSchedule(ctx context.Context, scheduleID uuid.UUID) (persistence.ProjectSchedule, error)
+	ListProjectSchedulesByProject(ctx context.Context, projectID uuid.UUID) ([]persistence.ProjectSchedule, error)
+	UpdateProjectSchedule(ctx context.Context, scheduleID uuid.UUID, input persistence.UpdateProjectScheduleInput) (persistence.ProjectSchedule, error)
+	DeleteProjectSchedule(ctx context.Context, scheduleID uuid.UUID) error
+
+	// Suite schedule management (overrides)
+	GetSuiteByID(ctx context.Context, suiteID uuid.UUID) (persistence.Suite, error)
+	ListSuiteSchedulesBySuiteWithEnv(ctx context.Context, suiteID uuid.UUID) ([]persistence.SuiteScheduleWithEnv, error)
+	GetSuiteScheduleWithEnv(ctx context.Context, scheduleID uuid.UUID) (persistence.SuiteScheduleWithEnv, error)
+	UpsertSuiteScheduleOverride(ctx context.Context, input persistence.CreateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, bool, error)
+	UpdateSuiteScheduleOverride(ctx context.Context, scheduleID uuid.UUID, input persistence.UpdateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, error)
+	DeleteSuiteScheduleOverride(ctx context.Context, scheduleID uuid.UUID) error
 
 	// CI Token management
 	ListCITokensForOrg(ctx context.Context, orgID uuid.UUID, includeRevoked bool) ([]persistence.CITokenRecord, error)
@@ -118,6 +135,7 @@ type dataStore interface {
 	// Project access control
 	ListAccessibleProjectIDs(ctx context.Context, orgID, userID uuid.UUID) ([]uuid.UUID, error)
 	UserCanAccessProject(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error)
+	UserHasProjectWriteAccess(ctx context.Context, orgID, userID, projectID uuid.UUID) (bool, error)
 
 	// Profile hydration queries
 	GetOrganizationByID(ctx context.Context, orgID uuid.UUID) (persistence.Organization, error)

@@ -543,6 +543,67 @@ type PullRequestFile struct {
 	Changes          int    `json:"changes"`
 }
 
+// GitHubCommitInfo contains commit metadata
+type GitHubCommitInfo struct {
+	SHA     string // Full commit SHA
+	Message string // First line of commit message (subject)
+}
+
+// GetCommit fetches commit metadata from GitHub.
+// The refOrSHA can be a branch name, tag, or commit SHA.
+func (g *GitHubAppClient) GetCommit(ctx context.Context, installationID int64, owner, repo, refOrSHA string) (*GitHubCommitInfo, error) {
+	token, err := g.GetInstallationToken(ctx, installationID)
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/commits/%s", owner, repo, refOrSHA)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("User-Agent", "rocketship-controlplane")
+
+	resp, err := g.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("commit not found: %s", refOrSHA)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get commit (status %d): %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var commitResp struct {
+		SHA    string `json:"sha"`
+		Commit struct {
+			Message string `json:"message"`
+		} `json:"commit"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&commitResp); err != nil {
+		return nil, fmt.Errorf("failed to decode commit response: %w", err)
+	}
+
+	// Extract first line of commit message (subject)
+	message := commitResp.Commit.Message
+	if idx := strings.Index(message, "\n"); idx != -1 {
+		message = message[:idx]
+	}
+	message = strings.TrimSpace(message)
+
+	return &GitHubCommitInfo{
+		SHA:     commitResp.SHA,
+		Message: message,
+	}, nil
+}
+
 // ListInstallations lists all installations of the GitHub App
 func (g *GitHubAppClient) ListInstallations(ctx context.Context) ([]GitHubAppInstallationInfo, error) {
 	appJWT, err := g.generateAppJWT()

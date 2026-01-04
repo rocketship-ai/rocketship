@@ -1,4 +1,4 @@
-import { Plus, Settings, Loader2, Key, Users, Crown, Search, X, ChevronDown, Mail, Clock, Send } from 'lucide-react';
+import { Plus, Settings, Loader2, Key, Users, Crown, Search, X, ChevronDown, Mail, Clock } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -36,6 +36,7 @@ import { CITokenModal } from '../components/ci-token-modal';
 import { CITokenRevealModal } from '../components/ci-token-reveal-modal';
 import { CITokensTable } from '../components/ci-tokens-table';
 import { ConfirmDialog } from '../components/confirm-dialog';
+import { InviteMemberModal, type InviteMemberFormData } from '../components/invite-member-modal';
 import { Button } from '../components/ui';
 import { apiGet } from '@/lib/api';
 
@@ -76,9 +77,6 @@ export function Environments() {
   // Access Control state
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteProjects, setInviteProjects] = useState<{ projectId: string; role: 'read' | 'write' }[]>([]);
-  const [inviteError, setInviteError] = useState<string | null>(null);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<{ projectId: string; userId: string; username: string } | null>(null);
   const [revokeInviteConfirm, setRevokeInviteConfirm] = useState<string | null>(null);
 
@@ -388,32 +386,12 @@ export function Environments() {
     return projects.filter((p) => writeProjectIds.has(p.id));
   }, [isOrgOwner, projects, writeProjectIds]);
 
-  const handleInviteMember = async () => {
-    if (!inviteEmail.trim() || inviteProjects.length === 0) {
-      setInviteError('Email and at least one project are required');
-      return;
-    }
-    if (!inviteEmail.includes('@')) {
-      setInviteError('Please enter a valid email address');
-      return;
-    }
-    setInviteError(null);
-    try {
-      await createInviteMutation.mutateAsync({
-        email: inviteEmail.trim(),
-        projects: inviteProjects.map((p) => ({ project_id: p.projectId, role: p.role })),
-      });
-      // Reset form and close modal
-      setInviteEmail('');
-      setInviteProjects([]);
-      setShowInviteModal(false);
-    } catch (err) {
-      if (err instanceof Error) {
-        setInviteError(err.message);
-      } else {
-        setInviteError('Failed to send invite');
-      }
-    }
+  const handleInviteMember = async (data: InviteMemberFormData) => {
+    await createInviteMutation.mutateAsync({
+      email: data.email,
+      projects: data.projects,
+    });
+    setShowInviteModal(false);
   };
 
   const handleRevokeInvite = async () => {
@@ -424,22 +402,6 @@ export function Environments() {
     } catch (err) {
       console.error('Failed to revoke invite:', err);
     }
-  };
-
-  const toggleInviteProject = (projectId: string) => {
-    setInviteProjects((prev) => {
-      const existing = prev.find((p) => p.projectId === projectId);
-      if (existing) {
-        return prev.filter((p) => p.projectId !== projectId);
-      }
-      return [...prev, { projectId, role: 'read' as const }];
-    });
-  };
-
-  const setInviteProjectRole = (projectId: string, role: 'read' | 'write') => {
-    setInviteProjects((prev) =>
-      prev.map((p) => (p.projectId === projectId ? { ...p, role } : p))
-    );
   };
 
   const handleUpdateRole = async (projectId: string, userId: string, role: 'read' | 'write') => {
@@ -662,12 +624,7 @@ export function Environments() {
               </div>
               {canInvite && (
                 <Button
-                  onClick={() => {
-                    setShowInviteModal(true);
-                    setInviteError(null);
-                    setInviteEmail('');
-                    setInviteProjects([]);
-                  }}
+                  onClick={() => setShowInviteModal(true)}
                   disabled={projects.length === 0}
                   leftIcon={<Mail className="w-4 h-4" />}
                 >
@@ -974,128 +931,14 @@ export function Environments() {
       />
 
       {/* Invite Member Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowInviteModal(false)}
-          />
-          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
-              <div className="flex items-center gap-2">
-                <Send className="w-5 h-5 text-[#666666]" />
-                <h3 className="font-semibold">Invite Member</h3>
-              </div>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="text-[#666666] hover:text-black"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              {/* Email Input */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Email Address</label>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="colleague@example.com"
-                  className="w-full px-3 py-2 border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-2 focus:ring-black/20"
-                />
-              </div>
-
-              {/* Project Selection */}
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Select Projects & Roles
-                </label>
-                {!isOrgOwner && (
-                  <p className="text-xs text-[#666666] mb-2">
-                    You can only invite to projects where you have Write access.
-                  </p>
-                )}
-                <div className="border border-[#e5e5e5] rounded-md max-h-48 overflow-y-auto">
-                  {invitableProjects.map((project) => {
-                    const selected = inviteProjects.find((p) => p.projectId === project.id);
-                    return (
-                      <div
-                        key={project.id}
-                        className={`flex items-center justify-between p-3 border-b border-[#e5e5e5] last:border-b-0 ${
-                          selected ? 'bg-blue-50' : 'hover:bg-[#fafafa]'
-                        }`}
-                      >
-                        <label className="flex items-center gap-2 cursor-pointer flex-1">
-                          <input
-                            type="checkbox"
-                            checked={!!selected}
-                            onChange={() => toggleInviteProject(project.id)}
-                            className="w-4 h-4 rounded border-[#e5e5e5] text-black focus:ring-black"
-                          />
-                          <span className="text-sm">{project.name}</span>
-                        </label>
-                        {selected && (
-                          <select
-                            value={selected.role}
-                            onChange={(e) =>
-                              setInviteProjectRole(project.id, e.target.value as 'read' | 'write')
-                            }
-                            className="text-sm px-2 py-1 border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-                          >
-                            <option value="read">Read</option>
-                            <option value="write">Write</option>
-                          </select>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {invitableProjects.length === 0 && (
-                  <p className="text-sm text-[#666666] text-center py-4">
-                    {isOrgOwner
-                      ? 'No projects available. Create a project first.'
-                      : 'You don\'t have Write access to any projects.'}
-                  </p>
-                )}
-              </div>
-
-              {inviteError && (
-                <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">
-                  {inviteError}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 p-4 border-t border-[#e5e5e5]">
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="px-4 py-2 text-sm border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleInviteMember}
-                disabled={createInviteMutation.isPending || !inviteEmail.trim() || inviteProjects.length === 0}
-                className="flex items-center gap-2 px-4 py-2 text-sm bg-black text-white rounded-md hover:bg-black/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {createInviteMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Send Invite
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <InviteMemberModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSubmit={handleInviteMember}
+        isSubmitting={createInviteMutation.isPending}
+        projects={invitableProjects}
+        isOrgOwner={isOrgOwner}
+      />
     </div>
   );
 }

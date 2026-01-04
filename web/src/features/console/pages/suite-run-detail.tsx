@@ -1,11 +1,12 @@
-import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
 import { LogsPanel } from '../components/logs-panel';
 import { useState } from 'react';
 import { useRun, useRunTests, useRunLogs, type RunTest } from '../hooks/use-console-queries';
+import { useLiveDurationMs } from '../hooks/use-live-duration';
 import { LoadingState, ErrorState } from '../components/ui';
-import { formatDuration, formatDateTime, mapRunStatus, mapTestStatus, mapStepStatusForSummary } from '../lib/format';
+import { formatDuration, formatDateTime, mapRunStatus, mapTestStatusLive, mapStepStatusForSummary, isLiveRunStatus, isLiveTestStatus } from '../lib/format';
 
 interface SuiteRunDetailProps {
   suiteRunId: string;
@@ -25,9 +26,13 @@ function transformTestRun(test: RunTest) {
   return {
     id: test.id,
     name: test.name,
-    status: mapTestStatus(test.status),
+    status: mapTestStatusLive(test.status),
     duration: formatDuration(test.duration_ms),
     steps,
+    // Pass expected step count for placeholder rendering
+    expectedStepCount: test.step_count,
+    // Keep raw status for isLive check
+    rawStatus: test.status,
   };
 }
 
@@ -37,7 +42,18 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
   // Fetch run data from API
   const { data: runData, isLoading: runLoading, error: runError } = useRun(suiteRunId);
   const { data: testsData, isLoading: testsLoading } = useRunTests(suiteRunId);
-  const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId);
+
+  // Check if run is live for log polling
+  const isRunLive = runData ? isLiveRunStatus(runData.status) : false;
+  const { data: logsData, isLoading: logsLoading } = useRunLogs(suiteRunId, { isRunLive });
+
+  // Live duration - updates while run is in progress
+  const liveDurationMs = useLiveDurationMs({
+    startedAt: runData?.started_at ?? runData?.created_at,
+    endedAt: runData?.ended_at,
+    isLive: isRunLive,
+    durationMs: runData?.duration_ms,
+  });
 
   // Back button component (shared across states)
   const BackButton = () => (
@@ -90,7 +106,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
       type: (isUncommitted ? 'uncommitted' : 'repo_commit') as 'repo_commit' | 'uncommitted',
       sha: runData.commit_sha || runData.bundle_sha || '',
     },
-    duration: formatDuration(runData.duration_ms),
+    duration: formatDuration(liveDurationMs),
     started: formatDateTime(runData.started_at),
     ended: formatDateTime(runData.ended_at),
     branch: runData.branch || 'main',
@@ -134,7 +150,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                     <XCircle className="w-5 h-5 text-[#ef0000]" />
                   )}
                   {suiteRun.status === 'running' && (
-                    <Clock className="w-5 h-5 text-[#4CBB17] animate-spin" />
+                    <Loader2 className="w-5 h-5 text-[#4CBB17] animate-spin" />
                   )}
                 </div>
                 {suiteRun.env && <EnvBadge env={suiteRun.env} />}
@@ -248,6 +264,7 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                 <TestItem
                   key={testRun.id}
                   test={testRun}
+                  isLive={isLiveTestStatus(testRun.rawStatus)}
                   onClick={() => onViewTestRun(testRun.id)}
                 />
               ))

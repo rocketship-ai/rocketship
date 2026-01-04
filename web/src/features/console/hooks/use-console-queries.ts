@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '@/lib/api'
+import { isLiveRunStatus, isLiveTestStatus, isLiveStepStatus } from '../lib/format'
 
 // Types matching the API response shapes
 
@@ -428,6 +429,14 @@ export function useSuiteRuns(suiteId: string, environmentId?: string) {
       return apiGet<SuiteRunSummary[]>(url)
     },
     enabled: !!suiteId,
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 3s if any run is live (RUNNING or PENDING)
+      const hasLiveRun = data.some((run) => isLiveRunStatus(run.status))
+      return hasLiveRun ? 3000 : false
+    },
   })
 }
 
@@ -458,6 +467,12 @@ export function useRun(runId: string) {
     queryKey: consoleKeys.run(runId),
     queryFn: () => apiGet<RunDetail>(`/api/runs/${runId}`),
     enabled: !!runId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 2s while run is live
+      return isLiveRunStatus(data.status) ? 2000 : false
+    },
   })
 }
 
@@ -466,14 +481,25 @@ export function useRunTests(runId: string) {
     queryKey: consoleKeys.runTests(runId),
     queryFn: () => apiGet<RunTest[]>(`/api/runs/${runId}/tests`),
     enabled: !!runId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 2s if any test is live (PENDING or RUNNING)
+      const hasLiveTest = data.some((test) => isLiveTestStatus(test.status))
+      return hasLiveTest ? 2000 : false
+    },
   })
 }
 
-export function useRunLogs(runId: string, limit = 500) {
+export function useRunLogs(runId: string, options?: { limit?: number; isRunLive?: boolean }) {
+  const limit = options?.limit ?? 500
+  const isRunLive = options?.isRunLive ?? false
   return useQuery({
     queryKey: consoleKeys.runLogs(runId),
     queryFn: () => apiGet<RunLog[]>(`/api/runs/${runId}/logs?limit=${limit}`),
     enabled: !!runId,
+    // Poll every 2s while run is live to stream logs
+    refetchInterval: isRunLive ? 2000 : false,
   })
 }
 
@@ -482,22 +508,41 @@ export function useTestRun(testRunId: string) {
     queryKey: consoleKeys.testRun(testRunId),
     queryFn: () => apiGet<TestRunDetail>(`/api/test-runs/${testRunId}`),
     enabled: !!testRunId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      // Poll every 2s while test is live
+      return isLiveTestStatus(data.test.status) ? 2000 : false
+    },
   })
 }
 
-export function useTestRunLogs(testRunId: string, limit = 500) {
+export function useTestRunLogs(testRunId: string, options?: { limit?: number; isTestLive?: boolean }) {
+  const limit = options?.limit ?? 500
+  const isTestLive = options?.isTestLive ?? false
   return useQuery({
     queryKey: consoleKeys.testRunLogs(testRunId),
     queryFn: () => apiGet<RunLog[]>(`/api/test-runs/${testRunId}/logs?limit=${limit}`),
     enabled: !!testRunId,
+    // Poll every 2s while test is live to stream logs
+    refetchInterval: isTestLive ? 2000 : false,
   })
 }
 
-export function useTestRunSteps(testRunId: string) {
+export function useTestRunSteps(testRunId: string, options?: { isTestLive?: boolean }) {
+  const isTestLive = options?.isTestLive ?? false
   return useQuery({
     queryKey: consoleKeys.testRunSteps(testRunId),
     queryFn: () => apiGet<RunStep[]>(`/api/test-runs/${testRunId}/steps`),
     enabled: !!testRunId,
+    refetchInterval: (query) => {
+      // Poll if test is live (passed from parent) OR if any step is still live
+      if (isTestLive) return 2000
+      const data = query.state.data
+      if (!data) return false
+      const hasLiveStep = data.some((step) => isLiveStepStatus(step.status))
+      return hasLiveStep ? 2000 : false
+    },
   })
 }
 
@@ -960,6 +1005,178 @@ export function useRevokeProjectInvite() {
       apiPost<void>(`/api/project-invites/${inviteId}/revoke`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project-invites'] })
+    },
+  })
+}
+
+// ============================================
+// Project Schedule Types and Hooks
+// ============================================
+
+export interface ProjectSchedule {
+  id: string
+  project_id: string
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+  next_run_at: string | null
+  last_run_at: string | null
+  last_run_id: string | null
+  last_run_status: string | null
+  created_at: string
+  updated_at: string
+  environment: {
+    name: string
+    slug: string
+  }
+}
+
+export interface CreateProjectScheduleRequest {
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+}
+
+export interface UpdateProjectScheduleRequest {
+  name?: string
+  cron_expression?: string
+  timezone?: string
+  enabled?: boolean
+}
+
+export function useProjectSchedules(projectId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'project', projectId, 'schedules'] as const,
+    queryFn: () => apiGet<ProjectSchedule[]>(`/api/projects/${projectId}/schedules`),
+    enabled: (options?.enabled ?? true) && !!projectId,
+  })
+}
+
+export function useCreateProjectSchedule(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateProjectScheduleRequest) =>
+      apiPost<ProjectSchedule>(`/api/projects/${projectId}/project-schedules`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'project', projectId, 'schedules'] })
+    },
+  })
+}
+
+export function useUpdateProjectSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ scheduleId, data }: { scheduleId: string; data: UpdateProjectScheduleRequest }) =>
+      apiPut<ProjectSchedule>(`/api/project-schedules/${scheduleId}`, data),
+    onSuccess: () => {
+      // Invalidate all project schedule queries since we don't know the project ID here
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}
+
+export function useDeleteProjectSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (scheduleId: string) =>
+      apiDelete(`/api/project-schedules/${scheduleId}`),
+    onSuccess: () => {
+      // Invalidate all project schedule queries
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}
+
+// ============================================
+// Suite Schedule Types and Hooks (Overrides)
+// ============================================
+
+export interface SuiteSchedule {
+  id: string
+  suite_id: string
+  project_id: string
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+  last_run_id?: string
+  last_run_status?: string
+  last_run_at?: string
+  next_run_at?: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  environment: {
+    name: string
+    slug: string
+  }
+}
+
+export interface CreateSuiteScheduleRequest {
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+}
+
+export interface UpdateSuiteScheduleRequest {
+  name?: string
+  cron_expression?: string
+  timezone?: string
+  enabled?: boolean
+}
+
+export function useSuiteSchedules(suiteId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'suite', suiteId, 'schedules'] as const,
+    queryFn: () => apiGet<SuiteSchedule[]>(`/api/suites/${suiteId}/schedules`),
+    enabled: (options?.enabled ?? true) && !!suiteId,
+  })
+}
+
+export function useUpsertSuiteSchedule(suiteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateSuiteScheduleRequest) =>
+      apiPost<SuiteSchedule>(`/api/suites/${suiteId}/schedules`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'suite', suiteId, 'schedules'] })
+    },
+  })
+}
+
+export function useUpdateSuiteSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ scheduleId, data }: { scheduleId: string; data: UpdateSuiteScheduleRequest }) =>
+      apiPut<SuiteSchedule>(`/api/suite-schedules/${scheduleId}`, data),
+    onSuccess: () => {
+      // Invalidate all suite schedule queries since we don't know the suite ID here
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}
+
+export function useDeleteSuiteSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (scheduleId: string) =>
+      apiDelete(`/api/suite-schedules/${scheduleId}`),
+    onSuccess: () => {
+      // Invalidate all suite schedule queries
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
     },
   })
 }

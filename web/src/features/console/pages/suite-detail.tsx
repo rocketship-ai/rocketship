@@ -1,13 +1,15 @@
-import { ArrowLeft, Search, GitBranch, Hash, Clock, CheckCircle2, XCircle, Plus, X, Edit2, ToggleRight, ToggleLeft, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
-import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from '../components/status-badge';
+import { ArrowLeft, Search, GitBranch, Clock, Plus, Play, Loader2, FileCode, AlertCircle, RefreshCw } from 'lucide-react';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { TestItem } from '../components/test-item';
+import { SuiteRunRow } from '../components/suite-run-row';
+import { ScheduleCard, type ScheduleCardData } from '../components/schedule-card';
+import { ScheduleFormModal, type ScheduleFormData } from '../components/schedule-form-modal';
 import { useMemo, useState } from 'react';
-import { useSuite, useSuiteRuns, useProjectEnvironments, type SuiteRunSummary } from '../hooks/use-console-queries';
+import { useSuite, useSuiteRuns, useProjectEnvironments, useProjectSchedules, useSuiteSchedules, useUpsertSuiteSchedule, useUpdateSuiteSchedule, useDeleteSuiteSchedule, type SuiteRunSummary, type ProjectSchedule, type SuiteSchedule } from '../hooks/use-console-queries';
 import { useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { LoadingState, ErrorState } from '../components/ui';
-import { formatDuration, formatRelativeTime, mapRunStatus } from '../lib/format';
+import { formatRelativeTime } from '../lib/format';
 
 interface SuiteDetailProps {
   suiteId: string;
@@ -16,15 +18,6 @@ interface SuiteDetailProps {
   onViewTest?: (testId: string) => void;
 }
 
-// Helper to display branch name
-function BranchDisplay({ branch }: { branch: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
-      <GitBranch className="w-3 h-3" />
-      {branch}
-    </span>
-  );
-}
 
 export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDetailProps) {
   const { data: suite, isLoading, error, refetch } = useSuite(suiteId);
@@ -45,41 +38,71 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<string | null>(null);
-  const [newScheduleEnv, setNewScheduleEnv] = useState('staging');
-  const [newScheduleCron, setNewScheduleCron] = useState('');
-  const [newScheduleEnabled, setNewScheduleEnabled] = useState(true);
+  const [editingSchedule, setEditingSchedule] = useState<{ schedule: ProjectSchedule | SuiteSchedule; isOverride: boolean } | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   // Tab configuration
   const tabs = [
     { id: 'activity', label: 'Activity', enabled: true },
     { id: 'tests', label: 'Tests', enabled: true },
-    { id: 'schedules', label: 'Schedules', enabled: false },
+    { id: 'schedules', label: 'Schedules', enabled: true },
     { id: 'variables', label: 'Variables', enabled: false },
     { id: 'lifecycle-hooks', label: 'Lifecycle Hooks', enabled: false },
     { id: 'retry-policy', label: 'Retry Policy', enabled: false },
     { id: 'alerts', label: 'Alerts & Notifications', enabled: false },
   ] as const;
 
-  // Suite schedules - placeholder (no DB persistence yet)
-  const schedules = [
-    {
-      id: 'sched-1',
-      env: 'staging',
-      cron: '*/30 * * * *',
-      enabled: false,
-      lastRun: '15 minutes ago',
-      nextRun: 'in 15 minutes',
-    },
-    {
-      id: 'sched-2',
-      env: 'production',
-      cron: '0 */6 * * *',
-      enabled: true,
-      lastRun: '2 hours ago',
-      nextRun: 'in 4 hours',
-    },
+  // Fetch project schedules (inherited) and suite schedules (overrides) from API
+  const { data: projectSchedules = [], isLoading: projectSchedulesLoading } = useProjectSchedules(projectId, { enabled: !!projectId });
+  const { data: suiteSchedules = [], isLoading: suiteSchedulesLoading, refetch: refetchSuiteSchedules } = useSuiteSchedules(suiteId, { enabled: !!suiteId });
+
+  const schedulesLoading = projectSchedulesLoading || suiteSchedulesLoading;
+
+  // Suite schedule mutations (we never mutate project schedules from suite detail page)
+  const upsertScheduleMutation = useUpsertSuiteSchedule(suiteId);
+  const updateScheduleMutation = useUpdateSuiteSchedule();
+  const deleteScheduleMutation = useDeleteSuiteSchedule();
+
+
+  // Build a set of environment IDs that have suite-level overrides
+  const overriddenEnvIds = new Set(suiteSchedules.map((s: SuiteSchedule) => s.environment_id));
+
+  // Map schedules to display format, merging inherited (project) and overrides (suite)
+  // Suite schedules take precedence over project schedules for the same environment
+  const schedules: (ScheduleCardData & { envId: string; isOverride: boolean; originalSchedule: ProjectSchedule | SuiteSchedule })[] = [
+    // Suite schedules (overrides) - these take precedence
+    ...suiteSchedules.map((s: SuiteSchedule) => ({
+      id: s.id,
+      env: s.environment?.slug ?? 'unknown',
+      envId: s.environment_id,
+      name: s.name,
+      cron: s.cron_expression,
+      timezone: s.timezone,
+      enabled: s.enabled,
+      lastRun: s.last_run_at ? formatRelativeTime(s.last_run_at) : 'Never',
+      nextRun: s.next_run_at ? formatRelativeTime(s.next_run_at) : 'Not scheduled',
+      lastRunStatus: s.last_run_status,
+      isOverride: true,
+      originalSchedule: s,
+    })),
+    // Project schedules (inherited) - only include those not overridden
+    ...projectSchedules
+      .filter((s: ProjectSchedule) => !overriddenEnvIds.has(s.environment_id))
+      .map((s: ProjectSchedule) => ({
+        id: s.id,
+        env: s.environment.slug,
+        envId: s.environment_id,
+        name: s.name,
+        cron: s.cron_expression,
+        timezone: s.timezone,
+        enabled: s.enabled,
+        lastRun: s.last_run_at ? formatRelativeTime(s.last_run_at) : 'Never',
+        nextRun: s.next_run_at ? formatRelativeTime(s.next_run_at) : 'Not scheduled',
+        lastRunStatus: s.last_run_status,
+        isOverride: false,
+        originalSchedule: s,
+      })),
   ];
 
   // Convert suite tests to the format expected by TestItem component
@@ -373,71 +396,13 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
 
                         {/* Runs list */}
                         <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm divide-y divide-[#e5e5e5]">
-                          {filteredRuns.map((run) => {
-                            const status = mapRunStatus(run.status);
-                            // Prefer commit message, then "Commit <sha>", then "Manual run"
-                            const title = run.commit_message
-                              || (run.commit_sha ? `Commit ${run.commit_sha.slice(0, 7)}` : 'Manual run');
-
-                            return (
-                              <div
-                                key={run.id}
-                                onClick={() => onViewRun(run.id)}
-                                className="p-4 hover:bg-[#fafafa] transition-colors cursor-pointer"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-4 flex-1">
-                                    {/* Status icon */}
-                                    <div>
-                                      {status === 'success' && (
-                                        <CheckCircle2 className="w-5 h-5 text-[#4CBB17]" />
-                                      )}
-                                      {status === 'failed' && (
-                                        <XCircle className="w-5 h-5 text-[#ef0000]" />
-                                      )}
-                                      {status === 'running' && (
-                                        <Loader2 className="w-5 h-5 text-[#4CBB17] animate-spin" />
-                                      )}
-                                    </div>
-
-                                    {/* Run info */}
-                                    <div className="flex-1">
-                                      <p className="text-sm mb-1 truncate max-w-lg">{title}</p>
-                                      <div className="flex items-center gap-3 flex-wrap">
-                                        <BranchDisplay branch={run.branch} />
-                                        {/* For uncommitted runs: show Uncommitted badge, no commit SHA */}
-                                        {/* For repo_commit runs: show commit SHA, no badge */}
-                                        {run.config_source === 'uncommitted' ? (
-                                          <ConfigSourceBadge type="uncommitted" />
-                                        ) : (
-                                          run.commit_sha && (
-                                            <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
-                                              <Hash className="w-3 h-3" />
-                                              {run.commit_sha.slice(0, 7)}
-                                            </span>
-                                          )
-                                        )}
-                                        <BadgeDot />
-                                        {run.environment && <EnvBadge env={run.environment} />}
-                                        <TriggerBadge trigger={run.initiator_type} />
-                                        {run.initiator_type === 'manual' && run.initiator_name && (
-                                          <UsernameBadge username={run.initiator_name} />
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {/* Metadata */}
-                                    <div className="flex items-center gap-4 text-sm text-[#666666]">
-                                      <span>{formatRelativeTime(run.created_at)}</span>
-                                      {run.duration_ms !== undefined && (
-                                        <span>{formatDuration(run.duration_ms)}</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {filteredRuns.map((run) => (
+                            <SuiteRunRow
+                              key={run.id}
+                              run={run}
+                              onClick={onViewRun}
+                            />
+                          ))}
                         </div>
                       </div>
                     );
@@ -476,66 +441,52 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
         {/* Schedules Tab */}
         {activeTab === 'schedules' && (
           <div>
-            {schedules.length > 0 ? (
+            {schedulesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-[#666666]" />
+                <span className="ml-3 text-[#666666]">Loading schedules...</span>
+              </div>
+            ) : schedules.length > 0 ? (
               <div className="space-y-3">
                 {schedules.map((schedule) => (
-                  <div
+                  <ScheduleCard
                     key={schedule.id}
-                    className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-6"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-sm px-2 py-1 bg-[#fafafa] rounded border border-[#e5e5e5] text-[#666666]">
-                            {schedule.env}
-                          </span>
-                          <code className="text-sm font-mono px-2 py-1 bg-[#fafafa] rounded border border-[#e5e5e5]">
-                            {schedule.cron}
-                          </code>
-                          <span className={`text-sm px-2 py-1 rounded border ${
-                            schedule.enabled 
-                              ? 'bg-green-50 text-green-700 border-green-200' 
-                              : 'bg-gray-50 text-gray-700 border-gray-200'
-                          }`}>
-                            {schedule.enabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-[#666666]">
-                          <span>Last run: {schedule.lastRun}</span>
-                          {schedule.enabled && (
-                            <>
-                              <span>•</span>
-                              <span>Next run: {schedule.nextRun}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={() => {
-                          setEditingSchedule(schedule.id);
-                          setNewScheduleEnv(schedule.env);
-                          setNewScheduleCron(schedule.cron);
-                          setNewScheduleEnabled(schedule.enabled);
-                        }}
-                        className="p-2 text-[#666666] hover:text-black transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                    schedule={schedule}
+                    isOverride={schedule.isOverride}
+                    onEdit={() => {
+                      setEditingSchedule({
+                        schedule: schedule.originalSchedule,
+                        isOverride: schedule.isOverride,
+                      });
+                      setScheduleError(null);
+                    }}
+                    onDelete={schedule.isOverride ? () => {
+                      if (confirm('Are you sure you want to delete this schedule override? The suite will revert to the inherited project schedule.')) {
+                        deleteScheduleMutation.mutate(schedule.id, {
+                          onSuccess: () => refetchSuiteSchedules(),
+                        });
+                      }
+                    } : undefined}
+                  />
                 ))}
               </div>
             ) : (
               <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm p-12 text-center">
-                <p className="text-[#666666]">No schedules configured for this suite</p>
+                <Clock className="w-12 h-12 text-[#999999] mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No schedules configured</h3>
+                <p className="text-[#666666] text-sm mb-4">
+                  Create a schedule to run this project's tests automatically.
+                </p>
               </div>
             )}
 
             {/* Add Schedule Button - moved to bottom right */}
             <div className="mt-4 flex justify-end">
               <button
-                onClick={() => setShowAddScheduleModal(true)}
+                onClick={() => {
+                  setShowAddScheduleModal(true);
+                  setScheduleError(null);
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -546,182 +497,92 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
         )}
       </div>
 
-      {/* Add Schedule Modal */}
-      {showAddScheduleModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-xl w-full max-w-md mx-4">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-[#e5e5e5]">
-              <h3>Add Schedule</h3>
-              <button
-                onClick={() => setShowAddScheduleModal(false)}
-                className="text-[#666666] hover:text-black transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Add Schedule Modal - creates a suite schedule override */}
+      <ScheduleFormModal
+        isOpen={showAddScheduleModal}
+        mode="create"
+        environments={projectEnvironments}
+        isSubmitting={upsertScheduleMutation.isPending}
+        error={scheduleError}
+        onErrorClear={() => setScheduleError(null)}
+        onClose={() => setShowAddScheduleModal(false)}
+        onSubmit={(data: ScheduleFormData) => {
+          upsertScheduleMutation.mutate({
+            environment_id: data.environment_id,
+            name: data.name,
+            cron_expression: data.cron_expression,
+            timezone: data.timezone,
+            enabled: data.enabled,
+          }, {
+            onSuccess: () => {
+              setShowAddScheduleModal(false);
+              refetchSuiteSchedules();
+            },
+            onError: (error) => {
+              setScheduleError(error instanceof Error ? error.message : 'Failed to create schedule');
+            },
+          });
+        }}
+      />
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
-              {/* Environment */}
-              <div>
-                <label className="text-sm mb-2 block">Environment</label>
-                <select
-                  value={newScheduleEnv}
-                  onChange={(e) => setNewScheduleEnv(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
-                >
-                  {projectEnvironments.map((env) => (
-                    <option key={env.id} value={env.name}>
-                      {env.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      {/* Edit Schedule Modal - creates/updates suite schedule override */}
+      <ScheduleFormModal
+        isOpen={!!editingSchedule}
+        mode="edit"
+        environments={projectEnvironments}
+        initialValues={editingSchedule ? {
+          name: editingSchedule.schedule.name,
+          environment_id: editingSchedule.schedule.environment_id,
+          cron_expression: editingSchedule.schedule.cron_expression,
+          timezone: editingSchedule.schedule.timezone,
+          enabled: editingSchedule.schedule.enabled,
+        } : undefined}
+        isSubmitting={editingSchedule?.isOverride ? updateScheduleMutation.isPending : upsertScheduleMutation.isPending}
+        error={scheduleError}
+        onErrorClear={() => setScheduleError(null)}
+        onClose={() => setEditingSchedule(null)}
+        onSubmit={(data: ScheduleFormData) => {
+          if (!editingSchedule) return;
 
-              {/* Cron Expression */}
-              <div>
-                <label className="text-sm mb-2 block">Cron Expression</label>
-                <input
-                  type="text"
-                  value={newScheduleCron}
-                  onChange={(e) => setNewScheduleCron(e.target.value)}
-                  placeholder="*/30 * * * *"
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-black/5"
-                />
-                <p className="text-xs text-[#999999] mt-1">
-                  Example: */30 * * * * (every 30 minutes)
-                </p>
-              </div>
-
-              {/* Enabled Toggle */}
-              <div className="flex items-center justify-between">
-                <label className="text-sm">Enabled</label>
-                <button
-                  onClick={() => setNewScheduleEnabled(!newScheduleEnabled)}
-                  className={`p-2 rounded transition-colors ${
-                    newScheduleEnabled ? 'text-[#4CBB17]' : 'text-[#999999]'
-                  }`}
-                >
-                  {newScheduleEnabled ? (
-                    <ToggleRight className="w-6 h-6" />
-                  ) : (
-                    <ToggleLeft className="w-6 h-6" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-[#e5e5e5]">
-              <button
-                onClick={() => setShowAddScheduleModal(false)}
-                className="px-4 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  // TODO: Add schedule logic
-                  setShowAddScheduleModal(false);
-                  setNewScheduleCron('');
-                }}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-              >
-                Add Schedule
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Schedule Modal */}
-      {editingSchedule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-xl w-full max-w-md mx-4">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-[#e5e5e5]">
-              <h3>Edit Schedule</h3>
-              <button
-                onClick={() => setEditingSchedule(null)}
-                className="text-[#666666] hover:text-black transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
-              {/* Environment */}
-              <div>
-                <label className="text-sm mb-2 block">Environment</label>
-                <select
-                  value={newScheduleEnv}
-                  onChange={(e) => setNewScheduleEnv(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
-                >
-                  {projectEnvironments.map((env) => (
-                    <option key={env.id} value={env.name}>
-                      {env.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Cron Expression */}
-              <div>
-                <label className="text-sm mb-2 block">Cron Expression</label>
-                <input
-                  type="text"
-                  value={newScheduleCron}
-                  onChange={(e) => setNewScheduleCron(e.target.value)}
-                  placeholder="*/30 * * * *"
-                  className="w-full px-3 py-2 bg-white border border-[#e5e5e5] rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-black/5"
-                />
-                <p className="text-xs text-[#999999] mt-1">
-                  Example: */30 * * * * (every 30 minutes)
-                </p>
-              </div>
-
-              {/* Enabled Toggle */}
-              <div className="flex items-center justify-between">
-                <label className="text-sm">Enabled</label>
-                <button
-                  onClick={() => setNewScheduleEnabled(!newScheduleEnabled)}
-                  className={`p-2 rounded transition-colors ${
-                    newScheduleEnabled ? 'text-[#4CBB17]' : 'text-[#999999]'
-                  }`}
-                >
-                  {newScheduleEnabled ? (
-                    <ToggleRight className="w-6 h-6" />
-                  ) : (
-                    <ToggleLeft className="w-6 h-6" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-[#e5e5e5]">
-              <button
-                onClick={() => setEditingSchedule(null)}
-                className="px-4 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  // TODO: Save schedule changes
-                  setEditingSchedule(null);
-                }}
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-black/90 transition-colors"
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          if (editingSchedule.isOverride) {
+            // Update existing suite schedule override
+            updateScheduleMutation.mutate({
+              scheduleId: editingSchedule.schedule.id,
+              data: {
+                name: data.name,
+                cron_expression: data.cron_expression,
+                timezone: data.timezone,
+                enabled: data.enabled,
+              },
+            }, {
+              onSuccess: () => {
+                setEditingSchedule(null);
+                refetchSuiteSchedules();
+              },
+              onError: (error) => {
+                setScheduleError(error instanceof Error ? error.message : 'Failed to update schedule');
+              },
+            });
+          } else {
+            // Create new suite schedule override from inherited project schedule
+            upsertScheduleMutation.mutate({
+              environment_id: data.environment_id,
+              name: data.name,
+              cron_expression: data.cron_expression,
+              timezone: data.timezone,
+              enabled: data.enabled,
+            }, {
+              onSuccess: () => {
+                setEditingSchedule(null);
+                refetchSuiteSchedules();
+              },
+              onError: (error) => {
+                setScheduleError(error instanceof Error ? error.message : 'Failed to create schedule override');
+              },
+            });
+          }
+        }}
+      />
     </div>
   );
 }

@@ -189,6 +189,11 @@ func (s *memoryRunStore) UpdateRunTestStepCounts(_ context.Context, _ uuid.UUID)
 	return nil
 }
 
+func (s *memoryRunStore) SetRunTestRunning(_ context.Context, _ uuid.UUID) error {
+	// No-op for memory store - test status is tracked via Engine.runs
+	return nil
+}
+
 func (s *memoryRunStore) ListRunSteps(_ context.Context, _ uuid.UUID) ([]persistence.RunStep, error) {
 	// No-op for memory store
 	return []persistence.RunStep{}, nil
@@ -210,5 +215,17 @@ func (s *memoryRunStore) FindCITokenByPlaintext(_ context.Context, _ string) (*p
 
 func (s *memoryRunStore) UpdateCITokenLastUsed(_ context.Context, _ uuid.UUID) error {
 	// No-op for memory store
+	return nil
+}
+
+// Schedule last run updates - no-op for memory store (no schedules in local mode)
+
+func (s *memoryRunStore) UpdateProjectScheduleLastRun(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	// No-op for memory store - no project schedules
+	return nil
+}
+
+func (s *memoryRunStore) UpdateSuiteScheduleLastRun(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	// No-op for memory store - no suite schedules
 	return nil
 }

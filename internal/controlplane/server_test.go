@@ -446,6 +446,14 @@ func (f *fakeStore) ProjectNameExists(_ context.Context, _ uuid.UUID, _, _ strin
 	return false, nil
 }
 
+func (f *fakeStore) UpdateProjectDefaultBranchHead(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	return nil
+}
+
+func (f *fakeStore) UpdateProjectsDefaultBranchHeadForRepo(_ context.Context, _ uuid.UUID, _, _, _, _ string, _ time.Time) (int64, error) {
+	return 0, nil
+}
+
 // Environment methods
 func (f *fakeStore) CreateEnvironment(_ context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error) {
 	return env, nil
@@ -852,6 +860,56 @@ func (f *fakeStore) RevokeProjectInvite(_ context.Context, _, _ uuid.UUID) error
 }
 
 func (f *fakeStore) CanUserInviteToProjects(_ context.Context, _, _ uuid.UUID, _ []uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+// Project schedule stubs
+func (f *fakeStore) CreateProjectSchedule(_ context.Context, _ persistence.CreateProjectScheduleInput) (persistence.ProjectSchedule, error) {
+	return persistence.ProjectSchedule{}, nil
+}
+
+func (f *fakeStore) GetProjectSchedule(_ context.Context, _ uuid.UUID) (persistence.ProjectSchedule, error) {
+	return persistence.ProjectSchedule{}, nil
+}
+
+func (f *fakeStore) ListProjectSchedulesByProject(_ context.Context, _ uuid.UUID) ([]persistence.ProjectSchedule, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) UpdateProjectSchedule(_ context.Context, _ uuid.UUID, _ persistence.UpdateProjectScheduleInput) (persistence.ProjectSchedule, error) {
+	return persistence.ProjectSchedule{}, nil
+}
+
+func (f *fakeStore) DeleteProjectSchedule(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+// Suite schedule management (overrides)
+func (f *fakeStore) GetSuiteByID(_ context.Context, _ uuid.UUID) (persistence.Suite, error) {
+	return persistence.Suite{}, nil
+}
+
+func (f *fakeStore) ListSuiteSchedulesBySuiteWithEnv(_ context.Context, _ uuid.UUID) ([]persistence.SuiteScheduleWithEnv, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetSuiteScheduleWithEnv(_ context.Context, _ uuid.UUID) (persistence.SuiteScheduleWithEnv, error) {
+	return persistence.SuiteScheduleWithEnv{}, nil
+}
+
+func (f *fakeStore) UpsertSuiteScheduleOverride(_ context.Context, _ persistence.CreateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, bool, error) {
+	return persistence.SuiteScheduleWithEnv{}, false, nil
+}
+
+func (f *fakeStore) UpdateSuiteScheduleOverride(_ context.Context, _ uuid.UUID, _ persistence.UpdateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, error) {
+	return persistence.SuiteScheduleWithEnv{}, nil
+}
+
+func (f *fakeStore) DeleteSuiteScheduleOverride(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
+func (f *fakeStore) UserHasProjectWriteAccess(_ context.Context, _, _, _ uuid.UUID) (bool, error) {
 	return true, nil
 }
 

@@ -141,6 +141,10 @@ func detectConfigSource(ctx *RunContext) string {
 	if ctx == nil {
 		return "repo_commit"
 	}
+	// Scheduled runs always use repo_commit (they run committed suite YAML from the default branch)
+	if strings.TrimSpace(ctx.Trigger) == "schedule" {
+		return "repo_commit"
+	}
 	// Honor explicit per-file config_source from CLI metadata
 	if ctx.Metadata != nil {
 		if source := strings.TrimSpace(ctx.Metadata["rs_config_source"]); source != "" {

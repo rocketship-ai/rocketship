@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // handleGitHubAppWebhook handles incoming GitHub App webhook events.
@@ -121,6 +122,12 @@ func (s *Server) processWebhookForScanning(ctx context.Context, event, deliveryI
 	// Handle PR lifecycle events (close/reopen) before scan determination
 	if event == "pull_request" {
 		s.handlePRLifecycleEvent(ctx, payload)
+	}
+
+	// For default-branch push events, ALWAYS update head metadata (even if .rocketship untouched)
+	// This keeps scheduler commit info fresh for Buildkite-style run titles
+	if event == "push" {
+		s.updateDefaultBranchHead(ctx, payload)
 	}
 
 	// Determine if this event should trigger a scan
@@ -396,6 +403,81 @@ func (s *Server) handlePRLifecycleEvent(ctx context.Context, payload *webhookPay
 	}
 }
 
+// updateDefaultBranchHead updates the default_branch_head_* fields for all projects
+// matching this repo when a push is to the default branch.
+// This runs on EVERY default-branch push, even if .rocketship is untouched,
+// to keep scheduler commit metadata fresh for Buildkite-style run titles.
+func (s *Server) updateDefaultBranchHead(ctx context.Context, payload *webhookPayload) {
+	// Guard: must have repository info with default branch
+	if payload.Repository == nil || payload.Repository.DefaultBranch == "" {
+		return
+	}
+
+	// Normalize the ref and check if it's the default branch
+	sourceRef := NormalizeSourceRef(payload.Ref)
+	if sourceRef.Ref != payload.Repository.DefaultBranch {
+		// Not a default-branch push, nothing to update
+		return
+	}
+
+	// Extract head SHA
+	headSHA := payload.After
+	if headSHA == "" && payload.HeadCommit != nil {
+		headSHA = payload.HeadCommit.ID
+	}
+	if headSHA == "" {
+		slog.Debug("webhook: no head SHA in push payload, skipping head update")
+		return
+	}
+
+	// Extract commit message (first line only)
+	var headMsg string
+	if payload.HeadCommit != nil && payload.HeadCommit.Message != "" {
+		headMsg = payload.HeadCommit.Message
+		if idx := strings.Index(headMsg, "\n"); idx != -1 {
+			headMsg = headMsg[:idx]
+		}
+		headMsg = strings.TrimSpace(headMsg)
+	}
+
+	// Build repo URL
+	repoURL := "https://github.com/" + payload.Repository.FullName
+	at := time.Now().UTC()
+
+	// Look up organizations for this installation
+	orgIDs, err := s.store.ListOrgsByInstallationID(ctx, payload.Installation.ID)
+	if err != nil {
+		slog.Error("webhook: failed to list orgs for head update",
+			"installation_id", payload.Installation.ID,
+			"error", err,
+		)
+		return
+	}
+
+	// Update head metadata for each organization's projects
+	for _, orgID := range orgIDs {
+		rowsUpdated, err := s.store.UpdateProjectsDefaultBranchHeadForRepo(
+			ctx, orgID, repoURL, payload.Repository.DefaultBranch, headSHA, headMsg, at,
+		)
+		if err != nil {
+			slog.Error("webhook: failed to update projects default branch head",
+				"org_id", orgID,
+				"repo", payload.Repository.FullName,
+				"error", err,
+			)
+			continue
+		}
+		if rowsUpdated > 0 {
+			slog.Info("webhook: updated default branch head for projects",
+				"org_id", orgID,
+				"repo", payload.Repository.FullName,
+				"sha", headSHA[:min(7, len(headSHA))],
+				"rows_updated", rowsUpdated,
+			)
+		}
+	}
+}
+
 // commitTouchesRocketship checks if a commit touches any .rocketship files
 func (s *Server) commitTouchesRocketship(commit *webhookCommit) bool {
 	if commit == nil {
@@ -445,6 +527,7 @@ type webhookInstallation struct {
 
 type webhookCommit struct {
 	ID       string   `json:"id"`
+	Message  string   `json:"message"`
 	Added    []string `json:"added"`
 	Removed  []string `json:"removed"`
 	Modified []string `json:"modified"`

@@ -33,8 +33,8 @@ func (s *Store) CreateSuite(ctx context.Context, suite Suite) (Suite, error) {
 	}
 
 	const query = `
-        INSERT INTO suites (id, project_id, name, description, file_path, source_ref, test_count, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        INSERT INTO suites (id, project_id, name, description, file_path, source_ref, yaml_payload, test_count, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         RETURNING created_at, updated_at
     `
 
@@ -49,7 +49,7 @@ func (s *Store) CreateSuite(ctx context.Context, suite Suite) (Suite, error) {
 	}{}
 
 	if err := s.db.GetContext(ctx, &dest, query,
-		suite.ID, suite.ProjectID, suite.Name, desc, suite.FilePath.String, suite.SourceRef, suite.TestCount); err != nil {
+		suite.ID, suite.ProjectID, suite.Name, desc, suite.FilePath.String, suite.SourceRef, suite.YamlPayload, suite.TestCount); err != nil {
 		if isUniqueViolation(err, "suites_project_file_ref_idx") {
 			return Suite{}, fmt.Errorf("suite file_path already exists in project for this ref")
 		}
@@ -67,7 +67,7 @@ func (s *Store) CreateSuite(ctx context.Context, suite Suite) (Suite, error) {
 // GetSuite retrieves a suite by ID
 func (s *Store) GetSuite(ctx context.Context, projectID, suiteID uuid.UUID) (Suite, error) {
 	const query = `
-        SELECT id, project_id, name, description, file_path, source_ref, test_count,
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
                last_run_id, last_run_status, last_run_at, created_at, updated_at
         FROM suites
         WHERE project_id = $1 AND id = $2
@@ -84,11 +84,31 @@ func (s *Store) GetSuite(ctx context.Context, projectID, suiteID uuid.UUID) (Sui
 	return suite, nil
 }
 
+// GetSuiteByID retrieves a suite by ID only (without requiring project_id)
+func (s *Store) GetSuiteByID(ctx context.Context, suiteID uuid.UUID) (Suite, error) {
+	const query = `
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
+               last_run_id, last_run_status, last_run_at, created_at, updated_at
+        FROM suites
+        WHERE id = $1
+    `
+
+	var suite Suite
+	if err := s.db.GetContext(ctx, &suite, query, suiteID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Suite{}, sql.ErrNoRows
+		}
+		return Suite{}, fmt.Errorf("failed to get suite: %w", err)
+	}
+
+	return suite, nil
+}
+
 // GetSuiteByName retrieves a suite by name and source_ref within a project
 // Returns (suite, found, error) - found is true if the suite exists
 func (s *Store) GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, sourceRef string) (Suite, bool, error) {
 	const query = `
-        SELECT id, project_id, name, description, file_path, source_ref, test_count,
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
                last_run_id, last_run_status, last_run_at, created_at, updated_at
         FROM suites
         WHERE project_id = $1 AND lower(name) = lower($2) AND lower(source_ref) = lower($3)
@@ -109,7 +129,7 @@ func (s *Store) GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, s
 // Returns (suite, found, error) - found is true if the suite exists
 func (s *Store) GetSuiteByFilePath(ctx context.Context, projectID uuid.UUID, filePath, sourceRef string) (Suite, bool, error) {
 	const query = `
-        SELECT id, project_id, name, description, file_path, source_ref, test_count,
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
                last_run_id, last_run_status, last_run_at, created_at, updated_at
         FROM suites
         WHERE project_id = $1 AND lower(file_path) = lower($2) AND lower(source_ref) = lower($3)
@@ -152,7 +172,7 @@ func (s *Store) UpsertSuite(ctx context.Context, suite Suite) (Suite, error) {
 		// Update existing suite - allow name change since file_path is the identity
 		const updateQuery = `
 			UPDATE suites
-			SET name = $2, description = $3, test_count = $4, is_active = true,
+			SET name = $2, description = $3, yaml_payload = $4, test_count = $5, is_active = true,
 			    deactivated_at = NULL, deactivated_reason = NULL, updated_at = NOW()
 			WHERE id = $1
 			RETURNING updated_at
@@ -165,7 +185,7 @@ func (s *Store) UpsertSuite(ctx context.Context, suite Suite) (Suite, error) {
 
 		var updatedAt time.Time
 		if err := s.db.GetContext(ctx, &updatedAt, updateQuery,
-			existing.ID, suite.Name, desc, suite.TestCount); err != nil {
+			existing.ID, suite.Name, desc, suite.YamlPayload, suite.TestCount); err != nil {
 			if isUniqueViolation(err, "suites_project_name_ref_idx") {
 				return Suite{}, fmt.Errorf("suite name already exists in project for this ref")
 			}
@@ -174,6 +194,7 @@ func (s *Store) UpsertSuite(ctx context.Context, suite Suite) (Suite, error) {
 
 		existing.Name = suite.Name
 		existing.Description = suite.Description
+		existing.YamlPayload = suite.YamlPayload
 		existing.TestCount = suite.TestCount
 		existing.UpdatedAt = updatedAt
 		return existing, nil
@@ -256,7 +277,7 @@ func (s *Store) UpsertTest(ctx context.Context, test Test) (Test, error) {
 // ListSuites returns all suites for a project
 func (s *Store) ListSuites(ctx context.Context, projectID uuid.UUID) ([]Suite, error) {
 	const query = `
-        SELECT id, project_id, name, description, file_path, source_ref, test_count,
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
                last_run_id, last_run_status, last_run_at, created_at, updated_at
         FROM suites
         WHERE project_id = $1
@@ -284,7 +305,7 @@ func (s *Store) ListRecentSuiteActivity(ctx context.Context, projectID uuid.UUID
 	}
 
 	const query = `
-        SELECT id, project_id, name, description, file_path, source_ref, test_count,
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
                last_run_id, last_run_status, last_run_at, created_at, updated_at
         FROM suites
         WHERE project_id = $1 AND last_run_at IS NOT NULL

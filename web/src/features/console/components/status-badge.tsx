@@ -2,11 +2,13 @@ interface StatusBadgeProps {
   status: 'success' | 'running' | 'failed' | 'pending';
   showLabel?: boolean;
   size?: 'sm' | 'md';
+  /** When true, shows pulsing green dot regardless of status */
+  isLive?: boolean;
 }
 
-export function StatusBadge({ status, showLabel = false, size = 'md' }: StatusBadgeProps) {
-  const dotSize = size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5';
-  
+export function StatusBadge({ status, showLabel = false, size = 'md', isLive = false }: StatusBadgeProps) {
+  const dotSize = size === 'sm' ? 'h-2 w-2' : 'h-2.5 w-2.5';
+
   const config = {
     success: {
       color: '#4CBB17',
@@ -28,22 +30,42 @@ export function StatusBadge({ status, showLabel = false, size = 'md' }: StatusBa
 
   const { color, label } = config[status];
 
+  // When live, override to pulsing green
+  const displayColor = isLive ? '#4CBB17' : color;
+
+  // Pulsating dot with ping effect for live status
+  const LiveDot = () => (
+    <span className={`relative flex ${dotSize}`} title="Live">
+      <span
+        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+        style={{ backgroundColor: displayColor }}
+      />
+      <span
+        className={`relative inline-flex rounded-full ${dotSize}`}
+        style={{ backgroundColor: displayColor }}
+      />
+    </span>
+  );
+
+  // Static dot for non-live status
+  const StaticDot = () => (
+    <div
+      className={`${dotSize} rounded-full`}
+      style={{ backgroundColor: displayColor }}
+      title={label}
+    />
+  );
+
   if (showLabel) {
     return (
       <div className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-[#fafafa] border border-[#e5e5e5]">
-        <div className={`${dotSize} rounded-full`} style={{ backgroundColor: color }} />
-        <span className="text-sm text-[#666666]">{label}</span>
+        {isLive ? <LiveDot /> : <StaticDot />}
+        <span className="text-sm text-[#666666]">{isLive ? 'Live' : label}</span>
       </div>
     );
   }
 
-  return (
-    <div
-      className={`${dotSize} rounded-full`}
-      style={{ backgroundColor: color }}
-      title={label}
-    />
-  );
+  return isLive ? <LiveDot /> : <StaticDot />;
 }
 
 interface EnvBadgeProps {

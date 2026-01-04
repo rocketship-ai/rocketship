@@ -30,8 +30,11 @@ export function RunStepCard({ step, stepNumber }: RunStepCardProps) {
   };
 
   // Calculate assertion counts for badge
-  const totalAssertions = step.assertions_passed + step.assertions_failed;
-  const assertionsPassed = totalAssertions > 0 && step.assertions_failed === 0;
+  const executedAssertions = step.assertions_passed + step.assertions_failed;
+  const plannedAssertionsCount = Array.isArray(step.step_config?.assertions) ? step.step_config.assertions.length : 0;
+  const totalAssertions = executedAssertions > 0 ? executedAssertions : plannedAssertionsCount;
+  const assertionsPassed = executedAssertions > 0 && step.assertions_failed === 0;
+  const isPlannedOnly = executedAssertions === 0 && plannedAssertionsCount > 0;
 
   // Variables for pill (only saved variables, not config/runtime)
   const savedVariablesCount = step.variables_data?.filter(v =>
@@ -87,11 +90,15 @@ export function RunStepCard({ step, stepNumber }: RunStepCardProps) {
             {/* Assertions badge */}
             {totalAssertions > 0 && (
               <span className={`text-xs font-normal px-2 py-1 rounded ${
-                assertionsPassed
-                  ? 'text-[#4CBB17] bg-[#4CBB17]/10'
-                  : 'text-[#ef4444] bg-[#ef4444]/10'
+                isPlannedOnly
+                  ? 'text-[#71717a] bg-[#f4f4f5]'
+                  : assertionsPassed
+                    ? 'text-[#4CBB17] bg-[#4CBB17]/10'
+                    : 'text-[#ef4444] bg-[#ef4444]/10'
               }`}>
-                {step.assertions_passed}/{totalAssertions} assertions
+                {isPlannedOnly
+                  ? `${totalAssertions} assertion${totalAssertions !== 1 ? 's' : ''}`
+                  : `${step.assertions_passed}/${executedAssertions} assertions`}
               </span>
             )}
 
@@ -157,9 +164,10 @@ function getBorderColor(status: StepUIStatus): string {
     case 'failed':
       return 'border-l-[#ef0000]';
     case 'running':
-      return 'border-l-[#4CBB17]';
+      // Light gray border for running - spinning icon indicates activity
+      return 'border-l-[#d4d4d4]';
     case 'pending':
     default:
-      return 'border-l-[#999999]';
+      return 'border-l-[#d4d4d4]';
   }
 }
