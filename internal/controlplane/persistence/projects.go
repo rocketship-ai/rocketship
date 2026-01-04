@@ -652,6 +652,26 @@ func (s *Store) UpdateProjectDefaultBranchHead(ctx context.Context, projectID uu
 	return nil
 }
 
+// UpdateProjectsDefaultBranchHeadForRepo updates the default branch HEAD metadata for all active
+// projects in a repo that are on the default branch (source_ref = defaultBranch).
+// This is called by the webhook handler on every default-branch push to keep scheduler metadata fresh.
+// Returns the number of rows updated.
+func (s *Store) UpdateProjectsDefaultBranchHeadForRepo(ctx context.Context, orgID uuid.UUID, repoURL, defaultBranch, sha, message string, at time.Time) (int64, error) {
+	const query = `
+		UPDATE projects
+		SET default_branch_head_sha = $4, default_branch_head_message = $5, default_branch_head_at = $6, updated_at = NOW()
+		WHERE organization_id = $1 AND repo_url = $2 AND source_ref = $3 AND is_active = true
+	`
+
+	res, err := s.db.ExecContext(ctx, query, orgID, repoURL, defaultBranch, sha, message, at)
+	if err != nil {
+		return 0, fmt.Errorf("failed to update projects default branch head: %w", err)
+	}
+
+	rows, _ := res.RowsAffected()
+	return rows, nil
+}
+
 // FindDefaultBranchProject looks up a project where source_ref matches default_branch.
 // This is used during PR scans to reuse existing default-branch projects instead of creating branch variants.
 // Returns (project, found, error) - found is true if a matching default-branch project exists.

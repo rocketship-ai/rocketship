@@ -450,6 +450,10 @@ func (f *fakeStore) UpdateProjectDefaultBranchHead(_ context.Context, _ uuid.UUI
 	return nil
 }
 
+func (f *fakeStore) UpdateProjectsDefaultBranchHeadForRepo(_ context.Context, _ uuid.UUID, _, _, _, _ string, _ time.Time) (int64, error) {
+	return 0, nil
+}
+
 // Environment methods
 func (f *fakeStore) CreateEnvironment(_ context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error) {
 	return env, nil

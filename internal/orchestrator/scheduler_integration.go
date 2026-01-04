@@ -99,6 +99,8 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 			ConfigSource:   configSource,
 			Source:         strings.TrimSpace(runContext.Source),
 			Branch:         strings.TrimSpace(runContext.Branch),
+			CommitSHA:      makeNullString(runContext.CommitSHA),
+			CommitMessage:  makeNullString(runContext.Metadata["rs_commit_message"]),
 			TotalTests:     len(run.Tests),
 			PassedTests:    0,
 			FailedTests:    0,

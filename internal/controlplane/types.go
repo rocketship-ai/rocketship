@@ -70,6 +70,7 @@ type dataStore interface {
 	ListProjects(ctx context.Context, orgID uuid.UUID) ([]persistence.Project, error)
 	ProjectNameExists(ctx context.Context, orgID uuid.UUID, name, sourceRef string) (bool, error)
 	UpdateProjectDefaultBranchHead(ctx context.Context, projectID uuid.UUID, sha, message string, at time.Time) error
+	UpdateProjectsDefaultBranchHeadForRepo(ctx context.Context, orgID uuid.UUID, repoURL, defaultBranch, sha, message string, at time.Time) (int64, error)
 
 	// Environment management
 	CreateEnvironment(ctx context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error)
