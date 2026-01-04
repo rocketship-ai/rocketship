@@ -146,66 +146,78 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
               setShowSuiteDropdown(!showSuiteDropdown);
               setShowPluginDropdown(false);
             }}
+            align="right"
           />
         </FilterBar>
 
         {/* Table */}
         {filteredTests.length > 0 ? (
-          <Card padding="sm" className="overflow-hidden">
-            <table className="w-full">
+          <Card padding="none" className="overflow-hidden">
+            <table className="w-full table-fixed">
               <thead className="border-b border-[#e5e5e5] bg-[#fafafa]">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-64">
+                  <th className="text-left px-6 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '280px' }}>
                     Name
                   </th>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-32">
+                  <th className="text-left px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '100px' }}>
                     Plugins
                   </th>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-48">
+                  <th className="text-left px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '160px' }}>
                     Suite
                   </th>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-64">
+                  <th className="text-left px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '240px' }}>
                     Latest Schedule Results
                   </th>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-20">
+                  <th className="text-left px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '80px' }}>
                     Success
                   </th>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-28">
+                  <th className="text-left px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '100px' }}>
                     Last Run
                   </th>
-                  <th className="text-left px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-28">
+                  <th className="text-left px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '100px' }}>
                     Next Run
                   </th>
-                  <th className="text-center px-6 py-3 text-xs text-[#666666] uppercase tracking-wider w-24">
+                  <th className="text-center px-4 py-3 text-[11px] font-medium text-[#666666] uppercase tracking-wider" style={{ width: '70px' }}>
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e5e5e5]">
+              <tbody className="divide-y divide-[#f0f0f0]">
                 {filteredTests.map((test) => {
                   return (
                     <tr
                       key={test.id}
-                      className="hover:bg-[#fafafa] transition-colors cursor-pointer"
+                      className="h-[60px] hover:bg-[#fafafa] transition-colors cursor-pointer"
                       onClick={() => onSelectTest(test.id)}
                     >
-                      <td className="px-6 h-14 align-middle max-w-0">
-                        <span className="text-sm truncate block">{test.name}</span>
+                      <td className="px-6 align-middle">
+                        <span className="text-sm text-[#111111] truncate block" title={test.name}>
+                          {test.name}
+                        </span>
                       </td>
-                      <td className="px-6 h-14 align-middle">
-                        <div className="flex items-center gap-2">
-                          {test.plugins.map((plugin) => {
-                            const Icon = getPluginIcon(plugin);
-                            return (
-                              <Icon
-                                key={plugin}
-                                className="w-4 h-4 text-[#666666] flex-shrink-0"
-                              />
-                            );
-                          })}
-                        </div>
+                      <td className="px-4 align-middle">
+                        {/* Plugin icons */}
+                        {test.plugins && test.plugins.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            {test.plugins.slice(0, 3).map((plugin, idx) => {
+                              const Icon = getPluginIcon(plugin);
+                              return (
+                                <span key={idx} title={plugin}>
+                                  <Icon className="w-4 h-4 text-[#666666]" />
+                                </span>
+                              );
+                            })}
+                            {test.plugins.length > 3 && (
+                              <span className="text-xs text-[#999999] ml-0.5">
+                                +{test.plugins.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[#999999]">—</span>
+                        )}
                       </td>
-                      <td className="px-6 h-14 align-middle max-w-0">
+                      <td className="px-4 align-middle">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -213,35 +225,33 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
                               onSelectSuite(test.suite_id);
                             }
                           }}
-                          className="text-sm text-black hover:underline truncate block text-left w-full"
+                          className="text-sm text-[#111111] hover:underline truncate block text-left max-w-full"
+                          title={test.suite_name}
                         >
                           {test.suite_name}
                         </button>
                       </td>
-                      <td className="px-6 h-14 align-middle">
-                        <Sparkline results={test.recent_results} size="lg" shape="pill" />
+                      <td className="px-4 align-middle">
+                        <Sparkline results={test.recent_results} size="lg" maxItems={20} isLive={test.is_live} />
                       </td>
-                      <td className="px-6 h-14 align-middle">
-                        <span className="text-sm">{test.success_rate || '—'}</span>
+                      <td className="px-4 align-middle">
+                        <span className="text-sm text-[#111111] whitespace-nowrap">{test.success_rate || '—'}</span>
                       </td>
-                      <td className="px-6 h-14 align-middle">
-                        <span className="text-sm text-[#666666]">
+                      <td className="px-4 align-middle">
+                        <span className="text-sm text-[#666666] whitespace-nowrap">
                           {formatRelativeTime(test.last_run_at || undefined)}
                         </span>
                       </td>
-                      <td className="px-6 h-14 align-middle">
-                        <span className="text-sm text-[#666666]">
+                      <td className="px-4 align-middle">
+                        <span className="text-sm text-[#666666] whitespace-nowrap">
                           {formatFutureRelativeTime(test.next_run_at)}
                         </span>
                       </td>
-                      <td className="px-6 h-14 align-middle text-center">
+                      <td className="px-4 align-middle text-center">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('Run test:', test.id);
-                          }}
-                          className="p-1 hover:bg-[#e5e5e5] rounded transition-colors"
-                          title="Run test"
+                          disabled
+                          className="p-1.5 rounded inline-flex items-center justify-center opacity-30 cursor-not-allowed"
+                          title="Run test (coming soon)"
                         >
                           <Play className="w-4 h-4 text-[#666666]" />
                         </button>

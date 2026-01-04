@@ -1,38 +1,47 @@
 interface SparklineProps {
   results: readonly ('success' | 'failed' | 'pending' | 'running')[];
   size?: 'sm' | 'md' | 'lg';
-  shape?: 'circle' | 'pill';
-  maxItems?: number; // Maximum number of items to display, will fill with gray if fewer results
+  maxItems?: number; // Maximum number of items to display (default 20)
+  isLive?: boolean; // Show live indicator (flashing rightmost pill)
 }
 
-export function Sparkline({ results, size = 'md', shape = 'circle', maxItems }: SparklineProps) {
-  const dotSize = size === 'sm' ? 'w-1.5 h-1.5' : size === 'lg' ? 'w-2.5 h-2.5' : 'w-2 h-2';
-  const pillSize = size === 'sm' ? 'w-1.5 h-4' : size === 'lg' ? 'w-2.5 h-6' : 'w-2 h-5';
-  const gap = size === 'lg' ? 'gap-1' : 'gap-0.5';
+export function Sparkline({ results, size = 'md', maxItems = 20, isLive = false }: SparklineProps) {
+  // Size classes for vertical pills - match north-star mockup sizing
+  // Pills are tall and narrow with fully rounded corners
+  const pillSize = size === 'sm'
+    ? 'w-[5px] h-[16px]'
+    : size === 'lg'
+    ? 'w-[8px] h-[24px]'
+    : 'w-[6px] h-[20px]';
+  const gap = size === 'lg' ? 'gap-[3px]' : 'gap-[2px]';
 
+  // Only green (success/live) and red (failed) - no gray/yellow
   const colorMap = {
-    success: '#4CBB17',
-    failed: '#ef0000',
-    pending: '#999999',
-    running: '#fbbf24', // Amber/yellow for running
-    empty: '#e5e5e5', // Gray for empty data
+    success: '#22c55e', // Tailwind green-500
+    failed: '#ef4444',  // Tailwind red-500
+    pending: '#22c55e', // Live runs show as green (flashing)
+    running: '#22c55e', // Live runs show as green (flashing)
   };
 
-  // If maxItems is specified, pad the results with empty items
-  const displayResults = maxItems
-    ? [...Array(Math.max(0, maxItems - results.length)).fill('empty' as const), ...results]
-    : results;
+  // Limit to maxItems, then reverse so newest is on the right
+  // API returns newest-first, we want oldest-left newest-right
+  const displayResults = [...results].slice(0, maxItems).reverse();
 
   return (
-    <div className={`flex items-center ${gap} w-full`}>
-      {displayResults.map((result, index) => (
-        <div
-          key={index}
-          className={`${shape === 'pill' ? pillSize : dotSize} ${shape === 'pill' ? 'rounded-full' : 'rounded-full'}`}
-          style={{ backgroundColor: colorMap[result as keyof typeof colorMap] }}
-          title={result === 'empty' ? 'No data' : result}
-        />
-      ))}
+    <div className={`flex items-center ${gap}`}>
+      {displayResults.map((result, index) => {
+        const isLastPill = index === displayResults.length - 1;
+        const isLivePill = isLastPill && isLive && (result === 'pending' || result === 'running');
+
+        return (
+          <div
+            key={index}
+            className={`${pillSize} rounded-full flex-shrink-0 ${isLivePill ? 'animate-pulse' : ''}`}
+            style={{ backgroundColor: colorMap[result] }}
+            title={result}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -15,6 +15,8 @@ interface MultiSelectDropdownProps {
   placeholder?: string;
   /** Show "All X" option even in singleSelect mode. Defaults to true for multi-select, false for single-select */
   showAllOption?: boolean;
+  /** Align dropdown to left or right edge of button. Defaults to 'left' */
+  align?: 'left' | 'right';
 }
 
 export function MultiSelectDropdown({
@@ -28,6 +30,7 @@ export function MultiSelectDropdown({
   singleSelect = false,
   placeholder,
   showAllOption,
+  align = 'left',
 }: MultiSelectDropdownProps) {
   // Default showAllOption: true for multi-select, false for single-select (unless explicitly set)
   const shouldShowAllOption = showAllOption !== undefined ? showAllOption : !singleSelect;
@@ -74,7 +77,7 @@ export function MultiSelectDropdown({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={onToggle} />
-          <div className="absolute top-full left-0 mt-1 w-full min-w-[240px] bg-white border border-[#e5e5e5] rounded-md shadow-lg z-20">
+          <div className={`absolute top-full mt-1 w-full min-w-[240px] bg-white border border-[#e5e5e5] rounded-md shadow-lg z-20 ${align === 'right' ? 'right-0' : 'left-0'}`}>
             <div className="p-2 border-b border-[#e5e5e5]">
               <div className="relative">
                 <input

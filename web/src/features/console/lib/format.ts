@@ -62,7 +62,7 @@ export function formatDateTime(isoString?: string): string {
   });
 }
 
-/** Format ISO date string to relative time (e.g., "2h ago", "3d ago") */
+/** Format ISO date string to relative time (e.g., "2 hours ago", "3 days ago") */
 export function formatRelativeTime(dateStr?: string): string {
   if (!dateStr) return '—';
 
@@ -74,31 +74,37 @@ export function formatRelativeTime(dateStr?: string): string {
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
   if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffMins === 1) return '1 minute ago';
+  if (diffMins < 60) return `${diffMins} minutes ago`;
+  if (diffHours === 1) return '1 hour ago';
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 7) return `${diffDays} days ago`;
   return date.toLocaleDateString();
 }
 
-/** Format ISO date string to future-relative time (e.g., "in 2h", "in 3d") */
+/** Format ISO date string to future-relative time (e.g., "in 2 hours", "in 30 minutes") */
 export function formatFutureRelativeTime(dateStr?: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return 'Not scheduled';
 
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
 
-  // If date is in the past, return "—" or use formatRelativeTime
-  if (diffMs <= 0) return '—';
+  // If date is in the past, return "Not scheduled" or use formatRelativeTime
+  if (diffMs <= 0) return 'Not scheduled';
 
   const diffMins = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMins < 1) return 'in <1m';
-  if (diffMins < 60) return `in ${diffMins}m`;
-  if (diffHours < 24) return `in ${diffHours}h`;
-  if (diffDays < 7) return `in ${diffDays}d`;
+  if (diffMins < 1) return 'in < 1 minute';
+  if (diffMins === 1) return 'in 1 minute';
+  if (diffMins < 60) return `in ${diffMins} minutes`;
+  if (diffHours === 1) return 'in 1 hour';
+  if (diffHours < 24) return `in ${diffHours} hours`;
+  if (diffDays === 1) return 'in 1 day';
+  if (diffDays < 7) return `in ${diffDays} days`;
   return date.toLocaleDateString();
 }
 

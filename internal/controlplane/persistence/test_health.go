@@ -218,7 +218,10 @@ func (s *Store) ListTestHealth(ctx context.Context, orgID, userID uuid.UUID, par
 			next_run_at,
 			is_live
 		FROM test_with_schedule
-		ORDER BY test_name ASC
+		ORDER BY
+			CASE WHEN next_run_at IS NOT NULL THEN 0 ELSE 1 END ASC,
+			last_run_at DESC NULLS LAST,
+			test_name ASC
 		LIMIT $3
 	`
 
