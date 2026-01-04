@@ -83,7 +83,11 @@ export function formatRelativeTime(dateStr?: string): string {
   return date.toLocaleDateString();
 }
 
-/** Format ISO date string to future-relative time (e.g., "in 2 hours", "in 30 minutes") */
+/**
+ * Format ISO date string to future-relative time (e.g., "in 2 hours", "in 30 minutes").
+ * For scheduled items where the timestamp is in the past (due/overdue), shows "due" or "overdue".
+ * Only returns "Not scheduled" when dateStr is null/undefined (truly no schedule).
+ */
 export function formatFutureRelativeTime(dateStr?: string | null): string {
   if (!dateStr) return 'Not scheduled';
 
@@ -91,8 +95,19 @@ export function formatFutureRelativeTime(dateStr?: string | null): string {
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
 
-  // If date is in the past, return "Not scheduled" or use formatRelativeTime
-  if (diffMs <= 0) return 'Not scheduled';
+  // If date is in the past, show "due" or "overdue" (not "Not scheduled")
+  // This handles the case where a schedule is due but hasn't been claimed/fired yet
+  if (diffMs <= 0) {
+    const pastMs = -diffMs;
+    const pastMins = Math.floor(pastMs / (1000 * 60));
+    // Within 2 minutes: just "due"
+    if (pastMins < 2) return 'due';
+    // Otherwise show how overdue
+    if (pastMins < 60) return `overdue ${pastMins}m`;
+    const pastHours = Math.floor(pastMins / 60);
+    if (pastHours < 24) return `overdue ${pastHours}h`;
+    return 'overdue';
+  }
 
   const diffMins = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
