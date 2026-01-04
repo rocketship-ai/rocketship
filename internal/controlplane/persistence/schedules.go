@@ -639,10 +639,12 @@ func (s *Store) UpdateSuiteScheduleLastRun(ctx context.Context, scheduleID uuid.
 // GetSuiteWithProjectAndEnv retrieves a suite with its project and environment info for the scheduler
 type SuiteWithProjectAndEnv struct {
 	Suite
-	ProjectOrganizationID uuid.UUID `db:"project_org_id"`
-	ProjectDefaultBranch  string    `db:"project_default_branch"`
-	EnvironmentSlug       string    `db:"env_slug"`
-	EnvironmentName       string    `db:"env_name"`
+	ProjectOrganizationID        uuid.UUID `db:"project_org_id"`
+	ProjectDefaultBranch         string    `db:"project_default_branch"`
+	EnvironmentSlug              string    `db:"env_slug"`
+	EnvironmentName              string    `db:"env_name"`
+	ProjectDefaultBranchHeadSHA  string    `db:"project_head_sha"`
+	ProjectDefaultBranchHeadMsg  string    `db:"project_head_message"`
 }
 
 func (s *Store) GetSuiteWithProjectAndEnv(ctx context.Context, suiteID, environmentID uuid.UUID) (SuiteWithProjectAndEnv, error) {
@@ -650,7 +652,9 @@ func (s *Store) GetSuiteWithProjectAndEnv(ctx context.Context, suiteID, environm
 		SELECT s.id, s.project_id, s.name, s.description, s.file_path, s.source_ref, s.yaml_payload, s.test_count,
 		       s.last_run_id, s.last_run_status, s.last_run_at, s.created_at, s.updated_at,
 		       p.organization_id as project_org_id, p.default_branch as project_default_branch,
-		       pe.slug as env_slug, pe.name as env_name
+		       pe.slug as env_slug, pe.name as env_name,
+		       COALESCE(p.default_branch_head_sha, '') as project_head_sha,
+		       COALESCE(p.default_branch_head_message, '') as project_head_message
 		FROM suites s
 		JOIN projects p ON s.project_id = p.id
 		JOIN project_environments pe ON pe.id = $2

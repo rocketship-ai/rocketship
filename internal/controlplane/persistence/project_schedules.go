@@ -487,24 +487,32 @@ type ProjectWithOrg struct {
 	PathScope      []string  // Unmarshaled from JSONB
 	SourceRef      string    `db:"source_ref"`
 	CreatedAt      time.Time `db:"created_at"`
+	// Default branch HEAD commit info (populated by scanner, used by scheduler)
+	DefaultBranchHeadSHA     string    // Commit SHA of default branch HEAD
+	DefaultBranchHeadMessage string    // First line of commit message
+	DefaultBranchHeadAt      time.Time // Timestamp when HEAD was last updated
 }
 
 func (s *Store) GetProjectWithOrg(ctx context.Context, projectID uuid.UUID) (ProjectWithOrg, error) {
 	const query = `
-		SELECT id, organization_id, name, repo_url, default_branch, path_scope, source_ref, created_at
+		SELECT id, organization_id, name, repo_url, default_branch, path_scope, source_ref, created_at,
+		       default_branch_head_sha, default_branch_head_message, default_branch_head_at
 		FROM projects
 		WHERE id = $1
 	`
 
 	var dest struct {
-		ID             uuid.UUID `db:"id"`
-		OrganizationID uuid.UUID `db:"organization_id"`
-		Name           string    `db:"name"`
-		RepoURL        string    `db:"repo_url"`
-		DefaultBranch  string    `db:"default_branch"`
-		PathScope      string    `db:"path_scope"`
-		SourceRef      string    `db:"source_ref"`
-		CreatedAt      time.Time `db:"created_at"`
+		ID                       uuid.UUID      `db:"id"`
+		OrganizationID           uuid.UUID      `db:"organization_id"`
+		Name                     string         `db:"name"`
+		RepoURL                  string         `db:"repo_url"`
+		DefaultBranch            string         `db:"default_branch"`
+		PathScope                string         `db:"path_scope"`
+		SourceRef                string         `db:"source_ref"`
+		CreatedAt                time.Time      `db:"created_at"`
+		DefaultBranchHeadSHA     sql.NullString `db:"default_branch_head_sha"`
+		DefaultBranchHeadMessage sql.NullString `db:"default_branch_head_message"`
+		DefaultBranchHeadAt      sql.NullTime   `db:"default_branch_head_at"`
 	}
 
 	if err := s.db.GetContext(ctx, &dest, query, projectID); err != nil {
@@ -515,13 +523,18 @@ func (s *Store) GetProjectWithOrg(ctx context.Context, projectID uuid.UUID) (Pro
 	}
 
 	result := ProjectWithOrg{
-		ID:             dest.ID,
-		OrganizationID: dest.OrganizationID,
-		Name:           dest.Name,
-		RepoURL:        dest.RepoURL,
-		DefaultBranch:  dest.DefaultBranch,
-		SourceRef:      dest.SourceRef,
-		CreatedAt:      dest.CreatedAt,
+		ID:                       dest.ID,
+		OrganizationID:           dest.OrganizationID,
+		Name:                     dest.Name,
+		RepoURL:                  dest.RepoURL,
+		DefaultBranch:            dest.DefaultBranch,
+		SourceRef:                dest.SourceRef,
+		CreatedAt:                dest.CreatedAt,
+		DefaultBranchHeadSHA:     dest.DefaultBranchHeadSHA.String,
+		DefaultBranchHeadMessage: dest.DefaultBranchHeadMessage.String,
+	}
+	if dest.DefaultBranchHeadAt.Valid {
+		result.DefaultBranchHeadAt = dest.DefaultBranchHeadAt.Time
 	}
 
 	// Unmarshal JSONB path_scope

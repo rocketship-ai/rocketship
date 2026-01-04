@@ -66,10 +66,31 @@ func (s *Scanner) Scan(ctx context.Context, input ScanInput) (*ScanResult, error
 		return nil, fmt.Errorf("failed to get repository info: %w", err)
 	}
 
-	// Determine which ref to use for fetching content
+	// Get commit info for the scan (SHA + message)
+	// This is used to populate default_branch_head_* fields on projects
+	var scanCommit *GitHubCommitInfo
+	commitRef := input.HeadSHA
+	if commitRef == "" {
+		commitRef = input.SourceRef.Ref
+	}
+	scanCommit, err = s.github.GetCommit(ctx, input.InstallationID, owner, repo, commitRef)
+	if err != nil {
+		// Log but don't fail - commit info is optional for scheduled run metadata
+		slog.Warn("scanner: failed to get commit info (continuing without it)",
+			"ref", commitRef,
+			"error", err,
+		)
+	}
+
+	// Determine which ref to use for fetching content (use stable SHA if available)
 	fetchRef := input.HeadSHA
 	if fetchRef == "" {
-		fetchRef = input.SourceRef.Ref
+		if scanCommit != nil {
+			// Use the resolved SHA for stable content fetching
+			fetchRef = scanCommit.SHA
+		} else {
+			fetchRef = input.SourceRef.Ref
+		}
 	}
 
 	// Get the tree to find .rocketship directories
@@ -88,6 +109,9 @@ func (s *Scanner) Scan(ctx context.Context, input ScanInput) (*ScanResult, error
 		return result, nil
 	}
 
+	// Check if this is a default branch scan
+	isDefaultBranch := strings.EqualFold(input.SourceRef.Ref, repoInfo.DefaultBranch)
+
 	// Process each .rocketship directory
 	for _, dir := range rocketshipDirs {
 		slog.Info("scanner: processing .rocketship directory",
@@ -103,6 +127,23 @@ func (s *Scanner) Scan(ctx context.Context, input ScanInput) (*ScanResult, error
 			result.Errors = append(result.Errors, errMsg)
 			slog.Error("scanner: "+errMsg, "repo", input.RepoFullName)
 			continue
+		}
+
+		// Update default branch HEAD metadata for this project when scanning the default branch
+		if isDefaultBranch && scanCommit != nil {
+			if err := s.store.UpdateProjectDefaultBranchHead(ctx, project.ID, scanCommit.SHA, scanCommit.Message, time.Now().UTC()); err != nil {
+				slog.Warn("scanner: failed to update project default branch head",
+					"project_id", project.ID,
+					"sha", scanCommit.SHA,
+					"error", err,
+				)
+			} else {
+				slog.Debug("scanner: updated project default branch head",
+					"project_id", project.ID,
+					"sha", scanCommit.SHA[:8],
+					"message", scanCommit.Message,
+				)
+			}
 		}
 
 		// Find and process suite files

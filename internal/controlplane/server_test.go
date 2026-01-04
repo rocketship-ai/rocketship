@@ -446,6 +446,10 @@ func (f *fakeStore) ProjectNameExists(_ context.Context, _ uuid.UUID, _, _ strin
 	return false, nil
 }
 
+func (f *fakeStore) UpdateProjectDefaultBranchHead(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	return nil
+}
+
 // Environment methods
 func (f *fakeStore) CreateEnvironment(_ context.Context, env persistence.ProjectEnvironment) (persistence.ProjectEnvironment, error) {
 	return env, nil

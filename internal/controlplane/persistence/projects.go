@@ -631,6 +631,27 @@ func (s *Store) UserHasProjectWriteAccess(ctx context.Context, orgID, userID, pr
 	return exists, nil
 }
 
+// UpdateProjectDefaultBranchHead updates the default branch HEAD commit info for a project.
+// This is called by the scanner when scanning the default branch.
+func (s *Store) UpdateProjectDefaultBranchHead(ctx context.Context, projectID uuid.UUID, sha, message string, at time.Time) error {
+	const query = `
+		UPDATE projects
+		SET default_branch_head_sha = $2, default_branch_head_message = $3, default_branch_head_at = $4, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	res, err := s.db.ExecContext(ctx, query, projectID, sha, message, at)
+	if err != nil {
+		return fmt.Errorf("failed to update project default branch head: %w", err)
+	}
+
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
 // FindDefaultBranchProject looks up a project where source_ref matches default_branch.
 // This is used during PR scans to reuse existing default-branch projects instead of creating branch variants.
 // Returns (project, found, error) - found is true if a matching default-branch project exists.

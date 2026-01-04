@@ -299,12 +299,20 @@ func (s *Scheduler) fireSuiteRun(
 		Source:       "scheduler",
 		ScheduleName: schedule.Name,
 		Metadata: map[string]string{
-			"env":              schedule.EnvironmentSlug,
-			"environment":     schedule.EnvironmentSlug,
-			"rs_schedule_id":   schedule.ID.String(),
-			"rs_schedule_type": "project",
+			"env":               schedule.EnvironmentSlug,
+			"environment":       schedule.EnvironmentSlug,
+			"rs_schedule_id":    schedule.ID.String(),
+			"rs_schedule_type":  "project",
 			"rs_environment_id": schedule.EnvironmentID.String(),
 		},
+	}
+
+	// Add commit metadata from project's default branch HEAD (if available)
+	if project.DefaultBranchHeadSHA != "" {
+		runContext.CommitSha = project.DefaultBranchHeadSHA
+	}
+	if project.DefaultBranchHeadMessage != "" {
+		runContext.Metadata["rs_commit_message"] = project.DefaultBranchHeadMessage
 	}
 
 	// Create the run request
@@ -422,6 +430,14 @@ func (s *Scheduler) fireSuiteRunForSuiteSchedule(
 			"rs_schedule_type":  "suite",
 			"rs_environment_id": schedule.EnvironmentID.UUID.String(),
 		},
+	}
+
+	// Add commit metadata from project's default branch HEAD (if available)
+	if suiteWithEnv.ProjectDefaultBranchHeadSHA != "" {
+		runContext.CommitSha = suiteWithEnv.ProjectDefaultBranchHeadSHA
+	}
+	if suiteWithEnv.ProjectDefaultBranchHeadMsg != "" {
+		runContext.Metadata["rs_commit_message"] = suiteWithEnv.ProjectDefaultBranchHeadMsg
 	}
 
 	// Create the run request
