@@ -1,4 +1,4 @@
-import { Play } from 'lucide-react';
+import { Play, Loader2 } from 'lucide-react';
 import { Sparkline } from '../components/sparkline';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
 import { useState, useMemo, useEffect } from 'react';
@@ -7,6 +7,7 @@ import { FilterBar, SearchInput } from '../components/filter-bar';
 import { getPluginIcon } from '../plugins';
 import { useTestHealth, useProjects, useProjectEnvironments } from '../hooks/use-console-queries';
 import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
+import { useDebouncedValue } from '../hooks/use-debounced-value';
 import { formatRelativeTime, formatFutureRelativeTime } from '../lib/format';
 
 // Available plugins for filter dropdown
@@ -23,6 +24,9 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
   const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
   const [showPluginDropdown, setShowPluginDropdown] = useState(false);
   const [showSuiteDropdown, setShowSuiteDropdown] = useState(false);
+
+  // Debounce search to avoid hammering API on every keystroke
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
   // Get the global project filter from localStorage
   const { selectedProjectIds } = useConsoleProjectFilter();
@@ -65,14 +69,17 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
     }
   }, [selectedEnvironmentId, projectEnvironments, clearSelectedEnvironmentId]);
 
-  // Fetch test health data from API
-  const { data, isLoading, error } = useTestHealth({
+  // Fetch test health data from API (uses debounced search to avoid API hammering)
+  const { data, isLoading, isFetching, error } = useTestHealth({
     projectIds: selectedProjectIds.length > 0 ? selectedProjectIds : undefined,
     environmentId: effectiveEnvironmentId,
     plugins: selectedPlugins.length > 0 ? selectedPlugins : undefined,
-    search: searchQuery || undefined,
+    search: debouncedSearch || undefined,
     suiteIds: undefined, // We filter by suite name in the UI, not IDs
   });
+
+  // Show searching indicator when actively searching (not initial load)
+  const isSearching = isFetching && !isLoading && debouncedSearch !== '';
 
   // Get available suites from API response
   const allSuites = useMemo(() => {
@@ -93,18 +100,7 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
     setSearchQuery('');
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="p-8">
-        <div className="max-w-[1600px] mx-auto">
-          <p className="text-sm text-[#666666] mb-6">Loading test health data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
+  // Error state (terminal - can early return)
   if (error) {
     return (
       <div className="p-8">
@@ -131,14 +127,20 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
         {/* Subtitle */}
         <p className="text-sm text-[#666666] mb-6">Scheduled test results over time</p>
 
-        {/* Filters */}
+        {/* Filters - always rendered to maintain input focus */}
         <FilterBar>
-          <SearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search tests..."
-            className="flex-1"
-          />
+          <div className="flex items-center gap-2 flex-1">
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search tests..."
+              className="flex-1"
+            />
+            {/* Subtle searching indicator */}
+            {isSearching && (
+              <Loader2 className="w-4 h-4 text-[#999999] animate-spin flex-shrink-0" />
+            )}
+          </div>
 
           <MultiSelectDropdown
             label="Plugins"
@@ -170,8 +172,15 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
           />
         </FilterBar>
 
-        {/* Table */}
-        {filteredTests.length > 0 ? (
+        {/* Table - show loading skeleton on initial load, keep previous data during refetch */}
+        {isLoading ? (
+          <Card padding="none" className="overflow-hidden">
+            <div className="p-8 text-center">
+              <Loader2 className="w-6 h-6 text-[#999999] animate-spin mx-auto mb-2" />
+              <p className="text-sm text-[#666666]">Loading test health data...</p>
+            </div>
+          </Card>
+        ) : filteredTests.length > 0 ? (
           <Card padding="none" className="overflow-hidden">
             <table className="w-full table-fixed">
               <thead className="border-b border-[#e5e5e5] bg-[#fafafa]">

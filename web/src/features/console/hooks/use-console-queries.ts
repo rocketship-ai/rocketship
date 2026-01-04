@@ -1258,6 +1258,8 @@ export function useTestHealth(params: TestHealthParams = {}) {
     queryFn: () => apiGet<TestHealthResponse>(`/api/test-health${queryString}`),
     refetchOnWindowFocus: true,
     refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
+    // Keep previous data while fetching new results (prevents UI flicker during search)
+    placeholderData: (previousData) => previousData,
     // Two-tier polling: fast when tests are live, idle otherwise (to discover new runs)
     refetchInterval: (query) => {
       const data = query.state.data
