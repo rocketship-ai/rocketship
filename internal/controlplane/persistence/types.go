@@ -205,9 +205,22 @@ type Suite struct {
 // StepSummary represents a step descriptor for UI display
 // This is stored in the tests.step_summaries JSONB column
 type StepSummary struct {
-	StepIndex int    `json:"step_index"`
-	Plugin    string `json:"plugin"`
-	Name      string `json:"name"`
+	StepIndex  int                      `json:"step_index"`
+	Plugin     string                   `json:"plugin"`
+	Name       string                   `json:"name"`
+	Config     map[string]interface{}   `json:"config,omitempty"`
+	Assertions []map[string]interface{} `json:"assertions,omitempty"`
+	Save       []map[string]interface{} `json:"save,omitempty"`
+	Retry      *StepRetryPolicy         `json:"retry,omitempty"`
+}
+
+// StepRetryPolicy mirrors dsl.RetryPolicy for storage in step summaries
+type StepRetryPolicy struct {
+	InitialInterval    string   `json:"initial_interval,omitempty"`
+	MaximumInterval    string   `json:"maximum_interval,omitempty"`
+	MaximumAttempts    int      `json:"maximum_attempts,omitempty"`
+	BackoffCoefficient float64  `json:"backoff_coefficient,omitempty"`
+	NonRetryableErrors []string `json:"non_retryable_errors,omitempty"`
 }
 
 // Test represents an individual test definition

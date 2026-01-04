@@ -385,11 +385,25 @@ func (s *Scanner) processSuiteFile(ctx context.Context, input ScanInput, project
 			if name == "" {
 				name = fmt.Sprintf("Step %d", i+1)
 			}
-			stepSummaries = append(stepSummaries, persistence.StepSummary{
-				StepIndex: i + 1,
-				Plugin:    step.Plugin,
-				Name:      name,
-			})
+			summary := persistence.StepSummary{
+				StepIndex:  i, // 0-based to match run_steps.step_index convention
+				Plugin:     step.Plugin,
+				Name:       name,
+				Config:     step.Config,
+				Assertions: step.Assertions,
+				Save:       step.Save,
+			}
+			// Convert retry policy if present
+			if step.Retry != nil {
+				summary.Retry = &persistence.StepRetryPolicy{
+					InitialInterval:    step.Retry.InitialInterval,
+					MaximumInterval:    step.Retry.MaximumInterval,
+					MaximumAttempts:    step.Retry.MaximumAttempts,
+					BackoffCoefficient: step.Retry.BackoffCoefficient,
+					NonRetryableErrors: step.Retry.NonRetryableErrors,
+				}
+			}
+			stepSummaries = append(stepSummaries, summary)
 		}
 
 		testRecord := persistence.Test{

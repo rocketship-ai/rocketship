@@ -917,6 +917,14 @@ func (f *fakeStore) ListTestHealth(_ context.Context, _, _ uuid.UUID, _ persiste
 	return []persistence.TestHealthRow{}, []persistence.TestHealthSuiteOption{}, nil
 }
 
+func (f *fakeStore) GetTestDetail(_ context.Context, _, _ uuid.UUID) (*persistence.TestDetailRow, error) {
+	return nil, sql.ErrNoRows
+}
+
+func (f *fakeStore) ListTestRuns(_ context.Context, _, _ uuid.UUID, _ persistence.TestRunsParams) ([]persistence.TestRunSummary, error) {
+	return []persistence.TestRunSummary{}, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

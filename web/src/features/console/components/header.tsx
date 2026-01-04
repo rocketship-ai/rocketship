@@ -4,6 +4,7 @@ import {
   useProjects,
   useSuite,
   useProjectEnvironments,
+  useTestDetail,
 } from '../hooks/use-console-queries';
 import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { MultiSelectDropdown } from './multi-select-dropdown';
@@ -14,6 +15,7 @@ interface HeaderProps {
   isDetailView?: boolean;
   detailViewType?: 'suite' | 'test' | 'suite-run' | 'test-run' | 'project' | null;
   suiteId?: string; // For suite detail view to fetch project environments
+  testId?: string; // For test detail view to fetch project environments
   projectIdForEnvs?: string; // Explicit project ID for env filter (used by test-health)
   primaryAction?: {
     label: string;
@@ -29,6 +31,7 @@ export function Header({
   isDetailView = false,
   detailViewType,
   suiteId,
+  testId,
   projectIdForEnvs: explicitProjectIdForEnvs,
   primaryAction,
   onEnvironmentChange,
@@ -46,16 +49,20 @@ export function Header({
   // If explicitProjectIdForEnvs is provided (from test-health), use that instead
   const { data: suite } = useSuite(suiteId || '');
 
+  // For test detail view: fetch test to get project ID
+  const { data: testDetail } = useTestDetail(testId || '');
+
   // Compute projectIdForEnvs with fallback for pages without explicit project context
-  // Priority: explicit prop > suite's project > first selected project > first accessible project
+  // Priority: explicit prop > suite's project > test's project > first selected project > first accessible project
   const projectIdForEnvs = useMemo(() => {
     if (explicitProjectIdForEnvs) return explicitProjectIdForEnvs;
     if (suite?.project?.id) return suite.project.id;
+    if (testDetail?.project_id) return testDetail.project_id;
     // For test-health and overview pages, fall back to first selected or first project
     if (selectedProjectIds.length > 0) return selectedProjectIds[0];
     if (projects.length > 0) return projects[0].id;
     return '';
-  }, [explicitProjectIdForEnvs, suite?.project?.id, selectedProjectIds, projects]);
+  }, [explicitProjectIdForEnvs, suite?.project?.id, testDetail?.project_id, selectedProjectIds, projects]);
 
   const { data: projectEnvironments = [] } = useProjectEnvironments(projectIdForEnvs);
 

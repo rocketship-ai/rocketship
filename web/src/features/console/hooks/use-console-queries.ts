@@ -241,7 +241,7 @@ export interface RunStep {
   step_index: number
   name: string
   plugin: string
-  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'PENDING'
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'PENDING' | 'DEFINITION'
   error_message?: string
   assertions_passed: number
   assertions_failed: number
@@ -382,6 +382,9 @@ export const consoleKeys = {
   testRun: (id: string) => [...consoleKeys.all, 'testRun', id] as const,
   testRunLogs: (id: string) => [...consoleKeys.all, 'testRun', id, 'logs'] as const,
   testRunSteps: (id: string) => [...consoleKeys.all, 'testRun', id, 'steps'] as const,
+  // Test Detail (test definition page)
+  testDetail: (id: string) => [...consoleKeys.all, 'test', id] as const,
+  testRuns: (id: string) => [...consoleKeys.all, 'test', id, 'runs'] as const,
   // Overview / Setup
   overviewSetup: () => [...consoleKeys.all, 'overview', 'setup'] as const,
   githubAppRepos: () => [...consoleKeys.all, 'github', 'repos'] as const,
@@ -1266,6 +1269,116 @@ export function useTestHealth(params: TestHealthParams = {}) {
       if (!data) return TEST_HEALTH_POLL_IDLE_MS // Initial load: use idle polling
       const hasLiveTest = data.tests.some((test) => test.is_live)
       return hasLiveTest ? TEST_HEALTH_POLL_LIVE_MS : TEST_HEALTH_POLL_IDLE_MS
+    },
+  })
+}
+
+// ============================================
+// Test Detail Types and Hooks
+// ============================================
+
+// Retry policy for step definitions
+export interface StepRetryPolicy {
+  initial_interval?: string
+  maximum_interval?: string
+  maximum_attempts?: number
+  backoff_coefficient?: number
+  non_retryable_errors?: string[]
+}
+
+// Enriched step definition from the test YAML
+export interface TestDetailStep {
+  step_index: number
+  plugin: string
+  name: string
+  config?: Record<string, unknown>
+  assertions?: Array<Record<string, unknown>>
+  save?: Array<Record<string, unknown>>
+  retry?: StepRetryPolicy
+}
+
+// Test detail response from GET /api/tests/:testId
+export interface TestDetail {
+  id: string
+  name: string
+  description?: string
+  source_ref: string
+  step_count: number
+  suite_id: string
+  suite_name: string
+  project_id: string
+  project_name: string
+  steps: TestDetailStep[]
+  created_at: string
+  updated_at: string
+}
+
+// Run summary for test detail sidebar
+export interface TestRunForTest {
+  id: string
+  run_id: string
+  status: 'RUNNING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'PENDING' | 'TIMEOUT'
+  trigger: 'ci' | 'manual' | 'schedule'
+  environment: string
+  branch: string
+  initiator: string
+  initiator_name?: string
+  commit_sha?: string
+  duration_ms?: number
+  created_at: string
+  started_at?: string
+  ended_at?: string
+}
+
+export interface TestRunsParams {
+  triggers?: string[]
+  environmentId?: string
+  limit?: number
+  offset?: number
+}
+
+// Polling intervals for test detail page
+const TEST_DETAIL_RUNS_POLL_LIVE_MS = 3000  // 3s when runs are in progress
+const TEST_DETAIL_RUNS_POLL_IDLE_MS = 15000 // 15s when idle
+
+export function useTestDetail(testId: string) {
+  return useQuery({
+    queryKey: consoleKeys.testDetail(testId),
+    queryFn: () => apiGet<TestDetail>(`/api/tests/${testId}`),
+    enabled: !!testId,
+  })
+}
+
+export function useTestRuns(testId: string, params: TestRunsParams = {}) {
+  // Build query string
+  const queryParts: string[] = []
+  if (params.triggers && params.triggers.length > 0) {
+    queryParts.push(`triggers=${params.triggers.join(',')}`)
+  }
+  if (params.environmentId) {
+    queryParts.push(`environment_id=${params.environmentId}`)
+  }
+  if (params.limit) {
+    queryParts.push(`limit=${params.limit}`)
+  }
+  if (params.offset) {
+    queryParts.push(`offset=${params.offset}`)
+  }
+
+  const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
+
+  return useQuery({
+    queryKey: [...consoleKeys.testRuns(testId), params] as const,
+    queryFn: () => apiGet<TestRunForTest[]>(`/api/tests/${testId}/runs${queryString}`),
+    enabled: !!testId,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    // Two-tier polling: fast when runs are in progress, idle otherwise
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return TEST_DETAIL_RUNS_POLL_IDLE_MS
+      const hasLiveRun = data.some((run) => isLiveTestStatus(run.status))
+      return hasLiveRun ? TEST_DETAIL_RUNS_POLL_LIVE_MS : TEST_DETAIL_RUNS_POLL_IDLE_MS
     },
   })
 }
