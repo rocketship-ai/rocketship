@@ -224,3 +224,8 @@ func (s *memoryRunStore) UpdateProjectScheduleLastRun(_ context.Context, _ uuid.
 	// No-op for memory store - no project schedules
 	return nil
 }
+
+func (s *memoryRunStore) UpdateSuiteScheduleLastRun(_ context.Context, _ uuid.UUID, _, _ string, _ time.Time) error {
+	// No-op for memory store - no suite schedules
+	return nil
+}

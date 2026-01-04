@@ -95,6 +95,14 @@ type dataStore interface {
 	UpdateProjectSchedule(ctx context.Context, scheduleID uuid.UUID, input persistence.UpdateProjectScheduleInput) (persistence.ProjectSchedule, error)
 	DeleteProjectSchedule(ctx context.Context, scheduleID uuid.UUID) error
 
+	// Suite schedule management (overrides)
+	GetSuiteByID(ctx context.Context, suiteID uuid.UUID) (persistence.Suite, error)
+	ListSuiteSchedulesBySuiteWithEnv(ctx context.Context, suiteID uuid.UUID) ([]persistence.SuiteScheduleWithEnv, error)
+	GetSuiteScheduleWithEnv(ctx context.Context, scheduleID uuid.UUID) (persistence.SuiteScheduleWithEnv, error)
+	UpsertSuiteScheduleOverride(ctx context.Context, input persistence.CreateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, bool, error)
+	UpdateSuiteScheduleOverride(ctx context.Context, scheduleID uuid.UUID, input persistence.UpdateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, error)
+	DeleteSuiteScheduleOverride(ctx context.Context, scheduleID uuid.UUID) error
+
 	// CI Token management
 	ListCITokensForOrg(ctx context.Context, orgID uuid.UUID, includeRevoked bool) ([]persistence.CITokenRecord, error)
 	CreateCIToken(ctx context.Context, orgID, createdBy uuid.UUID, input persistence.CITokenCreateInput) (string, persistence.CITokenRecord, error)

@@ -84,6 +84,26 @@ func (s *Store) GetSuite(ctx context.Context, projectID, suiteID uuid.UUID) (Sui
 	return suite, nil
 }
 
+// GetSuiteByID retrieves a suite by ID only (without requiring project_id)
+func (s *Store) GetSuiteByID(ctx context.Context, suiteID uuid.UUID) (Suite, error) {
+	const query = `
+        SELECT id, project_id, name, description, file_path, source_ref, yaml_payload, test_count,
+               last_run_id, last_run_status, last_run_at, created_at, updated_at
+        FROM suites
+        WHERE id = $1
+    `
+
+	var suite Suite
+	if err := s.db.GetContext(ctx, &suite, query, suiteID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Suite{}, sql.ErrNoRows
+		}
+		return Suite{}, fmt.Errorf("failed to get suite: %w", err)
+	}
+
+	return suite, nil
+}
+
 // GetSuiteByName retrieves a suite by name and source_ref within a project
 // Returns (suite, found, error) - found is true if the suite exists
 func (s *Store) GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, sourceRef string) (Suite, bool, error) {

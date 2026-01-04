@@ -5,7 +5,7 @@ import { SuiteRunRow } from '../components/suite-run-row';
 import { ScheduleCard, type ScheduleCardData } from '../components/schedule-card';
 import { ScheduleFormModal, type ScheduleFormData } from '../components/schedule-form-modal';
 import { useMemo, useState } from 'react';
-import { useSuite, useSuiteRuns, useProjectEnvironments, useProjectSchedules, useCreateProjectSchedule, useUpdateProjectSchedule, useDeleteProjectSchedule, type SuiteRunSummary, type ProjectSchedule } from '../hooks/use-console-queries';
+import { useSuite, useSuiteRuns, useProjectEnvironments, useProjectSchedules, useSuiteSchedules, useUpsertSuiteSchedule, useUpdateSuiteSchedule, useDeleteSuiteSchedule, type SuiteRunSummary, type ProjectSchedule, type SuiteSchedule } from '../hooks/use-console-queries';
 import { useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { SourceRefBadge } from '../components/SourceRefBadge';
 import { LoadingState, ErrorState } from '../components/ui';
@@ -38,7 +38,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<ProjectSchedule | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<{ schedule: ProjectSchedule | SuiteSchedule; isOverride: boolean } | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
@@ -53,28 +53,57 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
     { id: 'alerts', label: 'Alerts & Notifications', enabled: false },
   ] as const;
 
-  // Fetch project schedules from API
-  const { data: projectSchedules = [], isLoading: schedulesLoading, refetch: refetchSchedules } = useProjectSchedules(projectId, { enabled: !!projectId });
+  // Fetch project schedules (inherited) and suite schedules (overrides) from API
+  const { data: projectSchedules = [], isLoading: projectSchedulesLoading } = useProjectSchedules(projectId, { enabled: !!projectId });
+  const { data: suiteSchedules = [], isLoading: suiteSchedulesLoading, refetch: refetchSuiteSchedules } = useSuiteSchedules(suiteId, { enabled: !!suiteId });
 
-  // Schedule mutations
-  const createScheduleMutation = useCreateProjectSchedule(projectId);
-  const updateScheduleMutation = useUpdateProjectSchedule();
-  const deleteScheduleMutation = useDeleteProjectSchedule();
+  const schedulesLoading = projectSchedulesLoading || suiteSchedulesLoading;
+
+  // Suite schedule mutations (we never mutate project schedules from suite detail page)
+  const upsertScheduleMutation = useUpsertSuiteSchedule(suiteId);
+  const updateScheduleMutation = useUpdateSuiteSchedule();
+  const deleteScheduleMutation = useDeleteSuiteSchedule();
 
 
-  // Map schedules to display format
-  const schedules: (ScheduleCardData & { envId: string })[] = projectSchedules.map((s: ProjectSchedule) => ({
-    id: s.id,
-    env: s.environment.slug,
-    envId: s.environment_id,
-    name: s.name,
-    cron: s.cron_expression,
-    timezone: s.timezone,
-    enabled: s.enabled,
-    lastRun: s.last_run_at ? formatRelativeTime(s.last_run_at) : 'Never',
-    nextRun: s.next_run_at ? formatRelativeTime(s.next_run_at) : 'Not scheduled',
-    lastRunStatus: s.last_run_status,
-  }));
+  // Build a set of environment IDs that have suite-level overrides
+  const overriddenEnvIds = new Set(suiteSchedules.map((s: SuiteSchedule) => s.environment_id));
+
+  // Map schedules to display format, merging inherited (project) and overrides (suite)
+  // Suite schedules take precedence over project schedules for the same environment
+  const schedules: (ScheduleCardData & { envId: string; isOverride: boolean; originalSchedule: ProjectSchedule | SuiteSchedule })[] = [
+    // Suite schedules (overrides) - these take precedence
+    ...suiteSchedules.map((s: SuiteSchedule) => ({
+      id: s.id,
+      env: s.environment?.slug ?? 'unknown',
+      envId: s.environment_id,
+      name: s.name,
+      cron: s.cron_expression,
+      timezone: s.timezone,
+      enabled: s.enabled,
+      lastRun: s.last_run_at ? formatRelativeTime(s.last_run_at) : 'Never',
+      nextRun: s.next_run_at ? formatRelativeTime(s.next_run_at) : 'Not scheduled',
+      lastRunStatus: s.last_run_status,
+      isOverride: true,
+      originalSchedule: s,
+    })),
+    // Project schedules (inherited) - only include those not overridden
+    ...projectSchedules
+      .filter((s: ProjectSchedule) => !overriddenEnvIds.has(s.environment_id))
+      .map((s: ProjectSchedule) => ({
+        id: s.id,
+        env: s.environment.slug,
+        envId: s.environment_id,
+        name: s.name,
+        cron: s.cron_expression,
+        timezone: s.timezone,
+        enabled: s.enabled,
+        lastRun: s.last_run_at ? formatRelativeTime(s.last_run_at) : 'Never',
+        nextRun: s.next_run_at ? formatRelativeTime(s.next_run_at) : 'Not scheduled',
+        lastRunStatus: s.last_run_status,
+        isOverride: false,
+        originalSchedule: s,
+      })),
+  ];
 
   // Convert suite tests to the format expected by TestItem component
   const suiteTests = (suite?.tests || []).map((test) => {
@@ -423,20 +452,21 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
                   <ScheduleCard
                     key={schedule.id}
                     schedule={schedule}
-                    onEdit={(scheduleId) => {
-                      const s = projectSchedules.find(x => x.id === scheduleId);
-                      if (s) {
-                        setEditingSchedule(s);
-                        setScheduleError(null);
-                      }
+                    isOverride={schedule.isOverride}
+                    onEdit={() => {
+                      setEditingSchedule({
+                        schedule: schedule.originalSchedule,
+                        isOverride: schedule.isOverride,
+                      });
+                      setScheduleError(null);
                     }}
-                    onDelete={(scheduleId) => {
-                      if (confirm('Are you sure you want to delete this schedule?')) {
-                        deleteScheduleMutation.mutate(scheduleId, {
-                          onSuccess: () => refetchSchedules(),
+                    onDelete={schedule.isOverride ? () => {
+                      if (confirm('Are you sure you want to delete this schedule override? The suite will revert to the inherited project schedule.')) {
+                        deleteScheduleMutation.mutate(schedule.id, {
+                          onSuccess: () => refetchSuiteSchedules(),
                         });
                       }
-                    }}
+                    } : undefined}
                   />
                 ))}
               </div>
@@ -467,17 +497,17 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
         )}
       </div>
 
-      {/* Add Schedule Modal */}
+      {/* Add Schedule Modal - creates a suite schedule override */}
       <ScheduleFormModal
         isOpen={showAddScheduleModal}
         mode="create"
         environments={projectEnvironments}
-        isSubmitting={createScheduleMutation.isPending}
+        isSubmitting={upsertScheduleMutation.isPending}
         error={scheduleError}
         onErrorClear={() => setScheduleError(null)}
         onClose={() => setShowAddScheduleModal(false)}
         onSubmit={(data: ScheduleFormData) => {
-          createScheduleMutation.mutate({
+          upsertScheduleMutation.mutate({
             environment_id: data.environment_id,
             name: data.name,
             cron_expression: data.cron_expression,
@@ -486,7 +516,7 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
           }, {
             onSuccess: () => {
               setShowAddScheduleModal(false);
-              refetchSchedules();
+              refetchSuiteSchedules();
             },
             onError: (error) => {
               setScheduleError(error instanceof Error ? error.message : 'Failed to create schedule');
@@ -495,41 +525,62 @@ export function SuiteDetail({ suiteId, onBack, onViewRun, onViewTest }: SuiteDet
         }}
       />
 
-      {/* Edit Schedule Modal */}
+      {/* Edit Schedule Modal - creates/updates suite schedule override */}
       <ScheduleFormModal
         isOpen={!!editingSchedule}
         mode="edit"
         environments={projectEnvironments}
         initialValues={editingSchedule ? {
-          name: editingSchedule.name,
-          environment_id: editingSchedule.environment_id,
-          cron_expression: editingSchedule.cron_expression,
-          timezone: editingSchedule.timezone,
-          enabled: editingSchedule.enabled,
+          name: editingSchedule.schedule.name,
+          environment_id: editingSchedule.schedule.environment_id,
+          cron_expression: editingSchedule.schedule.cron_expression,
+          timezone: editingSchedule.schedule.timezone,
+          enabled: editingSchedule.schedule.enabled,
         } : undefined}
-        isSubmitting={updateScheduleMutation.isPending}
+        isSubmitting={editingSchedule?.isOverride ? updateScheduleMutation.isPending : upsertScheduleMutation.isPending}
         error={scheduleError}
         onErrorClear={() => setScheduleError(null)}
         onClose={() => setEditingSchedule(null)}
         onSubmit={(data: ScheduleFormData) => {
           if (!editingSchedule) return;
-          updateScheduleMutation.mutate({
-            scheduleId: editingSchedule.id,
-            data: {
+
+          if (editingSchedule.isOverride) {
+            // Update existing suite schedule override
+            updateScheduleMutation.mutate({
+              scheduleId: editingSchedule.schedule.id,
+              data: {
+                name: data.name,
+                cron_expression: data.cron_expression,
+                timezone: data.timezone,
+                enabled: data.enabled,
+              },
+            }, {
+              onSuccess: () => {
+                setEditingSchedule(null);
+                refetchSuiteSchedules();
+              },
+              onError: (error) => {
+                setScheduleError(error instanceof Error ? error.message : 'Failed to update schedule');
+              },
+            });
+          } else {
+            // Create new suite schedule override from inherited project schedule
+            upsertScheduleMutation.mutate({
+              environment_id: data.environment_id,
               name: data.name,
               cron_expression: data.cron_expression,
               timezone: data.timezone,
               enabled: data.enabled,
-            },
-          }, {
-            onSuccess: () => {
-              setEditingSchedule(null);
-              refetchSchedules();
-            },
-            onError: (error) => {
-              setScheduleError(error instanceof Error ? error.message : 'Failed to update schedule');
-            },
-          });
+            }, {
+              onSuccess: () => {
+                setEditingSchedule(null);
+                refetchSuiteSchedules();
+              },
+              onError: (error) => {
+                setScheduleError(error instanceof Error ? error.message : 'Failed to create schedule override');
+              },
+            });
+          }
         }}
       />
     </div>

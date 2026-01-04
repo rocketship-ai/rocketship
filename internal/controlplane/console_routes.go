@@ -591,6 +591,8 @@ func (s *Server) handleConsoleSuiteRoutesDispatch(w http.ResponseWriter, r *http
 	switch segments[1] {
 	case "runs":
 		s.handleSuiteRuns(w, r, principal, suiteID)
+	case "schedules":
+		s.handleSuiteSchedules(w, r, principal, suiteID)
 	case "tests":
 		// Could add /api/suites/{id}/tests later if needed
 		writeError(w, http.StatusNotFound, "resource not found")

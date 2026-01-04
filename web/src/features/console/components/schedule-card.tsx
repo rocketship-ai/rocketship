@@ -31,6 +31,8 @@ interface ScheduleCardProps {
   disabled?: boolean;
   /** Optional className for additional styling */
   className?: string;
+  /** Whether this is a suite-level override (vs inherited from project) */
+  isOverride?: boolean;
 }
 
 /**
@@ -43,6 +45,7 @@ export function ScheduleCard({
   onDelete,
   disabled = false,
   className = '',
+  isOverride,
 }: ScheduleCardProps) {
   const handleEdit = () => {
     if (!disabled) {
@@ -66,6 +69,7 @@ export function ScheduleCard({
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <span className="font-medium">{schedule.name}</span>
             <EnvBadge env={schedule.env} />
+            {isOverride !== undefined && <OverrideBadge isOverride={isOverride} />}
             <code className="text-xs font-mono px-2 py-0.5 bg-[#fafafa] rounded border border-[#e5e5e5] text-[#666666]">
               {schedule.cron}
             </code>
@@ -155,4 +159,21 @@ function LastRunStatus({ status }: { status: string }) {
   };
 
   return <span className={getStatusClass()}>{status}</span>;
+}
+
+/**
+ * Badge showing inherited/override status
+ */
+function OverrideBadge({ isOverride }: { isOverride: boolean }) {
+  return (
+    <span
+      className={`text-xs px-2 py-0.5 rounded border ${
+        isOverride
+          ? 'bg-purple-50 text-purple-700 border-purple-200'
+          : 'bg-blue-50 text-blue-700 border-blue-200'
+      }`}
+    >
+      {isOverride ? 'Override' : 'Inherited'}
+    </span>
+  );
 }

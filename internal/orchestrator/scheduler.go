@@ -43,6 +43,12 @@ type SchedulerStore interface {
 	ListActiveSuitesForProjectSchedule(ctx context.Context, projectID, environmentID uuid.UUID) ([]persistence.Suite, error)
 	GetProjectWithOrg(ctx context.Context, projectID uuid.UUID) (persistence.ProjectWithOrg, error)
 	GetEnvironmentBySlug(ctx context.Context, projectID uuid.UUID, slug string) (persistence.ProjectEnvironment, error)
+
+	// Suite schedule operations (overrides)
+	ListDueSuiteScheduleIDs(ctx context.Context, before time.Time, limit int) ([]uuid.UUID, error)
+	ClaimDueSuiteSchedule(ctx context.Context, scheduleID uuid.UUID, now time.Time) (bool, persistence.SuiteScheduleWithEnv, error)
+	UpdateSuiteScheduleLastRun(ctx context.Context, scheduleID uuid.UUID, runID, status string, runAt time.Time) error
+	GetSuiteWithProjectAndEnv(ctx context.Context, suiteID, environmentID uuid.UUID) (persistence.SuiteWithProjectAndEnv, error)
 }
 
 // NewScheduler creates a new scheduler
@@ -100,7 +106,7 @@ func (s *Scheduler) tick() {
 	now := time.Now().UTC()
 
 	// Phase 1: Acquire leadership and discover due schedules (fast, holds lock briefly)
-	scheduleIDs, err := s.discoverDueSchedules(ctx, now)
+	projectScheduleIDs, suiteScheduleIDs, err := s.discoverDueSchedules(ctx, now)
 	if err != nil {
 		if err != errLockNotAcquired {
 			s.logger.Error("scheduler: failed to discover due schedules", "error", err)
@@ -108,18 +114,36 @@ func (s *Scheduler) tick() {
 		return
 	}
 
-	if len(scheduleIDs) == 0 {
-		s.logger.Debug("scheduler: no due project schedules")
+	if len(projectScheduleIDs) == 0 && len(suiteScheduleIDs) == 0 {
+		s.logger.Debug("scheduler: no due schedules")
 		return
 	}
 
-	s.logger.Info("scheduler: found due project schedules", "count", len(scheduleIDs))
+	if len(projectScheduleIDs) > 0 {
+		s.logger.Info("scheduler: found due project schedules", "count", len(projectScheduleIDs))
+	}
+	if len(suiteScheduleIDs) > 0 {
+		s.logger.Info("scheduler: found due suite schedules", "count", len(suiteScheduleIDs))
+	}
 
 	// Phase 2: Process schedules outside the lock (lock already released)
-	// Each schedule is claimed atomically via ClaimDueProjectSchedule
-	for _, scheduleID := range scheduleIDs {
+	// Each schedule is claimed atomically
+
+	// Process project schedules
+	for _, scheduleID := range projectScheduleIDs {
 		if err := s.fireProjectScheduleByID(ctx, scheduleID, now); err != nil {
 			s.logger.Error("scheduler: failed to fire project schedule",
+				"schedule_id", scheduleID,
+				"error", err,
+			)
+			continue
+		}
+	}
+
+	// Process suite schedules (overrides)
+	for _, scheduleID := range suiteScheduleIDs {
+		if err := s.fireSuiteScheduleByID(ctx, scheduleID, now); err != nil {
+			s.logger.Error("scheduler: failed to fire suite schedule",
 				"schedule_id", scheduleID,
 				"error", err,
 			)
@@ -133,16 +157,17 @@ var errLockNotAcquired = fmt.Errorf("lock not acquired")
 
 // discoverDueSchedules acquires the advisory lock, fetches due schedule IDs, and releases
 // the lock immediately. This minimizes lock hold time to milliseconds instead of minutes.
-func (s *Scheduler) discoverDueSchedules(ctx context.Context, now time.Time) ([]uuid.UUID, error) {
+// Returns (projectScheduleIDs, suiteScheduleIDs, error)
+func (s *Scheduler) discoverDueSchedules(ctx context.Context, now time.Time) ([]uuid.UUID, []uuid.UUID, error) {
 	// Try to acquire leadership via transaction-scoped advisory lock
 	// This is safe with connection pooling - lock is bound to the transaction
 	acquired, tx, err := s.store.TryAcquireAdvisoryXactLock(ctx, SchedulerAdvisoryLockKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire advisory lock: %w", err)
+		return nil, nil, fmt.Errorf("failed to acquire advisory lock: %w", err)
 	}
 	if !acquired {
 		s.logger.Debug("scheduler: another instance holds the lock, skipping tick")
-		return nil, errLockNotAcquired
+		return nil, nil, errLockNotAcquired
 	}
 	defer func() {
 		_ = tx.Rollback()
@@ -150,19 +175,25 @@ func (s *Scheduler) discoverDueSchedules(ctx context.Context, now time.Time) ([]
 
 	s.logger.Debug("scheduler: acquired leadership, checking due schedules")
 
-	// Fetch due schedule IDs (fast query, no row locks)
-	scheduleIDs, err := s.store.ListDueProjectScheduleIDs(ctx, now, 100)
+	// Fetch due project schedule IDs (fast query, no row locks)
+	projectScheduleIDs, err := s.store.ListDueProjectScheduleIDs(ctx, now, 100)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list due schedules: %w", err)
+		return nil, nil, fmt.Errorf("failed to list due project schedules: %w", err)
+	}
+
+	// Fetch due suite schedule IDs (fast query, no row locks)
+	suiteScheduleIDs, err := s.store.ListDueSuiteScheduleIDs(ctx, now, 100)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list due suite schedules: %w", err)
 	}
 
 	// Commit immediately to release the advisory lock
 	// The lock is now held for only milliseconds (discovery phase)
 	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit lock transaction: %w", err)
+		return nil, nil, fmt.Errorf("failed to commit lock transaction: %w", err)
 	}
 
-	return scheduleIDs, nil
+	return projectScheduleIDs, suiteScheduleIDs, nil
 }
 
 // fireProjectScheduleByID attempts to claim and fire a schedule by its ID.
@@ -292,6 +323,124 @@ func (s *Scheduler) fireSuiteRun(
 		"run_id", resp.RunId,
 		"suite_name", suite.Name,
 		"schedule_id", schedule.ID,
+		"environment", schedule.EnvironmentSlug,
+	)
+
+	return resp.RunId, "RUNNING", nil
+}
+
+// fireSuiteScheduleByID attempts to claim and fire a suite schedule override by its ID.
+// This is called outside the advisory lock, relying on ClaimDueSuiteSchedule for atomicity.
+func (s *Scheduler) fireSuiteScheduleByID(ctx context.Context, scheduleID uuid.UUID, now time.Time) error {
+	s.logger.Debug("scheduler: attempting to claim suite schedule", "schedule_id", scheduleID)
+
+	// Atomically claim the schedule if it's still due
+	// This is safe in HA - only one instance can successfully claim
+	claimed, schedule, err := s.store.ClaimDueSuiteSchedule(ctx, scheduleID, now)
+	if err != nil {
+		return fmt.Errorf("failed to claim suite schedule: %w", err)
+	}
+	if !claimed {
+		s.logger.Debug("scheduler: suite schedule already claimed by another instance",
+			"schedule_id", scheduleID,
+		)
+		return nil
+	}
+
+	s.logger.Info("scheduler: firing suite schedule",
+		"schedule_id", schedule.ID,
+		"schedule_name", schedule.Name,
+		"suite_id", schedule.SuiteID,
+		"environment", schedule.EnvironmentSlug,
+	)
+
+	// Get suite with project and environment info
+	suiteWithEnv, err := s.store.GetSuiteWithProjectAndEnv(ctx, schedule.SuiteID, schedule.EnvironmentID.UUID)
+	if err != nil {
+		return fmt.Errorf("failed to get suite with project/env: %w", err)
+	}
+
+	// Verify the suite is on the default branch
+	if suiteWithEnv.SourceRef != suiteWithEnv.ProjectDefaultBranch {
+		s.logger.Warn("scheduler: skipping suite schedule - suite not on default branch",
+			"schedule_id", schedule.ID,
+			"suite_id", schedule.SuiteID,
+			"suite_source_ref", suiteWithEnv.SourceRef,
+			"project_default_branch", suiteWithEnv.ProjectDefaultBranch,
+		)
+		return nil
+	}
+
+	if suiteWithEnv.YamlPayload == "" {
+		s.logger.Warn("scheduler: skipping suite schedule - no yaml_payload",
+			"schedule_id", schedule.ID,
+			"suite_id", schedule.SuiteID,
+		)
+		return nil
+	}
+
+	// Fire the run for this single suite
+	runID, _, err := s.fireSuiteRunForSuiteSchedule(ctx, suiteWithEnv, schedule)
+	if err != nil {
+		s.logger.Error("scheduler: failed to fire suite run for suite schedule",
+			"schedule_id", schedule.ID,
+			"suite_id", schedule.SuiteID,
+			"error", err,
+		)
+		// Update last run status to FAILED
+		_ = s.store.UpdateSuiteScheduleLastRun(ctx, schedule.ID, "", "FAILED", time.Now().UTC())
+		return err
+	}
+
+	// Update schedule's last run info
+	if err := s.store.UpdateSuiteScheduleLastRun(ctx, schedule.ID, runID, "RUNNING", time.Now().UTC()); err != nil {
+		s.logger.Error("scheduler: failed to update suite schedule last run",
+			"schedule_id", schedule.ID,
+			"error", err,
+		)
+	}
+
+	return nil
+}
+
+func (s *Scheduler) fireSuiteRunForSuiteSchedule(
+	ctx context.Context,
+	suiteWithEnv persistence.SuiteWithProjectAndEnv,
+	schedule persistence.SuiteScheduleWithEnv,
+) (string, string, error) {
+	// Build run context
+	runContext := &generated.RunContext{
+		ProjectId:    suiteWithEnv.ProjectID.String(),
+		Branch:       suiteWithEnv.ProjectDefaultBranch,
+		Trigger:      "schedule",
+		Source:       "scheduler",
+		ScheduleName: schedule.Name,
+		Metadata: map[string]string{
+			"env":               schedule.EnvironmentSlug,
+			"environment":       schedule.EnvironmentSlug,
+			"rs_schedule_id":    schedule.ID.String(),
+			"rs_schedule_type":  "suite",
+			"rs_environment_id": schedule.EnvironmentID.UUID.String(),
+		},
+	}
+
+	// Create the run request
+	req := &generated.CreateRunRequest{
+		YamlPayload: []byte(suiteWithEnv.YamlPayload),
+		Context:     runContext,
+	}
+
+	// Create run through the engine (bypasses gRPC, calls internal method)
+	resp, err := s.engine.createRunInternal(ctx, suiteWithEnv.ProjectOrganizationID, "schedule:"+schedule.ID.String(), req)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create run: %w", err)
+	}
+
+	s.logger.Info("scheduler: created run for suite schedule",
+		"run_id", resp.RunId,
+		"suite_name", suiteWithEnv.Name,
+		"schedule_id", schedule.ID,
+		"schedule_type", "suite",
 		"environment", schedule.EnvironmentSlug,
 	)
 

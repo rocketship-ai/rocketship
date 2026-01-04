@@ -876,6 +876,31 @@ func (f *fakeStore) DeleteProjectSchedule(_ context.Context, _ uuid.UUID) error 
 	return nil
 }
 
+// Suite schedule management (overrides)
+func (f *fakeStore) GetSuiteByID(_ context.Context, _ uuid.UUID) (persistence.Suite, error) {
+	return persistence.Suite{}, nil
+}
+
+func (f *fakeStore) ListSuiteSchedulesBySuiteWithEnv(_ context.Context, _ uuid.UUID) ([]persistence.SuiteScheduleWithEnv, error) {
+	return nil, nil
+}
+
+func (f *fakeStore) GetSuiteScheduleWithEnv(_ context.Context, _ uuid.UUID) (persistence.SuiteScheduleWithEnv, error) {
+	return persistence.SuiteScheduleWithEnv{}, nil
+}
+
+func (f *fakeStore) UpsertSuiteScheduleOverride(_ context.Context, _ persistence.CreateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, bool, error) {
+	return persistence.SuiteScheduleWithEnv{}, false, nil
+}
+
+func (f *fakeStore) UpdateSuiteScheduleOverride(_ context.Context, _ uuid.UUID, _ persistence.UpdateSuiteScheduleInput) (persistence.SuiteScheduleWithEnv, error) {
+	return persistence.SuiteScheduleWithEnv{}, nil
+}
+
+func (f *fakeStore) DeleteSuiteScheduleOverride(_ context.Context, _ uuid.UUID) error {
+	return nil
+}
+
 func (f *fakeStore) UserHasProjectWriteAccess(_ context.Context, _, _, _ uuid.UUID) (bool, error) {
 	return true, nil
 }

@@ -1093,3 +1093,90 @@ export function useDeleteProjectSchedule() {
     },
   })
 }
+
+// ============================================
+// Suite Schedule Types and Hooks (Overrides)
+// ============================================
+
+export interface SuiteSchedule {
+  id: string
+  suite_id: string
+  project_id: string
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+  last_run_id?: string
+  last_run_status?: string
+  last_run_at?: string
+  next_run_at?: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  environment: {
+    name: string
+    slug: string
+  }
+}
+
+export interface CreateSuiteScheduleRequest {
+  environment_id: string
+  name: string
+  cron_expression: string
+  timezone: string
+  enabled: boolean
+}
+
+export interface UpdateSuiteScheduleRequest {
+  name?: string
+  cron_expression?: string
+  timezone?: string
+  enabled?: boolean
+}
+
+export function useSuiteSchedules(suiteId: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'suite', suiteId, 'schedules'] as const,
+    queryFn: () => apiGet<SuiteSchedule[]>(`/api/suites/${suiteId}/schedules`),
+    enabled: (options?.enabled ?? true) && !!suiteId,
+  })
+}
+
+export function useUpsertSuiteSchedule(suiteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateSuiteScheduleRequest) =>
+      apiPost<SuiteSchedule>(`/api/suites/${suiteId}/schedules`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all, 'suite', suiteId, 'schedules'] })
+    },
+  })
+}
+
+export function useUpdateSuiteSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ scheduleId, data }: { scheduleId: string; data: UpdateSuiteScheduleRequest }) =>
+      apiPut<SuiteSchedule>(`/api/suite-schedules/${scheduleId}`, data),
+    onSuccess: () => {
+      // Invalidate all suite schedule queries since we don't know the suite ID here
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}
+
+export function useDeleteSuiteSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (scheduleId: string) =>
+      apiDelete(`/api/suite-schedules/${scheduleId}`),
+    onSuccess: () => {
+      // Invalidate all suite schedule queries
+      queryClient.invalidateQueries({ queryKey: [...consoleKeys.all] })
+    },
+  })
+}

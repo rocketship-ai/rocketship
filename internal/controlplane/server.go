@@ -170,6 +170,7 @@ func (s *Server) routes() {
 
 	// Schedule management routes
 	s.mux.HandleFunc("/api/project-schedules/", s.requireAuth(s.handleProjectSchedulesDispatch))
+	s.mux.HandleFunc("/api/suite-schedules/", s.requireAuth(s.handleSuiteSchedulesDispatch))
 }
 
 // ServeHTTP satisfies http.Handler with CORS support.

@@ -222,10 +222,17 @@ func (e *Engine) checkIfRunFinished(runID string) {
 					slog.Debug("checkIfRunFinished: failed to update suite last_run", "suite_id", suiteID, "error", err)
 				}
 			}
-			// Update project schedule last_run if this was a scheduled run
-			if scheduleID != uuid.Nil && scheduleType == "project" {
-				if err := e.runStore.UpdateProjectScheduleLastRun(context.Background(), scheduleID, runID, "PASSED", endTime); err != nil {
-					slog.Debug("checkIfRunFinished: failed to update project schedule last_run", "schedule_id", scheduleID, "error", err)
+			// Update schedule last_run if this was a scheduled run
+			if scheduleID != uuid.Nil {
+				switch scheduleType {
+				case "project":
+					if err := e.runStore.UpdateProjectScheduleLastRun(context.Background(), scheduleID, runID, "PASSED", endTime); err != nil {
+						slog.Debug("checkIfRunFinished: failed to update project schedule last_run", "schedule_id", scheduleID, "error", err)
+					}
+				case "suite":
+					if err := e.runStore.UpdateSuiteScheduleLastRun(context.Background(), scheduleID, runID, "PASSED", endTime); err != nil {
+						slog.Debug("checkIfRunFinished: failed to update suite schedule last_run", "schedule_id", scheduleID, "error", err)
+					}
 				}
 			}
 		}
@@ -263,10 +270,17 @@ func (e *Engine) checkIfRunFinished(runID string) {
 				slog.Debug("checkIfRunFinished: failed to update suite last_run", "suite_id", suiteID, "error", err)
 			}
 		}
-		// Update project schedule last_run if this was a scheduled run
-		if scheduleID != uuid.Nil && scheduleType == "project" {
-			if err := e.runStore.UpdateProjectScheduleLastRun(context.Background(), scheduleID, runID, "FAILED", endTime); err != nil {
-				slog.Debug("checkIfRunFinished: failed to update project schedule last_run", "schedule_id", scheduleID, "error", err)
+		// Update schedule last_run if this was a scheduled run
+		if scheduleID != uuid.Nil {
+			switch scheduleType {
+			case "project":
+				if err := e.runStore.UpdateProjectScheduleLastRun(context.Background(), scheduleID, runID, "FAILED", endTime); err != nil {
+					slog.Debug("checkIfRunFinished: failed to update project schedule last_run", "schedule_id", scheduleID, "error", err)
+				}
+			case "suite":
+				if err := e.runStore.UpdateSuiteScheduleLastRun(context.Background(), scheduleID, runID, "FAILED", endTime); err != nil {
+					slog.Debug("checkIfRunFinished: failed to update suite schedule last_run", "schedule_id", scheduleID, "error", err)
+				}
 			}
 		}
 	}

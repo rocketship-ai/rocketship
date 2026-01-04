@@ -55,6 +55,7 @@ type RunStore interface {
 	UpdateCITokenLastUsed(ctx context.Context, tokenID uuid.UUID) error
 	// Schedule last run updates
 	UpdateProjectScheduleLastRun(ctx context.Context, scheduleID uuid.UUID, runID, status string, runAt time.Time) error
+	UpdateSuiteScheduleLastRun(ctx context.Context, scheduleID uuid.UUID, runID, status string, runAt time.Time) error
 }
 
 type RunInfo struct {
