@@ -2,6 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '@/lib/api'
 import { isLiveRunStatus, isLiveTestStatus, isLiveStepStatus } from '../lib/format'
 
+// Polling intervals (ms) for two-tier polling strategy
+// Live polling: fast refresh when tests/runs are in progress
+// Idle polling: slower background refresh to discover new runs
+const TEST_HEALTH_POLL_LIVE_MS = 5000    // 5s when tests are running
+const TEST_HEALTH_POLL_IDLE_MS = 30000   // 30s when idle (to discover new runs)
+const SUITE_RUNS_POLL_LIVE_MS = 3000     // 3s when runs are in progress
+const SUITE_RUNS_POLL_IDLE_MS = 15000    // 15s when idle (to discover new runs)
+
 // Types matching the API response shapes
 
 export interface LastScan {
@@ -430,12 +438,13 @@ export function useSuiteRuns(suiteId: string, environmentId?: string) {
     },
     enabled: !!suiteId,
     refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
     refetchInterval: (query) => {
       const data = query.state.data
-      if (!data) return false
-      // Poll every 3s if any run is live (RUNNING or PENDING)
+      if (!data) return SUITE_RUNS_POLL_IDLE_MS // Initial load: use idle polling
+      // Fast polling when runs are live, idle polling otherwise (to discover new runs)
       const hasLiveRun = data.some((run) => isLiveRunStatus(run.status))
-      return hasLiveRun ? 3000 : false
+      return hasLiveRun ? SUITE_RUNS_POLL_LIVE_MS : SUITE_RUNS_POLL_IDLE_MS
     },
   })
 }
@@ -1248,12 +1257,13 @@ export function useTestHealth(params: TestHealthParams = {}) {
     queryKey: [...consoleKeys.all, 'test-health', params] as const,
     queryFn: () => apiGet<TestHealthResponse>(`/api/test-health${queryString}`),
     refetchOnWindowFocus: true,
-    // Poll every 5s if any test is live (has pending/running result)
+    refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
+    // Two-tier polling: fast when tests are live, idle otherwise (to discover new runs)
     refetchInterval: (query) => {
       const data = query.state.data
-      if (!data) return false
+      if (!data) return TEST_HEALTH_POLL_IDLE_MS // Initial load: use idle polling
       const hasLiveTest = data.tests.some((test) => test.is_live)
-      return hasLiveTest ? 5000 : false
+      return hasLiveTest ? TEST_HEALTH_POLL_LIVE_MS : TEST_HEALTH_POLL_IDLE_MS
     },
   })
 }
