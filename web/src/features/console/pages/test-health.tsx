@@ -1,11 +1,11 @@
 import { Play } from 'lucide-react';
 import { Sparkline } from '../components/sparkline';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { EmptyState, Card } from '../components/ui';
 import { FilterBar, SearchInput } from '../components/filter-bar';
 import { getPluginIcon } from '../plugins';
-import { useTestHealth, useProjects } from '../hooks/use-console-queries';
+import { useTestHealth, useProjects, useProjectEnvironments } from '../hooks/use-console-queries';
 import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { formatRelativeTime, formatFutureRelativeTime } from '../lib/format';
 
@@ -42,13 +42,33 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
     return undefined;
   }, [selectedProjectIds, projects]);
 
-  // Get environment filter
-  const { selectedEnvironmentId } = useConsoleEnvironmentFilter(projectIdForEnvs || '');
+  // Get environment filter and fetch project environments for validation
+  const { selectedEnvironmentId, clearSelectedEnvironmentId } = useConsoleEnvironmentFilter(projectIdForEnvs || '');
+  const { data: projectEnvironments = [] } = useProjectEnvironments(projectIdForEnvs || '');
+
+  // Validate selectedEnvironmentId against actual project environments
+  // This prevents stale/invalid environment IDs from being sent to the API
+  const effectiveEnvironmentId = useMemo(() => {
+    if (!selectedEnvironmentId) return undefined;
+    if (projectEnvironments.length === 0) return undefined; // Still loading
+    const envExists = projectEnvironments.some(e => e.id === selectedEnvironmentId);
+    return envExists ? selectedEnvironmentId : undefined;
+  }, [selectedEnvironmentId, projectEnvironments]);
+
+  // Clear stale environment selection if it doesn't exist in current project
+  useEffect(() => {
+    if (selectedEnvironmentId && projectEnvironments.length > 0) {
+      const envExists = projectEnvironments.some(e => e.id === selectedEnvironmentId);
+      if (!envExists) {
+        clearSelectedEnvironmentId();
+      }
+    }
+  }, [selectedEnvironmentId, projectEnvironments, clearSelectedEnvironmentId]);
 
   // Fetch test health data from API
   const { data, isLoading, error } = useTestHealth({
     projectIds: selectedProjectIds.length > 0 ? selectedProjectIds : undefined,
-    environmentId: selectedEnvironmentId || undefined,
+    environmentId: effectiveEnvironmentId,
     plugins: selectedPlugins.length > 0 ? selectedPlugins : undefined,
     search: searchQuery || undefined,
     suiteIds: undefined, // We filter by suite name in the UI, not IDs

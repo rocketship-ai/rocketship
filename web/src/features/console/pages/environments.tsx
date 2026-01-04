@@ -1,4 +1,4 @@
-import { Plus, Settings, Loader2, Key, Users, Crown, Search, X, ChevronDown, Mail, Clock } from 'lucide-react';
+import { Plus, Settings, Loader2, Key, Users, User, Search, X, ChevronDown, Mail, Clock } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -37,6 +37,7 @@ import { CITokenRevealModal } from '../components/ci-token-reveal-modal';
 import { CITokensTable } from '../components/ci-tokens-table';
 import { ConfirmDialog } from '../components/confirm-dialog';
 import { InviteMemberModal, type InviteMemberFormData } from '../components/invite-member-modal';
+import { InfoLabel } from '../components/info-label';
 import { Button } from '../components/ui';
 import { apiGet } from '@/lib/api';
 
@@ -572,267 +573,284 @@ export function Environments() {
         </div>
 
         {/* Access Control Section */}
-        <div className="space-y-6">
-          {/* Organization Owners */}
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm">
-            <div className="flex items-center gap-2 p-4 border-b border-[#e5e5e5]">
-              <Crown className="w-5 h-5 text-amber-500" />
-              <h3>Organization Owners</h3>
-            </div>
-            <div className="p-4">
-              {ownersLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-                  <span className="ml-2 text-sm text-[#666666]">Loading owners...</span>
+        <div className="space-y-4">
+          <h2>Access Control</h2>
+          <InfoLabel>
+            Org owners automatically have Write access to all projects. Project members can be granted Read or Write access.
+          </InfoLabel>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Organization Owners - Left column */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm h-full">
+                <div className="flex items-center gap-2 p-4 border-b border-[#e5e5e5]">
+                  <User className="w-5 h-5 text-[#666666]" />
+                  <h3>Organization Owners</h3>
                 </div>
-              ) : orgOwners.length === 0 ? (
-                <p className="text-sm text-[#666666] text-center py-4">No owners found.</p>
-              ) : (
-                <div className="space-y-2">
-                  {orgOwners.map((owner) => (
-                    <div
-                      key={owner.user_id}
-                      className="flex items-center justify-between py-2 px-3 bg-[#fafafa] rounded-md"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                          <span className="text-amber-700 text-sm font-medium">
-                            {(owner.name || owner.username || owner.email)[0].toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{owner.name || owner.username}</p>
-                          <p className="text-xs text-[#666666]">{owner.email}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                        Owner
-                      </span>
+                <div className="p-4">
+                  {ownersLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                      <span className="ml-2 text-sm text-[#666666]">Loading owners...</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Project Members */}
-          <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm">
-            <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#666666]" />
-                <h3>Project Members</h3>
-              </div>
-              {canInvite && (
-                <Button
-                  onClick={() => setShowInviteModal(true)}
-                  disabled={projects.length === 0}
-                  leftIcon={<Mail className="w-4 h-4" />}
-                >
-                  Invite Member
-                </Button>
-              )}
-            </div>
-
-            {/* Pending Invites - visible to anyone who can invite */}
-            {canInvite && invitesError ? (
-              <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
-                <div className="flex items-center gap-2">
-                  <X className="w-4 h-4 text-red-600" />
-                  <span className="text-sm text-red-700">
-                    Failed to load invites: {invitesError instanceof Error ? invitesError.message : 'Unknown error'}
-                  </span>
-                </div>
-              </div>
-            ) : canInvite && invitesLoading ? (
-              <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-                  <span className="text-sm text-amber-700">Loading pending invites...</span>
-                </div>
-              </div>
-            ) : canInvite && pendingInvites.length > 0 ? (
-              <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm font-medium text-amber-700">
-                    {pendingInvites.length} Pending Invite{pendingInvites.length > 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-md border border-amber-200"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{invite.email}</p>
-                        <p className="text-xs text-[#666666]">
-                          Invited by {invite.inviter_name} · Expires{' '}
-                          {new Date(invite.expires_at).toLocaleDateString()}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {invite.projects.map((p) => (
-                            <span
-                              key={p.project_id}
-                              className={`text-xs px-2 py-0.5 rounded-full ${
-                                p.role === 'write'
-                                  ? 'bg-green-50 text-green-700'
-                                  : 'bg-blue-50 text-blue-700'
-                              }`}
-                            >
-                              {p.project_name} ({p.role})
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setRevokeInviteConfirm(invite.id)}
-                        className="text-xs text-red-600 hover:text-red-700 hover:underline"
-                      >
-                        Revoke
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {/* Search */}
-            <div className="p-4 border-b border-[#e5e5e5]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999999]" />
-                <input
-                  type="text"
-                  value={memberSearchTerm}
-                  onChange={(e) => setMemberSearchTerm(e.target.value)}
-                  placeholder="Search by username, email, or project..."
-                  className="w-full pl-10 pr-4 py-2 text-sm border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-                />
-                {memberSearchTerm && (
-                  <button
-                    onClick={() => setMemberSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#666666]"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Error banner for aggregated member query failures */}
-            {aggregatedMembersErrors > 0 && (
-              <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
-                <div className="flex items-center gap-2">
-                  <X className="w-4 h-4 text-red-600" />
-                  <span className="text-sm text-red-700">
-                    Failed to load members for {aggregatedMembersErrors} project{aggregatedMembersErrors > 1 ? 's' : ''}.
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Members Table */}
-            <div className="overflow-x-auto">
-              {membersLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
-                  <span className="ml-2 text-sm text-[#666666]">Loading members...</span>
-                </div>
-              ) : filteredMembers.length === 0 ? (
-                <p className="text-sm text-[#666666] text-center py-8">
-                  {memberSearchTerm ? 'No members match your search.' : 'No project members yet.'}
-                </p>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-xs text-[#666666] border-b border-[#e5e5e5]">
-                      <th className="text-left py-3 px-4 font-medium">User</th>
-                      <th className="text-left py-3 px-4 font-medium">Project</th>
-                      <th className="text-left py-3 px-4 font-medium">Role</th>
-                      {isOrgOwner && (
-                        <th className="text-right py-3 px-4 font-medium">Actions</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMembers.map((member) => (
-                      <tr
-                        key={`${member.project_id}-${member.user_id}`}
-                        className="border-b border-[#e5e5e5] last:border-b-0 hover:bg-[#fafafa]"
-                      >
-                        <td className="py-3 px-4">
+                  ) : orgOwners.length === 0 ? (
+                    <p className="text-sm text-[#666666] text-center py-4">No owners found.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {orgOwners.map((owner) => (
+                        <div
+                          key={owner.user_id}
+                          className="flex items-center justify-between py-2 px-3 bg-[#fafafa] rounded-md"
+                        >
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-[#e5e5e5] flex items-center justify-center">
-                              <span className="text-[#666666] text-sm font-medium">
-                                {(member.name || member.username || member.email)[0].toUpperCase()}
-                              </span>
-                            </div>
+                            <img
+                              src={`https://github.com/${owner.username}.png`}
+                              alt={owner.name || owner.username}
+                              className="w-8 h-8 rounded-full border border-[#e5e5e5]"
+                              onError={(e) => {
+                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(owner.name || owner.username || owner.email)}&background=random&size=32`;
+                              }}
+                            />
                             <div>
-                              <p className="text-sm font-medium">{member.name || member.username}</p>
-                              <p className="text-xs text-[#666666]">{member.email}</p>
+                              <p className="text-sm font-medium">{owner.name || owner.username}</p>
+                              <p className="text-xs text-[#666666]">{owner.email}</p>
                             </div>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-sm">{member.project_name}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          {isOrgOwner ? (
-                            <div className="relative inline-block">
-                              <select
-                                value={member.role}
-                                onChange={(e) =>
-                                  handleUpdateRole(
-                                    member.project_id,
-                                    member.user_id,
-                                    e.target.value as 'read' | 'write'
-                                  )
-                                }
-                                disabled={updateRoleMutation.isPending}
-                                className={`appearance-none text-sm px-2 py-1 pr-7 border rounded-md focus:outline-none focus:ring-1 focus:ring-black ${
-                                  member.role === 'write'
-                                    ? 'bg-green-50 border-green-200 text-green-700'
-                                    : 'bg-blue-50 border-blue-200 text-blue-700'
-                                }`}
-                              >
-                                <option value="read">Read</option>
-                                <option value="write">Write</option>
-                              </select>
-                              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[#666666]" />
+                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                            Owner
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Project Members - Right column (wider) */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg border border-[#e5e5e5] shadow-sm h-full">
+                <div className="flex items-center justify-between p-4 border-b border-[#e5e5e5]">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#666666]" />
+                    <h3>Project Members</h3>
+                  </div>
+                  {canInvite && (
+                    <Button
+                      onClick={() => setShowInviteModal(true)}
+                      disabled={projects.length === 0}
+                      leftIcon={<Mail className="w-4 h-4" />}
+                    >
+                      Invite Member
+                    </Button>
+                  )}
+                </div>
+
+                {/* Pending Invites - visible to anyone who can invite */}
+                {canInvite && invitesError ? (
+                  <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
+                    <div className="flex items-center gap-2">
+                      <X className="w-4 h-4 text-red-600" />
+                      <span className="text-sm text-red-700">
+                        Failed to load invites: {invitesError instanceof Error ? invitesError.message : 'Unknown error'}
+                      </span>
+                    </div>
+                  </div>
+                ) : canInvite && invitesLoading ? (
+                  <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
+                      <span className="text-sm text-amber-700">Loading pending invites...</span>
+                    </div>
+                  </div>
+                ) : canInvite && pendingInvites.length > 0 ? (
+                  <div className="p-4 border-b border-[#e5e5e5] bg-amber-50">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-700">
+                        {pendingInvites.length} Pending Invite{pendingInvites.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {pendingInvites.map((invite) => (
+                        <div
+                          key={invite.id}
+                          className="flex items-center justify-between p-3 bg-white rounded-md border border-amber-200"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{invite.email}</p>
+                            <p className="text-xs text-[#666666]">
+                              Invited by {invite.inviter_name} · Expires{' '}
+                              {new Date(invite.expires_at).toLocaleDateString()}
+                            </p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {invite.projects.map((p) => (
+                                <span
+                                  key={p.project_id}
+                                  className={`text-xs px-2 py-0.5 rounded-full ${
+                                    p.role === 'write'
+                                      ? 'bg-green-50 text-green-700'
+                                      : 'bg-blue-50 text-blue-700'
+                                  }`}
+                                >
+                                  {p.project_name} ({p.role})
+                                </span>
+                              ))}
                             </div>
-                          ) : (
-                            <span
-                              className={`text-sm px-2 py-1 rounded-full ${
-                                member.role === 'write'
-                                  ? 'bg-green-50 text-green-700'
-                                  : 'bg-blue-50 text-blue-700'
-                              }`}
-                            >
-                              {member.role === 'write' ? 'Write' : 'Read'}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
+                          </div>
+                          <button
+                            onClick={() => setRevokeInviteConfirm(invite.id)}
+                            className="text-xs text-red-600 hover:text-red-700 hover:underline"
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Search */}
+                <div className="p-4 border-b border-[#e5e5e5]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#999999]" />
+                    <input
+                      type="text"
+                      value={memberSearchTerm}
+                      onChange={(e) => setMemberSearchTerm(e.target.value)}
+                      placeholder="Search by username, email, or project..."
+                      className="w-full pl-10 pr-4 py-2 text-sm border border-[#e5e5e5] rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                    />
+                    {memberSearchTerm && (
+                      <button
+                        onClick={() => setMemberSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#666666]"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Error banner for aggregated member query failures */}
+                {aggregatedMembersErrors > 0 && (
+                  <div className="p-4 border-b border-[#e5e5e5] bg-red-50">
+                    <div className="flex items-center gap-2">
+                      <X className="w-4 h-4 text-red-600" />
+                      <span className="text-sm text-red-700">
+                        Failed to load members for {aggregatedMembersErrors} project{aggregatedMembersErrors > 1 ? 's' : ''}.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Members Table */}
+                <div className="overflow-x-auto">
+                  {membersLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#666666]" />
+                      <span className="ml-2 text-sm text-[#666666]">Loading members...</span>
+                    </div>
+                  ) : filteredMembers.length === 0 ? (
+                    <p className="text-sm text-[#666666] text-center py-8">
+                      {memberSearchTerm ? 'No members match your search.' : 'No project members yet.'}
+                    </p>
+                  ) : (
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-xs text-[#666666] border-b border-[#e5e5e5]">
+                          <th className="text-left py-3 px-4 font-medium">User</th>
+                          <th className="text-left py-3 px-4 font-medium">Project</th>
+                          <th className="text-left py-3 px-4 font-medium">Role</th>
                           {isOrgOwner && (
-                            <button
-                              onClick={() =>
-                                setRemoveMemberConfirm({
-                                  projectId: member.project_id,
-                                  userId: member.user_id,
-                                  username: member.username || member.email,
-                                })
-                              }
-                              className="text-xs text-red-600 hover:text-red-700 hover:underline"
-                            >
-                              Remove
-                            </button>
+                            <th className="text-right py-3 px-4 font-medium">Actions</th>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredMembers.map((member) => (
+                          <tr
+                            key={`${member.project_id}-${member.user_id}`}
+                            className="border-b border-[#e5e5e5] last:border-b-0 hover:bg-[#fafafa]"
+                          >
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={`https://github.com/${member.username}.png`}
+                                  alt={member.name || member.username}
+                                  className="w-8 h-8 rounded-full border border-[#e5e5e5]"
+                                  onError={(e) => {
+                                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name || member.username || member.email)}&background=random&size=32`;
+                                  }}
+                                />
+                                <div>
+                                  <p className="text-sm font-medium">{member.name || member.username}</p>
+                                  <p className="text-xs text-[#666666]">{member.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-sm">{member.project_name}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {isOrgOwner ? (
+                                <div className="relative inline-block">
+                                  <select
+                                    value={member.role}
+                                    onChange={(e) =>
+                                      handleUpdateRole(
+                                        member.project_id,
+                                        member.user_id,
+                                        e.target.value as 'read' | 'write'
+                                      )
+                                    }
+                                    disabled={updateRoleMutation.isPending}
+                                    className={`appearance-none text-sm px-2 py-1 pr-7 border rounded-md focus:outline-none focus:ring-1 focus:ring-black ${
+                                      member.role === 'write'
+                                        ? 'bg-green-50 border-green-200 text-green-700'
+                                        : 'bg-blue-50 border-blue-200 text-blue-700'
+                                    }`}
+                                  >
+                                    <option value="read">Read</option>
+                                    <option value="write">Write</option>
+                                  </select>
+                                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[#666666]" />
+                                </div>
+                              ) : (
+                                <span
+                                  className={`text-sm px-2 py-1 rounded-full ${
+                                    member.role === 'write'
+                                      ? 'bg-green-50 text-green-700'
+                                      : 'bg-blue-50 text-blue-700'
+                                  }`}
+                                >
+                                  {member.role === 'write' ? 'Write' : 'Read'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              {isOrgOwner && (
+                                <button
+                                  onClick={() =>
+                                    setRemoveMemberConfirm({
+                                      projectId: member.project_id,
+                                      userId: member.user_id,
+                                      username: member.username || member.email,
+                                    })
+                                  }
+                                  className="text-xs text-red-600 hover:text-red-700 hover:underline"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

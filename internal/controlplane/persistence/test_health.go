@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -145,16 +146,18 @@ func (s *Store) ListTestHealth(ctx context.Context, orgID, userID uuid.UUID, par
 				tb.*,
 				COALESCE(lr.statuses, ARRAY[]::text[]) as latest_results,
 				lr.last_run_at,
-				COALESCE(lr.total_runs, 0) as total_runs,
 				COALESCE(lr.passed_runs, 0) as passed_runs,
-				COALESCE((ARRAY_LENGTH(lr.statuses, 1) > 0 AND lr.statuses[1] IN ('PENDING', 'RUNNING')), false) as is_live
+				COALESCE(lr.completed_runs, 0) as completed_runs,
+				COALESCE((ARRAY_LENGTH(lr.statuses, 1) > 0 AND lr.statuses[1] = 'RUNNING'), false) as is_live
 			FROM test_base tb
 			LEFT JOIN LATERAL (
 				SELECT
 					array_agg(recent.status ORDER BY recent.created_at DESC) as statuses,
 					MAX(recent.created_at) as last_run_at,
-					COUNT(*)::int as total_runs,
-					COUNT(*) FILTER (WHERE recent.status = 'PASSED')::int as passed_runs
+					COUNT(*) FILTER (WHERE recent.status = 'PASSED')::int as passed_runs,
+					-- Only count completed runs (PASSED + FAILED/CANCELLED/TIMEOUT) for success rate
+					-- Excludes RUNNING and PENDING which haven't finished yet
+					COUNT(*) FILTER (WHERE recent.status IN ('PASSED', 'FAILED', 'CANCELLED', 'TIMEOUT'))::int as completed_runs
 				FROM (
 					SELECT
 						rt.status,
@@ -213,7 +216,7 @@ func (s *Store) ListTestHealth(ctx context.Context, orgID, userID uuid.UUID, par
 			project_id,
 			project_name,
 			COALESCE(array_to_json(latest_results)::text, '[]') as latest_results_json,
-			CASE WHEN total_runs > 0 THEN ROUND((passed_runs::numeric / total_runs) * 100)::int ELSE NULL END as success_percent,
+			CASE WHEN completed_runs > 0 THEN ROUND((passed_runs::numeric / completed_runs) * 100)::int ELSE NULL END as success_percent,
 			last_run_at,
 			next_run_at,
 			is_live
@@ -306,58 +309,56 @@ func (s *Store) ListTestHealth(ctx context.Context, orgID, userID uuid.UUID, par
 	return rows, suiteOptions, nil
 }
 
+// stepSummary represents a single step in step_summaries JSONB
+type stepSummary struct {
+	Plugin string `json:"plugin"`
+}
+
 // parsePluginsFromStepSummaries extracts unique plugin names from step_summaries JSONB
-func parsePluginsFromStepSummaries(json string) []string {
-	// Simple parsing without unmarshalling entire struct
-	// Format: [{"step_index":0,"plugin":"http","name":"..."},...]
-	plugins := make(map[string]struct{})
-
-	// Find all "plugin":"..." patterns
-	idx := 0
-	for {
-		start := strings.Index(json[idx:], `"plugin":"`)
-		if start == -1 {
-			break
-		}
-		start += idx + len(`"plugin":"`)
-		end := strings.Index(json[start:], `"`)
-		if end == -1 {
-			break
-		}
-		plugin := json[start : start+end]
-		plugins[plugin] = struct{}{}
-		idx = start + end
+// Preserves first-seen order for stable output.
+func parsePluginsFromStepSummaries(jsonStr string) []string {
+	if jsonStr == "" || jsonStr == "[]" || jsonStr == "null" {
+		return []string{}
 	}
 
-	result := make([]string, 0, len(plugins))
-	for p := range plugins {
-		result = append(result, p)
+	var steps []stepSummary
+	if err := json.Unmarshal([]byte(jsonStr), &steps); err != nil {
+		return []string{}
 	}
+
+	// Use a map to track uniqueness, slice to preserve order
+	seen := make(map[string]struct{})
+	result := make([]string, 0, len(steps))
+
+	for _, step := range steps {
+		if step.Plugin == "" {
+			continue
+		}
+		if _, exists := seen[step.Plugin]; !exists {
+			seen[step.Plugin] = struct{}{}
+			result = append(result, step.Plugin)
+		}
+	}
+
 	return result
 }
 
 // parseLatestResults parses the JSON array of result statuses
-func parseLatestResults(json string) []string {
+func parseLatestResults(jsonStr string) []string {
 	// Format: ["PASSED","FAILED","RUNNING",...]
 	// Map to lowercase: success, failed, pending, running
-	if json == "" || json == "[]" || json == "null" {
+	if jsonStr == "" || jsonStr == "[]" || jsonStr == "null" {
 		return []string{}
 	}
 
-	// Simple parsing
-	results := make([]string, 0, 20)
-	idx := 0
-	for {
-		start := strings.Index(json[idx:], `"`)
-		if start == -1 {
-			break
-		}
-		start += idx + 1
-		end := strings.Index(json[start:], `"`)
-		if end == -1 {
-			break
-		}
-		status := json[start : start+end]
+	// Use proper JSON parsing to avoid off-by-one bugs
+	var statuses []string
+	if err := json.Unmarshal([]byte(jsonStr), &statuses); err != nil {
+		return []string{}
+	}
+
+	results := make([]string, 0, len(statuses))
+	for _, status := range statuses {
 		// Map to UI status
 		switch strings.ToUpper(status) {
 		case "PASSED":
@@ -371,7 +372,6 @@ func parseLatestResults(json string) []string {
 		default:
 			results = append(results, "pending")
 		}
-		idx = start + end
 	}
 	return results
 }

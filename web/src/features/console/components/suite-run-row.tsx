@@ -68,7 +68,11 @@ export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) 
 
           {/* Run info */}
           <div className="flex-1">
-            <p className="text-sm mb-1 truncate max-w-lg">{title}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm truncate max-w-lg">{title}</p>
+              {run.environment && <EnvBadge env={run.environment} />}
+              <TriggerBadge trigger={run.initiator_type} />
+            </div>
             <div className="flex items-center gap-3 flex-wrap">
               <BranchDisplay branch={run.branch} />
               {/* For uncommitted runs: show Uncommitted badge, no commit SHA */}
@@ -83,11 +87,11 @@ export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) 
                   </span>
                 )
               )}
-              <BadgeDot />
-              {run.environment && <EnvBadge env={run.environment} />}
-              <TriggerBadge trigger={run.initiator_type} />
               {run.initiator_type === 'manual' && run.initiator_name && (
-                <UsernameBadge username={run.initiator_name} />
+                <>
+                  <BadgeDot />
+                  <UsernameBadge username={run.initiator_name} />
+                </>
               )}
             </div>
           </div>

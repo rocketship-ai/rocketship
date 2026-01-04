@@ -160,7 +160,15 @@ interface UsernameBadgeProps {
 
 export function UsernameBadge({ username }: UsernameBadgeProps) {
   return (
-    <span className="text-xs text-[#666666]">
+    <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
+      <img
+        src={`https://github.com/${username}.png`}
+        alt={username}
+        className="w-4 h-4 rounded-full"
+        onError={(e) => {
+          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random&size=16`;
+        }}
+      />
       @{username}
     </span>
   );

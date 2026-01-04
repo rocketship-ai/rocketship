@@ -67,18 +67,37 @@ export function Header({
   } = useConsoleEnvironmentFilter(projectIdForEnvs);
 
   // Convert env ID to selected environment name for dropdown
+  // If the environment ID doesn't exist in current project, treat as "All Environments"
   const selectedEnvName = useMemo(() => {
     if (!selectedEnvironmentId || projectEnvironments.length === 0) return [];
     const env = projectEnvironments.find(e => e.id === selectedEnvironmentId);
     return env ? [env.name] : [];
   }, [selectedEnvironmentId, projectEnvironments]);
 
+  // Clear stale environment selection if it doesn't exist in current project
+  // This ensures UI and API requests stay consistent
+  useEffect(() => {
+    if (selectedEnvironmentId && projectEnvironments.length > 0) {
+      const envExists = projectEnvironments.some(e => e.id === selectedEnvironmentId);
+      if (!envExists) {
+        clearSelectedEnvironmentId();
+      }
+    }
+  }, [selectedEnvironmentId, projectEnvironments, clearSelectedEnvironmentId]);
+
   // Notify parent when environment changes (for backward compatibility)
+  // Use effectiveEnvironmentId (validated) rather than raw selectedEnvironmentId
+  const effectiveEnvironmentId = useMemo(() => {
+    if (!selectedEnvironmentId || projectEnvironments.length === 0) return undefined;
+    const envExists = projectEnvironments.some(e => e.id === selectedEnvironmentId);
+    return envExists ? selectedEnvironmentId : undefined;
+  }, [selectedEnvironmentId, projectEnvironments]);
+
   useEffect(() => {
     if (onEnvironmentChange) {
-      onEnvironmentChange(selectedEnvironmentId || undefined);
+      onEnvironmentChange(effectiveEnvironmentId);
     }
-  }, [selectedEnvironmentId, onEnvironmentChange]);
+  }, [effectiveEnvironmentId, onEnvironmentChange]);
 
   // Pages that should show filters - but not if we're in a detail view
   // All list pages including environments use the global multi-select project filter

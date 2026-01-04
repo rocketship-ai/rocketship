@@ -89,11 +89,18 @@ func main() {
 
 	// Start the scheduler if we have a database store that supports scheduling
 	var scheduler *orchestrator.Scheduler
+	var reconciler *orchestrator.Reconciler
 	if schedulerStore, ok := runStore.(orchestrator.SchedulerStore); ok {
 		schedLogger := slog.Default().With("component", "scheduler")
 		scheduler = orchestrator.NewScheduler(engine, schedulerStore, schedLogger)
 		scheduler.Start()
 		logger.Info("scheduler started")
+
+		// Start the reconciler to clean up stale runs (runs stuck in RUNNING status)
+		reconcileLogger := slog.Default().With("component", "reconciler")
+		reconciler = orchestrator.NewReconciler(engine, reconcileLogger)
+		reconciler.Start()
+		logger.Info("reconciler started")
 	} else {
 		logger.Debug("scheduler disabled (no database store)")
 	}
@@ -104,6 +111,9 @@ func main() {
 	go func() {
 		sig := <-sigCh
 		logger.Info("received shutdown signal", "signal", sig)
+		if reconciler != nil {
+			reconciler.Stop()
+		}
 		if scheduler != nil {
 			scheduler.Stop()
 		}

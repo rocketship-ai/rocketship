@@ -244,3 +244,171 @@ func (s *Store) ListRunsByProject(ctx context.Context, projectID uuid.UUID, limi
 	}
 	return runs, nil
 }
+
+// UpdateRunStatusByID updates a run's status directly by run_id, without requiring org_id.
+// This is used for DB-only completion checks when in-memory state is not available.
+func (s *Store) UpdateRunStatusByID(ctx context.Context, runID string, status string, endedAt time.Time, totals *RunTotals) error {
+	if runID == "" {
+		return errors.New("run id required")
+	}
+	if status == "" {
+		return errors.New("status required")
+	}
+
+	var query string
+	var args []interface{}
+
+	if totals != nil {
+		query = `
+            UPDATE runs
+            SET status = $2, ended_at = $3,
+                total_tests = $4, passed_tests = $5, failed_tests = $6, timeout_tests = $7,
+                updated_at = NOW()
+            WHERE id = $1
+        `
+		args = []interface{}{runID, status, endedAt, totals.Total, totals.Passed, totals.Failed, totals.Timeout}
+	} else {
+		query = `
+            UPDATE runs
+            SET status = $2, ended_at = $3, updated_at = NOW()
+            WHERE id = $1
+        `
+		args = []interface{}{runID, status, endedAt}
+	}
+
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to update run status: %w", err)
+	}
+
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// ListStaleRunningRuns returns runs that are stuck in RUNNING status and are older than the specified time.
+// This is used for reconciliation to clean up stale runs after engine restarts.
+func (s *Store) ListStaleRunningRuns(ctx context.Context, olderThan time.Time, limit int) ([]RunRecord, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	const query = `
+        SELECT id, organization_id, project_id, status, suite_name, initiator, trigger, schedule_name, schedule_type,
+               config_source, source, branch, environment, commit_sha, bundle_sha,
+               total_tests, passed_tests, failed_tests, timeout_tests, skipped_tests,
+               environment_id, schedule_id, commit_message,
+               created_at, updated_at, started_at, ended_at
+        FROM runs
+        WHERE status = 'RUNNING'
+          AND created_at < $1
+        ORDER BY created_at ASC
+        LIMIT $2
+    `
+	var runs []RunRecord
+	if err := s.db.SelectContext(ctx, &runs, query, olderThan, limit); err != nil {
+		return nil, fmt.Errorf("failed to list stale running runs: %w", err)
+	}
+	if runs == nil {
+		runs = []RunRecord{}
+	}
+	return runs, nil
+}
+
+// ForceCompleteStaleRunTests marks all PENDING/RUNNING run_tests for a run as complete.
+// This is used during reconciliation when the parent run is being marked as complete.
+// If status is "PASSED", only PENDING/RUNNING tests are marked as PASSED.
+// If status is "FAILED", all non-terminal tests are marked as FAILED.
+func (s *Store) ForceCompleteStaleRunTests(ctx context.Context, runID string, status string) error {
+	if runID == "" {
+		return errors.New("run id required")
+	}
+	if status == "" {
+		return errors.New("status required")
+	}
+
+	const query = `
+        UPDATE run_tests
+        SET status = $2, ended_at = NOW()
+        WHERE run_id = $1 AND status IN ('PENDING', 'RUNNING')
+    `
+
+	if _, err := s.db.ExecContext(ctx, query, runID, status); err != nil {
+		return fmt.Errorf("failed to force complete stale run_tests: %w", err)
+	}
+
+	return nil
+}
+
+// StaleRunTest represents a run_test that is stuck in PENDING/RUNNING status
+type StaleRunTest struct {
+	ID         uuid.UUID `db:"id"`
+	RunID      string    `db:"run_id"`
+	WorkflowID string    `db:"workflow_id"`
+	Name       string    `db:"name"`
+	Status     string    `db:"status"`
+	CreatedAt  time.Time `db:"created_at"`
+}
+
+// ListStaleRunTests returns run_tests that are stuck in PENDING/RUNNING status
+// and are older than the specified time. This is used for Temporal-based reconciliation.
+func (s *Store) ListStaleRunTests(ctx context.Context, olderThan time.Time, limit int) ([]StaleRunTest, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	const query = `
+        SELECT id, run_id, workflow_id, name, status, created_at
+        FROM run_tests
+        WHERE status IN ('PENDING', 'RUNNING')
+          AND created_at < $1
+          AND workflow_id IS NOT NULL
+          AND workflow_id != ''
+        ORDER BY created_at ASC
+        LIMIT $2
+    `
+	var tests []StaleRunTest
+	if err := s.db.SelectContext(ctx, &tests, query, olderThan, limit); err != nil {
+		return nil, fmt.Errorf("failed to list stale run_tests: %w", err)
+	}
+	if tests == nil {
+		tests = []StaleRunTest{}
+	}
+	return tests, nil
+}
+
+// UpdateRunTestStatus updates a run_test's status and ended_at by ID.
+// This is used for reconciliation when updating based on Temporal status.
+func (s *Store) UpdateRunTestStatus(ctx context.Context, id uuid.UUID, status string, endedAt time.Time) error {
+	if id == uuid.Nil {
+		return errors.New("run test id required")
+	}
+	if status == "" {
+		return errors.New("status required")
+	}
+
+	const query = `
+        UPDATE run_tests
+        SET status = $2, ended_at = $3
+        WHERE id = $1
+    `
+
+	res, err := s.db.ExecContext(ctx, query, id, status, endedAt)
+	if err != nil {
+		return fmt.Errorf("failed to update run_test status: %w", err)
+	}
+
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
