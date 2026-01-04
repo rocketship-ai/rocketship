@@ -913,6 +913,10 @@ func (f *fakeStore) UserHasProjectWriteAccess(_ context.Context, _, _, _ uuid.UU
 	return true, nil
 }
 
+func (f *fakeStore) ListTestHealth(_ context.Context, _, _ uuid.UUID, _ persistence.TestHealthParams) ([]persistence.TestHealthRow, []persistence.TestHealthSuiteOption, error) {
+	return []persistence.TestHealthRow{}, []persistence.TestHealthSuiteOption{}, nil
+}
+
 func TestServerDeviceFlowAndRefresh(t *testing.T) {
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

@@ -80,6 +80,28 @@ export function formatRelativeTime(dateStr?: string): string {
   return date.toLocaleDateString();
 }
 
+/** Format ISO date string to future-relative time (e.g., "in 2h", "in 3d") */
+export function formatFutureRelativeTime(dateStr?: string | null): string {
+  if (!dateStr) return '—';
+
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+
+  // If date is in the past, return "—" or use formatRelativeTime
+  if (diffMs <= 0) return '—';
+
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'in <1m';
+  if (diffMins < 60) return `in ${diffMins}m`;
+  if (diffHours < 24) return `in ${diffHours}h`;
+  if (diffDays < 7) return `in ${diffDays}d`;
+  return date.toLocaleDateString();
+}
+
 // =============================================================================
 // HTTP Status Formatting
 // =============================================================================

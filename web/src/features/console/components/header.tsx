@@ -14,6 +14,7 @@ interface HeaderProps {
   isDetailView?: boolean;
   detailViewType?: 'suite' | 'test' | 'suite-run' | 'test-run' | 'project' | null;
   suiteId?: string; // For suite detail view to fetch project environments
+  projectIdForEnvs?: string; // Explicit project ID for env filter (used by test-health)
   primaryAction?: {
     label: string;
     onClick: () => void;
@@ -28,6 +29,7 @@ export function Header({
   isDetailView = false,
   detailViewType,
   suiteId,
+  projectIdForEnvs: explicitProjectIdForEnvs,
   primaryAction,
   onEnvironmentChange,
 }: HeaderProps) {
@@ -41,8 +43,20 @@ export function Header({
   const { data: projects = [] } = useProjects();
 
   // For suite detail view: fetch suite to get project ID, then fetch environments
+  // If explicitProjectIdForEnvs is provided (from test-health), use that instead
   const { data: suite } = useSuite(suiteId || '');
-  const projectIdForEnvs = suite?.project?.id || '';
+
+  // Compute projectIdForEnvs with fallback for pages without explicit project context
+  // Priority: explicit prop > suite's project > first selected project > first accessible project
+  const projectIdForEnvs = useMemo(() => {
+    if (explicitProjectIdForEnvs) return explicitProjectIdForEnvs;
+    if (suite?.project?.id) return suite.project.id;
+    // For test-health and overview pages, fall back to first selected or first project
+    if (selectedProjectIds.length > 0) return selectedProjectIds[0];
+    if (projects.length > 0) return projects[0].id;
+    return '';
+  }, [explicitProjectIdForEnvs, suite?.project?.id, selectedProjectIds, projects]);
+
   const { data: projectEnvironments = [] } = useProjectEnvironments(projectIdForEnvs);
 
   // Local environment selection for suite's project (sticky per project via localStorage)

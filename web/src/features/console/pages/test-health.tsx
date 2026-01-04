@@ -1,11 +1,16 @@
 import { Play } from 'lucide-react';
 import { Sparkline } from '../components/sparkline';
 import { MultiSelectDropdown } from '../components/multi-select-dropdown';
-import { useState } from 'react';
-import { tests, suites, availablePlugins, getSuiteById } from '../data/mock-data';
+import { useState, useMemo } from 'react';
 import { EmptyState, Card } from '../components/ui';
 import { FilterBar, SearchInput } from '../components/filter-bar';
 import { getPluginIcon } from '../plugins';
+import { useTestHealth, useProjects } from '../hooks/use-console-queries';
+import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
+import { formatRelativeTime, formatFutureRelativeTime } from '../lib/format';
+
+// Available plugins for filter dropdown
+const availablePlugins = ['http', 'playwright', 'supabase', 'agent', 'sql', 'script', 'delay', 'log', 'browser_use'];
 
 interface TestHealthProps {
   onSelectTest: (testId: string) => void;
@@ -19,30 +24,86 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
   const [showPluginDropdown, setShowPluginDropdown] = useState(false);
   const [showSuiteDropdown, setShowSuiteDropdown] = useState(false);
 
-  const allPlugins = availablePlugins;
-  const allSuites = suites.map(s => s.name);
+  // Get the global project filter from localStorage
+  const { selectedProjectIds } = useConsoleProjectFilter();
 
-  const filteredTests = tests.filter((test) => {
-    if (searchQuery && !test.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
+  // Get projects for determining projectIdForEnvs
+  const { data: projects = [] } = useProjects();
+
+  // Determine the project ID for environment filtering
+  // Use first selected project, or first accessible project
+  const projectIdForEnvs = useMemo(() => {
+    if (selectedProjectIds.length > 0) {
+      return selectedProjectIds[0];
     }
-    if (selectedPlugins.length > 0 && !selectedPlugins.some(plugin => test.plugins.includes(plugin))) {
-      return false;
+    if (projects.length > 0) {
+      return projects[0].id;
     }
-    if (selectedSuites.length > 0) {
-      const suite = getSuiteById(test.suiteId);
-      if (!suite || !selectedSuites.includes(suite.name)) {
-        return false;
-      }
-    }
-    return true;
+    return undefined;
+  }, [selectedProjectIds, projects]);
+
+  // Get environment filter
+  const { selectedEnvironmentId } = useConsoleEnvironmentFilter(projectIdForEnvs || '');
+
+  // Fetch test health data from API
+  const { data, isLoading, error } = useTestHealth({
+    projectIds: selectedProjectIds.length > 0 ? selectedProjectIds : undefined,
+    environmentId: selectedEnvironmentId || undefined,
+    plugins: selectedPlugins.length > 0 ? selectedPlugins : undefined,
+    search: searchQuery || undefined,
+    suiteIds: undefined, // We filter by suite name in the UI, not IDs
   });
+
+  // Get available suites from API response
+  const allSuites = useMemo(() => {
+    if (!data?.suites) return [];
+    return data.suites.map(s => s.name);
+  }, [data?.suites]);
+
+  // Filter tests by selected suites (client-side since we have the data)
+  const filteredTests = useMemo(() => {
+    if (!data?.tests) return [];
+    if (selectedSuites.length === 0) return data.tests;
+    return data.tests.filter(test => selectedSuites.includes(test.suite_name));
+  }, [data?.tests, selectedSuites]);
 
   const handleClearFilters = () => {
     setSelectedPlugins([]);
     setSelectedSuites([]);
     setSearchQuery('');
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-[1600px] mx-auto">
+          <p className="text-sm text-[#666666] mb-6">Loading test health data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-[1600px] mx-auto">
+          <EmptyState
+            title="Failed to load test health data"
+            action={
+              <button
+                onClick={() => window.location.reload()}
+                className="text-sm text-black hover:underline"
+              >
+                Retry
+              </button>
+            }
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -61,7 +122,7 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
 
           <MultiSelectDropdown
             label="Plugins"
-            items={allPlugins}
+            items={availablePlugins}
             selectedItems={selectedPlugins}
             onSelectionChange={setSelectedPlugins}
             isOpen={showPluginDropdown}
@@ -122,9 +183,6 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
               </thead>
               <tbody className="divide-y divide-[#e5e5e5]">
                 {filteredTests.map((test) => {
-                  const suite = getSuiteById(test.suiteId);
-                  const suiteName = suite?.name || 'Unknown';
-
                   return (
                     <tr
                       key={test.id}
@@ -152,25 +210,29 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (onSelectSuite) {
-                              onSelectSuite(test.suiteId);
+                              onSelectSuite(test.suite_id);
                             }
                           }}
                           className="text-sm text-black hover:underline truncate block text-left w-full"
                         >
-                          {suiteName}
+                          {test.suite_name}
                         </button>
                       </td>
                       <td className="px-6 h-14 align-middle">
-                        <Sparkline results={test.recentResults} size="lg" shape="pill" />
+                        <Sparkline results={test.recent_results} size="lg" shape="pill" />
                       </td>
                       <td className="px-6 h-14 align-middle">
-                        <span className="text-sm">{test.successRate}</span>
+                        <span className="text-sm">{test.success_rate || '—'}</span>
                       </td>
                       <td className="px-6 h-14 align-middle">
-                        <span className="text-sm text-[#666666]">{test.lastScheduledRun}</span>
+                        <span className="text-sm text-[#666666]">
+                          {formatRelativeTime(test.last_run_at || undefined)}
+                        </span>
                       </td>
                       <td className="px-6 h-14 align-middle">
-                        <span className="text-sm text-[#666666]">{test.nextRun}</span>
+                        <span className="text-sm text-[#666666]">
+                          {formatFutureRelativeTime(test.next_run_at)}
+                        </span>
                       </td>
                       <td className="px-6 h-14 align-middle text-center">
                         <button
@@ -192,18 +254,36 @@ export function TestHealth({ onSelectTest, onSelectSuite }: TestHealthProps) {
           </Card>
         ) : (
           <EmptyState
-            title="No tests found matching your filters"
+            title={data?.tests?.length === 0 ? "No scheduled tests found" : "No tests found matching your filters"}
             action={
-              <button
-                onClick={handleClearFilters}
-                className="text-sm text-black hover:underline"
-              >
-                Clear filters
-              </button>
+              selectedPlugins.length > 0 || selectedSuites.length > 0 || searchQuery ? (
+                <button
+                  onClick={handleClearFilters}
+                  className="text-sm text-black hover:underline"
+                >
+                  Clear filters
+                </button>
+              ) : undefined
             }
           />
         )}
       </div>
     </div>
   );
+}
+
+// Export a helper to get projectIdForEnvs for the Header component
+export function useTestHealthProjectIdForEnvs(): string | undefined {
+  const { selectedProjectIds } = useConsoleProjectFilter();
+  const { data: projects = [] } = useProjects();
+
+  return useMemo(() => {
+    if (selectedProjectIds.length > 0) {
+      return selectedProjectIds[0];
+    }
+    if (projects.length > 0) {
+      return projects[0].id;
+    }
+    return undefined;
+  }, [selectedProjectIds, projects]);
 }

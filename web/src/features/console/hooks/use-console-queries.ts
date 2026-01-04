@@ -1180,3 +1180,80 @@ export function useDeleteSuiteSchedule() {
     },
   })
 }
+
+// ============================================
+// Test Health Types and Hooks
+// ============================================
+
+export interface TestHealthItem {
+  id: string
+  name: string
+  step_count: number
+  plugins: string[]
+  suite_id: string
+  suite_name: string
+  project_id: string
+  project_name: string
+  recent_results: ('success' | 'failed' | 'pending' | 'running')[]
+  success_rate: string | null
+  last_run_at: string | null
+  next_run_at: string | null
+  is_live: boolean
+}
+
+export interface TestHealthSuiteOption {
+  id: string
+  name: string
+}
+
+export interface TestHealthResponse {
+  tests: TestHealthItem[]
+  suites: TestHealthSuiteOption[]
+}
+
+export interface TestHealthParams {
+  projectIds?: string[]
+  environmentId?: string
+  suiteIds?: string[]
+  plugins?: string[]
+  search?: string
+  limit?: number
+}
+
+export function useTestHealth(params: TestHealthParams = {}) {
+  // Build query string
+  const queryParts: string[] = []
+  if (params.projectIds && params.projectIds.length > 0) {
+    queryParts.push(`project_ids=${params.projectIds.join(',')}`)
+  }
+  if (params.environmentId) {
+    queryParts.push(`environment_id=${params.environmentId}`)
+  }
+  if (params.suiteIds && params.suiteIds.length > 0) {
+    queryParts.push(`suite_ids=${params.suiteIds.join(',')}`)
+  }
+  if (params.plugins && params.plugins.length > 0) {
+    queryParts.push(`plugins=${params.plugins.join(',')}`)
+  }
+  if (params.search) {
+    queryParts.push(`search=${encodeURIComponent(params.search)}`)
+  }
+  if (params.limit) {
+    queryParts.push(`limit=${params.limit}`)
+  }
+
+  const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
+
+  return useQuery({
+    queryKey: [...consoleKeys.all, 'test-health', params] as const,
+    queryFn: () => apiGet<TestHealthResponse>(`/api/test-health${queryString}`),
+    refetchOnWindowFocus: true,
+    // Poll every 5s if any test is live (has pending/running result)
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      const hasLiveTest = data.tests.some((test) => test.is_live)
+      return hasLiveTest ? 5000 : false
+    },
+  })
+}
