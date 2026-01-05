@@ -612,7 +612,7 @@ export function useOverviewSetup() {
 
 // Polling intervals for overview metrics
 const OVERVIEW_POLL_LIVE_MS = 5000   // 5s when runs are in progress
-const OVERVIEW_POLL_IDLE_MS = 30000  // 30s when idle
+const OVERVIEW_POLL_IDLE_MS = 15000  // 15s when idle (frequent enough to discover new runs promptly)
 
 export interface OverviewMetricsParams {
   projectIds?: string[]
@@ -639,6 +639,10 @@ export function useOverviewMetrics(params: OverviewMetricsParams = {}) {
       const url = `/api/overview/metrics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
       return await apiGet<OverviewMetricsResponse>(url)
     },
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false, // Don't poll when browser tab is backgrounded
+    // Keep previous data while fetching (prevents UI flicker during refetch)
+    placeholderData: (previousData) => previousData,
     refetchInterval: (query) => {
       // Two-tier polling: faster when runs are in progress
       const data = query.state.data

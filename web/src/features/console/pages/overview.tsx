@@ -36,7 +36,7 @@ export function Overview({ onNavigate }: OverviewProps) {
   const sortedProjectIds = useMemo(() => [...selectedProjectIds].sort(), [selectedProjectIds]);
 
   // Overview metrics from API (respects project and environment filters)
-  const { data: metricsData } = useOverviewMetrics({
+  const { data: metricsData, isFetching: metricsRefetching } = useOverviewMetrics({
     projectIds: sortedProjectIds.length > 0 ? sortedProjectIds : undefined,
     environmentId: effectiveEnvironmentId,
     days: 7,
@@ -304,6 +304,13 @@ export function Overview({ onNavigate }: OverviewProps) {
         ) : null}
 
         {/* "Now" Row - 5 Tiles */}
+        {/* Subtle updating indicator - only show during refetch when we already have data */}
+        {metricsRefetching && metricsData && (
+          <div className="flex items-center justify-end gap-1.5 mb-2 text-[#999999]">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span className="text-xs">Updating...</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {nowMetrics.map((metric, idx) => (
             <div
