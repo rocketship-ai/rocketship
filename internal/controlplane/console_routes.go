@@ -3,6 +3,7 @@ package controlplane
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -615,4 +616,92 @@ func (s *Server) handleConsoleSuiteRoutesDispatch(w http.ResponseWriter, r *http
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}
+}
+
+// handleOverviewMetrics handles GET /api/overview/metrics
+// Returns aggregated metrics for the overview dashboard
+func (s *Server) handleOverviewMetrics(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	// Parse query params
+	query := r.URL.Query()
+
+	// Parse project_ids (comma-separated)
+	var projectIDs []uuid.UUID
+	if projectIDsStr := query.Get("project_ids"); projectIDsStr != "" {
+		for _, idStr := range strings.Split(projectIDsStr, ",") {
+			idStr = strings.TrimSpace(idStr)
+			if idStr == "" {
+				continue
+			}
+			id, err := uuid.Parse(idStr)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "invalid project_ids")
+				return
+			}
+			projectIDs = append(projectIDs, id)
+		}
+	}
+
+	// Parse environment_id (single UUID, optional)
+	var environmentID *uuid.UUID
+	if envIDStr := query.Get("environment_id"); envIDStr != "" {
+		id, err := uuid.Parse(envIDStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid environment_id")
+			return
+		}
+		environmentID = &id
+	}
+
+	// Parse days (default 7, cap 30)
+	days := 7
+	if daysStr := query.Get("days"); daysStr != "" {
+		var d int
+		if _, err := stringToInt(daysStr, &d); err == nil && d > 0 {
+			days = d
+		}
+	}
+
+	// Get metrics from store
+	metrics, err := s.store.GetOverviewMetrics(r.Context(), principal.OrgID, principal.UserID, projectIDs, environmentID, days)
+	if err != nil {
+		log.Printf("failed to get overview metrics: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get metrics")
+		return
+	}
+
+	// Build response
+	response := map[string]interface{}{
+		"now": map[string]interface{}{
+			"failing_monitors":      metrics.FailingMonitors,
+			"failing_tests_24h":     metrics.FailingTests24h,
+			"runs_in_progress":      metrics.RunsInProgress,
+			"pass_rate_24h":         metrics.PassRate24h,
+			"median_duration_ms_24h": metrics.MedianDurationMs24h,
+		},
+		"pass_rate_over_time":    metrics.PassRateOverTime,
+		"failures_by_suite_24h": metrics.FailuresBySuite24h,
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+// stringToInt parses a string to int and writes to the target
+func stringToInt(s string, target *int) (int, error) {
+	var n int
+	_, err := fmt.Sscanf(s, "%d", &n)
+	if err != nil {
+		return 0, err
+	}
+	*target = n
+	return n, nil
 }

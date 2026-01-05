@@ -122,6 +122,9 @@ type dataStore interface {
 	CountEnabledSchedulesForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 	CountActiveCITokensForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 
+	// Overview dashboard metrics
+	GetOverviewMetrics(ctx context.Context, orgID, userID uuid.UUID, projectIDs []uuid.UUID, environmentID *uuid.UUID, days int) (persistence.OverviewMetrics, error)
+
 	// Console hydration queries
 	ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.ProjectSummary, error)
 	ListProjectSummariesForUser(ctx context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectSummary, error)

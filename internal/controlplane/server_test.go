@@ -530,6 +530,13 @@ func (f *fakeStore) CountActiveCITokensForOrg(_ context.Context, _ uuid.UUID) (i
 	return 0, nil
 }
 
+func (f *fakeStore) GetOverviewMetrics(_ context.Context, _, _ uuid.UUID, _ []uuid.UUID, _ *uuid.UUID, _ int) (persistence.OverviewMetrics, error) {
+	return persistence.OverviewMetrics{
+		PassRateOverTime:   []persistence.PassRateDataPoint{},
+		FailuresBySuite24h: []persistence.SuiteFailureData{},
+	}, nil
+}
+
 func (f *fakeStore) ProjectOrganizationID(_ context.Context, projectID uuid.UUID) (uuid.UUID, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

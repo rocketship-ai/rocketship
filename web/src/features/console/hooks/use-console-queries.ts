@@ -323,6 +323,33 @@ export interface SetupData {
   github_install_url?: string
 }
 
+// Overview dashboard metrics types
+export interface OverviewNowMetrics {
+  failing_monitors: number
+  failing_tests_24h: number
+  runs_in_progress: number
+  pass_rate_24h: number | null
+  median_duration_ms_24h: number | null
+}
+
+export interface PassRateDataPoint {
+  date: string // YYYY-MM-DD
+  pass_rate: number // 0-100
+  volume: number
+}
+
+export interface SuiteFailureData {
+  suite: string
+  passes: number
+  failures: number
+}
+
+export interface OverviewMetricsResponse {
+  now: OverviewNowMetrics
+  pass_rate_over_time: PassRateDataPoint[]
+  failures_by_suite_24h: SuiteFailureData[]
+}
+
 export interface GitHubRepo {
   id: number
   name: string
@@ -391,6 +418,8 @@ export const consoleKeys = {
   testRuns: (id: string) => [...consoleKeys.all, 'test', id, 'runs'] as const,
   // Overview / Setup
   overviewSetup: () => [...consoleKeys.all, 'overview', 'setup'] as const,
+  overviewMetrics: (projectIds?: string[], environmentId?: string, days?: number) =>
+    [...consoleKeys.all, 'overview', 'metrics', { projectIds, environmentId, days }] as const,
   githubAppRepos: () => [...consoleKeys.all, 'github', 'repos'] as const,
 }
 
@@ -577,6 +606,44 @@ export function useOverviewSetup() {
         }
         throw error
       }
+    },
+  })
+}
+
+// Polling intervals for overview metrics
+const OVERVIEW_POLL_LIVE_MS = 5000   // 5s when runs are in progress
+const OVERVIEW_POLL_IDLE_MS = 30000  // 30s when idle
+
+export interface OverviewMetricsParams {
+  projectIds?: string[]
+  environmentId?: string
+  days?: number
+}
+
+export function useOverviewMetrics(params: OverviewMetricsParams = {}) {
+  const { projectIds, environmentId, days = 7 } = params
+
+  return useQuery({
+    queryKey: consoleKeys.overviewMetrics(projectIds, environmentId, days),
+    queryFn: async () => {
+      const queryParams = new URLSearchParams()
+      if (projectIds && projectIds.length > 0) {
+        queryParams.set('project_ids', projectIds.join(','))
+      }
+      if (environmentId) {
+        queryParams.set('environment_id', environmentId)
+      }
+      if (days) {
+        queryParams.set('days', days.toString())
+      }
+      const url = `/api/overview/metrics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      return await apiGet<OverviewMetricsResponse>(url)
+    },
+    refetchInterval: (query) => {
+      // Two-tier polling: faster when runs are in progress
+      const data = query.state.data
+      if (!data) return OVERVIEW_POLL_IDLE_MS
+      return data.now.runs_in_progress > 0 ? OVERVIEW_POLL_LIVE_MS : OVERVIEW_POLL_IDLE_MS
     },
   })
 }

@@ -157,6 +157,7 @@ func (s *Server) routes() {
 
 	// Onboarding API
 	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))
+	s.mux.HandleFunc("/api/overview/metrics", s.requireAuth(s.handleOverviewMetrics))
 
 	// CI Token management
 	s.mux.HandleFunc("/api/ci-tokens", s.requireAuth(s.handleCITokensDispatch))
