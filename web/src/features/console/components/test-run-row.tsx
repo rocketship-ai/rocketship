@@ -1,5 +1,5 @@
-import { GitBranch } from 'lucide-react';
-import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, BadgeDot } from './status-badge';
+import { GitBranch, Hash } from 'lucide-react';
+import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge } from './status-badge';
 import { formatDuration, formatRelativeTime } from '../lib/format';
 import { useLiveDurationMs } from '../hooks/use-live-duration';
 
@@ -101,9 +101,10 @@ export function TestRunRow({ run, onClick }: TestRunRowProps) {
         <TriggerBadge trigger={run.trigger} />
       </div>
 
-      {/* Row 3: Branch/username (manual) or duration (non-manual) */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Row 3: Git metadata or duration based on trigger type */}
+      <div className="flex items-center gap-3 flex-wrap">
         {isManual ? (
+          // Manual: branch + @username
           <>
             {run.branch && (
               <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
@@ -112,16 +113,30 @@ export function TestRunRow({ run, onClick }: TestRunRowProps) {
               </span>
             )}
             {run.initiator_name && (
-              <>
-                <BadgeDot />
-                <UsernameBadge username={run.initiator_name} />
-              </>
+              <UsernameBadge username={run.initiator_name} />
             )}
           </>
-        ) : (
+        ) : isSchedule ? (
+          // Schedule: duration (with live ticking)
           <>
             {liveDurationMs !== undefined && (
               <span className="text-xs text-[#666666]">{formatDuration(liveDurationMs)}</span>
+            )}
+          </>
+        ) : (
+          // CI: branch + commit SHA
+          <>
+            {run.branch && (
+              <span className="inline-flex items-center gap-1 text-xs text-[#666666]">
+                <GitBranch className="w-3 h-3" />
+                {run.branch}
+              </span>
+            )}
+            {run.commit_sha && (
+              <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">
+                <Hash className="w-3 h-3" />
+                {run.commit_sha.slice(0, 7)}
+              </span>
             )}
           </>
         )}
