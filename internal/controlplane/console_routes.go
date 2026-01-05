@@ -254,6 +254,22 @@ func (s *Server) handleSuiteActivity(w http.ResponseWriter, r *http.Request, pri
 				"at":     nil,
 			}
 		}
+		// Aggregate metrics (null if no run history)
+		if suite.MedianDurationMs.Valid {
+			item["median_duration_ms"] = suite.MedianDurationMs.Int64
+		} else {
+			item["median_duration_ms"] = nil
+		}
+		if suite.ReliabilityPct.Valid {
+			item["reliability_pct"] = suite.ReliabilityPct.Float64
+		} else {
+			item["reliability_pct"] = nil
+		}
+		if suite.RunsPerWeek.Valid {
+			item["runs_per_week"] = suite.RunsPerWeek.Int64
+		} else {
+			item["runs_per_week"] = nil
+		}
 		payload = append(payload, item)
 	}
 

@@ -62,6 +62,10 @@ export interface SuiteActivityItem {
     status: string | null
     at: string | null
   }
+  // Aggregate metrics from recent runs
+  median_duration_ms?: number | null
+  reliability_pct?: number | null
+  runs_per_week?: number | null
 }
 
 // Step summary from test definition (YAML)
