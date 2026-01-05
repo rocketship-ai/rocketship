@@ -323,6 +323,33 @@ export interface SetupData {
   github_install_url?: string
 }
 
+// Overview dashboard metrics types
+export interface OverviewNowMetrics {
+  failing_monitors: number
+  failing_tests_24h: number
+  runs_in_progress: number
+  pass_rate_24h: number | null
+  median_duration_ms_24h: number | null
+}
+
+export interface PassRateDataPoint {
+  date: string // YYYY-MM-DD
+  pass_rate: number // 0-100
+  volume: number
+}
+
+export interface SuiteFailureData {
+  suite: string
+  passes: number
+  failures: number
+}
+
+export interface OverviewMetricsResponse {
+  now: OverviewNowMetrics
+  pass_rate_over_time: PassRateDataPoint[]
+  failures_by_suite_24h: SuiteFailureData[]
+}
+
 export interface GitHubRepo {
   id: number
   name: string
@@ -391,6 +418,8 @@ export const consoleKeys = {
   testRuns: (id: string) => [...consoleKeys.all, 'test', id, 'runs'] as const,
   // Overview / Setup
   overviewSetup: () => [...consoleKeys.all, 'overview', 'setup'] as const,
+  overviewMetrics: (projectIds?: string[], environmentId?: string, days?: number) =>
+    [...consoleKeys.all, 'overview', 'metrics', { projectIds, environmentId, days }] as const,
   githubAppRepos: () => [...consoleKeys.all, 'github', 'repos'] as const,
 }
 
@@ -434,23 +463,71 @@ export function useSuite(suiteId: string) {
   })
 }
 
-export function useSuiteRuns(suiteId: string, environmentId?: string) {
+// Suite runs params for server-side filtering and pagination
+export interface SuiteRunsParams {
+  environmentId?: string
+  branch?: string
+  triggers?: string[]
+  search?: string
+  limit?: number
+  offset?: number
+  runsPerBranch?: number
+}
+
+// Suite runs response with mode indicator for summary vs branch drilldown
+export interface SuiteRunsResponse {
+  mode: 'summary' | 'branch'
+  runs: SuiteRunSummary[]
+  total?: number    // Only meaningful in branch mode
+  limit: number
+  offset: number
+  branch?: string   // Only in branch mode
+}
+
+export function useSuiteRuns(suiteId: string, params: SuiteRunsParams = {}) {
+  // Build query string from params
+  const buildQueryString = () => {
+    const queryParts: string[] = []
+    if (params.environmentId) {
+      queryParts.push(`environment_id=${encodeURIComponent(params.environmentId)}`)
+    }
+    if (params.branch) {
+      queryParts.push(`branch=${encodeURIComponent(params.branch)}`)
+    }
+    if (params.triggers && params.triggers.length > 0) {
+      queryParts.push(`triggers=${encodeURIComponent(params.triggers.join(','))}`)
+    }
+    if (params.search) {
+      queryParts.push(`search=${encodeURIComponent(params.search)}`)
+    }
+    if (params.limit !== undefined) {
+      queryParts.push(`limit=${params.limit}`)
+    }
+    if (params.offset !== undefined) {
+      queryParts.push(`offset=${params.offset}`)
+    }
+    if (params.runsPerBranch !== undefined) {
+      queryParts.push(`runs_per_branch=${params.runsPerBranch}`)
+    }
+    return queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
+  }
+
   return useQuery({
-    queryKey: [...consoleKeys.suiteRuns(suiteId), environmentId] as const,
+    queryKey: [...consoleKeys.suiteRuns(suiteId), params] as const,
     queryFn: () => {
-      const url = environmentId
-        ? `/api/suites/${suiteId}/runs?environment_id=${environmentId}`
-        : `/api/suites/${suiteId}/runs`
-      return apiGet<SuiteRunSummary[]>(url)
+      const url = `/api/suites/${suiteId}/runs${buildQueryString()}`
+      return apiGet<SuiteRunsResponse>(url)
     },
     enabled: !!suiteId,
     refetchOnWindowFocus: true,
     refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
+    // Keep previous data while fetching (prevents UI flicker during refetch/search)
+    placeholderData: (previousData) => previousData,
     refetchInterval: (query) => {
       const data = query.state.data
       if (!data) return SUITE_RUNS_POLL_IDLE_MS // Initial load: use idle polling
       // Fast polling when runs are live, idle polling otherwise (to discover new runs)
-      const hasLiveRun = data.some((run) => isLiveRunStatus(run.status))
+      const hasLiveRun = data.runs.some((run) => isLiveRunStatus(run.status))
       return hasLiveRun ? SUITE_RUNS_POLL_LIVE_MS : SUITE_RUNS_POLL_IDLE_MS
     },
   })
@@ -577,6 +654,48 @@ export function useOverviewSetup() {
         }
         throw error
       }
+    },
+  })
+}
+
+// Polling intervals for overview metrics
+const OVERVIEW_POLL_LIVE_MS = 5000   // 5s when runs are in progress
+const OVERVIEW_POLL_IDLE_MS = 15000  // 15s when idle (frequent enough to discover new runs promptly)
+
+export interface OverviewMetricsParams {
+  projectIds?: string[]
+  environmentId?: string
+  days?: number
+}
+
+export function useOverviewMetrics(params: OverviewMetricsParams = {}) {
+  const { projectIds, environmentId, days = 7 } = params
+
+  return useQuery({
+    queryKey: consoleKeys.overviewMetrics(projectIds, environmentId, days),
+    queryFn: async () => {
+      const queryParams = new URLSearchParams()
+      if (projectIds && projectIds.length > 0) {
+        queryParams.set('project_ids', projectIds.join(','))
+      }
+      if (environmentId) {
+        queryParams.set('environment_id', environmentId)
+      }
+      if (days) {
+        queryParams.set('days', days.toString())
+      }
+      const url = `/api/overview/metrics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      return await apiGet<OverviewMetricsResponse>(url)
+    },
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false, // Don't poll when browser tab is backgrounded
+    // Keep previous data while fetching (prevents UI flicker during refetch)
+    placeholderData: (previousData) => previousData,
+    refetchInterval: (query) => {
+      // Two-tier polling: faster when runs are in progress
+      const data = query.state.data
+      if (!data) return OVERVIEW_POLL_IDLE_MS
+      return data.now.runs_in_progress > 0 ? OVERVIEW_POLL_LIVE_MS : OVERVIEW_POLL_IDLE_MS
     },
   })
 }
@@ -1335,6 +1454,14 @@ export interface TestRunForTest {
   ended_at?: string
 }
 
+// Server-side paginated response for test runs
+export interface TestRunsResponse {
+  runs: TestRunForTest[]
+  total: number
+  limit: number
+  offset: number
+}
+
 export interface TestRunsParams {
   triggers?: string[]
   environmentId?: string
@@ -1366,7 +1493,7 @@ export function useTestRuns(testId: string, params: TestRunsParams = {}) {
   if (params.limit) {
     queryParts.push(`limit=${params.limit}`)
   }
-  if (params.offset) {
+  if (params.offset !== undefined) {
     queryParts.push(`offset=${params.offset}`)
   }
 
@@ -1374,17 +1501,17 @@ export function useTestRuns(testId: string, params: TestRunsParams = {}) {
 
   return useQuery({
     queryKey: [...consoleKeys.testRuns(testId), params] as const,
-    queryFn: () => apiGet<TestRunForTest[]>(`/api/tests/${testId}/runs${queryString}`),
+    queryFn: () => apiGet<TestRunsResponse>(`/api/tests/${testId}/runs${queryString}`),
     enabled: !!testId,
     refetchOnWindowFocus: true,
     refetchIntervalInBackground: false,
-    // Keep previous data while fetching new results (prevents UI flicker during filter changes)
+    // Keep previous data while fetching new results (prevents UI flicker during page/filter changes)
     placeholderData: (previousData) => previousData,
     // Two-tier polling: fast when runs are in progress, idle otherwise
     refetchInterval: (query) => {
       const data = query.state.data
-      if (!data) return TEST_DETAIL_RUNS_POLL_IDLE_MS
-      const hasLiveRun = data.some((run) => isLiveTestStatus(run.status))
+      if (!data || !data.runs) return TEST_DETAIL_RUNS_POLL_IDLE_MS
+      const hasLiveRun = data.runs.some((run) => isLiveTestStatus(run.status))
       return hasLiveRun ? TEST_DETAIL_RUNS_POLL_LIVE_MS : TEST_DETAIL_RUNS_POLL_IDLE_MS
     },
   })

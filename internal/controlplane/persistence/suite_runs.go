@@ -63,6 +63,13 @@ func (s *Store) ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid
 	return ids, nil
 }
 
+// SuiteRunsFilter holds filter parameters for suite run queries
+type SuiteRunsFilter struct {
+	EnvironmentSlug string   // Filter by environment slug (empty = all)
+	Triggers        []string // Filter by trigger types (empty = all)
+	Search          string   // Search in commit message and SHA
+}
+
 // ListRunsForSuiteGroup returns runs for a suite across all projects in a group
 // (projects that share the same repo/path_scope).
 //
@@ -72,8 +79,8 @@ func (s *Store) ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid
 //
 // Each branch shows up to runsPerBranch runs (default 5).
 // Results are ordered by: default branch first, then by latest run time desc, then by created_at desc.
-// If environmentID is provided, only runs with that environment_id are returned.
-func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, environmentID uuid.NullUUID) ([]SuiteRunRow, error) {
+// Use filter to apply environment, trigger, and search filters.
+func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, filter SuiteRunsFilter) ([]SuiteRunRow, error) {
 	if runsPerBranch <= 0 {
 		runsPerBranch = 5
 	}
@@ -101,7 +108,9 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			WHERE organization_id = $1
 			  AND project_id = ANY($2)
 			  AND suite_name = $3
-			  AND ($6::uuid IS NULL OR environment_id = $6)
+			  AND ($6 = '' OR environment = $6)
+			  AND ($7::text[] IS NULL OR trigger = ANY($7))
+			  AND ($8 = '' OR COALESCE(commit_message, '') ILIKE '%' || $8 || '%' OR COALESCE(commit_sha, '') ILIKE '%' || $8 || '%')
 			GROUP BY branch
 		),
 		branch_ranking AS (
@@ -152,7 +161,9 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			WHERE r.organization_id = $1
 			  AND r.project_id = ANY($2)
 			  AND r.suite_name = $3
-			  AND ($6::uuid IS NULL OR r.environment_id = $6)
+			  AND ($6 = '' OR r.environment = $6)
+			  AND ($7::text[] IS NULL OR r.trigger = ANY($7))
+			  AND ($8 = '' OR COALESCE(r.commit_message, '') ILIKE '%' || $8 || '%' OR COALESCE(r.commit_sha, '') ILIKE '%' || $8 || '%')
 		)
 		SELECT
 			id,
@@ -183,12 +194,114 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			created_at DESC
 	`
 
+	// Convert triggers to pq.Array (nil if empty for SQL NULL)
+	var triggersArg interface{}
+	if len(filter.Triggers) > 0 {
+		triggersArg = pq.Array(filter.Triggers)
+	}
+
 	var runs []SuiteRunRow
-	if err := s.db.SelectContext(ctx, &runs, query, orgID, pq.Array(projectIDs), suiteName, runsPerBranch, defaultBranch, environmentID); err != nil {
+	if err := s.db.SelectContext(ctx, &runs, query, orgID, pq.Array(projectIDs), suiteName, runsPerBranch, defaultBranch, filter.EnvironmentSlug, triggersArg, filter.Search); err != nil {
 		return nil, fmt.Errorf("failed to list runs for suite group: %w", err)
 	}
 	if runs == nil {
 		runs = []SuiteRunRow{}
 	}
 	return runs, nil
+}
+
+// SuiteRunsBranchResult holds paginated results for branch drilldown view
+type SuiteRunsBranchResult struct {
+	Runs   []SuiteRunRow
+	Total  int
+	Limit  int
+	Offset int
+	Branch string
+}
+
+// ListRunsForSuiteBranch returns paginated runs for a specific branch with filters.
+// Used for branch drilldown view with pagination.
+func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, branch string, filter SuiteRunsFilter, limit, offset int) (SuiteRunsBranchResult, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	if len(projectIDs) == 0 {
+		return SuiteRunsBranchResult{Runs: []SuiteRunRow{}, Branch: branch, Limit: limit, Offset: offset}, nil
+	}
+
+	// Single query with COUNT(*) OVER() for total
+	const query = `
+		SELECT
+			id,
+			status,
+			branch,
+			commit_sha,
+			commit_message,
+			config_source,
+			environment,
+			initiator,
+			trigger,
+			schedule_name,
+			schedule_id,
+			source,
+			total_tests,
+			passed_tests,
+			failed_tests,
+			timeout_tests,
+			skipped_tests,
+			created_at,
+			started_at,
+			ended_at,
+			COUNT(*) OVER() as total_count
+		FROM runs
+		WHERE organization_id = $1
+		  AND project_id = ANY($2)
+		  AND suite_name = $3
+		  AND branch = $4
+		  AND ($5 = '' OR environment = $5)
+		  AND ($6::text[] IS NULL OR trigger = ANY($6))
+		  AND ($7 = '' OR COALESCE(commit_message, '') ILIKE '%' || $7 || '%' OR COALESCE(commit_sha, '') ILIKE '%' || $7 || '%')
+		ORDER BY created_at DESC
+		LIMIT $8 OFFSET $9
+	`
+
+	// Row type includes total_count
+	type runWithCount struct {
+		SuiteRunRow
+		TotalCount int `db:"total_count"`
+	}
+
+	// Convert triggers to pq.Array (nil if empty for SQL NULL)
+	var triggersArg interface{}
+	if len(filter.Triggers) > 0 {
+		triggersArg = pq.Array(filter.Triggers)
+	}
+
+	var runsWithCount []runWithCount
+	if err := s.db.SelectContext(ctx, &runsWithCount, query, orgID, pq.Array(projectIDs), suiteName, branch, filter.EnvironmentSlug, triggersArg, filter.Search, limit, offset); err != nil {
+		return SuiteRunsBranchResult{}, fmt.Errorf("failed to list runs for suite branch: %w", err)
+	}
+
+	// Extract runs and total
+	runs := make([]SuiteRunRow, len(runsWithCount))
+	total := 0
+	for i, r := range runsWithCount {
+		runs[i] = r.SuiteRunRow
+		total = r.TotalCount // Same for all rows
+	}
+
+	return SuiteRunsBranchResult{
+		Runs:   runs,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+		Branch: branch,
+	}, nil
 }

@@ -57,6 +57,15 @@ type TestRunSummary struct {
 	Branch      string         `db:"branch"`
 	CommitSHA   sql.NullString `db:"commit_sha"`
 	Initiator   string         `db:"initiator"`
+	TotalCount  int            `db:"total_count"` // For COUNT(*) OVER() pagination
+}
+
+// TestRunsResult contains paginated test run results with total count
+type TestRunsResult struct {
+	Runs   []TestRunSummary
+	Total  int
+	Limit  int
+	Offset int
 }
 
 // TestRunsParams contains query parameters for ListTestRuns
@@ -136,11 +145,12 @@ type TestIdentity struct {
 
 // ListTestRuns returns recent run_tests for a logical test identity with filtering by trigger.
 // This queries across all projects in the same repo/path_scope group to show runs from feature branches.
-func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity TestIdentity, params TestRunsParams) ([]TestRunSummary, error) {
+// Returns paginated results with total count for server-side pagination.
+func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity TestIdentity, params TestRunsParams) (TestRunsResult, error) {
 	// Set defaults
 	limit := params.Limit
 	if limit <= 0 {
-		limit = 20
+		limit = 10
 	}
 	if limit > 100 {
 		limit = 100
@@ -154,14 +164,15 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity Test
 	// Get all project IDs that share the same repo/path_scope (the "project group")
 	projectIDs, err := s.ListProjectIDsByRepoAndPathScope(ctx, orgID, identity.RepoURL, identity.PathScope)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get project group IDs: %w", err)
+		return TestRunsResult{}, fmt.Errorf("failed to get project group IDs: %w", err)
 	}
 	if len(projectIDs) == 0 {
-		return []TestRunSummary{}, nil
+		return TestRunsResult{Runs: []TestRunSummary{}, Total: 0, Limit: limit, Offset: offset}, nil
 	}
 
 	// Build the query matching by suite_name and test_name across the project group
 	// This avoids relying on rt.test_id which may be null for some CI flows
+	// Uses COUNT(*) OVER() for efficient total count in a single query
 	query := `
 		SELECT
 			rt.id,
@@ -175,7 +186,8 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity Test
 			r.environment,
 			r.branch,
 			r.commit_sha,
-			r.initiator
+			r.initiator,
+			COUNT(*) OVER() AS total_count
 		FROM run_tests rt
 		JOIN runs r ON rt.run_id = r.id
 		WHERE r.project_id = ANY($1)
@@ -207,12 +219,23 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity Test
 
 	var rows []TestRunSummary
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, fmt.Errorf("failed to list test runs: %w", err)
+		return TestRunsResult{}, fmt.Errorf("failed to list test runs: %w", err)
 	}
 
 	if rows == nil {
 		rows = []TestRunSummary{}
 	}
 
-	return rows, nil
+	// Extract total from first row (all rows have same total_count from COUNT(*) OVER())
+	total := 0
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
+	}
+
+	return TestRunsResult{
+		Runs:   rows,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
 }

@@ -530,6 +530,13 @@ func (f *fakeStore) CountActiveCITokensForOrg(_ context.Context, _ uuid.UUID) (i
 	return 0, nil
 }
 
+func (f *fakeStore) GetOverviewMetrics(_ context.Context, _, _ uuid.UUID, _ []uuid.UUID, _ *uuid.UUID, _ int) (persistence.OverviewMetrics, error) {
+	return persistence.OverviewMetrics{
+		PassRateOverTime:   []persistence.PassRateDataPoint{},
+		FailuresBySuite24h: []persistence.SuiteFailureData{},
+	}, nil
+}
+
 func (f *fakeStore) ProjectOrganizationID(_ context.Context, projectID uuid.UUID) (uuid.UUID, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -741,8 +748,17 @@ func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.U
 	return []uuid.UUID{}, nil
 }
 
-func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int, _ uuid.NullUUID) ([]persistence.SuiteRunRow, error) {
+func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int, _ persistence.SuiteRunsFilter) ([]persistence.SuiteRunRow, error) {
 	return []persistence.SuiteRunRow{}, nil
+}
+
+func (f *fakeStore) ListRunsForSuiteBranch(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ persistence.SuiteRunsFilter, limit, offset int) (persistence.SuiteRunsBranchResult, error) {
+	return persistence.SuiteRunsBranchResult{
+		Runs:   []persistence.SuiteRunRow{},
+		Total:  0,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
 }
 
 func (f *fakeStore) DeactivateProjectsForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _, _ string) (int, error) {
@@ -921,8 +937,8 @@ func (f *fakeStore) GetTestDetail(_ context.Context, _, _ uuid.UUID) (*persisten
 	return nil, sql.ErrNoRows
 }
 
-func (f *fakeStore) ListTestRuns(_ context.Context, _ uuid.UUID, _ persistence.TestIdentity, _ persistence.TestRunsParams) ([]persistence.TestRunSummary, error) {
-	return []persistence.TestRunSummary{}, nil
+func (f *fakeStore) ListTestRuns(_ context.Context, _ uuid.UUID, _ persistence.TestIdentity, _ persistence.TestRunsParams) (persistence.TestRunsResult, error) {
+	return persistence.TestRunsResult{Runs: []persistence.TestRunSummary{}, Total: 0, Limit: 10, Offset: 0}, nil
 }
 
 func TestServerDeviceFlowAndRefresh(t *testing.T) {

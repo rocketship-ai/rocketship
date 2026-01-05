@@ -17,6 +17,10 @@ interface MultiSelectDropdownProps {
   showAllOption?: boolean;
   /** Align dropdown to left or right edge of button. Defaults to 'left' */
   align?: 'left' | 'right';
+  /** Disable the dropdown (shows tooltip on hover) */
+  disabled?: boolean;
+  /** Tooltip text when disabled */
+  disabledTooltip?: string;
 }
 
 export function MultiSelectDropdown({
@@ -31,6 +35,8 @@ export function MultiSelectDropdown({
   placeholder,
   showAllOption,
   align = 'left',
+  disabled = false,
+  disabledTooltip,
 }: MultiSelectDropdownProps) {
   // Default showAllOption: true for multi-select, false for single-select (unless explicitly set)
   const shouldShowAllOption = showAllOption !== undefined ? showAllOption : !singleSelect;
@@ -67,14 +73,20 @@ export function MultiSelectDropdown({
   return (
     <div className="relative">
       <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white border border-[#e5e5e5] rounded-md hover:bg-[#fafafa] transition-colors"
+        onClick={disabled ? undefined : onToggle}
+        disabled={disabled}
+        title={disabled ? disabledTooltip : undefined}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-md transition-colors ${
+          disabled
+            ? 'bg-[#f5f5f5] border-[#e5e5e5] text-[#999999] cursor-not-allowed'
+            : 'bg-white border-[#e5e5e5] hover:bg-[#fafafa]'
+        }`}
       >
         <span className="text-sm">{buttonLabel}</span>
-        <ChevronDown className="w-4 h-4 text-[#666666]" />
+        <ChevronDown className={`w-4 h-4 ${disabled ? 'text-[#cccccc]' : 'text-[#666666]'}`} />
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <>
           <div className="fixed inset-0 z-10" onClick={onToggle} />
           <div className={`absolute top-full mt-1 w-full min-w-[240px] bg-white border border-[#e5e5e5] rounded-md shadow-lg z-20 ${align === 'right' ? 'right-0' : 'left-0'}`}>

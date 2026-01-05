@@ -122,6 +122,9 @@ type dataStore interface {
 	CountEnabledSchedulesForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 	CountActiveCITokensForOrg(ctx context.Context, orgID uuid.UUID) (int, error)
 
+	// Overview dashboard metrics
+	GetOverviewMetrics(ctx context.Context, orgID, userID uuid.UUID, projectIDs []uuid.UUID, environmentID *uuid.UUID, days int) (persistence.OverviewMetrics, error)
+
 	// Console hydration queries
 	ListProjectSummariesForOrg(ctx context.Context, orgID uuid.UUID) ([]persistence.ProjectSummary, error)
 	ListProjectSummariesForUser(ctx context.Context, orgID, userID uuid.UUID) ([]persistence.ProjectSummary, error)
@@ -143,7 +146,8 @@ type dataStore interface {
 
 	// Suite run activity queries
 	ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) ([]uuid.UUID, error)
-	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, environmentID uuid.NullUUID) ([]persistence.SuiteRunRow, error)
+	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, filter persistence.SuiteRunsFilter) ([]persistence.SuiteRunRow, error)
+	ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, branch string, filter persistence.SuiteRunsFilter, limit, offset int) (persistence.SuiteRunsBranchResult, error)
 
 	// Run detail queries
 	GetRun(ctx context.Context, orgID uuid.UUID, runID string) (persistence.RunRecord, error)
@@ -175,7 +179,7 @@ type dataStore interface {
 
 	// Test Detail queries
 	GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.UUID) (*persistence.TestDetailRow, error)
-	ListTestRuns(ctx context.Context, orgID uuid.UUID, identity persistence.TestIdentity, params persistence.TestRunsParams) ([]persistence.TestRunSummary, error)
+	ListTestRuns(ctx context.Context, orgID uuid.UUID, identity persistence.TestIdentity, params persistence.TestRunsParams) (persistence.TestRunsResult, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)

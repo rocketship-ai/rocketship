@@ -112,6 +112,12 @@ export function Header({
   const showEnvironmentFilter = (!isDetailView && ['overview', 'test-health'].includes(activePage)) ||
                                  (isDetailView && (detailViewType === 'suite' || detailViewType === 'test'));
 
+  // Disable environment filter on list pages when not exactly 1 project is selected
+  // (environment filter only makes sense with a single project context)
+  const shouldDisableEnvFilter = !isDetailView &&
+    ['overview', 'test-health'].includes(activePage) &&
+    selectedProjectIds.length !== 1;
+
   // Get project names for dropdowns
   const projectNames = projects.map(p => p.name);
 
@@ -192,6 +198,8 @@ export function Header({
                   singleSelect={true}
                   showAllOption={true}
                   placeholder="All Environments"
+                  disabled={shouldDisableEnvFilter}
+                  disabledTooltip="Select a single project to filter by environment"
                 />
               </div>
             )}

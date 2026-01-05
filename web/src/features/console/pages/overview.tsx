@@ -1,9 +1,10 @@
 import { CheckCircle2, Circle, AlertCircle, X, Loader2, ExternalLink } from 'lucide-react';
 import { Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
   useOverviewSetup,
+  useOverviewMetrics,
   useGithubAppRepos,
   useConnectGithubRepo,
   useSyncGithubApp,
@@ -11,6 +12,8 @@ import {
   type GitHubRepo,
   type ConnectRepoResult,
 } from '../hooks/use-console-queries';
+import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
+import { formatDuration } from '../lib/format';
 import { Button } from '../components/ui';
 
 interface OverviewProps {
@@ -20,6 +23,24 @@ interface OverviewProps {
 export function Overview({ onNavigate }: OverviewProps) {
   // Setup data from API via React Query
   const { data: setupData, isLoading: setupLoading } = useOverviewSetup();
+
+  // Project filter for scoped metrics
+  const { selectedProjectIds } = useConsoleProjectFilter();
+
+  // Environment filter - only applies when exactly one project is selected
+  const effectiveProjectId = selectedProjectIds.length === 1 ? selectedProjectIds[0] : '';
+  const { selectedEnvironmentId } = useConsoleEnvironmentFilter(effectiveProjectId);
+  const effectiveEnvironmentId = selectedProjectIds.length === 1 ? selectedEnvironmentId : undefined;
+
+  // Stabilize project IDs ordering for query key consistency
+  const sortedProjectIds = useMemo(() => [...selectedProjectIds].sort(), [selectedProjectIds]);
+
+  // Overview metrics from API (respects project and environment filters)
+  const { data: metricsData, isFetching: metricsRefetching } = useOverviewMetrics({
+    projectIds: sortedProjectIds.length > 0 ? sortedProjectIds : undefined,
+    environmentId: effectiveEnvironmentId,
+    days: 7,
+  });
 
   // GitHub repos query (only fetched when modal opens)
   const {
@@ -174,20 +195,52 @@ export function Overview({ onNavigate }: OverviewProps) {
   // Check if GitHub App is installed (step 2 complete)
   const isGitHubAppInstalled = getStep('install_github_app')?.complete ?? false;
 
-  // "Now" row data - placeholder until run aggregation is implemented
-  const nowMetrics = [
-    { label: 'Failing Monitors', value: '—' },
-    { label: 'Failing Tests (24h)', value: '—' },
-    { label: 'Runs in Progress', value: '—' },
-    { label: 'Pass Rate (24h)', value: '—' },
-    { label: 'Median Duration (24h)', value: '—' },
-  ];
+  // Process metrics data from API
+  const nowMetrics = useMemo(() => {
+    const now = metricsData?.now;
+    return [
+      {
+        label: 'Failing Monitors',
+        value: now?.failing_monitors != null ? String(now.failing_monitors) : '—',
+      },
+      {
+        label: 'Failing Tests (24h)',
+        value: now?.failing_tests_24h != null ? String(now.failing_tests_24h) : '—',
+      },
+      {
+        label: 'Runs in Progress',
+        value: now?.runs_in_progress != null ? String(now.runs_in_progress) : '—',
+      },
+      {
+        label: 'Pass Rate (24h)',
+        value: now?.pass_rate_24h != null ? `${Math.round(now.pass_rate_24h)}%` : '—',
+      },
+      {
+        label: 'Median Duration (24h)',
+        value: now?.median_duration_ms_24h != null ? formatDuration(now.median_duration_ms_24h) : '—',
+      },
+    ];
+  }, [metricsData]);
 
-  // Pass rate over time - empty until run data exists
-  const passRateData: Array<{ date: string; passRate: number; volume: number }> = [];
+  // Pass rate over time - transform API data for chart
+  const passRateData = useMemo(() => {
+    if (!metricsData?.pass_rate_over_time) return [];
+    return metricsData.pass_rate_over_time.map((point) => ({
+      date: point.date.slice(5), // MM-DD format
+      passRate: point.pass_rate,
+      volume: point.volume,
+    }));
+  }, [metricsData]);
 
-  // Failures by suite - empty until run data exists
-  const failuresBySuite: Array<{ suite: string; passes: number; failures: number }> = [];
+  // Failures by suite - transform API data for chart
+  const failuresBySuite = useMemo(() => {
+    if (!metricsData?.failures_by_suite_24h) return [];
+    return metricsData.failures_by_suite_24h.map((item) => ({
+      suite: item.suite,
+      passes: item.passes,
+      failures: item.failures,
+    }));
+  }, [metricsData]);
 
   return (
     <div className="flex-1 min-w-0 p-8">
@@ -251,6 +304,13 @@ export function Overview({ onNavigate }: OverviewProps) {
         ) : null}
 
         {/* "Now" Row - 5 Tiles */}
+        {/* Subtle updating indicator - only show during refetch when we already have data */}
+        {metricsRefetching && metricsData && (
+          <div className="flex items-center justify-end gap-1.5 mb-2 text-[#999999]">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span className="text-xs">Updating...</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {nowMetrics.map((metric, idx) => (
             <div

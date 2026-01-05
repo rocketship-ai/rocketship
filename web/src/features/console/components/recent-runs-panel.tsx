@@ -1,10 +1,14 @@
 import { Loader2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { MultiSelectDropdown } from './multi-select-dropdown';
 import { TestRunRow, type TestRunRowData } from './test-run-row';
 
 interface RecentRunsPanelProps {
   runs: TestRunRowData[];
+  totalRuns: number;
+  currentPage: number;
+  runsPerPage: number;
+  onPageChange: (page: number) => void;
   isLoading: boolean;
   error: Error | null;
   selectedTriggers: string[];
@@ -16,10 +20,14 @@ interface RecentRunsPanelProps {
 
 /**
  * Recent Runs sidebar panel for the Test Detail page.
- * Shows a filterable, paginated list of test runs.
+ * Shows a filterable, server-paginated list of test runs.
  */
 export function RecentRunsPanel({
   runs,
+  totalRuns,
+  currentPage,
+  runsPerPage,
+  onPageChange,
   isLoading,
   error,
   selectedTriggers,
@@ -29,22 +37,9 @@ export function RecentRunsPanel({
   onRetry,
 }: RecentRunsPanelProps) {
   const [showTriggerDropdown, setShowTriggerDropdown] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const runsPerPage = 10;
 
-  // Reset to first page when filters change
-  const handleTriggerChange = (triggers: string[]) => {
-    onTriggerChange(triggers);
-    setCurrentPage(1);
-  };
-
-  // Paginate runs
-  const paginatedRuns = useMemo(() => {
-    const start = (currentPage - 1) * runsPerPage;
-    return runs.slice(start, start + runsPerPage);
-  }, [runs, currentPage, runsPerPage]);
-
-  const totalPages = Math.max(1, Math.ceil(runs.length / runsPerPage));
+  // Calculate total pages from server total
+  const totalPages = Math.max(1, Math.ceil(totalRuns / runsPerPage));
 
   return (
     <div className="w-80 flex-shrink-0">
@@ -59,7 +54,7 @@ export function RecentRunsPanel({
               label="Triggers"
               items={['ci', 'manual', 'schedule']}
               selectedItems={selectedTriggers}
-              onSelectionChange={handleTriggerChange}
+              onSelectionChange={onTriggerChange}
               isOpen={showTriggerDropdown}
               onToggle={() => setShowTriggerDropdown(!showTriggerDropdown)}
               showAllOption={true}
@@ -68,7 +63,7 @@ export function RecentRunsPanel({
           </div>
         </div>
 
-        {/* Recent runs list */}
+        {/* Recent runs list - data is already server-paginated */}
         <div>
           {error ? (
             <div className="p-8 text-center">
@@ -98,7 +93,7 @@ export function RecentRunsPanel({
               </p>
             </div>
           ) : (
-            paginatedRuns.map((run) => (
+            runs.map((run) => (
               <TestRunRow
                 key={run.id}
                 run={run}
@@ -108,22 +103,22 @@ export function RecentRunsPanel({
           )}
         </div>
 
-        {/* Pagination */}
-        {runs.length > runsPerPage && (
+        {/* Pagination - based on server total */}
+        {totalRuns > runsPerPage && (
           <div className="p-4 border-t border-[#e5e5e5]">
             <div className="flex items-center justify-between">
               <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                onClick={() => onPageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 className="text-xs px-3 py-1.5 bg-white border border-[#e5e5e5] rounded hover:bg-[#fafafa] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Previous
+                Prev
               </button>
               <span className="text-xs text-[#666666]">
                 Page {currentPage} of {totalPages}
               </span>
               <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage >= totalPages}
                 className="text-xs px-3 py-1.5 bg-white border border-[#e5e5e5] rounded hover:bg-[#fafafa] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >

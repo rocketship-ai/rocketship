@@ -3,12 +3,14 @@ package controlplane
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 )
 
 // handleConsoleProjects handles GET /api/projects (list projects the user can access)
@@ -278,7 +280,14 @@ func (s *Server) handleSuiteActivity(w http.ResponseWriter, r *http.Request, pri
 
 // handleSuiteRuns handles GET /api/suites/{suiteId}/runs
 // Returns run history for a suite across all branches/refs
-// Optional query param: environment_id - filter runs by environment
+// Query params:
+//   - environment_id: (uuid) filter runs by environment
+//   - branch: (string) when set, enter branch drilldown mode with pagination
+//   - limit: (int) runs per page in branch mode (default 10, max 50)
+//   - offset: (int) pagination offset in branch mode
+//   - runs_per_branch: (int) runs per branch in summary mode (default 5, max 20)
+//   - triggers: (csv) filter by trigger types (ci, manual, schedule)
+//   - search: (string) search in commit message and SHA
 func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, suiteID uuid.UUID) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -290,16 +299,7 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
-	// Parse optional environment_id query param
-	var environmentID uuid.NullUUID
-	if envIDStr := r.URL.Query().Get("environment_id"); envIDStr != "" {
-		envID, err := uuid.Parse(envIDStr)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid environment_id")
-			return
-		}
-		environmentID = uuid.NullUUID{UUID: envID, Valid: true}
-	}
+	query := r.URL.Query()
 
 	// Get suite detail (includes org check)
 	suite, err := s.store.GetSuiteDetail(r.Context(), principal.OrgID, suiteID)
@@ -341,18 +341,111 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
-	// Query runs for these projects + suite name
-	// - Shows up to 3 branches: default + 2 most recently active feature branches
-	// - Limit to 5 runs per branch
-	// - Filter by environment_id if provided
-	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, 5, environmentID)
-	if err != nil {
-		log.Printf("failed to list runs for suite: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to list runs")
-		return
+	// Build filter from query params
+	var filter persistence.SuiteRunsFilter
+
+	// Environment filter: resolve UUID → slug for cross-project filtering
+	if envIDStr := query.Get("environment_id"); envIDStr != "" {
+		envID, err := uuid.Parse(envIDStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid environment_id")
+			return
+		}
+		// Look up environment to get its slug
+		env, err := s.store.GetEnvironment(r.Context(), suite.ProjectID, envID)
+		if err == nil {
+			filter.EnvironmentSlug = env.Slug
+		}
+		// If env not found, filter.EnvironmentSlug remains empty (returns no runs, which is correct)
 	}
 
-	// Build response
+	// Trigger filter: parse CSV, validate values
+	if triggersStr := query.Get("triggers"); triggersStr != "" {
+		validTriggers := map[string]bool{"ci": true, "manual": true, "schedule": true}
+		for _, t := range strings.Split(triggersStr, ",") {
+			t = strings.ToLower(strings.TrimSpace(t))
+			if validTriggers[t] {
+				filter.Triggers = append(filter.Triggers, t)
+			}
+		}
+	}
+
+	// Search filter
+	filter.Search = strings.TrimSpace(query.Get("search"))
+
+	// Branch param determines mode: summary (all branches) vs branch (single branch with pagination)
+	branch := strings.TrimSpace(query.Get("branch"))
+
+	var responsePayload map[string]interface{}
+
+	if branch != "" {
+		// Branch drilldown mode with pagination
+		limit := 10
+		if limitStr := query.Get("limit"); limitStr != "" {
+			if _, err := stringToInt(limitStr, &limit); err != nil || limit <= 0 {
+				limit = 10
+			}
+		}
+		if limit > 50 {
+			limit = 50
+		}
+
+		offset := 0
+		if offsetStr := query.Get("offset"); offsetStr != "" {
+			if _, err := stringToInt(offsetStr, &offset); err != nil || offset < 0 {
+				offset = 0
+			}
+		}
+
+		result, err := s.store.ListRunsForSuiteBranch(r.Context(), principal.OrgID, projectIDs, suite.Name, branch, filter, limit, offset)
+		if err != nil {
+			log.Printf("failed to list runs for suite branch: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to list runs")
+			return
+		}
+
+		runsPayload := s.formatSuiteRuns(result.Runs)
+		responsePayload = map[string]interface{}{
+			"mode":   "branch",
+			"runs":   runsPayload,
+			"total":  result.Total,
+			"limit":  result.Limit,
+			"offset": result.Offset,
+			"branch": result.Branch,
+		}
+	} else {
+		// Summary mode: multiple branches
+		runsPerBranch := 5
+		if rStr := query.Get("runs_per_branch"); rStr != "" {
+			if _, err := stringToInt(rStr, &runsPerBranch); err != nil || runsPerBranch <= 0 {
+				runsPerBranch = 5
+			}
+		}
+		if runsPerBranch > 20 {
+			runsPerBranch = 20
+		}
+
+		runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, runsPerBranch, filter)
+		if err != nil {
+			log.Printf("failed to list runs for suite: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to list runs")
+			return
+		}
+
+		runsPayload := s.formatSuiteRuns(runs)
+		responsePayload = map[string]interface{}{
+			"mode":   "summary",
+			"runs":   runsPayload,
+			"limit":  runsPerBranch,
+			"offset": 0,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, responsePayload)
+}
+
+// formatSuiteRuns converts SuiteRunRow slice to API response format
+func (s *Server) formatSuiteRuns(runs []persistence.SuiteRunRow) []map[string]interface{} {
 	payload := make([]map[string]interface{}, 0, len(runs))
 	for _, run := range runs {
 		item := map[string]interface{}{
@@ -404,8 +497,7 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 
 		payload = append(payload, item)
 	}
-
-	writeJSON(w, http.StatusOK, payload)
+	return payload
 }
 
 // handleSuiteDetail handles GET /api/suites/{suiteId}
@@ -615,4 +707,92 @@ func (s *Server) handleConsoleSuiteRoutesDispatch(w http.ResponseWriter, r *http
 	default:
 		writeError(w, http.StatusNotFound, "resource not found")
 	}
+}
+
+// handleOverviewMetrics handles GET /api/overview/metrics
+// Returns aggregated metrics for the overview dashboard
+func (s *Server) handleOverviewMetrics(w http.ResponseWriter, r *http.Request, principal brokerPrincipal) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if principal.RequiresOrgMembership() {
+		writeError(w, http.StatusForbidden, "organization membership required")
+		return
+	}
+
+	// Parse query params
+	query := r.URL.Query()
+
+	// Parse project_ids (comma-separated)
+	var projectIDs []uuid.UUID
+	if projectIDsStr := query.Get("project_ids"); projectIDsStr != "" {
+		for _, idStr := range strings.Split(projectIDsStr, ",") {
+			idStr = strings.TrimSpace(idStr)
+			if idStr == "" {
+				continue
+			}
+			id, err := uuid.Parse(idStr)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "invalid project_ids")
+				return
+			}
+			projectIDs = append(projectIDs, id)
+		}
+	}
+
+	// Parse environment_id (single UUID, optional)
+	var environmentID *uuid.UUID
+	if envIDStr := query.Get("environment_id"); envIDStr != "" {
+		id, err := uuid.Parse(envIDStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid environment_id")
+			return
+		}
+		environmentID = &id
+	}
+
+	// Parse days (default 7, cap 30)
+	days := 7
+	if daysStr := query.Get("days"); daysStr != "" {
+		var d int
+		if _, err := stringToInt(daysStr, &d); err == nil && d > 0 {
+			days = d
+		}
+	}
+
+	// Get metrics from store
+	metrics, err := s.store.GetOverviewMetrics(r.Context(), principal.OrgID, principal.UserID, projectIDs, environmentID, days)
+	if err != nil {
+		log.Printf("failed to get overview metrics: %v", err)
+		writeError(w, http.StatusInternalServerError, "failed to get metrics")
+		return
+	}
+
+	// Build response
+	response := map[string]interface{}{
+		"now": map[string]interface{}{
+			"failing_monitors":      metrics.FailingMonitors,
+			"failing_tests_24h":     metrics.FailingTests24h,
+			"runs_in_progress":      metrics.RunsInProgress,
+			"pass_rate_24h":         metrics.PassRate24h,
+			"median_duration_ms_24h": metrics.MedianDurationMs24h,
+		},
+		"pass_rate_over_time":    metrics.PassRateOverTime,
+		"failures_by_suite_24h": metrics.FailuresBySuite24h,
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+// stringToInt parses a string to int and writes to the target
+func stringToInt(s string, target *int) (int, error) {
+	var n int
+	_, err := fmt.Sscanf(s, "%d", &n)
+	if err != nil {
+		return 0, err
+	}
+	*target = n
+	return n, nil
 }
