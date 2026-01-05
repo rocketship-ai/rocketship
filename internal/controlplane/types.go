@@ -179,7 +179,7 @@ type dataStore interface {
 
 	// Test Detail queries
 	GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.UUID) (*persistence.TestDetailRow, error)
-	ListTestRuns(ctx context.Context, orgID uuid.UUID, identity persistence.TestIdentity, params persistence.TestRunsParams) ([]persistence.TestRunSummary, error)
+	ListTestRuns(ctx context.Context, orgID uuid.UUID, identity persistence.TestIdentity, params persistence.TestRunsParams) (persistence.TestRunsResult, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)

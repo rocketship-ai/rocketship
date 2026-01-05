@@ -1454,6 +1454,14 @@ export interface TestRunForTest {
   ended_at?: string
 }
 
+// Server-side paginated response for test runs
+export interface TestRunsResponse {
+  runs: TestRunForTest[]
+  total: number
+  limit: number
+  offset: number
+}
+
 export interface TestRunsParams {
   triggers?: string[]
   environmentId?: string
@@ -1485,7 +1493,7 @@ export function useTestRuns(testId: string, params: TestRunsParams = {}) {
   if (params.limit) {
     queryParts.push(`limit=${params.limit}`)
   }
-  if (params.offset) {
+  if (params.offset !== undefined) {
     queryParts.push(`offset=${params.offset}`)
   }
 
@@ -1493,17 +1501,17 @@ export function useTestRuns(testId: string, params: TestRunsParams = {}) {
 
   return useQuery({
     queryKey: [...consoleKeys.testRuns(testId), params] as const,
-    queryFn: () => apiGet<TestRunForTest[]>(`/api/tests/${testId}/runs${queryString}`),
+    queryFn: () => apiGet<TestRunsResponse>(`/api/tests/${testId}/runs${queryString}`),
     enabled: !!testId,
     refetchOnWindowFocus: true,
     refetchIntervalInBackground: false,
-    // Keep previous data while fetching new results (prevents UI flicker during filter changes)
+    // Keep previous data while fetching new results (prevents UI flicker during page/filter changes)
     placeholderData: (previousData) => previousData,
     // Two-tier polling: fast when runs are in progress, idle otherwise
     refetchInterval: (query) => {
       const data = query.state.data
-      if (!data) return TEST_DETAIL_RUNS_POLL_IDLE_MS
-      const hasLiveRun = data.some((run) => isLiveTestStatus(run.status))
+      if (!data || !data.runs) return TEST_DETAIL_RUNS_POLL_IDLE_MS
+      const hasLiveRun = data.runs.some((run) => isLiveTestStatus(run.status))
       return hasLiveRun ? TEST_DETAIL_RUNS_POLL_LIVE_MS : TEST_DETAIL_RUNS_POLL_IDLE_MS
     },
   })

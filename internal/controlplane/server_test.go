@@ -937,8 +937,8 @@ func (f *fakeStore) GetTestDetail(_ context.Context, _, _ uuid.UUID) (*persisten
 	return nil, sql.ErrNoRows
 }
 
-func (f *fakeStore) ListTestRuns(_ context.Context, _ uuid.UUID, _ persistence.TestIdentity, _ persistence.TestRunsParams) ([]persistence.TestRunSummary, error) {
-	return []persistence.TestRunSummary{}, nil
+func (f *fakeStore) ListTestRuns(_ context.Context, _ uuid.UUID, _ persistence.TestIdentity, _ persistence.TestRunsParams) (persistence.TestRunsResult, error) {
+	return persistence.TestRunsResult{Runs: []persistence.TestRunSummary{}, Total: 0, Limit: 10, Offset: 0}, nil
 }
 
 func TestServerDeviceFlowAndRefresh(t *testing.T) {

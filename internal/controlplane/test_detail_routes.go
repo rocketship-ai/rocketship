@@ -185,16 +185,16 @@ func (s *Server) handleTestRuns(w http.ResponseWriter, r *http.Request, principa
 		}
 	}
 
-	runs, err := s.store.ListTestRuns(r.Context(), principal.OrgID, identity, params)
+	result, err := s.store.ListTestRuns(r.Context(), principal.OrgID, identity, params)
 	if err != nil {
 		log.Printf("failed to list test runs: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list runs")
 		return
 	}
 
-	// Build response payload
-	payload := make([]map[string]interface{}, 0, len(runs))
-	for _, run := range runs {
+	// Build runs array for response
+	runsPayload := make([]map[string]interface{}, 0, len(result.Runs))
+	for _, run := range result.Runs {
 		item := map[string]interface{}{
 			"id":          run.ID.String(),
 			"run_id":      run.RunID,
@@ -224,7 +224,15 @@ func (s *Server) handleTestRuns(w http.ResponseWriter, r *http.Request, principa
 			item["initiator_name"] = strings.TrimPrefix(run.Initiator, "user:")
 		}
 
-		payload = append(payload, item)
+		runsPayload = append(runsPayload, item)
+	}
+
+	// Return paginated response with total count
+	payload := map[string]interface{}{
+		"runs":   runsPayload,
+		"total":  result.Total,
+		"limit":  result.Limit,
+		"offset": result.Offset,
 	}
 
 	writeJSON(w, http.StatusOK, payload)

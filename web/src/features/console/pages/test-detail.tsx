@@ -1,7 +1,7 @@
 import { ArrowLeft, Play, Edit3, Loader2 } from 'lucide-react';
 import { RunStepCard } from '../components/run-steps';
 import { RecentRunsPanel } from '../components/recent-runs-panel';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTestDetail, useTestRuns, type TestDetailStep, type RunStep } from '../hooks/use-console-queries';
 import { useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 
@@ -39,6 +39,8 @@ function convertToRunStep(step: TestDetailStep): RunStep {
 export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetailProps) {
   const [activeTab, setActiveTab] = useState<'steps' | 'schedules'>('steps');
   const [selectedTriggers, setSelectedTriggers] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const runsPerPage = 10;
 
   // Fetch test detail data
   const { data: testDetail, isLoading: testLoading, error: testError } = useTestDetail(testId);
@@ -47,12 +49,25 @@ export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetai
   const projectId = testDetail?.project_id || '';
   const { selectedEnvironmentId } = useConsoleEnvironmentFilter(projectId);
 
-  // Fetch test runs with filters
-  const { data: runs = [], isLoading: runsLoading, error: runsError, refetch: refetchRuns } = useTestRuns(testId, {
+  // Calculate offset for server-side pagination
+  const offset = (currentPage - 1) * runsPerPage;
+
+  // Fetch test runs with filters and pagination
+  const { data: runsData, isLoading: runsLoading, error: runsError, refetch: refetchRuns } = useTestRuns(testId, {
     triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
     environmentId: selectedEnvironmentId,
-    limit: 100, // Fetch enough for pagination
+    limit: runsPerPage,
+    offset,
   });
+
+  // Extract runs and total from response
+  const runs = runsData?.runs ?? [];
+  const totalRuns = runsData?.total ?? 0;
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTriggers, selectedEnvironmentId]);
 
   // Check if any filters are applied
   const hasFiltersApplied = selectedTriggers.length > 0 || !!selectedEnvironmentId;
@@ -99,6 +114,10 @@ export function TestDetail({ testId, onBack, onViewRun, onViewSuite }: TestDetai
       {/* Left Sidebar - Recent Test Runs */}
       <RecentRunsPanel
         runs={runs}
+        totalRuns={totalRuns}
+        currentPage={currentPage}
+        runsPerPage={runsPerPage}
+        onPageChange={setCurrentPage}
         isLoading={runsLoading}
         error={runsError instanceof Error ? runsError : null}
         selectedTriggers={selectedTriggers}
