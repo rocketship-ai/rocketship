@@ -56,6 +56,14 @@ type RunStore interface {
 	// Schedule last run updates
 	UpdateProjectScheduleLastRun(ctx context.Context, scheduleID uuid.UUID, runID, status string, runAt time.Time) error
 	UpdateSuiteScheduleLastRun(ctx context.Context, scheduleID uuid.UUID, runID, status string, runAt time.Time) error
+	// Direct run status update (for DB-only completion checks)
+	UpdateRunStatusByID(ctx context.Context, runID string, status string, endedAt time.Time, totals *persistence.RunTotals) error
+	// Stale run reconciliation
+	ListStaleRunningRuns(ctx context.Context, olderThan time.Time, limit int) ([]persistence.RunRecord, error)
+	ForceCompleteStaleRunTests(ctx context.Context, runID string, status string) error
+	// Temporal-based reconciliation (fast path)
+	ListStaleRunTests(ctx context.Context, olderThan time.Time, limit int) ([]persistence.StaleRunTest, error)
+	UpdateRunTestStatus(ctx context.Context, id uuid.UUID, status string, endedAt time.Time) error
 }
 
 type RunInfo struct {

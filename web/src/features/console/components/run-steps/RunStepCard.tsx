@@ -52,10 +52,12 @@ export function RunStepCard({ step, stepNumber }: RunStepCardProps) {
         onClick={handleToggle}
       >
         <div className="flex items-center">
-          {/* Left: Status Icon */}
-          <div className="flex-shrink-0 mr-4">
-            <StatusIcon status={status} />
-          </div>
+          {/* Left: Status Icon (hidden for definition steps) */}
+          {status !== 'definition' && (
+            <div className="flex-shrink-0 mr-4">
+              <StatusIcon status={status} />
+            </div>
+          )}
 
           {/* Middle: Content */}
           <div className="flex-1 min-w-0">
@@ -151,6 +153,9 @@ function StatusIcon({ status }: { status: StepUIStatus }) {
       return <XCircle className="w-5 h-5 text-[#ef0000]" />;
     case 'running':
       return <Loader2 className="w-5 h-5 text-[#4CBB17] animate-spin" />;
+    case 'definition':
+      // Test definitions show no status icon (not executed yet)
+      return null;
     case 'pending':
     default:
       return <Clock className="w-5 h-5 text-[#999999]" />;
@@ -166,6 +171,7 @@ function getBorderColor(status: StepUIStatus): string {
     case 'running':
       // Light gray border for running - spinning icon indicates activity
       return 'border-l-[#d4d4d4]';
+    case 'definition':
     case 'pending':
     default:
       return 'border-l-[#d4d4d4]';

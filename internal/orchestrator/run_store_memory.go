@@ -229,3 +229,48 @@ func (s *memoryRunStore) UpdateSuiteScheduleLastRun(_ context.Context, _ uuid.UU
 	// No-op for memory store - no suite schedules
 	return nil
 }
+
+// Direct run status update - for DB-only completion checks
+func (s *memoryRunStore) UpdateRunStatusByID(ctx context.Context, runID string, status string, endedAt time.Time, totals *persistence.RunTotals) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	rec, ok := s.runs[runID]
+	if !ok {
+		return sql.ErrNoRows
+	}
+
+	rec.Status = status
+	rec.EndedAt = sql.NullTime{Time: endedAt, Valid: true}
+	if totals != nil {
+		rec.TotalTests = totals.Total
+		rec.PassedTests = totals.Passed
+		rec.FailedTests = totals.Failed
+		rec.TimeoutTests = totals.Timeout
+	}
+	rec.UpdatedAt = time.Now().UTC()
+	s.runs[runID] = rec
+	return nil
+}
+
+// Stale run reconciliation - no-op for memory store (reconciliation is for persistent DB)
+func (s *memoryRunStore) ListStaleRunningRuns(_ context.Context, _ time.Time, _ int) ([]persistence.RunRecord, error) {
+	// No-op for memory store - reconciliation uses persistent database
+	return []persistence.RunRecord{}, nil
+}
+
+func (s *memoryRunStore) ForceCompleteStaleRunTests(_ context.Context, _ string, _ string) error {
+	// No-op for memory store - reconciliation uses persistent database
+	return nil
+}
+
+// Temporal-based reconciliation - no-op for memory store (reconciliation is for persistent DB)
+func (s *memoryRunStore) ListStaleRunTests(_ context.Context, _ time.Time, _ int) ([]persistence.StaleRunTest, error) {
+	// No-op for memory store - reconciliation uses persistent database
+	return []persistence.StaleRunTest{}, nil
+}
+
+func (s *memoryRunStore) UpdateRunTestStatus(_ context.Context, _ uuid.UUID, _ string, _ time.Time) error {
+	// No-op for memory store - reconciliation uses persistent database
+	return nil
+}

@@ -300,6 +300,10 @@ type SuiteActivityRow struct {
 	ProjectID     uuid.UUID      `db:"project_id"`
 	ProjectName   string         `db:"project_name"`
 	RepoURL       string         `db:"repo_url"`
+	// Aggregate metrics from recent runs
+	MedianDurationMs sql.NullInt64   `db:"median_duration_ms"`
+	ReliabilityPct   sql.NullFloat64 `db:"reliability_pct"`
+	RunsPerWeek      sql.NullInt64   `db:"runs_per_week"`
 }
 
 // ListSuitesForOrg returns active suites across the org with project info.
@@ -316,6 +320,7 @@ func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int
 	// Use a CTE with ROW_NUMBER to deduplicate suites by (project_id, file_path).
 	// Prefer suites where source_ref matches the project's default_branch.
 	// This prevents showing duplicate suites when a PR modifies an existing suite.
+	// Also compute aggregate metrics from recent runs using LEFT JOIN LATERAL.
 	const query = `
 		WITH ranked_suites AS (
 			SELECT
@@ -344,20 +349,53 @@ func (s *Store) ListSuitesForOrg(ctx context.Context, orgID uuid.UUID, limit int
 			WHERE p.organization_id = $1 AND p.is_active = true AND s.is_active = true
 		)
 		SELECT
-			suite_id,
-			suite_name,
-			description,
-			file_path,
-			source_ref,
-			test_count,
-			last_run_status,
-			last_run_at,
-			project_id,
-			project_name,
-			repo_url
-		FROM ranked_suites
-		WHERE rn = 1
-		ORDER BY suite_name ASC, source_ref ASC
+			rs.suite_id,
+			rs.suite_name,
+			rs.description,
+			rs.file_path,
+			rs.source_ref,
+			rs.test_count,
+			rs.last_run_status,
+			rs.last_run_at,
+			rs.project_id,
+			rs.project_name,
+			rs.repo_url,
+			metrics.median_duration_ms,
+			metrics.reliability_pct,
+			weekly.runs_per_week
+		FROM ranked_suites rs
+		LEFT JOIN LATERAL (
+			-- Compute median duration and reliability from last 50 completed runs
+			SELECT
+				percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms)::bigint AS median_duration_ms,
+				100.0 * SUM(CASE WHEN status = 'PASSED' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS reliability_pct
+			FROM (
+				SELECT
+					EXTRACT(EPOCH FROM (r.ended_at - r.started_at)) * 1000 AS duration_ms,
+					r.status
+				FROM runs r
+				WHERE r.project_id = rs.project_id
+					AND r.organization_id = $1
+					AND r.suite_name = rs.suite_name
+					AND r.status IN ('PASSED', 'FAILED', 'CANCELLED', 'TIMEOUT')
+					AND r.started_at IS NOT NULL
+					AND r.ended_at IS NOT NULL
+				ORDER BY r.created_at DESC
+				LIMIT 50
+			) recent_runs
+		) metrics ON true
+		LEFT JOIN LATERAL (
+			-- Count runs in last 7 days
+			SELECT COUNT(*)::bigint AS runs_per_week
+			FROM runs r
+			WHERE r.project_id = rs.project_id
+				AND r.organization_id = $1
+				AND r.suite_name = rs.suite_name
+				AND r.status IN ('PASSED', 'FAILED', 'CANCELLED', 'TIMEOUT')
+				AND r.created_at >= NOW() - INTERVAL '7 days'
+		) weekly ON true
+		WHERE rs.rn = 1
+		ORDER BY rs.suite_name ASC, rs.source_ref ASC
 		LIMIT $2
 	`
 
@@ -395,6 +433,7 @@ func (s *Store) ListSuitesForUserProjects(ctx context.Context, orgID, userID uui
 
 	// Use a CTE with ROW_NUMBER to deduplicate suites by (project_id, file_path).
 	// Prefer suites where source_ref matches the project's default_branch.
+	// Also compute aggregate metrics from recent runs using LEFT JOIN LATERAL.
 	const query = `
 		WITH ranked_suites AS (
 			SELECT
@@ -410,6 +449,7 @@ func (s *Store) ListSuitesForUserProjects(ctx context.Context, orgID, userID uui
 				p.name AS project_name,
 				p.repo_url,
 				p.default_branch,
+				p.organization_id,
 				ROW_NUMBER() OVER (
 					PARTITION BY p.id, s.file_path
 					ORDER BY
@@ -423,20 +463,53 @@ func (s *Store) ListSuitesForUserProjects(ctx context.Context, orgID, userID uui
 			WHERE p.id = ANY($1) AND p.is_active = true AND s.is_active = true
 		)
 		SELECT
-			suite_id,
-			suite_name,
-			description,
-			file_path,
-			source_ref,
-			test_count,
-			last_run_status,
-			last_run_at,
-			project_id,
-			project_name,
-			repo_url
-		FROM ranked_suites
-		WHERE rn = 1
-		ORDER BY suite_name ASC, source_ref ASC
+			rs.suite_id,
+			rs.suite_name,
+			rs.description,
+			rs.file_path,
+			rs.source_ref,
+			rs.test_count,
+			rs.last_run_status,
+			rs.last_run_at,
+			rs.project_id,
+			rs.project_name,
+			rs.repo_url,
+			metrics.median_duration_ms,
+			metrics.reliability_pct,
+			weekly.runs_per_week
+		FROM ranked_suites rs
+		LEFT JOIN LATERAL (
+			-- Compute median duration and reliability from last 50 completed runs
+			SELECT
+				percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms)::bigint AS median_duration_ms,
+				100.0 * SUM(CASE WHEN status = 'PASSED' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0) AS reliability_pct
+			FROM (
+				SELECT
+					EXTRACT(EPOCH FROM (r.ended_at - r.started_at)) * 1000 AS duration_ms,
+					r.status
+				FROM runs r
+				WHERE r.project_id = rs.project_id
+					AND r.organization_id = rs.organization_id
+					AND r.suite_name = rs.suite_name
+					AND r.status IN ('PASSED', 'FAILED', 'CANCELLED', 'TIMEOUT')
+					AND r.started_at IS NOT NULL
+					AND r.ended_at IS NOT NULL
+				ORDER BY r.created_at DESC
+				LIMIT 50
+			) recent_runs
+		) metrics ON true
+		LEFT JOIN LATERAL (
+			-- Count runs in last 7 days
+			SELECT COUNT(*)::bigint AS runs_per_week
+			FROM runs r
+			WHERE r.project_id = rs.project_id
+				AND r.organization_id = rs.organization_id
+				AND r.suite_name = rs.suite_name
+				AND r.status IN ('PASSED', 'FAILED', 'CANCELLED', 'TIMEOUT')
+				AND r.created_at >= NOW() - INTERVAL '7 days'
+		) weekly ON true
+		WHERE rs.rn = 1
+		ORDER BY rs.suite_name ASC, rs.source_ref ASC
 		LIMIT $2
 	`
 

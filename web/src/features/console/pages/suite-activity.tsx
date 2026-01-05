@@ -6,6 +6,7 @@ import { SourceRefBadge } from '../components/SourceRefBadge';
 import { QueryBoundary } from '../components/query-boundary';
 import { Card, EmptyState } from '../components/ui';
 import { FilterBar, SearchInput } from '../components/filter-bar';
+import { formatDuration } from '../lib/format';
 
 interface SuiteActivityProps {
   onSelectSuite: (suiteId: string) => void;
@@ -86,39 +87,44 @@ export function SuiteActivity({ onSelectSuite }: SuiteActivityProps) {
                             {suite.project.name}
                           </p>
 
-                          {/* Metrics - placeholders until run aggregation exists */}
+                          {/* Metrics from run aggregation */}
                           <div className="flex items-center gap-8 mt-6">
                             <div className="flex items-center gap-2">
                               <div>
                                 <p className="text-xs text-[#999999]">Speed</p>
-                                <p className="text-sm text-[#999999]">—</p>
+                                <p className={`text-sm ${suite.median_duration_ms != null ? 'text-black' : 'text-[#999999]'}`}>
+                                  {suite.median_duration_ms != null
+                                    ? formatDuration(suite.median_duration_ms)
+                                    : '—'}
+                                </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <div>
                                 <p className="text-xs text-[#999999]">Reliability</p>
-                                <p className="text-sm text-[#999999]">—</p>
+                                <p className={`text-sm ${suite.reliability_pct != null ? 'text-black' : 'text-[#999999]'}`}>
+                                  {suite.reliability_pct != null
+                                    ? `${Math.round(suite.reliability_pct)}%`
+                                    : '—'}
+                                </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <div>
                                 <p className="text-xs text-[#999999]">Runs</p>
-                                <p className="text-sm text-[#999999]">—</p>
+                                <p className={`text-sm ${suite.runs_per_week != null ? 'text-black' : 'text-[#999999]'}`}>
+                                  {suite.runs_per_week != null
+                                    ? `${suite.runs_per_week}/week`
+                                    : '—'}
+                                </p>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Activity placeholder - no run history yet */}
+                        {/* Right side: test count */}
                         <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-auto">
                           <p className="text-xs text-[#999999]">{suite.test_count} tests</p>
-                          <div className="flex items-center text-xs text-[#999999]">
-                            {suite.last_run.status ? (
-                              <span>Last run: {suite.last_run.status}</span>
-                            ) : (
-                              <span>No runs yet</span>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </Card>

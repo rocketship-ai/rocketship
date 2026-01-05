@@ -4,6 +4,7 @@ import {
   useProjects,
   useSuite,
   useProjectEnvironments,
+  useTestDetail,
 } from '../hooks/use-console-queries';
 import { useConsoleProjectFilter, useConsoleEnvironmentFilter } from '../hooks/use-console-filters';
 import { MultiSelectDropdown } from './multi-select-dropdown';
@@ -14,6 +15,8 @@ interface HeaderProps {
   isDetailView?: boolean;
   detailViewType?: 'suite' | 'test' | 'suite-run' | 'test-run' | 'project' | null;
   suiteId?: string; // For suite detail view to fetch project environments
+  testId?: string; // For test detail view to fetch project environments
+  projectIdForEnvs?: string; // Explicit project ID for env filter (used by test-health)
   primaryAction?: {
     label: string;
     onClick: () => void;
@@ -28,6 +31,8 @@ export function Header({
   isDetailView = false,
   detailViewType,
   suiteId,
+  testId,
+  projectIdForEnvs: explicitProjectIdForEnvs,
   primaryAction,
   onEnvironmentChange,
 }: HeaderProps) {
@@ -41,8 +46,24 @@ export function Header({
   const { data: projects = [] } = useProjects();
 
   // For suite detail view: fetch suite to get project ID, then fetch environments
+  // If explicitProjectIdForEnvs is provided (from test-health), use that instead
   const { data: suite } = useSuite(suiteId || '');
-  const projectIdForEnvs = suite?.project?.id || '';
+
+  // For test detail view: fetch test to get project ID
+  const { data: testDetail } = useTestDetail(testId || '');
+
+  // Compute projectIdForEnvs with fallback for pages without explicit project context
+  // Priority: explicit prop > suite's project > test's project > first selected project > first accessible project
+  const projectIdForEnvs = useMemo(() => {
+    if (explicitProjectIdForEnvs) return explicitProjectIdForEnvs;
+    if (suite?.project?.id) return suite.project.id;
+    if (testDetail?.project_id) return testDetail.project_id;
+    // For test-health and overview pages, fall back to first selected or first project
+    if (selectedProjectIds.length > 0) return selectedProjectIds[0];
+    if (projects.length > 0) return projects[0].id;
+    return '';
+  }, [explicitProjectIdForEnvs, suite?.project?.id, testDetail?.project_id, selectedProjectIds, projects]);
+
   const { data: projectEnvironments = [] } = useProjectEnvironments(projectIdForEnvs);
 
   // Local environment selection for suite's project (sticky per project via localStorage)
@@ -53,18 +74,37 @@ export function Header({
   } = useConsoleEnvironmentFilter(projectIdForEnvs);
 
   // Convert env ID to selected environment name for dropdown
+  // If the environment ID doesn't exist in current project, treat as "All Environments"
   const selectedEnvName = useMemo(() => {
     if (!selectedEnvironmentId || projectEnvironments.length === 0) return [];
     const env = projectEnvironments.find(e => e.id === selectedEnvironmentId);
     return env ? [env.name] : [];
   }, [selectedEnvironmentId, projectEnvironments]);
 
+  // Clear stale environment selection if it doesn't exist in current project
+  // This ensures UI and API requests stay consistent
+  useEffect(() => {
+    if (selectedEnvironmentId && projectEnvironments.length > 0) {
+      const envExists = projectEnvironments.some(e => e.id === selectedEnvironmentId);
+      if (!envExists) {
+        clearSelectedEnvironmentId();
+      }
+    }
+  }, [selectedEnvironmentId, projectEnvironments, clearSelectedEnvironmentId]);
+
   // Notify parent when environment changes (for backward compatibility)
+  // Use effectiveEnvironmentId (validated) rather than raw selectedEnvironmentId
+  const effectiveEnvironmentId = useMemo(() => {
+    if (!selectedEnvironmentId || projectEnvironments.length === 0) return undefined;
+    const envExists = projectEnvironments.some(e => e.id === selectedEnvironmentId);
+    return envExists ? selectedEnvironmentId : undefined;
+  }, [selectedEnvironmentId, projectEnvironments]);
+
   useEffect(() => {
     if (onEnvironmentChange) {
-      onEnvironmentChange(selectedEnvironmentId || undefined);
+      onEnvironmentChange(effectiveEnvironmentId);
     }
-  }, [selectedEnvironmentId, onEnvironmentChange]);
+  }, [effectiveEnvironmentId, onEnvironmentChange]);
 
   // Pages that should show filters - but not if we're in a detail view
   // All list pages including environments use the global multi-select project filter

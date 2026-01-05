@@ -152,6 +152,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("/api/suites/", s.requireAuth(s.handleConsoleSuiteRoutesDispatch))
 	s.mux.HandleFunc("/api/runs/", s.requireAuth(s.handleRunRoutesDispatch))
 	s.mux.HandleFunc("/api/test-runs/", s.requireAuth(s.handleTestRunRoutesDispatch))
+	s.mux.HandleFunc("/api/test-health", s.requireAuth(s.handleTestHealth))
+	s.mux.HandleFunc("/api/tests/", s.requireAuth(s.handleTestRoutesDispatch))
 
 	// Onboarding API
 	s.mux.HandleFunc("/api/overview/setup", s.requireAuth(s.handleOverviewSetup))

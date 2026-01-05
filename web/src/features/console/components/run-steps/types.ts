@@ -4,7 +4,7 @@ import type { RunStep } from '../../hooks/use-console-queries';
 export type { RunStep, AssertionResult, SavedVariable, StepConfig } from '../../hooks/use-console-queries';
 
 /** UI status for step display */
-export type StepUIStatus = 'success' | 'failed' | 'pending' | 'running';
+export type StepUIStatus = 'success' | 'failed' | 'pending' | 'running' | 'definition';
 
 /** Map API status to UI status */
 export function mapStepStatus(status: string): StepUIStatus {
@@ -15,6 +15,8 @@ export function mapStepStatus(status: string): StepUIStatus {
       return 'failed';
     case 'RUNNING':
       return 'running';
+    case 'DEFINITION':
+      return 'definition';
     case 'PENDING':
     default:
       return 'pending';

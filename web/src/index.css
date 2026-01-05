@@ -173,3 +173,16 @@ button, input, select, textarea {
 .animate-rainbow {
   animation: rainbow var(--speed, 2s) infinite linear;
 }
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s ease-in-out infinite;
+}

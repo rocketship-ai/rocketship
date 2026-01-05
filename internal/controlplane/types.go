@@ -169,6 +169,13 @@ type dataStore interface {
 	// Reconciliation for full scans (deactivate missing suites/tests)
 	DeactivateSuitesMissingFromDir(ctx context.Context, projectID uuid.UUID, sourceRef, rocketshipDir string, presentFilePaths []string, reason string) (int, error)
 	DeactivateTestsMissingFromSuite(ctx context.Context, suiteID uuid.UUID, sourceRef string, presentTestNames []string, reason string) (int, error)
+
+	// Test Health queries
+	ListTestHealth(ctx context.Context, orgID, userID uuid.UUID, params persistence.TestHealthParams) ([]persistence.TestHealthRow, []persistence.TestHealthSuiteOption, error)
+
+	// Test Detail queries
+	GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.UUID) (*persistence.TestDetailRow, error)
+	ListTestRuns(ctx context.Context, orgID uuid.UUID, identity persistence.TestIdentity, params persistence.TestRunsParams) ([]persistence.TestRunSummary, error)
 }
 
 // githubProvider defines the interface for GitHub OAuth operations (identity only)

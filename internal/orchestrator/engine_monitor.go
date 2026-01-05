@@ -43,63 +43,92 @@ func (e *Engine) monitorWorkflow(runID, workflowID, workflowRunID string) {
 }
 
 func (e *Engine) updateTestStatus(runID, workflowID string, workflowErr error) {
+	endedAt := time.Now().UTC()
+
+	// Determine status and error message from workflow result
+	var status string
+	var errMsg *string
+	var cleanErr string
+
+	if workflowErr != nil {
+		if workflowErr.Error() == "workflow monitoring timeout" {
+			status = "TIMEOUT"
+		} else {
+			status = "FAILED"
+			cleanErr = interpreter.ExtractCleanError(workflowErr)
+			errMsg = &cleanErr
+		}
+	} else {
+		status = "PASSED"
+	}
+
+	// CRITICAL: Always persist DB update first, regardless of in-memory state.
+	// This ensures scheduled runs (and any runs where engine may have restarted)
+	// get their terminal status persisted correctly.
+	if e.runStore != nil {
+		if err := e.runStore.UpdateRunTestByWorkflowID(context.Background(), workflowID, status, errMsg, endedAt, 0); err != nil {
+			// Only log as error if it's not a "not found" error (which can happen for local runs without DB)
+			slog.Error("updateTestStatus: failed to persist run_test status", "workflow_id", workflowID, "status", status, "error", err)
+		} else {
+			slog.Debug("updateTestStatus: persisted run_test status", "workflow_id", workflowID, "status", status)
+		}
+	}
+
+	// Now update in-memory state (for streaming logs, etc.)
 	e.mu.Lock()
 	runInfo, exists := e.runs[runID]
 	if !exists {
 		e.mu.Unlock()
-		log.Printf("[ERROR] Run not found during status update: %s", runID)
+		// Run not in memory - this can happen after engine restart.
+		// DB was already updated above, so just trigger run completion check via DB.
+		slog.Warn("updateTestStatus: run not in memory, checking DB for run completion", "run_id", runID, "workflow_id", workflowID)
+		e.checkIfRunFinishedFromDB(runID)
 		return
 	}
 
 	testInfo, exists := runInfo.Tests[workflowID]
 	if !exists {
 		e.mu.Unlock()
-		log.Printf("[ERROR] Test not found during status update: %s in run %s", workflowID, runID)
+		// Test not in memory but run exists - this is unusual but handle it
+		slog.Warn("updateTestStatus: test not in memory", "run_id", runID, "workflow_id", workflowID)
+		e.checkIfRunFinished(runID)
 		return
 	}
 
-	endedAt := time.Now().UTC()
+	// Update in-memory state
 	testInfo.EndedAt = endedAt
+	testInfo.Status = status
 	durationMs := endedAt.Sub(testInfo.StartedAt).Milliseconds()
 	orgID := runInfo.OrganizationID
+	testID := testInfo.TestID
+	testName := testInfo.Name
+	e.mu.Unlock()
 
-	var status string
-	var errMsg *string
-
+	// Log based on status
 	if workflowErr != nil {
-		if workflowErr.Error() == "workflow monitoring timeout" {
-			status = "TIMEOUT"
-			testInfo.Status = status
-			e.mu.Unlock()
-			log.Printf("[WARN] Test timed out: %s", testInfo.Name)
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", testInfo.Name), "red", true)
+		if status == "TIMEOUT" {
+			log.Printf("[WARN] Test timed out: %s", testName)
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" timed out", testName), "red", true)
 		} else {
-			status = "FAILED"
-			testInfo.Status = status
-			e.mu.Unlock()
-			cleanErr := interpreter.ExtractCleanError(workflowErr)
-			errMsg = &cleanErr
-			log.Printf("[ERROR] Test failed: %s - %s", testInfo.Name, cleanErr)
-			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %s", testInfo.Name, cleanErr), "red", true)
+			log.Printf("[ERROR] Test failed: %s - %s", testName, cleanErr)
+			e.addLog(runID, fmt.Sprintf("Test: \"%s\" failed: %s", testName, cleanErr), "red", true)
 		}
 	} else {
-		status = "PASSED"
-		testInfo.Status = status
-		e.mu.Unlock()
-		log.Printf("[INFO] Test passed: %s", testInfo.Name)
-		e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testInfo.Name), "green", true)
+		log.Printf("[INFO] Test passed: %s", testName)
+		e.addLog(runID, fmt.Sprintf("Test: \"%s\" passed", testName), "green", true)
 	}
 
-	// Persist run_test status update
+	// Update duration now that we have it from in-memory state
 	if orgID != uuid.Nil && e.runStore != nil {
+		// Re-update with correct duration (the initial update above used 0)
 		if err := e.runStore.UpdateRunTestByWorkflowID(context.Background(), workflowID, status, errMsg, endedAt, durationMs); err != nil {
-			slog.Error("updateTestStatus: failed to persist run_test status", "workflow_id", workflowID, "error", err)
+			slog.Debug("updateTestStatus: failed to update duration", "workflow_id", workflowID, "error", err)
 		}
 
 		// Update test last_run if we have a resolved test_id
-		if testInfo.TestID != uuid.Nil {
-			if err := e.runStore.UpdateTestLastRun(context.Background(), testInfo.TestID, runID, status, endedAt, durationMs); err != nil {
-				slog.Debug("updateTestStatus: failed to update test last_run", "test_id", testInfo.TestID, "error", err)
+		if testID != uuid.Nil {
+			if err := e.runStore.UpdateTestLastRun(context.Background(), testID, runID, status, endedAt, durationMs); err != nil {
+				slog.Debug("updateTestStatus: failed to update test last_run", "test_id", testID, "error", err)
 			}
 		}
 	}
@@ -311,4 +340,77 @@ func (e *Engine) getTestStatusCounts(runID string) (TestStatusCounts, error) {
 	}
 
 	return counts, nil
+}
+
+// checkIfRunFinishedFromDB checks run completion status directly from the database.
+// This is used when in-memory state is not available (e.g., after engine restart).
+func (e *Engine) checkIfRunFinishedFromDB(runID string) {
+	if e.runStore == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	// Get all run_tests for this run from DB
+	runTests, err := e.runStore.ListRunTests(ctx, runID)
+	if err != nil {
+		slog.Error("checkIfRunFinishedFromDB: failed to list run_tests", "run_id", runID, "error", err)
+		return
+	}
+
+	if len(runTests) == 0 {
+		slog.Debug("checkIfRunFinishedFromDB: no run_tests found", "run_id", runID)
+		return
+	}
+
+	// Count statuses from DB
+	counts := TestStatusCounts{Total: len(runTests)}
+	for _, rt := range runTests {
+		switch rt.Status {
+		case "PASSED":
+			counts.Passed++
+		case "FAILED":
+			counts.Failed++
+		case "TIMEOUT":
+			counts.TimedOut++
+		case "PENDING", "RUNNING":
+			counts.Pending++
+		}
+	}
+
+	// If any tests still pending/running, run is not finished
+	if counts.Pending > 0 {
+		slog.Debug("checkIfRunFinishedFromDB: run still has pending tests", "run_id", runID, "pending", counts.Pending)
+		return
+	}
+
+	// All tests complete - determine final status
+	endTime := time.Now().UTC()
+	var finalStatus string
+	if counts.Failed == 0 && counts.TimedOut == 0 {
+		finalStatus = "PASSED"
+	} else {
+		finalStatus = "FAILED"
+	}
+
+	slog.Info("checkIfRunFinishedFromDB: all tests complete, updating run status",
+		"run_id", runID,
+		"status", finalStatus,
+		"passed", counts.Passed,
+		"failed", counts.Failed,
+		"timeout", counts.TimedOut,
+	)
+
+	// Get run record to find org_id
+	// We need to use a method that doesn't require org_id first
+	runTests2, err := e.runStore.ListRunTests(ctx, runID)
+	if err != nil || len(runTests2) == 0 {
+		slog.Error("checkIfRunFinishedFromDB: cannot determine org_id", "run_id", runID)
+		return
+	}
+
+	// Use the UpdateRunByID method to update run status directly
+	if err := e.runStore.UpdateRunStatusByID(ctx, runID, finalStatus, endTime, makeRunTotals(counts)); err != nil {
+		slog.Error("checkIfRunFinishedFromDB: failed to update run status", "run_id", runID, "error", err)
+	}
 }
