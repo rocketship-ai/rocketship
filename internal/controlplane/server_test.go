@@ -921,7 +921,7 @@ func (f *fakeStore) GetTestDetail(_ context.Context, _, _ uuid.UUID) (*persisten
 	return nil, sql.ErrNoRows
 }
 
-func (f *fakeStore) ListTestRuns(_ context.Context, _, _ uuid.UUID, _ persistence.TestRunsParams) ([]persistence.TestRunSummary, error) {
+func (f *fakeStore) ListTestRuns(_ context.Context, _ uuid.UUID, _ persistence.TestIdentity, _ persistence.TestRunsParams) ([]persistence.TestRunSummary, error) {
 	return []persistence.TestRunSummary{}, nil
 }
 

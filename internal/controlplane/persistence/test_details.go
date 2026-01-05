@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // TestDetailRow represents a single test with enriched step definitions
@@ -24,8 +25,12 @@ type TestDetailRow struct {
 	SuiteName string    `db:"suite_name"`
 
 	// Project info
-	ProjectID   uuid.UUID `db:"project_id"`
-	ProjectName string    `db:"project_name"`
+	ProjectID            uuid.UUID `db:"project_id"`
+	ProjectName          string    `db:"project_name"`
+	ProjectRepoURL       string    `db:"project_repo_url"`
+	ProjectPathScope     []string  `db:"-"` // Parsed from JSON
+	ProjectPathScopeJSON string    `db:"project_path_scope"`
+	ProjectDefaultBranch string    `db:"project_default_branch"`
 
 	// Parsed step summaries with enriched config
 	StepSummaries []StepSummary `db:"-"`
@@ -56,10 +61,10 @@ type TestRunSummary struct {
 
 // TestRunsParams contains query parameters for ListTestRuns
 type TestRunsParams struct {
-	Triggers      []string // Filter by trigger types (ci, manual, schedule)
-	EnvironmentID uuid.NullUUID
-	Limit         int
-	Offset        int
+	Triggers        []string // Filter by trigger types (ci, manual, schedule)
+	EnvironmentSlug string   // Filter by environment slug (e.g. "staging") - matches r.environment string
+	Limit           int
+	Offset          int
 }
 
 // GetTestDetail returns a test with its enriched step summaries and project/suite info
@@ -75,6 +80,9 @@ func (s *Store) GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.
 			s.name as suite_name,
 			p.id as project_id,
 			p.name as project_name,
+			p.repo_url as project_repo_url,
+			COALESCE(p.path_scope, '[]'::jsonb)::text as project_path_scope,
+			p.default_branch as project_default_branch,
 			COALESCE(t.step_summaries, '[]'::jsonb)::text as step_summaries_json,
 			t.created_at,
 			t.updated_at
@@ -106,11 +114,29 @@ func (s *Store) GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.
 		row.StepSummaries = []StepSummary{}
 	}
 
+	// Parse project path_scope from JSON
+	if row.ProjectPathScopeJSON != "" && row.ProjectPathScopeJSON != "[]" {
+		if err := json.Unmarshal([]byte(row.ProjectPathScopeJSON), &row.ProjectPathScope); err != nil {
+			row.ProjectPathScope = []string{}
+		}
+	} else {
+		row.ProjectPathScope = []string{}
+	}
+
 	return &row, nil
 }
 
-// ListTestRuns returns recent run_tests for a specific test with filtering by trigger
-func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, testID uuid.UUID, params TestRunsParams) ([]TestRunSummary, error) {
+// TestIdentity contains the fields needed to identify a logical test across branches/projects
+type TestIdentity struct {
+	SuiteName string
+	TestName  string
+	RepoURL   string
+	PathScope []string
+}
+
+// ListTestRuns returns recent run_tests for a logical test identity with filtering by trigger.
+// This queries across all projects in the same repo/path_scope group to show runs from feature branches.
+func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity TestIdentity, params TestRunsParams) ([]TestRunSummary, error) {
 	// Set defaults
 	limit := params.Limit
 	if limit <= 0 {
@@ -125,7 +151,17 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, testID uuid.U
 		offset = 0
 	}
 
-	// Build the query with optional trigger filter
+	// Get all project IDs that share the same repo/path_scope (the "project group")
+	projectIDs, err := s.ListProjectIDsByRepoAndPathScope(ctx, orgID, identity.RepoURL, identity.PathScope)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project group IDs: %w", err)
+	}
+	if len(projectIDs) == 0 {
+		return []TestRunSummary{}, nil
+	}
+
+	// Build the query matching by suite_name and test_name across the project group
+	// This avoids relying on rt.test_id which may be null for some CI flows
 	query := `
 		SELECT
 			rt.id,
@@ -142,25 +178,26 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, testID uuid.U
 			r.initiator
 		FROM run_tests rt
 		JOIN runs r ON rt.run_id = r.id
-		JOIN projects p ON r.project_id = p.id
-		WHERE rt.test_id = $1
-		  AND p.organization_id = $2
+		WHERE r.project_id = ANY($1)
+		  AND r.organization_id = $2
+		  AND r.suite_name = $3
+		  AND lower(rt.name) = lower($4)
 	`
 
-	args := []interface{}{testID, orgID}
-	argPos := 3
+	args := []interface{}{pq.Array(projectIDs), orgID, identity.SuiteName, identity.TestName}
+	argPos := 5
 
 	// Add trigger filter if specified
 	if len(params.Triggers) > 0 {
 		query += fmt.Sprintf(" AND r.trigger = ANY($%d)", argPos)
-		args = append(args, params.Triggers)
+		args = append(args, pq.Array(params.Triggers))
 		argPos++
 	}
 
-	// Add environment filter if specified
-	if params.EnvironmentID.Valid {
-		query += fmt.Sprintf(" AND r.environment_id = $%d", argPos)
-		args = append(args, params.EnvironmentID.UUID)
+	// Add environment filter if specified (by slug/string, not UUID)
+	if params.EnvironmentSlug != "" {
+		query += fmt.Sprintf(" AND r.environment = $%d", argPos)
+		args = append(args, params.EnvironmentSlug)
 		argPos++
 	}
 
@@ -171,6 +208,10 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, testID uuid.U
 	var rows []TestRunSummary
 	if err := s.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, fmt.Errorf("failed to list test runs: %w", err)
+	}
+
+	if rows == nil {
+		rows = []TestRunSummary{}
 	}
 
 	return rows, nil

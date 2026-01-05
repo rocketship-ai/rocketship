@@ -1308,6 +1308,7 @@ export interface TestDetail {
   suite_name: string
   project_id: string
   project_name: string
+  project_default_branch: string
   steps: TestDetailStep[]
   created_at: string
   updated_at: string
@@ -1373,6 +1374,8 @@ export function useTestRuns(testId: string, params: TestRunsParams = {}) {
     enabled: !!testId,
     refetchOnWindowFocus: true,
     refetchIntervalInBackground: false,
+    // Keep previous data while fetching new results (prevents UI flicker during filter changes)
+    placeholderData: (previousData) => previousData,
     // Two-tier polling: fast when runs are in progress, idle otherwise
     refetchInterval: (query) => {
       const data = query.state.data

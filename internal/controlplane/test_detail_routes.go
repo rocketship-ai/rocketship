@@ -50,16 +50,17 @@ func (s *Server) handleTestDetail(w http.ResponseWriter, r *http.Request, princi
 
 	// Build response payload
 	payload := map[string]interface{}{
-		"id":          test.ID.String(),
-		"name":        test.Name,
-		"source_ref":  test.SourceRef,
-		"step_count":  test.StepCount,
-		"suite_id":    test.SuiteID.String(),
-		"suite_name":  test.SuiteName,
-		"project_id":  test.ProjectID.String(),
-		"project_name": test.ProjectName,
-		"created_at":  test.CreatedAt.Format(time.RFC3339),
-		"updated_at":  test.UpdatedAt.Format(time.RFC3339),
+		"id":                     test.ID.String(),
+		"name":                   test.Name,
+		"source_ref":             test.SourceRef,
+		"step_count":             test.StepCount,
+		"suite_id":               test.SuiteID.String(),
+		"suite_name":             test.SuiteName,
+		"project_id":             test.ProjectID.String(),
+		"project_name":           test.ProjectName,
+		"project_default_branch": test.ProjectDefaultBranch,
+		"created_at":             test.CreatedAt.Format(time.RFC3339),
+		"updated_at":             test.UpdatedAt.Format(time.RFC3339),
 	}
 
 	if test.Description.Valid {
@@ -130,19 +131,43 @@ func (s *Server) handleTestRuns(w http.ResponseWriter, r *http.Request, principa
 		return
 	}
 
+	// Build test identity for cross-branch/project lookup
+	identity := persistence.TestIdentity{
+		SuiteName: test.SuiteName,
+		TestName:  test.Name,
+		RepoURL:   test.ProjectRepoURL,
+		PathScope: test.ProjectPathScope,
+	}
+
 	// Parse query parameters
 	params := persistence.TestRunsParams{}
 
-	// Parse triggers filter
+	// Parse triggers filter (normalize and validate)
 	if triggersStr := r.URL.Query().Get("triggers"); triggersStr != "" {
-		params.Triggers = strings.Split(triggersStr, ",")
+		allowedTriggers := map[string]bool{"ci": true, "manual": true, "schedule": true}
+		rawTriggers := strings.Split(triggersStr, ",")
+		validTriggers := make([]string, 0, len(rawTriggers))
+		for _, t := range rawTriggers {
+			normalized := strings.ToLower(strings.TrimSpace(t))
+			if normalized != "" && allowedTriggers[normalized] {
+				validTriggers = append(validTriggers, normalized)
+			}
+		}
+		if len(validTriggers) > 0 {
+			params.Triggers = validTriggers
+		}
 	}
 
-	// Parse environment filter
+	// Parse environment filter - resolve UUID to slug for cross-project matching
 	if envIDStr := r.URL.Query().Get("environment_id"); envIDStr != "" {
 		envID, err := uuid.Parse(envIDStr)
 		if err == nil {
-			params.EnvironmentID = uuid.NullUUID{UUID: envID, Valid: true}
+			// Look up the environment to get its slug
+			env, err := s.store.GetEnvironment(r.Context(), test.ProjectID, envID)
+			if err == nil {
+				params.EnvironmentSlug = env.Slug
+			}
+			// If environment not found, silently skip the filter (user may have selected invalid env)
 		}
 	}
 
@@ -160,7 +185,7 @@ func (s *Server) handleTestRuns(w http.ResponseWriter, r *http.Request, principa
 		}
 	}
 
-	runs, err := s.store.ListTestRuns(r.Context(), principal.OrgID, testID, params)
+	runs, err := s.store.ListTestRuns(r.Context(), principal.OrgID, identity, params)
 	if err != nil {
 		log.Printf("failed to list test runs: %v", err)
 		writeError(w, http.StatusInternalServerError, "failed to list runs")
