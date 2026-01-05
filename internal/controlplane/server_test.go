@@ -748,8 +748,17 @@ func (f *fakeStore) ListProjectIDsByRepoAndPathScope(_ context.Context, _ uuid.U
 	return []uuid.UUID{}, nil
 }
 
-func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int, _ uuid.NullUUID) ([]persistence.SuiteRunRow, error) {
+func (f *fakeStore) ListRunsForSuiteGroup(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ int, _ persistence.SuiteRunsFilter) ([]persistence.SuiteRunRow, error) {
 	return []persistence.SuiteRunRow{}, nil
+}
+
+func (f *fakeStore) ListRunsForSuiteBranch(_ context.Context, _ uuid.UUID, _ []uuid.UUID, _, _ string, _ persistence.SuiteRunsFilter, limit, offset int) (persistence.SuiteRunsBranchResult, error) {
+	return persistence.SuiteRunsBranchResult{
+		Runs:   []persistence.SuiteRunRow{},
+		Total:  0,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
 }
 
 func (f *fakeStore) DeactivateProjectsForRepoAndSourceRef(_ context.Context, _ uuid.UUID, _, _, _ string) (int, error) {

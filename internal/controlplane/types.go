@@ -146,7 +146,8 @@ type dataStore interface {
 
 	// Suite run activity queries
 	ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) ([]uuid.UUID, error)
-	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, environmentID uuid.NullUUID) ([]persistence.SuiteRunRow, error)
+	ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, filter persistence.SuiteRunsFilter) ([]persistence.SuiteRunRow, error)
+	ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, branch string, filter persistence.SuiteRunsFilter, limit, offset int) (persistence.SuiteRunsBranchResult, error)
 
 	// Run detail queries
 	GetRun(ctx context.Context, orgID uuid.UUID, runID string) (persistence.RunRecord, error)

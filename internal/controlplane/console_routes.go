@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rocketship-ai/rocketship/internal/controlplane/persistence"
 )
 
 // handleConsoleProjects handles GET /api/projects (list projects the user can access)
@@ -279,7 +280,14 @@ func (s *Server) handleSuiteActivity(w http.ResponseWriter, r *http.Request, pri
 
 // handleSuiteRuns handles GET /api/suites/{suiteId}/runs
 // Returns run history for a suite across all branches/refs
-// Optional query param: environment_id - filter runs by environment
+// Query params:
+//   - environment_id: (uuid) filter runs by environment
+//   - branch: (string) when set, enter branch drilldown mode with pagination
+//   - limit: (int) runs per page in branch mode (default 10, max 50)
+//   - offset: (int) pagination offset in branch mode
+//   - runs_per_branch: (int) runs per branch in summary mode (default 5, max 20)
+//   - triggers: (csv) filter by trigger types (ci, manual, schedule)
+//   - search: (string) search in commit message and SHA
 func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, principal brokerPrincipal, suiteID uuid.UUID) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -291,16 +299,7 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
-	// Parse optional environment_id query param
-	var environmentID uuid.NullUUID
-	if envIDStr := r.URL.Query().Get("environment_id"); envIDStr != "" {
-		envID, err := uuid.Parse(envIDStr)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid environment_id")
-			return
-		}
-		environmentID = uuid.NullUUID{UUID: envID, Valid: true}
-	}
+	query := r.URL.Query()
 
 	// Get suite detail (includes org check)
 	suite, err := s.store.GetSuiteDetail(r.Context(), principal.OrgID, suiteID)
@@ -342,18 +341,111 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 		return
 	}
 
-	// Query runs for these projects + suite name
-	// - Shows up to 3 branches: default + 2 most recently active feature branches
-	// - Limit to 5 runs per branch
-	// - Filter by environment_id if provided
-	runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, 5, environmentID)
-	if err != nil {
-		log.Printf("failed to list runs for suite: %v", err)
-		writeError(w, http.StatusInternalServerError, "failed to list runs")
-		return
+	// Build filter from query params
+	var filter persistence.SuiteRunsFilter
+
+	// Environment filter: resolve UUID → slug for cross-project filtering
+	if envIDStr := query.Get("environment_id"); envIDStr != "" {
+		envID, err := uuid.Parse(envIDStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid environment_id")
+			return
+		}
+		// Look up environment to get its slug
+		env, err := s.store.GetEnvironment(r.Context(), suite.ProjectID, envID)
+		if err == nil {
+			filter.EnvironmentSlug = env.Slug
+		}
+		// If env not found, filter.EnvironmentSlug remains empty (returns no runs, which is correct)
 	}
 
-	// Build response
+	// Trigger filter: parse CSV, validate values
+	if triggersStr := query.Get("triggers"); triggersStr != "" {
+		validTriggers := map[string]bool{"ci": true, "manual": true, "schedule": true}
+		for _, t := range strings.Split(triggersStr, ",") {
+			t = strings.ToLower(strings.TrimSpace(t))
+			if validTriggers[t] {
+				filter.Triggers = append(filter.Triggers, t)
+			}
+		}
+	}
+
+	// Search filter
+	filter.Search = strings.TrimSpace(query.Get("search"))
+
+	// Branch param determines mode: summary (all branches) vs branch (single branch with pagination)
+	branch := strings.TrimSpace(query.Get("branch"))
+
+	var responsePayload map[string]interface{}
+
+	if branch != "" {
+		// Branch drilldown mode with pagination
+		limit := 10
+		if limitStr := query.Get("limit"); limitStr != "" {
+			if _, err := stringToInt(limitStr, &limit); err != nil || limit <= 0 {
+				limit = 10
+			}
+		}
+		if limit > 50 {
+			limit = 50
+		}
+
+		offset := 0
+		if offsetStr := query.Get("offset"); offsetStr != "" {
+			if _, err := stringToInt(offsetStr, &offset); err != nil || offset < 0 {
+				offset = 0
+			}
+		}
+
+		result, err := s.store.ListRunsForSuiteBranch(r.Context(), principal.OrgID, projectIDs, suite.Name, branch, filter, limit, offset)
+		if err != nil {
+			log.Printf("failed to list runs for suite branch: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to list runs")
+			return
+		}
+
+		runsPayload := s.formatSuiteRuns(result.Runs)
+		responsePayload = map[string]interface{}{
+			"mode":   "branch",
+			"runs":   runsPayload,
+			"total":  result.Total,
+			"limit":  result.Limit,
+			"offset": result.Offset,
+			"branch": result.Branch,
+		}
+	} else {
+		// Summary mode: multiple branches
+		runsPerBranch := 5
+		if rStr := query.Get("runs_per_branch"); rStr != "" {
+			if _, err := stringToInt(rStr, &runsPerBranch); err != nil || runsPerBranch <= 0 {
+				runsPerBranch = 5
+			}
+		}
+		if runsPerBranch > 20 {
+			runsPerBranch = 20
+		}
+
+		runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, runsPerBranch, filter)
+		if err != nil {
+			log.Printf("failed to list runs for suite: %v", err)
+			writeError(w, http.StatusInternalServerError, "failed to list runs")
+			return
+		}
+
+		runsPayload := s.formatSuiteRuns(runs)
+		responsePayload = map[string]interface{}{
+			"mode":   "summary",
+			"runs":   runsPayload,
+			"limit":  runsPerBranch,
+			"offset": 0,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, responsePayload)
+}
+
+// formatSuiteRuns converts SuiteRunRow slice to API response format
+func (s *Server) formatSuiteRuns(runs []persistence.SuiteRunRow) []map[string]interface{} {
 	payload := make([]map[string]interface{}, 0, len(runs))
 	for _, run := range runs {
 		item := map[string]interface{}{
@@ -405,8 +497,7 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 
 		payload = append(payload, item)
 	}
-
-	writeJSON(w, http.StatusOK, payload)
+	return payload
 }
 
 // handleSuiteDetail handles GET /api/suites/{suiteId}

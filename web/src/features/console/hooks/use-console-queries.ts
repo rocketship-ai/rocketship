@@ -463,23 +463,71 @@ export function useSuite(suiteId: string) {
   })
 }
 
-export function useSuiteRuns(suiteId: string, environmentId?: string) {
+// Suite runs params for server-side filtering and pagination
+export interface SuiteRunsParams {
+  environmentId?: string
+  branch?: string
+  triggers?: string[]
+  search?: string
+  limit?: number
+  offset?: number
+  runsPerBranch?: number
+}
+
+// Suite runs response with mode indicator for summary vs branch drilldown
+export interface SuiteRunsResponse {
+  mode: 'summary' | 'branch'
+  runs: SuiteRunSummary[]
+  total?: number    // Only meaningful in branch mode
+  limit: number
+  offset: number
+  branch?: string   // Only in branch mode
+}
+
+export function useSuiteRuns(suiteId: string, params: SuiteRunsParams = {}) {
+  // Build query string from params
+  const buildQueryString = () => {
+    const queryParts: string[] = []
+    if (params.environmentId) {
+      queryParts.push(`environment_id=${encodeURIComponent(params.environmentId)}`)
+    }
+    if (params.branch) {
+      queryParts.push(`branch=${encodeURIComponent(params.branch)}`)
+    }
+    if (params.triggers && params.triggers.length > 0) {
+      queryParts.push(`triggers=${encodeURIComponent(params.triggers.join(','))}`)
+    }
+    if (params.search) {
+      queryParts.push(`search=${encodeURIComponent(params.search)}`)
+    }
+    if (params.limit !== undefined) {
+      queryParts.push(`limit=${params.limit}`)
+    }
+    if (params.offset !== undefined) {
+      queryParts.push(`offset=${params.offset}`)
+    }
+    if (params.runsPerBranch !== undefined) {
+      queryParts.push(`runs_per_branch=${params.runsPerBranch}`)
+    }
+    return queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
+  }
+
   return useQuery({
-    queryKey: [...consoleKeys.suiteRuns(suiteId), environmentId] as const,
+    queryKey: [...consoleKeys.suiteRuns(suiteId), params] as const,
     queryFn: () => {
-      const url = environmentId
-        ? `/api/suites/${suiteId}/runs?environment_id=${environmentId}`
-        : `/api/suites/${suiteId}/runs`
-      return apiGet<SuiteRunSummary[]>(url)
+      const url = `/api/suites/${suiteId}/runs${buildQueryString()}`
+      return apiGet<SuiteRunsResponse>(url)
     },
     enabled: !!suiteId,
     refetchOnWindowFocus: true,
     refetchIntervalInBackground: false, // Don't poll when tab is backgrounded
+    // Keep previous data while fetching (prevents UI flicker during refetch/search)
+    placeholderData: (previousData) => previousData,
     refetchInterval: (query) => {
       const data = query.state.data
       if (!data) return SUITE_RUNS_POLL_IDLE_MS // Initial load: use idle polling
       // Fast polling when runs are live, idle polling otherwise (to discover new runs)
-      const hasLiveRun = data.some((run) => isLiveRunStatus(run.status))
+      const hasLiveRun = data.runs.some((run) => isLiveRunStatus(run.status))
       return hasLiveRun ? SUITE_RUNS_POLL_LIVE_MS : SUITE_RUNS_POLL_IDLE_MS
     },
   })
