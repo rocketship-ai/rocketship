@@ -280,7 +280,24 @@ export default function SignupPage() {
             </Button>
 
             <p className="text-center mt-6 text-xs text-gray-400">
-              By signing up, you agree to our Terms of Service
+              By signing up, you agree to our{" "}
+              <a
+                href="https://github.com/rocketship-ai/rocketship/blob/main/legal/rocketship-terms-of-service.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-gray-600"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://github.com/rocketship-ai/rocketship/blob/main/legal/rocketship-privacy-policy.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-gray-600"
+              >
+                Privacy Policy
+              </a>
             </p>
 
             <div className="mt-6 pt-6 border-t border-gray-100">
