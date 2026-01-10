@@ -102,24 +102,10 @@ export function InitiatorBadge({ initiator, name }: InitiatorBadgeProps) {
   );
 }
 
-interface ConfigSourceBadgeProps {
-  type: 'uncommitted' | 'repo_commit';
-  sha?: string;
-}
-
-export function ConfigSourceBadge({ type, sha }: ConfigSourceBadgeProps) {
-  if (type === 'uncommitted') {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#f6a724]/10 border border-[#f6a724]/30 text-[#f6a724]">
-        Uncommitted
-      </span>
-    );
-  }
-
-  // type === 'repo_commit' - show the commit SHA
+export function UncommittedLabel() {
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#fafafa] border border-[#e5e5e5] text-[#666666]">
-      Repo@{sha?.slice(0, 7) || '—'}
+    <span className="text-xs text-[#e05a00]">
+      Uncommitted
     </span>
   );
 }
