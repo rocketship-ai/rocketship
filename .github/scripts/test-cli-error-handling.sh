@@ -8,7 +8,7 @@ log() {
 log "Validating error scenarios"
 ! rocketship validate nonexistent.yaml
 ! rocketship run -f nonexistent.yaml
-! rocketship validate examples/simple-http/rocketship.yaml examples/nonexistent.yaml
+! rocketship validate .rocketship/simple-http.yaml .rocketship/nonexistent.yaml
 
 log "Testing run persistence error flows"
 ! rocketship list -e localhost:7700

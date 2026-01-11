@@ -1,7 +1,7 @@
 name: "HTTP OpenAPI Multi-Format Example"
 description: "Demonstrates OpenAPI validation for form-encoded and JSON requests"
 openapi:
-  spec: "./examples/http-openapi-form/spec.openapi"
+  spec: "./.rocketship/http-openapi-form-spec.openapi"
   cache_ttl: "5m"
 
 tests:

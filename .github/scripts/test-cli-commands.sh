@@ -9,9 +9,9 @@ log "Running CLI smoke tests"
 rocketship --help >/dev/null
 rocketship version
 
-log "Validating examples"
-rocketship validate examples/
-rocketship validate examples/simple-http/rocketship.yaml
+log "Validating .rocketship test suites"
+rocketship validate .rocketship/
+rocketship validate .rocketship/simple-http.yaml
 
 log "Running targeted script tests"
 ./.github/scripts/test-log-plugin.sh
@@ -26,9 +26,9 @@ log "Testing Supabase error handling"
 log "Testing browser error handling"
 ./.github/scripts/test-browser-error-handling.sh
 
-log "Executing examples directory"
+log "Executing .rocketship test suites"
 set +e  # Temporarily disable exit on error to capture output
-OUTPUT=$(rocketship run -ad examples --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb" 2>&1)
+OUTPUT=$(rocketship run -ad .rocketship --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb" 2>&1)
 EXIT_CODE=$?
 set -e  # Re-enable exit on error
 
@@ -37,9 +37,9 @@ echo "$OUTPUT"
 
 # Check if any tests failed
 if echo "$OUTPUT" | grep -q "✗ Failed Tests: 0"; then
-  log "All examples passed"
+  log "All test suites passed"
 else
-  echo "❌ Example suite failures detected (exit code: $EXIT_CODE)"
+  echo "❌ Test suite failures detected (exit code: $EXIT_CODE)"
   exit 1
 fi
 

@@ -30,7 +30,7 @@ Saves and assertions (`json_path`) remain available on every step for variable p
 
 ## Example Flow
 
-`examples/browser/persistent-session/checkout.yaml` demonstrates an interleaved run:
+`.rocketship/browser-persistent-session.yaml` demonstrates an interleaved run:
 
 ```yaml
 - name: start browser

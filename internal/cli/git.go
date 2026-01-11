@@ -11,6 +11,14 @@ import (
 	"strings"
 )
 
+func evalSymlinksBestEffort(path string) string {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return path
+	}
+	return resolved
+}
+
 // GitInfo contains local git repository information
 type GitInfo struct {
 	Branch        string
@@ -61,7 +69,7 @@ func GetRepoRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(root), nil
+	return evalSymlinksBestEffort(strings.TrimSpace(root)), nil
 }
 
 // DerivePathScope determines the path scope from a YAML file path relative to the repo root
@@ -78,6 +86,11 @@ func DerivePathScope(yamlFilePath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Normalize symlinked paths to avoid `filepath.Rel` producing `..` segments when
+	// repoRoot and absPath are in different symlink namespaces.
+	repoRoot = evalSymlinksBestEffort(repoRoot)
+	absPath = evalSymlinksBestEffort(absPath)
 
 	// Get relative path from repo root
 	relPath, err := filepath.Rel(repoRoot, absPath)

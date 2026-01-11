@@ -1,7 +1,7 @@
 name: "HTTP OpenAPI Multi-Format Example (Invalid)"
 description: "Triggers OpenAPI validation failure for missing form field"
 openapi:
-  spec: "./examples/http-openapi-form/spec.openapi"
+  spec: "./.rocketship/http-openapi-form-spec.openapi"
   cache_ttl: "5m"
 
 tests:

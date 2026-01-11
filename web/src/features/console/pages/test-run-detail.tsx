@@ -1,5 +1,5 @@
 import { ArrowLeft, Play, AlertCircle, Edit3, Loader2 } from 'lucide-react';
-import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
+import { StatusBadge, EnvBadge, TriggerBadge, UsernameBadge, UncommittedLabel, BadgeDot } from '../components/status-badge';
 import { useState } from 'react';
 import { useTestRun, useTestRunLogs, useTestRunSteps } from '../hooks/use-console-queries';
 import { useLiveDurationMs } from '../hooks/use-live-duration';
@@ -139,9 +139,8 @@ export function TestRunDetail({ testRunId, onBack }: TestRunDetailProps) {
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusBadge status={testRun.status} isLive={isTestLive} />
                 {testRun.env && <EnvBadge env={testRun.env} />}
-                {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant */}
                 {testRun.isUncommitted && (
-                  <ConfigSourceBadge type="uncommitted" />
+                  <UncommittedLabel />
                 )}
                 <BadgeDot />
                 <TriggerBadge trigger={testRun.trigger} />

@@ -249,6 +249,28 @@ func runSingleTest(ctx context.Context, client *EngineClient, yamlPath string, c
 			// Clean file - no bundle_sha needed (it's in the repo at commit_sha)
 			Logger.Debug("file is clean, setting config_source=repo_commit", "path", yamlPath)
 		}
+
+		// Set suite file path for stable suite identity (used for run→suite linking)
+		// Normalize to forward slashes for consistency with Git/scanner paths (cross-platform)
+		if _, ok := runContext.Metadata["rs_suite_file_path"]; !ok {
+			repoRoot, err := GetRepoRoot()
+			if err == nil {
+				absPath, err := filepath.Abs(yamlPath)
+				if err == nil {
+					// Normalize symlinked paths to avoid `filepath.Rel` producing `..` segments when
+					// repoRoot and absPath are in different symlink namespaces.
+					repoRoot = evalSymlinksBestEffort(repoRoot)
+					absPath = evalSymlinksBestEffort(absPath)
+
+					relPath, err := filepath.Rel(repoRoot, absPath)
+					if err == nil {
+						normalizedPath := filepath.ToSlash(relPath)
+						runContext.Metadata["rs_suite_file_path"] = normalizedPath
+						Logger.Debug("set suite file path", "path", normalizedPath)
+					}
+				}
+			}
+		}
 	}
 
 	// Create run with timeout
@@ -735,19 +757,6 @@ func NewRunCmd() *cobra.Command {
 					} else {
 						runContext.Metadata["rs_path_scope_json"] = PathScopeToJSON(pathScope)
 						Logger.Debug("derived path scope", "path_scope", pathScope)
-					}
-				}
-				// Also add the suite file path for debugging
-				if _, ok := runContext.Metadata["rs_suite_file"]; !ok && len(testFiles) == 1 {
-					repoRoot, err := GetRepoRoot()
-					if err == nil {
-						absPath, err := filepath.Abs(testFiles[0])
-						if err == nil {
-							relPath, err := filepath.Rel(repoRoot, absPath)
-							if err == nil {
-								runContext.Metadata["rs_suite_file"] = relPath
-							}
-						}
 					}
 				}
 			}

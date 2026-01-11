@@ -3,10 +3,10 @@ set -e
 
 echo "Running Supabase error handling tests (these should fail)..."
 # Use env file for local testing; in CI the env var is set by workflow
-if [ -f "error-examples/supabase-error-handling/.env" ]; then
-    OUTPUT=$(rocketship run -af error-examples/supabase-error-handling/rocketship.yaml --env-file error-examples/supabase-error-handling/.env 2>&1 || true)
+if [ -f ".rocketship-errors/supabase-error-handling.env" ]; then
+    OUTPUT=$(rocketship run -af .rocketship-errors/supabase-error-handling.yaml --env-file .rocketship-errors/supabase-error-handling.env 2>&1 || true)
 else
-    OUTPUT=$(rocketship run -af error-examples/supabase-error-handling/rocketship.yaml 2>&1 || true)
+    OUTPUT=$(rocketship run -af .rocketship-errors/supabase-error-handling.yaml 2>&1 || true)
 fi
 
 echo "Test output:"

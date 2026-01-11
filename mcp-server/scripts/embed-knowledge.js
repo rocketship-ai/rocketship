@@ -21,23 +21,22 @@ function loadRealSchema() {
 }
 
 function loadRealExamples() {
-  const examplesDir = path.join(PROJECT_ROOT, 'examples');
+  const rocketshipDir = path.join(PROJECT_ROOT, '.rocketship');
   const examples = new Map();
-  
-  if (!fs.existsSync(examplesDir)) {
-    throw new Error(`Examples directory not found at ${examplesDir}`);
+
+  if (!fs.existsSync(rocketshipDir)) {
+    throw new Error(`.rocketship directory not found at ${rocketshipDir}`);
   }
 
-  const subdirs = fs.readdirSync(examplesDir, { withFileTypes: true })
-    .filter(dirent => dirent.isDirectory())
+  const yamlFiles = fs.readdirSync(rocketshipDir, { withFileTypes: true })
+    .filter(dirent => dirent.isFile() && dirent.name.endsWith('.yaml'))
     .map(dirent => dirent.name);
 
-  for (const subdir of subdirs) {
-    const yamlPath = path.join(examplesDir, subdir, 'rocketship.yaml');
-    if (fs.existsSync(yamlPath)) {
-      const content = fs.readFileSync(yamlPath, 'utf-8');
-      examples.set(subdir, content);
-    }
+  for (const file of yamlFiles) {
+    const yamlPath = path.join(rocketshipDir, file);
+    const content = fs.readFileSync(yamlPath, 'utf-8');
+    const name = file.replace('.yaml', '');
+    examples.set(name, content);
   }
 
   return examples;

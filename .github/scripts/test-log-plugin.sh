@@ -24,7 +24,7 @@ echo "Testing log plugin functionality..."
 
 # Test 1: Normal logging level
 echo "Running log plugin test with normal logging..."
-OUTPUT=$(run_capture rocketship run -af examples/simple-log/rocketship.yaml)
+OUTPUT=$(run_capture rocketship run -af .rocketship/simple-log.yaml)
 echo "$OUTPUT"
 
 # Check that specific log messages appear in stdout
@@ -73,7 +73,7 @@ fi
 
 # Test 2: ERROR level logging (to ensure messages still appear)
 echo "Testing log plugin with ERROR level logging (to ensure messages still appear)..."
-OUTPUT=$(run_capture env ROCKETSHIP_LOG=ERROR rocketship run -af examples/simple-log/rocketship.yaml)
+OUTPUT=$(run_capture env ROCKETSHIP_LOG=ERROR rocketship run -af .rocketship/simple-log.yaml)
 echo "$OUTPUT"
 
 # Verify log messages still appear with ERROR level logging

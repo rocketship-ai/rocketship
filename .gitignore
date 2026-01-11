@@ -27,7 +27,6 @@ cli-introspection.json
 
 # user testing
 **/.env
-.rocketship/
 .playwright-mcp/
 
 # GitHub App private keys (local dev only; never commit)

@@ -33,10 +33,10 @@ TESTS_FAILED=0
 
 # Test 1: Suite-level hooks
 log "Test 1: Running suite-level hooks example..."
-if [ -f "examples/lifecycle-hooks/.env" ]; then
-    OUTPUT=$(run_capture rocketship run -af examples/lifecycle-hooks/suite-level-hooks/rocketship.yaml --env-file examples/lifecycle-hooks/.env)
+if [ -f ".rocketship/lifecycle-hooks.env" ]; then
+    OUTPUT=$(run_capture rocketship run -af .rocketship/lifecycle-hooks-suite-level.yaml --env-file .rocketship/lifecycle-hooks.env)
 else
-    OUTPUT=$(run_capture rocketship run -af examples/lifecycle-hooks/suite-level-hooks/rocketship.yaml)
+    OUTPUT=$(run_capture rocketship run -af .rocketship/lifecycle-hooks-suite-level.yaml)
 fi
 
 echo "$OUTPUT"
@@ -68,10 +68,10 @@ echo ""
 
 # Test 2: Test-level hooks
 log "Test 2: Running test-level hooks example..."
-if [ -f "examples/lifecycle-hooks/.env" ]; then
-    OUTPUT=$(run_capture rocketship run -af examples/lifecycle-hooks/test-level-hooks/rocketship.yaml --env-file examples/lifecycle-hooks/.env)
+if [ -f ".rocketship/lifecycle-hooks.env" ]; then
+    OUTPUT=$(run_capture rocketship run -af .rocketship/lifecycle-hooks-test-level.yaml --env-file .rocketship/lifecycle-hooks.env)
 else
-    OUTPUT=$(run_capture rocketship run -af examples/lifecycle-hooks/test-level-hooks/rocketship.yaml)
+    OUTPUT=$(run_capture rocketship run -af .rocketship/lifecycle-hooks-test-level.yaml)
 fi
 
 echo "$OUTPUT"
@@ -103,10 +103,10 @@ echo ""
 
 # Test 3: Combined hooks
 log "Test 3: Running combined suite and test hooks example..."
-if [ -f "examples/lifecycle-hooks/.env" ]; then
-    OUTPUT=$(run_capture rocketship run -af examples/lifecycle-hooks/combined-hooks/rocketship.yaml --env-file examples/lifecycle-hooks/.env)
+if [ -f ".rocketship/lifecycle-hooks.env" ]; then
+    OUTPUT=$(run_capture rocketship run -af .rocketship/lifecycle-hooks-combined.yaml --env-file .rocketship/lifecycle-hooks.env)
 else
-    OUTPUT=$(run_capture rocketship run -af examples/lifecycle-hooks/combined-hooks/rocketship.yaml)
+    OUTPUT=$(run_capture rocketship run -af .rocketship/lifecycle-hooks-combined.yaml)
 fi
 
 echo "$OUTPUT"

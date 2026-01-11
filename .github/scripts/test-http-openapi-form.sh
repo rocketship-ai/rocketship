@@ -5,10 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 pushd "${REPO_ROOT}" >/dev/null
-ROCKETSHIP_LOG=ERROR rocketship run -af examples/http-openapi-form/rocketship.yaml
+ROCKETSHIP_LOG=ERROR rocketship run -af .rocketship/http-openapi-form.yaml
 
 set +e
-OUTPUT=$(ROCKETSHIP_LOG=ERROR rocketship run -af error-examples/http-openapi-form-invalid/rocketship.yaml 2>&1)
+OUTPUT=$(ROCKETSHIP_LOG=ERROR rocketship run -af .rocketship-errors/http-openapi-form-invalid.yaml 2>&1)
 set -e
 popd >/dev/null
 

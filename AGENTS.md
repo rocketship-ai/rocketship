@@ -134,7 +134,7 @@ cat /tmp/debug.log | grep -E "(undefined variables|failed to parse template)"
 
 1. **Make code changes** to engine/worker/CLI
 2. **Rebuild binaries**: `make install`
-3. **Test with debug logging**: `rocketship run --debug -af examples/simple-http/rocketship.yaml`
+3. **Test with debug logging**: `rocketship run --debug -af .rocketship/simple-http.yaml`
 4. **Run lint and test suite**: `make lint && make test`
 
 ### Local Development Binary Usage
@@ -145,7 +145,7 @@ The system automatically uses local development binaries from `internal/embedded
 
 ```bash
 # Quick test with debug output
-rocketship run --debug -af examples/simple-http/rocketship.yaml
+rocketship run --debug -af .rocketship/simple-http.yaml
 
 # Background server for iterative testing
 rocketship --debug start server --background
@@ -266,7 +266,7 @@ rocketship profile create minikube grpc://localhost:7700
 rocketship profile use minikube
 
 # 4. Run tests
-rocketship run -af examples/simple-http/rocketship.yaml
+rocketship run -af .rocketship/simple-http.yaml
 
 # 5. Tear down when finished
 helm uninstall rocketship temporal -n rocketship
@@ -314,7 +314,7 @@ rocketship stop server
 
 ## Running Tests with SQL Plugin
 
-- **Minikube stack:** run `scripts/install-minikube.sh`, port-forward the engine, then execute `rocketship run -af examples/sql-testing/rocketship.yaml`.
+- **Minikube stack:** run `scripts/install-minikube.sh`, port-forward the engine, then execute `rocketship run -af .rocketship/sql-testing.yaml`.
 - **Standalone Docker containers:**
 
   ```bash
@@ -330,7 +330,7 @@ rocketship stop server
 When using Minikube, the worker image built by `scripts/install-minikube.sh` already contains the Python and Playwright dependencies. After the script completes, port-forward the engine and run:
 
 ```bash
-rocketship run -af examples/browser-testing/rocketship.yaml
+rocketship run -af .rocketship/browser.yaml
 ```
 
 For manual local setups, install the dependencies once:
@@ -338,7 +338,7 @@ For manual local setups, install the dependencies once:
 ```bash
 pip install playwright
 playwright install chromium
-rocketship run -af examples/browser-automation/rocketship.yaml
+rocketship run -af .rocketship/browser.yaml
 ```
 
 ## Testing Against tryme Server

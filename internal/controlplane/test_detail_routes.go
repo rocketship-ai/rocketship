@@ -132,11 +132,17 @@ func (s *Server) handleTestRuns(w http.ResponseWriter, r *http.Request, principa
 	}
 
 	// Build test identity for cross-branch/project lookup
+	// Use suite_file_path for stable identity (survives suite name changes)
+	var suiteFilePath string
+	if test.SuiteFilePath.Valid {
+		suiteFilePath = test.SuiteFilePath.String
+	}
 	identity := persistence.TestIdentity{
-		SuiteName: test.SuiteName,
-		TestName:  test.Name,
-		RepoURL:   test.ProjectRepoURL,
-		PathScope: test.ProjectPathScope,
+		SuiteFilePath: suiteFilePath,
+		SuiteName:     test.SuiteName, // Fallback for legacy runs
+		TestName:      test.Name,
+		RepoURL:       test.ProjectRepoURL,
+		PathScope:     test.ProjectPathScope,
 	}
 
 	// Parse query parameters

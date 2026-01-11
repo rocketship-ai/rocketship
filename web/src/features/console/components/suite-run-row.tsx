@@ -1,5 +1,5 @@
 import { CheckCircle2, XCircle, Loader2, GitBranch, Hash } from 'lucide-react';
-import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, ConfigSourceBadge } from './status-badge';
+import { EnvBadge, TriggerBadge, UsernameBadge, BadgeDot, UncommittedLabel } from './status-badge';
 import { formatRelativeTime, formatDuration, mapRunStatus, isLiveRunStatus } from '../lib/format';
 
 export interface SuiteRunRowData {
@@ -75,10 +75,10 @@ export function SuiteRunRow({ run, onClick, className = '' }: SuiteRunRowProps) 
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <BranchDisplay branch={run.branch} />
-              {/* For uncommitted runs: show Uncommitted badge, no commit SHA */}
-              {/* For repo_commit runs: show commit SHA, no badge */}
+              {/* For uncommitted runs: show Uncommitted label, no commit SHA */}
+              {/* For repo_commit runs: show commit SHA, no label */}
               {run.config_source === 'uncommitted' ? (
-                <ConfigSourceBadge type="uncommitted" />
+                <UncommittedLabel />
               ) : (
                 run.commit_sha && (
                   <span className="inline-flex items-center gap-1 text-xs text-[#666666] font-mono">

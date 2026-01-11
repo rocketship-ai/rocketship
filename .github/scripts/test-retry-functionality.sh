@@ -34,12 +34,12 @@ echo "📋 Test 1: Retry configuration validation..."
 
 # Test that retry policy examples validate correctly
 echo "  → Validating retry policy example..."
-rocketship validate examples/retry-policy/rocketship.yaml
+rocketship validate .rocketship/retry-policy.yaml
 echo "✅ Retry policy example validates correctly"
 
 # Test that retry configuration doesn't break normal operation
 echo "  → Running retry policy example (should pass without retries)..."
-OUTPUT=$(run_capture rocketship run -af examples/retry-policy/rocketship.yaml)
+OUTPUT=$(run_capture rocketship run -af .rocketship/retry-policy.yaml)
 if echo "$OUTPUT" | grep -q "✓ Passed Tests: 4"; then
     echo "✅ Retry policy example runs successfully"
 else

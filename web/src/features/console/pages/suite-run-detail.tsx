@@ -1,5 +1,5 @@
 import { ArrowLeft, RotateCw, Download, GitBranch, Hash, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { EnvBadge, TriggerBadge, UsernameBadge, ConfigSourceBadge, BadgeDot } from '../components/status-badge';
+import { EnvBadge, TriggerBadge, UsernameBadge, UncommittedLabel, BadgeDot } from '../components/status-badge';
 import { TestItem } from '../components/test-item';
 import { LogsPanel } from '../components/logs-panel';
 import { useState } from 'react';
@@ -154,9 +154,8 @@ export function SuiteRunDetail({ suiteRunId, onBack, onViewTestRun }: SuiteRunDe
                   )}
                 </div>
                 {suiteRun.env && <EnvBadge env={suiteRun.env} />}
-                {/* Only show ConfigSourceBadge for uncommitted runs - repo_commit is redundant with commit shown below */}
                 {suiteRun.configSource.type === 'uncommitted' && (
-                  <ConfigSourceBadge type="uncommitted" />
+                  <UncommittedLabel />
                 )}
                 <BadgeDot />
                 <TriggerBadge trigger={suiteRun.trigger} />

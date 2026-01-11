@@ -24,7 +24,7 @@ trap cleanup EXIT
 echo "Running tests with different contexts..."
 
 echo "  → Running test with github-actions context..."
-rocketship run -f examples/simple-delay/rocketship.yaml \
+rocketship run -f .rocketship/simple-delay.yaml \
   --engine localhost:7700 \
   --project-id "test-project-a" \
   --source "github-actions" \
@@ -33,8 +33,8 @@ rocketship run -f examples/simple-delay/rocketship.yaml \
   --metadata "env=ci" \
   --metadata "team=backend"
 
-echo "  → Running test with cli-local context..."  
-rocketship run -f examples/simple-log/rocketship.yaml \
+echo "  → Running test with cli-local context..."
+rocketship run -f .rocketship/simple-log.yaml \
   --engine localhost:7700 \
   --project-id "test-project-b" \
   --source "cli-local" \
@@ -42,7 +42,7 @@ rocketship run -f examples/simple-log/rocketship.yaml \
   --trigger "manual"
 
 echo "  → Running test with ci-main context..."
-rocketship run -f examples/config-variables/rocketship.yaml \
+rocketship run -f .rocketship/config-variables.yaml \
   --engine localhost:7700 \
   --project-id "test-project-a" \
   --source "ci-main" \
