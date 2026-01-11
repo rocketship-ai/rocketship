@@ -325,22 +325,20 @@ function extractFileStructureFromDocs() {
     structure.from_docs.claude = claudeContent;
   }
   
-  // Check examples directory
-  const examplesPath = path.join(PROJECT_ROOT, 'examples');
-  if (fs.existsSync(examplesPath)) {
-    const exampleDirs = fs.readdirSync(examplesPath, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory())
+  // Check .rocketship directory for test suite YAML files
+  const rocketshipPath = path.join(PROJECT_ROOT, '.rocketship');
+  if (fs.existsSync(rocketshipPath)) {
+    const yamlFiles = fs.readdirSync(rocketshipPath, { withFileTypes: true })
+      .filter(dirent => dirent.isFile() && dirent.name.endsWith('.yaml'))
       .map(dirent => dirent.name);
-      
+
     structure.real_examples = {};
-    exampleDirs.forEach(dir => {
-      const yamlPath = path.join(examplesPath, dir, 'rocketship.yaml');
-      if (fs.existsSync(yamlPath)) {
-        structure.real_examples[dir] = {
-          path: `examples/${dir}/rocketship.yaml`,
-          exists: true
-        };
-      }
+    yamlFiles.forEach(file => {
+      const name = file.replace('.yaml', '');
+      structure.real_examples[name] = {
+        path: `.rocketship/${file}`,
+        exists: true
+      };
     });
   }
   

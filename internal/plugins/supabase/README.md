@@ -416,7 +416,7 @@ The plugin automatically handles Supabase API errors and provides detailed error
 
 ## Complete Example
 
-See `/examples/supabase-testing/rocketship.yaml` for a comprehensive example that demonstrates:
+See `/.rocketship/supabase-testing.yaml` for a comprehensive example that demonstrates:
 
 - Database CRUD operations
 - RPC function calls

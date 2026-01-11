@@ -385,7 +385,7 @@ Create and use the default cloud profile from the CLI (already pointing at `cli.
 ```bash
 rocketship profile list
 rocketship login
-rocketship run -f examples/simple-http/rocketship.yaml
+rocketship run -f .rocketship/simple-http.yaml
 ```
 
 If you see a `connection refused` message against `127.0.0.1:7700`, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.

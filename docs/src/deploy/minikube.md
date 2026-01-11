@@ -226,7 +226,7 @@ rocketship profile create minikube grpc://localhost:7700
 rocketship profile use minikube
 
 # Run tests
-rocketship run -af examples/simple-http/rocketship.yaml
+rocketship run -af .rocketship/simple-http.yaml
 ```
 
 ### CLI With Auth

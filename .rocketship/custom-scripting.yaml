@@ -105,7 +105,7 @@ tests:
         plugin: "script"
         config:
           language: "javascript"
-          file: "examples/custom-scripting/validate-and-process.js"
+          file: ".rocketship/custom-scripting-validate-and-process.js"
 
       - name: "HTTP Step 2 - Create Animal Assessment with Script Data"
         plugin: "http"
