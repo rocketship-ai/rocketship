@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"path"
 	"strings"
 	"time"
 
@@ -58,6 +59,17 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 	var envSecrets map[string]string
 	var envConfigVars map[string]interface{}
 
+	// Extract suite_file_path from metadata for stable suite identity (needed later for suite resolution)
+	// Normalize path (path.Clean handles forward slashes, consistent with Git/scanner paths)
+	var suiteFilePath sql.NullString
+	if runContext.Metadata != nil {
+		if fp := strings.TrimSpace(runContext.Metadata["rs_suite_file_path"]); fp != "" {
+			normalizedPath := path.Clean(fp)
+			suiteFilePath = sql.NullString{String: normalizedPath, Valid: true}
+			slog.Debug("createRunInternal: using suite_file_path from metadata", "suite_file_path", normalizedPath)
+		}
+	}
+
 	if e.runStore != nil {
 		// Extract schedule_id from metadata if present
 		var scheduleID uuid.NullUUID
@@ -92,6 +104,7 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 			OrganizationID: orgID,
 			Status:         "RUNNING",
 			SuiteName:      run.Name,
+			SuiteFilePath:  suiteFilePath,
 			Initiator:      initiator,
 			Trigger:        strings.TrimSpace(runContext.Trigger),
 			ScheduleName:   strings.TrimSpace(runContext.ScheduleName),
@@ -160,17 +173,52 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 			resolvedProjectID = projectID
 		}
 
+		// Use suite_file_path for stable suite identity (preferred), fall back to suite_name
 		if resolvedProjectID != uuid.Nil {
 			sourceRef := strings.TrimSpace(runContext.Branch)
 			if sourceRef == "" {
 				sourceRef = "main"
 			}
-			suite, found, err := e.runStore.GetSuiteByName(ctx, resolvedProjectID, run.Name, sourceRef)
-			if err != nil {
-				slog.Debug("createRunInternal: failed to lookup suite", "error", err)
-			} else if found {
+
+			var suite persistence.Suite
+			var found bool
+			var err error
+
+			// Try to resolve suite by file_path first (stable identity across renames)
+			if suiteFilePath.Valid && suiteFilePath.String != "" {
+				// First try: exact branch match
+				suite, found, err = e.runStore.GetSuiteByFilePath(ctx, resolvedProjectID, suiteFilePath.String, sourceRef)
+				if err != nil {
+					slog.Debug("createRunInternal: failed to lookup suite by file_path", "file_path", suiteFilePath.String, "source_ref", sourceRef, "error", err)
+				}
+
+				// Second try: if not found and sourceRef != default branch, try default branch
+				if !found {
+					project, projErr := e.runStore.GetProject(ctx, resolvedProjectID)
+					if projErr != nil {
+						slog.Debug("createRunInternal: failed to get project for default branch lookup", "project_id", resolvedProjectID, "error", projErr)
+					} else if project.DefaultBranch != "" && !strings.EqualFold(sourceRef, project.DefaultBranch) {
+						suite, found, err = e.runStore.GetSuiteByFilePath(ctx, resolvedProjectID, suiteFilePath.String, project.DefaultBranch)
+						if err != nil {
+							slog.Debug("createRunInternal: failed to lookup suite by file_path on default branch", "file_path", suiteFilePath.String, "default_branch", project.DefaultBranch, "error", err)
+						} else if found {
+							slog.Debug("createRunInternal: resolved suite via default branch fallback", "file_path", suiteFilePath.String, "default_branch", project.DefaultBranch)
+						}
+					}
+				}
+			}
+
+			// Fallback: if suite_file_path is empty or resolution failed, try suite_name (legacy behavior)
+			if !found {
+				suite, found, err = e.runStore.GetSuiteByName(ctx, resolvedProjectID, run.Name, sourceRef)
+				if err != nil {
+					slog.Debug("createRunInternal: failed to lookup suite by name", "suite_name", run.Name, "source_ref", sourceRef, "error", err)
+				}
+			}
+
+			if found {
 				resolvedSuiteID = suite.ID
-				slog.Debug("createRunInternal: resolved suite_id", "suite_id", suite.ID, "suite_name", run.Name, "source_ref", sourceRef)
+				slog.Debug("createRunInternal: resolved suite_id", "suite_id", suite.ID, "suite_name", run.Name, "file_path", suiteFilePath.String, "source_ref", sourceRef)
 
 				tests, err := e.runStore.ListTestsBySuite(ctx, suite.ID)
 				if err != nil {
@@ -182,6 +230,8 @@ func (e *Engine) createRunInternal(ctx context.Context, orgID uuid.UUID, initiat
 					}
 					slog.Debug("createRunInternal: built test_id map", "count", len(testIDMap))
 				}
+			} else {
+				slog.Debug("createRunInternal: suite not found", "suite_name", run.Name, "file_path", suiteFilePath.String, "source_ref", sourceRef)
 			}
 		}
 	}

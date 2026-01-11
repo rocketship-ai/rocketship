@@ -155,6 +155,16 @@ func (s *memoryRunStore) GetSuiteByName(_ context.Context, _ uuid.UUID, _, _ str
 	return persistence.Suite{}, false, nil
 }
 
+func (s *memoryRunStore) GetSuiteByFilePath(_ context.Context, _ uuid.UUID, _, _ string) (persistence.Suite, bool, error) {
+	// No-op for memory store - no suite discovery
+	return persistence.Suite{}, false, nil
+}
+
+func (s *memoryRunStore) GetProject(_ context.Context, _ uuid.UUID) (persistence.Project, error) {
+	// No-op for memory store - no project lookup
+	return persistence.Project{}, sql.ErrNoRows
+}
+
 func (s *memoryRunStore) ListTestsBySuite(_ context.Context, _ uuid.UUID) ([]persistence.Test, error) {
 	// No-op for memory store - no test discovery
 	return []persistence.Test{}, nil
