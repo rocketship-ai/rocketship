@@ -99,7 +99,7 @@ tests:
         plugin: script
         config:
           language: shell
-          file: "examples/shell-testing/test-script.sh"
+          file: ".rocketship/shell-testing-test-script.sh"
         # External script results saved automatically
 
       - name: "Verify external script execution"

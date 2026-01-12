@@ -373,6 +373,15 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 	// Search filter
 	filter.Search = strings.TrimSpace(query.Get("search"))
 
+	// Set SuiteName for backwards compatibility (fallback for old runs without suite_file_path)
+	filter.SuiteName = suite.Name
+
+	// Use suite.FilePath for primary suite matching (stable identity across renames)
+	suiteFilePath := ""
+	if suite.FilePath.Valid {
+		suiteFilePath = suite.FilePath.String
+	}
+
 	// Branch param determines mode: summary (all branches) vs branch (single branch with pagination)
 	branch := strings.TrimSpace(query.Get("branch"))
 
@@ -397,7 +406,7 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 			}
 		}
 
-		result, err := s.store.ListRunsForSuiteBranch(r.Context(), principal.OrgID, projectIDs, suite.Name, branch, filter, limit, offset)
+		result, err := s.store.ListRunsForSuiteBranch(r.Context(), principal.OrgID, projectIDs, suiteFilePath, branch, filter, limit, offset)
 		if err != nil {
 			log.Printf("failed to list runs for suite branch: %v", err)
 			writeError(w, http.StatusInternalServerError, "failed to list runs")
@@ -425,7 +434,7 @@ func (s *Server) handleSuiteRuns(w http.ResponseWriter, r *http.Request, princip
 			runsPerBranch = 20
 		}
 
-		runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suite.Name, project.DefaultBranch, runsPerBranch, filter)
+		runs, err := s.store.ListRunsForSuiteGroup(r.Context(), principal.OrgID, projectIDs, suiteFilePath, project.DefaultBranch, runsPerBranch, filter)
 		if err != nil {
 			log.Printf("failed to list runs for suite: %v", err)
 			writeError(w, http.StatusInternalServerError, "failed to list runs")

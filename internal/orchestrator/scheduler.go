@@ -307,6 +307,11 @@ func (s *Scheduler) fireSuiteRun(
 		},
 	}
 
+	// Add suite file path for stable suite identity
+	if suite.FilePath.Valid && suite.FilePath.String != "" {
+		runContext.Metadata["rs_suite_file_path"] = suite.FilePath.String
+	}
+
 	// Add commit metadata from project's default branch HEAD (if available)
 	if project.DefaultBranchHeadSHA != "" {
 		runContext.CommitSha = project.DefaultBranchHeadSHA
@@ -430,6 +435,11 @@ func (s *Scheduler) fireSuiteRunForSuiteSchedule(
 			"rs_schedule_type":  "suite",
 			"rs_environment_id": schedule.EnvironmentID.UUID.String(),
 		},
+	}
+
+	// Add suite file path for stable suite identity
+	if suiteWithEnv.FilePath.Valid && suiteWithEnv.FilePath.String != "" {
+		runContext.Metadata["rs_suite_file_path"] = suiteWithEnv.FilePath.String
 	}
 
 	// Add commit metadata from project's default branch HEAD (if available)

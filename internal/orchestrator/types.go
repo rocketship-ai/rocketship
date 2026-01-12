@@ -45,6 +45,8 @@ type RunStore interface {
 	FindProjectByRepoAndPathScope(ctx context.Context, orgID uuid.UUID, repoURL string, pathScope []string) (persistence.Project, bool, error)
 	// Suite/test lookup for run linking
 	GetSuiteByName(ctx context.Context, projectID uuid.UUID, name, sourceRef string) (persistence.Suite, bool, error)
+	GetSuiteByFilePath(ctx context.Context, projectID uuid.UUID, filePath, sourceRef string) (persistence.Suite, bool, error)
+	GetProject(ctx context.Context, projectID uuid.UUID) (persistence.Project, error)
 	ListTestsBySuite(ctx context.Context, suiteID uuid.UUID) ([]persistence.Test, error)
 	UpdateSuiteLastRun(ctx context.Context, suiteID uuid.UUID, runID, status string, runAt time.Time) error
 	UpdateTestLastRun(ctx context.Context, testID uuid.UUID, runID, status string, runAt time.Time, durationMs int64) error

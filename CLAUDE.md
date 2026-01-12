@@ -134,7 +134,7 @@ cat /tmp/debug.log | grep -E "(undefined variables|failed to parse template)"
 
 1. **Make code changes** to engine/worker/CLI
 2. **Rebuild binaries**: `make install`
-3. **Test with debug logging**: `rocketship run --debug -af examples/simple-http/rocketship.yaml`
+3. **Test with debug logging**: `rocketship run --debug -af .rocketship/simple-http.yaml`
 4. **Run lint and test suite**: `make lint && make test`
 
 ### Local Development Binary Usage
@@ -145,7 +145,7 @@ The system automatically uses local development binaries from `internal/embedded
 
 ```bash
 # Quick test with debug output
-rocketship run --debug -af examples/simple-http/rocketship.yaml
+rocketship run --debug -af .rocketship/simple-http.yaml
 
 # Background server for iterative testing
 rocketship --debug start server --background
@@ -397,7 +397,7 @@ rocketship stop server
 
 ```bash
 kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
-rocketship run -af examples/sql-testing/rocketship.yaml
+rocketship run -af .rocketship/sql-testing.yaml
 ```
 
 **Ad-hoc local databases (optional):** if you only need throwaway databases for quick experiments, you can spin them up with Docker:
@@ -422,7 +422,7 @@ The Minikube workflow builds fresh engine/worker images that already contain the
 
 ```bash
 kubectl port-forward -n rocketship svc/rocketship-engine 7700:7700
-rocketship run -af examples/browser-testing/rocketship.yaml
+rocketship run -af .rocketship/browser.yaml
 ```
 
 **Manual local mode:** when you are not using the cluster, install the browser dependencies once per machine:
@@ -430,7 +430,7 @@ rocketship run -af examples/browser-testing/rocketship.yaml
 ```bash
 pip install browser-use playwright langchain-openai langchain-anthropic
 playwright install chromium
-rocketship run -af examples/browser-automation/rocketship.yaml
+rocketship run -af .rocketship/browser.yaml
 ```
 
 ## Testing Against tryme Server

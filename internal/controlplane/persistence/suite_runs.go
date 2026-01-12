@@ -19,6 +19,7 @@ type SuiteRunRow struct {
 	CommitSHA     sql.NullString `db:"commit_sha"`
 	CommitMessage sql.NullString `db:"commit_message"`
 	ConfigSource  string         `db:"config_source"`
+	SuiteFilePath sql.NullString `db:"suite_file_path"`
 	Environment   string         `db:"environment"`
 	Initiator     string         `db:"initiator"`
 	Trigger       string         `db:"trigger"`
@@ -68,6 +69,7 @@ type SuiteRunsFilter struct {
 	EnvironmentSlug string   // Filter by environment slug (empty = all)
 	Triggers        []string // Filter by trigger types (empty = all)
 	Search          string   // Search in commit message and SHA
+	SuiteName       string   // Fallback filter for old runs without suite_file_path
 }
 
 // ListRunsForSuiteGroup returns runs for a suite across all projects in a group
@@ -80,7 +82,8 @@ type SuiteRunsFilter struct {
 // Each branch shows up to runsPerBranch runs (default 5).
 // Results are ordered by: default branch first, then by latest run time desc, then by created_at desc.
 // Use filter to apply environment, trigger, and search filters.
-func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, defaultBranch string, runsPerBranch int, filter SuiteRunsFilter) ([]SuiteRunRow, error) {
+// suiteFilePath is the primary filter; filter.SuiteName is used as fallback for old runs without suite_file_path.
+func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteFilePath, defaultBranch string, runsPerBranch int, filter SuiteRunsFilter) ([]SuiteRunRow, error) {
 	if runsPerBranch <= 0 {
 		runsPerBranch = 5
 	}
@@ -98,6 +101,11 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 	// 3. top_branches: Select default branch + top 2 non-default branches
 	// 4. ranked_runs: Get runs for selected branches, numbered within each branch
 	// 5. Final SELECT: Filter to runsPerBranch runs per branch, ordered properly
+	//
+	// Suite matching: Prefer suite_file_path when available, fallback to suite_name for old runs.
+	// The condition matches if:
+	//   - suite_file_path is not null AND matches the provided file path, OR
+	//   - suite_file_path is null AND suite_name matches the fallback name (for backwards compat)
 	const query = `
 		WITH branch_stats AS (
 			SELECT
@@ -107,7 +115,10 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			FROM runs
 			WHERE organization_id = $1
 			  AND project_id = ANY($2)
-			  AND suite_name = $3
+			  AND (
+			      (suite_file_path IS NOT NULL AND lower(suite_file_path) = lower($3))
+			      OR (suite_file_path IS NULL AND $9 != '' AND lower(suite_name) = lower($9))
+			  )
 			  AND ($6 = '' OR environment = $6)
 			  AND ($7::text[] IS NULL OR trigger = ANY($7))
 			  AND ($8 = '' OR COALESCE(commit_message, '') ILIKE '%' || $8 || '%' OR COALESCE(commit_sha, '') ILIKE '%' || $8 || '%')
@@ -140,6 +151,7 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 				r.commit_sha,
 				r.commit_message,
 				r.config_source,
+				r.suite_file_path,
 				r.environment,
 				r.initiator,
 				r.trigger,
@@ -160,7 +172,10 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			INNER JOIN top_branches tb ON r.branch = tb.branch
 			WHERE r.organization_id = $1
 			  AND r.project_id = ANY($2)
-			  AND r.suite_name = $3
+			  AND (
+			      (r.suite_file_path IS NOT NULL AND lower(r.suite_file_path) = lower($3))
+			      OR (r.suite_file_path IS NULL AND $9 != '' AND lower(r.suite_name) = lower($9))
+			  )
 			  AND ($6 = '' OR r.environment = $6)
 			  AND ($7::text[] IS NULL OR r.trigger = ANY($7))
 			  AND ($8 = '' OR COALESCE(r.commit_message, '') ILIKE '%' || $8 || '%' OR COALESCE(r.commit_sha, '') ILIKE '%' || $8 || '%')
@@ -172,6 +187,7 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 			commit_sha,
 			commit_message,
 			config_source,
+			suite_file_path,
 			environment,
 			initiator,
 			trigger,
@@ -201,7 +217,7 @@ func (s *Store) ListRunsForSuiteGroup(ctx context.Context, orgID uuid.UUID, proj
 	}
 
 	var runs []SuiteRunRow
-	if err := s.db.SelectContext(ctx, &runs, query, orgID, pq.Array(projectIDs), suiteName, runsPerBranch, defaultBranch, filter.EnvironmentSlug, triggersArg, filter.Search); err != nil {
+	if err := s.db.SelectContext(ctx, &runs, query, orgID, pq.Array(projectIDs), suiteFilePath, runsPerBranch, defaultBranch, filter.EnvironmentSlug, triggersArg, filter.Search, filter.SuiteName); err != nil {
 		return nil, fmt.Errorf("failed to list runs for suite group: %w", err)
 	}
 	if runs == nil {
@@ -221,7 +237,8 @@ type SuiteRunsBranchResult struct {
 
 // ListRunsForSuiteBranch returns paginated runs for a specific branch with filters.
 // Used for branch drilldown view with pagination.
-func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteName, branch string, filter SuiteRunsFilter, limit, offset int) (SuiteRunsBranchResult, error) {
+// suiteFilePath is the primary filter; filter.SuiteName is used as fallback for old runs without suite_file_path.
+func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, projectIDs []uuid.UUID, suiteFilePath, branch string, filter SuiteRunsFilter, limit, offset int) (SuiteRunsBranchResult, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -237,6 +254,7 @@ func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, pro
 	}
 
 	// Single query with COUNT(*) OVER() for total
+	// Suite matching: Prefer suite_file_path when available, fallback to suite_name for old runs.
 	const query = `
 		SELECT
 			id,
@@ -245,6 +263,7 @@ func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, pro
 			commit_sha,
 			commit_message,
 			config_source,
+			suite_file_path,
 			environment,
 			initiator,
 			trigger,
@@ -263,7 +282,10 @@ func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, pro
 		FROM runs
 		WHERE organization_id = $1
 		  AND project_id = ANY($2)
-		  AND suite_name = $3
+		  AND (
+		      (suite_file_path IS NOT NULL AND lower(suite_file_path) = lower($3))
+		      OR (suite_file_path IS NULL AND $10 != '' AND lower(suite_name) = lower($10))
+		  )
 		  AND branch = $4
 		  AND ($5 = '' OR environment = $5)
 		  AND ($6::text[] IS NULL OR trigger = ANY($6))
@@ -285,7 +307,7 @@ func (s *Store) ListRunsForSuiteBranch(ctx context.Context, orgID uuid.UUID, pro
 	}
 
 	var runsWithCount []runWithCount
-	if err := s.db.SelectContext(ctx, &runsWithCount, query, orgID, pq.Array(projectIDs), suiteName, branch, filter.EnvironmentSlug, triggersArg, filter.Search, limit, offset); err != nil {
+	if err := s.db.SelectContext(ctx, &runsWithCount, query, orgID, pq.Array(projectIDs), suiteFilePath, branch, filter.EnvironmentSlug, triggersArg, filter.Search, limit, offset, filter.SuiteName); err != nil {
 		return SuiteRunsBranchResult{}, fmt.Errorf("failed to list runs for suite branch: %w", err)
 	}
 

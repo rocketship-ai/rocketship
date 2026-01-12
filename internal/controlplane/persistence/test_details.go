@@ -21,8 +21,9 @@ type TestDetailRow struct {
 	StepCount   int            `db:"step_count"`
 
 	// Suite info
-	SuiteID   uuid.UUID `db:"suite_id"`
-	SuiteName string    `db:"suite_name"`
+	SuiteID       uuid.UUID      `db:"suite_id"`
+	SuiteName     string         `db:"suite_name"`
+	SuiteFilePath sql.NullString `db:"suite_file_path"` // Stable file path identity
 
 	// Project info
 	ProjectID            uuid.UUID `db:"project_id"`
@@ -87,6 +88,7 @@ func (s *Store) GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.
 			t.step_count,
 			t.suite_id,
 			s.name as suite_name,
+			s.file_path as suite_file_path,
 			p.id as project_id,
 			p.name as project_name,
 			p.repo_url as project_repo_url,
@@ -135,16 +137,19 @@ func (s *Store) GetTestDetail(ctx context.Context, orgID uuid.UUID, testID uuid.
 	return &row, nil
 }
 
-// TestIdentity contains the fields needed to identify a logical test across branches/projects
+// TestIdentity contains the fields needed to identify a logical test across branches/projects.
+// Uses suite_file_path instead of suite_name for stable identity (suite names can change).
 type TestIdentity struct {
-	SuiteName string
-	TestName  string
-	RepoURL   string
-	PathScope []string
+	SuiteFilePath string   // Stable file path identity (e.g., "tests/api.yaml")
+	SuiteName     string   // Fallback for runs without suite_file_path
+	TestName      string   // Test name within the suite (case-insensitive match)
+	RepoURL       string   // Repository URL for project group matching
+	PathScope     []string // Path scope for project group matching
 }
 
 // ListTestRuns returns recent run_tests for a logical test identity with filtering by trigger.
 // This queries across all projects in the same repo/path_scope group to show runs from feature branches.
+// Uses suite_file_path for stable identity matching, with fallback to suite_name for legacy runs.
 // Returns paginated results with total count for server-side pagination.
 func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity TestIdentity, params TestRunsParams) (TestRunsResult, error) {
 	// Set defaults
@@ -170,8 +175,9 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity Test
 		return TestRunsResult{Runs: []TestRunSummary{}, Total: 0, Limit: limit, Offset: offset}, nil
 	}
 
-	// Build the query matching by suite_name and test_name across the project group
-	// This avoids relying on rt.test_id which may be null for some CI flows
+	// Build the query matching by suite_file_path (stable) and test_name across the project group.
+	// - Primary match: lower(r.suite_file_path) = lower($suiteFilePath)
+	// - Fallback for legacy runs: suite_file_path is null AND r.suite_name = $suiteName
 	// Uses COUNT(*) OVER() for efficient total count in a single query
 	query := `
 		SELECT
@@ -192,12 +198,15 @@ func (s *Store) ListTestRuns(ctx context.Context, orgID uuid.UUID, identity Test
 		JOIN runs r ON rt.run_id = r.id
 		WHERE r.project_id = ANY($1)
 		  AND r.organization_id = $2
-		  AND r.suite_name = $3
-		  AND lower(rt.name) = lower($4)
+		  AND (
+		      (r.suite_file_path IS NOT NULL AND lower(r.suite_file_path) = lower($3))
+		      OR (r.suite_file_path IS NULL AND r.suite_name = $4)
+		  )
+		  AND lower(rt.name) = lower($5)
 	`
 
-	args := []interface{}{pq.Array(projectIDs), orgID, identity.SuiteName, identity.TestName}
-	argPos := 5
+	args := []interface{}{pq.Array(projectIDs), orgID, identity.SuiteFilePath, identity.SuiteName, identity.TestName}
+	argPos := 6
 
 	// Add trigger filter if specified
 	if len(params.Triggers) > 0 {

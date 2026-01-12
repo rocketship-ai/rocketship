@@ -139,6 +139,7 @@ type RunRecord struct {
 	ProjectID      uuid.NullUUID  `db:"project_id"`
 	Status         string         `db:"status"`
 	SuiteName      string         `db:"suite_name"`
+	SuiteFilePath  sql.NullString `db:"suite_file_path"` // Stable suite identity (file path)
 	Initiator      string         `db:"initiator"`
 	Trigger        string         `db:"trigger"`
 	ScheduleName   string         `db:"schedule_name"`
