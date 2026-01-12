@@ -52,3 +52,6 @@ rocketship-vault/
 
 # Local secrets directory for development
 .secrets/
+
+# Production secrets scratchpad (NEVER commit)
+.secrets-prod/
