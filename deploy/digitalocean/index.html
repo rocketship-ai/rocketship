@@ -2328,7 +2328,7 @@ Enabling the chart's bundled Postgres (<code>--set postgres.enabled=true</code>)
 <p>Create and use the default cloud profile from the CLI (already pointing at <code>cli.rocketship.globalbank.com:443</code>):</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>rocketship<span class="w"> </span>profile<span class="w"> </span>list
 <a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>rocketship<span class="w"> </span>login
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>examples/simple-http/rocketship.yaml
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>rocketship<span class="w"> </span>run<span class="w"> </span>-f<span class="w"> </span>.rocketship/simple-http.yaml
 </code></pre></div>
 <p>If you see a <code>connection refused</code> message against <code>127.0.0.1:7700</code>, ensure you are running a CLI build that includes the profile resolution fixes introduced in PR #2.</p>
 <h2 id="10-updating-the-deployment">10. Updating the Deployment</h2>
