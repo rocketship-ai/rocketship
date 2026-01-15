@@ -1,0 +1,124 @@
+name: "CI - Complex HTTP Test Suite"
+description: "Complex HTTP operations with CRUD for CI dogfood - uses parameterized test session"
+vars:
+  test_session: "ci-default-session"
+tests:
+  - name: "Product Management Flow"
+    steps:
+      - name: "Create first product"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/products"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+          body: |
+            {
+              "name": "Widget",
+              "sku": "W123",
+              "price": 19.99
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".name"
+            expected: "Widget"
+        save:
+          - json_path: ".id"
+            as: "first_product_id"
+          - json_path: ".sku"
+            as: "first_product_sku"
+
+      - name: "Create second product"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/products"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+          body: |
+            {
+              "name": "Gadget",
+              "sku": "G456",
+              "price": 29.99
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "second_product_id"
+
+      - name: "Get all products"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/products"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".products_0.name"
+            expected: "Widget"
+          - type: "json_path"
+            path: ".products_1.name"
+            expected: "Gadget"
+
+      - name: "Update first product"
+        plugin: "http"
+        config:
+          method: "PUT"
+          url: "https://tryme.rocketship.sh/products/{{ first_product_id }}"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+          body: |
+            {
+              "name": "Widget Pro",
+              "sku": "{{ first_product_sku }}",
+              "price": 24.99
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".name"
+            expected: "Widget Pro"
+        save:
+          - json_path: ".name"
+            as: "updated_name"
+
+      - name: "Delete second product"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/products/{{ second_product_id }}"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
+
+      - name: "Verify second product deleted"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/products/{{ second_product_id }}"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 404
+
+      - name: "Cleanup - Delete first product"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/products/{{ first_product_id }}"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
