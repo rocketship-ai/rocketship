@@ -384,7 +384,7 @@ jobs:
 
           ./rocketship run \
             --engine grpcs://cli.rocketship.sh \
-            -d .rocketship/ci \
+            -d .rocketship/ci/.rocketship \
             --source github-actions \
             --trigger ci \
             --branch "${{ github.head_ref }}" \
