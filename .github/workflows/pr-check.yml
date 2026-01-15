@@ -354,3 +354,42 @@ jobs:
 
       - name: Helm template checks
         run: ./.github/scripts/helm_template_check.sh
+
+  dogfood-cloud:
+    name: Dogfood on Rocketship Cloud
+    runs-on: ubuntu-latest
+    # Skip for forks - secrets won't be available
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          check-latest: true
+
+      - name: Build CLI
+        run: go build -o rocketship ./cmd/rocketship
+
+      - name: Run dogfood suites against Rocketship Cloud
+        env:
+          ROCKETSHIP_TOKEN: ${{ secrets.ROCKETSHIP_TOKEN }}
+        run: |
+          # Skip if token not configured (e.g., new contributors)
+          if [ -z "$ROCKETSHIP_TOKEN" ]; then
+            echo "ROCKETSHIP_TOKEN not configured - skipping dogfood"
+            exit 0
+          fi
+
+          ./rocketship run \
+            --engine grpcs://cli.rocketship.sh \
+            -d .rocketship/ci \
+            --source github-actions \
+            --trigger ci \
+            --branch "${{ github.head_ref }}" \
+            --commit "${{ github.event.pull_request.head.sha }}" \
+            --var test_session="${{ github.run_id }}" \
+            --metadata rs_repo_url="https://github.com/${{ github.repository }}" \
+            --metadata rs_pr_number="${{ github.event.pull_request.number }}" \
+            --metadata rs_gh_run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
