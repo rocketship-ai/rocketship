@@ -1,4 +1,4 @@
-.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck helm-lint helm-template-check go-lint workflow-check
+.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck helm-lint helm-template-check go-lint workflow-check setup-local start-local delete-local
 
 prepare-embed:
 	@mkdir -p internal/embedded/bin
@@ -197,3 +197,22 @@ docs-serve: docs-deps
 docs-clean:
 	@echo "Cleaning up documentation environment..."
 	@rm -rf docs/.venv docs/site
+
+# =============================================================================
+# Local Development (Minikube)
+# =============================================================================
+
+# Set up local minikube development environment
+setup-local:
+	@echo "Setting up local development environment..."
+	@scripts/setup-local-dev.sh
+
+# Start local development environment (minikube tunnel + vite + skaffold)
+start-local:
+	@echo "Starting local development environment..."
+	@scripts/start-dev.sh
+
+# Delete local development environment
+delete-local:
+	@echo "Deleting local development environment..."
+	@scripts/delete-local-dev.sh
