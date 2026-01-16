@@ -18,11 +18,11 @@ export default defineConfig({
     ],
   },
   server: {
-    host: true,  // Listen on 0.0.0.0 (all interfaces)
+    host: true,  // Listen on all interfaces (required for minikube access)
     port: 5173,
     strictPort: true,
     origin: 'http://auth.minikube.local',
-    allowedHosts: ['auth.minikube.local'],
+    allowedHosts: ['auth.minikube.local', 'host.docker.internal'],
     hmr: {
       host: 'auth.minikube.local',
       clientPort: 80,

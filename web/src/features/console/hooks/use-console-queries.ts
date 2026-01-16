@@ -285,7 +285,7 @@ export interface ProfileOrganization {
   id: string
   name: string
   slug: string
-  role: 'admin' | 'member'
+  role: 'owner' | 'member'
 }
 
 export interface ProfileGitHub {

@@ -23,6 +23,55 @@ if [ -z "$ROCKETSHIP_INGRESS_IP" ]; then
   exit 1
 fi
 
+# Detect host address for vite-relay based on minikube driver
+echo "Detecting host address for vite-relay..."
+
+# Use minikube config to get driver for specific profile (more reliable than parsing profile list)
+MINIKUBE_DRIVER=$(minikube config get driver -p "$MINIKUBE_PROFILE" 2>/dev/null || echo "")
+
+# Fallback: try to get from profile list if config doesn't work
+if [ -z "$MINIKUBE_DRIVER" ]; then
+  MINIKUBE_DRIVER=$(minikube profile list -o json 2>/dev/null | grep -o "\"Name\":\"$MINIKUBE_PROFILE\"[^}]*\"Driver\":\"[^\"]*\"" | grep -o '"Driver":"[^"]*"' | cut -d'"' -f4)
+fi
+
+echo "Detected minikube driver: ${MINIKUBE_DRIVER:-unknown}"
+
+# Determine HOST_IP based on driver
+if [ "$MINIKUBE_DRIVER" = "docker" ]; then
+  # Docker driver: use host.docker.internal (works reliably on macOS/Windows)
+  HOST_IP="host.docker.internal"
+  echo "Using host.docker.internal for Docker driver"
+elif [ -n "$MINIKUBE_DRIVER" ]; then
+  # Other known drivers (hyperkit, virtualbox, etc.): detect gateway IP
+  MINIKUBE_IP=$(minikube ip -p "$MINIKUBE_PROFILE" 2>/dev/null)
+  HOST_IP="${MINIKUBE_IP%.*}.1"
+  echo "Using gateway IP: $HOST_IP (minikube IP: $MINIKUBE_IP)"
+else
+  # Fallback: default to host.docker.internal on macOS (most common setup)
+  if [ "$(uname)" = "Darwin" ]; then
+    HOST_IP="host.docker.internal"
+    echo "WARNING: Could not detect minikube driver. Defaulting to host.docker.internal for macOS."
+  else
+    # Linux: try to detect gateway
+    MINIKUBE_IP=$(minikube ip -p "$MINIKUBE_PROFILE" 2>/dev/null)
+    if [ -n "$MINIKUBE_IP" ]; then
+      HOST_IP="${MINIKUBE_IP%.*}.1"
+      echo "WARNING: Could not detect minikube driver. Using gateway IP: $HOST_IP"
+    else
+      HOST_IP="host.docker.internal"
+      echo "WARNING: Could not detect minikube driver or IP. Defaulting to host.docker.internal."
+    fi
+  fi
+fi
+
+# Update vite-relay deployment if it exists and has wrong host
+CURRENT_VITE_HOST=$(kubectl get deployment vite-relay -n "$ROCKETSHIP_NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].args[3]}' 2>/dev/null | sed 's/TCP4:\(.*\):5173/\1/')
+if [ -n "$CURRENT_VITE_HOST" ] && [ "$CURRENT_VITE_HOST" != "$HOST_IP" ]; then
+  echo "Updating vite-relay from $CURRENT_VITE_HOST to $HOST_IP..."
+  kubectl patch deployment vite-relay -n "$ROCKETSHIP_NAMESPACE" --type='json' \
+    -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/args\", \"value\": [\"-d\",\"-d\",\"TCP4-LISTEN:5173,fork,reuseaddr\",\"TCP4:${HOST_IP}:5173\"]}]" >/dev/null 2>&1
+fi
+
 # Export for Skaffold
 export ROCKETSHIP_INGRESS_IP
 export MINIKUBE_PROFILE
@@ -47,11 +96,33 @@ if ! grep -q "auth.minikube.local" /etc/hosts 2>/dev/null; then
   read -p "Press Enter to continue anyway, or Ctrl+C to abort..."
 fi
 
+# Check if web dependencies are installed
+if [ ! -d "$REPO_ROOT/web/node_modules" ]; then
+  echo ""
+  echo "ERROR: Web dependencies not installed."
+  echo "Run the following command first:"
+  echo ""
+  echo "  cd web && npm install"
+  echo ""
+  exit 1
+fi
+
+if [ ! -x "$REPO_ROOT/web/node_modules/.bin/vite" ]; then
+  echo ""
+  echo "ERROR: Vite not found. Web dependencies may be corrupted."
+  echo "Run the following commands:"
+  echo ""
+  echo "  cd web && rm -rf node_modules && npm install"
+  echo ""
+  exit 1
+fi
+
 echo "Starting local development environment..."
 echo ""
 echo "Using configuration:"
 echo "  MINIKUBE_PROFILE=$MINIKUBE_PROFILE"
 echo "  ROCKETSHIP_INGRESS_IP=$ROCKETSHIP_INGRESS_IP (for engine hostAliases)"
+echo "  HOST_IP=$HOST_IP (for vite-relay)"
 echo ""
 
 # Create a temporary directory for log files
@@ -99,8 +170,35 @@ cd "$REPO_ROOT/web"
 npm run dev > "$LOG_DIR/vite.log" 2>&1 &
 VITE_PID=$!
 cd "$REPO_ROOT"
-echo "  → Vite started (PID: $VITE_PID, log: $LOG_DIR/vite.log)"
-sleep 3
+echo "  → Vite starting (PID: $VITE_PID, log: $LOG_DIR/vite.log)"
+
+# Wait for Vite to be ready (check if it's listening on port 5173)
+echo "  → Waiting for Vite to be ready..."
+VITE_READY=false
+for i in {1..15}; do
+  if curl -s -o /dev/null -w "" http://localhost:5173 2>/dev/null; then
+    VITE_READY=true
+    break
+  fi
+  # Check if Vite process died
+  if ! kill -0 "$VITE_PID" 2>/dev/null; then
+    echo ""
+    echo "ERROR: Vite failed to start. Check the log:"
+    echo "  cat $LOG_DIR/vite.log"
+    echo ""
+    tail -20 "$LOG_DIR/vite.log" 2>/dev/null
+    exit 1
+  fi
+  sleep 1
+done
+
+if [ "$VITE_READY" = true ]; then
+  echo "  → Vite ready at http://localhost:5173"
+else
+  echo ""
+  echo "WARNING: Vite may not be ready yet. Check log if web UI doesn't load:"
+  echo "  cat $LOG_DIR/vite.log"
+fi
 
 # Start Skaffold dev mode (with no port-forward since we're using minikube tunnel)
 echo "[3/3] Starting Skaffold in development mode..."

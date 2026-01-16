@@ -52,6 +52,7 @@ func (s *Store) ListProjectIDsByRepoAndPathScope(ctx context.Context, orgID uuid
 		WHERE organization_id = $1
 		  AND repo_url = $2
 		  AND path_scope = $3::jsonb
+		  AND is_active = true
 	`
 
 	var ids []uuid.UUID

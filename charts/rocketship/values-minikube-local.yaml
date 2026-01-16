@@ -35,10 +35,14 @@ controlplane:
     - read:user
     - user:email
   github:
-    # Local development OAuth App: "Rocketship Cloud - Local"
-    # Callback URL: http://auth.minikube.local/callback
+    # GitHub OAuth App credentials come from the rocketship-github-oauth secret
+    # Created by setup-local-dev.sh from .env values:
+    #   ROCKETSHIP_GITHUB_CLIENT_ID
+    #   ROCKETSHIP_GITHUB_CLIENT_SECRET
+    # Create your own OAuth App at https://github.com/settings/developers
+    # IMPORTANT: Enable "Device Flow" in the OAuth App settings
+    # Set callback URL to: http://auth.minikube.local/callback
     # NOTE: OAuth is identity-only; repo access uses GitHub App installation
-    clientID: Ov23li2GoXfR7bC7fR0y
     clientSecretSecret: rocketship-github-oauth
     clientSecretKey: ROCKETSHIP_GITHUB_CLIENT_SECRET
     scopes:
@@ -115,10 +119,10 @@ engine:
     - name: ROCKETSHIP_DISABLE_GRPC_WEB
       value: "false"  # Enable gRPC-Web for browser access through ingress
   # For minikube: point auth.minikube.local to ingress-nginx-controller ClusterIP
-  # This is more stable than using the LoadBalancer IP (192.168.58.2)
-  # To find: kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}'
+  # NOTE: This IP is overridden dynamically by Skaffold using ROCKETSHIP_INGRESS_IP
+  # (detected by start-dev.sh). The placeholder below is never used when running via Skaffold.
   hostAliases:
-    - ip: "10.101.7.183"  # ingress-nginx-controller ClusterIP
+    - ip: "PLACEHOLDER_OVERRIDDEN_BY_SKAFFOLD"
       hostnames:
         - "auth.minikube.local"
   resources:
