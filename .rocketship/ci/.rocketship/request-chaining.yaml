@@ -1,0 +1,93 @@
+name: "CI - Request Chaining Test Suite"
+description: "Request chaining and delays for CI dogfood - uses parameterized test session"
+vars:
+  test_session: "ci-default-session"
+tests:
+  - name: "Car Management Flow"
+    steps:
+      - name: "Create first car"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/cars"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+          body: |
+            {
+              "make": "Toyota",
+              "model": "Corolla",
+              "year": 2020
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".make"
+            expected: "Toyota"
+        save:
+          - json_path: ".id"
+            as: "first_car_id"
+
+      - name: "Wait for system processing"
+        plugin: "delay"
+        config:
+          duration: "500ms"
+
+      - name: "Create second car"
+        plugin: "http"
+        config:
+          method: "POST"
+          url: "https://tryme.rocketship.sh/cars"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+          body: |
+            {
+              "make": "Honda",
+              "model": "Civic",
+              "year": 2022
+            }
+        assertions:
+          - type: "status_code"
+            expected: 200
+        save:
+          - json_path: ".id"
+            as: "second_car_id"
+
+      - name: "List all cars"
+        plugin: "http"
+        config:
+          method: "GET"
+          url: "https://tryme.rocketship.sh/cars"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 200
+          - type: "json_path"
+            path: ".cars_0.make"
+            expected: "Toyota"
+          - type: "json_path"
+            path: ".cars_1.make"
+            expected: "Honda"
+
+      - name: "Cleanup - Delete first car"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/cars/{{ first_car_id }}"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 204
+
+      - name: "Cleanup - Delete second car"
+        plugin: "http"
+        config:
+          method: "DELETE"
+          url: "https://tryme.rocketship.sh/cars/{{ second_car_id }}"
+          headers:
+            X-Test-Session: "{{ .vars.test_session }}"
+        assertions:
+          - type: "status_code"
+            expected: 204

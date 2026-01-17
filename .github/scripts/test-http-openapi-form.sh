@@ -8,7 +8,7 @@ pushd "${REPO_ROOT}" >/dev/null
 ROCKETSHIP_LOG=ERROR rocketship run -af .rocketship/http-openapi-form.yaml
 
 set +e
-OUTPUT=$(ROCKETSHIP_LOG=ERROR rocketship run -af .rocketship-errors/http-openapi-form-invalid.yaml 2>&1)
+OUTPUT=$(ROCKETSHIP_LOG=ERROR rocketship run -af .rocketship-failure-cases/.rocketship/http-openapi-form-invalid.yaml 2>&1)
 set -e
 popd >/dev/null
 
