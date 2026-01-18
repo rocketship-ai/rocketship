@@ -231,7 +231,8 @@ jobs:
             fi
           }
 
-          update_file charts/rocketship/values-production.yaml
+          # Update prod values file (new location)
+          update_file deploy/prod/rocketship-values.yaml
 
           if git status --porcelain | grep . >/dev/null; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
@@ -333,3 +334,52 @@ jobs:
           gh pr create --fill --title "Update to ${{ steps.rel.outputs.tag }}" --body "Automated tap update"
         env:
           GH_TOKEN: ${{ env.GH_PAT }}
+
+  promote-to-production:
+    name: Open PR to promote UI to production
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+    steps:
+      - name: GH_PAT not configured
+        if: env.GH_PAT == ''
+        run: echo "GH_PAT secret not configured; skipping production promotion PR."
+
+      - name: Checkout at tag
+        if: env.GH_PAT != ''
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.GH_PAT }}
+
+      - name: Create promotion PR
+        if: env.GH_PAT != ''
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+          GH_TOKEN: ${{ env.GH_PAT }}
+        run: |
+          set -euo pipefail
+          git config user.name "rocketship-release-bot"
+          git config user.email "release-bot@users.noreply.github.com"
+
+          # Create promote branch from the exact tag commit
+          PROMOTE_BRANCH="promote/${VERSION}"
+          git checkout -b "$PROMOTE_BRANCH"
+          git push -u origin "$PROMOTE_BRANCH"
+
+          # Open PR against production branch
+          gh pr create \
+            --base production \
+            --head "$PROMOTE_BRANCH" \
+            --title "Promote ${VERSION} to production" \
+            --body "$(cat <<EOF
+          Automated PR to deploy UI version \`${VERSION}\` to production.
+
+          **Deployment sequence:**
+          1. First, merge the backend PR in \`rocketship-internal\` (bumps controlplane/engine/worker images)
+          2. Then merge this PR to deploy the UI via Cloudflare Pages
+
+          This ensures the backend and UI are deployed from the same release.
+          EOF
+          )"

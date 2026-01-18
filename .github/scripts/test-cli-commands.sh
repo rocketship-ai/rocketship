@@ -28,7 +28,12 @@ log "Testing browser error handling"
 
 log "Executing .rocketship test suites"
 set +e  # Temporarily disable exit on error to capture output
-OUTPUT=$(rocketship run -ad .rocketship --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb" 2>&1)
+# Use a unique tryme session for isolation when suites include the X-Test-Session header.
+TEST_SESSION="${GITHUB_RUN_ID:-cli-integration}"
+OUTPUT=$(rocketship run -ad .rocketship \
+  --var mysql_dsn="root:testpass@tcp(127.0.0.1:3306)/testdb" \
+  --var test_session="$TEST_SESSION" \
+  2>&1)
 EXIT_CODE=$?
 set -e  # Re-enable exit on error
 

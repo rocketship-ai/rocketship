@@ -526,8 +526,10 @@ export function useSuiteRuns(suiteId: string, params: SuiteRunsParams = {}) {
     refetchInterval: (query) => {
       const data = query.state.data
       if (!data) return SUITE_RUNS_POLL_IDLE_MS // Initial load: use idle polling
+      // Guard against non-array runs (e.g., API version mismatch)
+      const runs = Array.isArray(data.runs) ? data.runs : []
       // Fast polling when runs are live, idle polling otherwise (to discover new runs)
-      const hasLiveRun = data.runs.some((run) => isLiveRunStatus(run.status))
+      const hasLiveRun = runs.some((run) => isLiveRunStatus(run.status))
       return hasLiveRun ? SUITE_RUNS_POLL_LIVE_MS : SUITE_RUNS_POLL_IDLE_MS
     },
   })
