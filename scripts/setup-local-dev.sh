@@ -121,6 +121,24 @@ fi
 export MINIKUBE_PROFILE
 kubectl config use-context "$MINIKUBE_PROFILE" >/dev/null 2>&1 || true
 
+# Verify the Kubernetes API server is actually responding
+echo "Verifying Kubernetes API server is healthy..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+while ! kubectl get nodes >/dev/null 2>&1; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+    echo "ERROR: Kubernetes API server is not responding after ${MAX_RETRIES} attempts."
+    echo "The cluster may be in a bad state. Try:"
+    echo "  make delete-local"
+    echo "  make setup-local"
+    exit 1
+  fi
+  echo "  Waiting for API server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+  sleep 2
+done
+echo "Kubernetes API server is healthy."
+
 # Point Docker CLI to minikube's Docker daemon for Skaffold
 eval "$(minikube -p "$MINIKUBE_PROFILE" docker-env)"
 
