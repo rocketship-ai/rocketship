@@ -13,6 +13,29 @@ cd "$REPO_ROOT"
 MINIKUBE_PROFILE=${MINIKUBE_PROFILE:-rocketship}
 ROCKETSHIP_NAMESPACE=${ROCKETSHIP_NAMESPACE:-rocketship}
 
+# =============================================================================
+# SAFETY CHECK: Ensure we're using the minikube context, not production!
+# =============================================================================
+CURRENT_CONTEXT=$(kubectl config current-context 2>/dev/null || echo "")
+
+if [ "$CURRENT_CONTEXT" != "$MINIKUBE_PROFILE" ]; then
+  echo "Current kubectl context: $CURRENT_CONTEXT"
+  echo "Expected context: $MINIKUBE_PROFILE"
+  echo ""
+
+  # Check if the minikube context exists
+  if kubectl config get-contexts "$MINIKUBE_PROFILE" >/dev/null 2>&1; then
+    echo "Switching kubectl context to '$MINIKUBE_PROFILE'..."
+    kubectl config use-context "$MINIKUBE_PROFILE"
+  else
+    echo "ERROR: Minikube context '$MINIKUBE_PROFILE' does not exist."
+    echo "Run 'make setup-local' first to create the minikube cluster."
+    exit 1
+  fi
+fi
+
+echo "Using kubectl context: $(kubectl config current-context)"
+
 # Detect ingress controller ClusterIP dynamically
 echo "Detecting ingress controller ClusterIP..."
 ROCKETSHIP_INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
