@@ -122,7 +122,7 @@ export function Environments() {
   // Access Control queries and mutations
   const { data: profile } = useProfile();
   const orgId = profile?.organization?.id ?? '';
-  const isOrgOwner = profile?.organization?.role === 'admin';
+  const isOrgOwner = profile?.organization?.role === 'owner';
 
   // Compute which projects the current user has write access to
   const writeProjectIds = useMemo(() => {

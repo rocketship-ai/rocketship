@@ -28,6 +28,13 @@ append_to_env() {
   local key="$1"
   local value="$2"
   if ! grep -q "^${key}=" "$REPO_ROOT/.env" 2>/dev/null; then
+    # Ensure file ends with newline before appending to avoid concatenating onto last line
+    if [ -f "$REPO_ROOT/.env" ] && [ -s "$REPO_ROOT/.env" ]; then
+      # Check if file ends with newline; if not, add one
+      if [ "$(tail -c1 "$REPO_ROOT/.env" | wc -l)" -eq 0 ]; then
+        echo "" >> "$REPO_ROOT/.env"
+      fi
+    fi
     echo "${key}=${value}" >> "$REPO_ROOT/.env"
     echo "Added ${key} to .env"
   fi
@@ -50,10 +57,16 @@ check_command skaffold
 # Validate required secrets from .env
 # =============================================================================
 
+ROCKETSHIP_GITHUB_CLIENT_ID=${ROCKETSHIP_GITHUB_CLIENT_ID:-}
 ROCKETSHIP_GITHUB_CLIENT_SECRET=${ROCKETSHIP_GITHUB_CLIENT_SECRET:-}
-if [ -z "$ROCKETSHIP_GITHUB_CLIENT_SECRET" ]; then
-  echo "ERROR: ROCKETSHIP_GITHUB_CLIENT_SECRET not set. Create a .env file with secrets from production."
-  echo "  See .env.example for required variables."
+if [ -z "$ROCKETSHIP_GITHUB_CLIENT_ID" ] || [ -z "$ROCKETSHIP_GITHUB_CLIENT_SECRET" ]; then
+  echo "ERROR: GitHub OAuth credentials not set."
+  echo "  Create a GitHub OAuth App at https://github.com/settings/developers"
+  echo "  IMPORTANT: Enable 'Device Flow' in the OAuth App settings"
+  echo "  Set callback URL to: http://auth.minikube.local/callback"
+  echo "  Then add to .env:"
+  echo "    ROCKETSHIP_GITHUB_CLIENT_ID=<your-client-id>"
+  echo "    ROCKETSHIP_GITHUB_CLIENT_SECRET=<your-client-secret>"
   exit 1
 fi
 
@@ -107,6 +120,24 @@ fi
 # Use the correct profile for subsequent kubectl/helm commands
 export MINIKUBE_PROFILE
 kubectl config use-context "$MINIKUBE_PROFILE" >/dev/null 2>&1 || true
+
+# Verify the Kubernetes API server is actually responding
+echo "Verifying Kubernetes API server is healthy..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+while ! kubectl get nodes >/dev/null 2>&1; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+    echo "ERROR: Kubernetes API server is not responding after ${MAX_RETRIES} attempts."
+    echo "The cluster may be in a bad state. Try:"
+    echo "  make delete-local"
+    echo "  make setup-local"
+    exit 1
+  fi
+  echo "  Waiting for API server... (attempt $RETRY_COUNT/$MAX_RETRIES)"
+  sleep 2
+done
+echo "Kubernetes API server is healthy."
 
 # Point Docker CLI to minikube's Docker daemon for Skaffold
 eval "$(minikube -p "$MINIKUBE_PROFILE" docker-env)"
@@ -213,9 +244,10 @@ kubectl create secret generic rocketship-worker-token \
   --dry-run=client -o yaml | kubectl apply -f -
 echo "Worker token secret created."
 
-# GitHub OAuth secret
+# GitHub OAuth secret (includes both client ID and secret)
 kubectl create secret generic rocketship-github-oauth \
   --namespace "$ROCKETSHIP_NAMESPACE" \
+  --from-literal=ROCKETSHIP_GITHUB_CLIENT_ID="$ROCKETSHIP_GITHUB_CLIENT_ID" \
   --from-literal=ROCKETSHIP_GITHUB_CLIENT_SECRET="$ROCKETSHIP_GITHUB_CLIENT_SECRET" \
   --dry-run=client -o yaml | kubectl apply -f -
 
@@ -264,24 +296,43 @@ fi
 # Deploy vite-relay for web UI development
 echo "Deploying vite-relay for local web UI development..."
 
-# Detect the host IP that pods can reach
-HOST_IP=""
-for ip in "192.168.64.1" "192.168.49.1" "host.minikube.internal"; do
-  echo "Testing connectivity to $ip from cluster..."
-  if kubectl run -n "$ROCKETSHIP_NAMESPACE" test-host-ip-${ip//\./-} --rm -it --restart=Never --image=busybox:1.36 -- sh -c "wget -qO- --timeout=2 http://$ip:5173/ 2>&1 | head -n 1" >/dev/null 2>&1; then
-    HOST_IP=$ip
-    echo "Detected reachable host IP: $HOST_IP"
-    break
-  fi
-done
+# Detect the minikube driver to choose the right host address
+# Use minikube config to get driver for specific profile (more reliable than parsing profile list)
+MINIKUBE_DRIVER=$(minikube config get driver -p "$MINIKUBE_PROFILE" 2>/dev/null || echo "")
 
-if [ -z "$HOST_IP" ]; then
-  echo "WARNING: Could not detect reachable host IP. Using 192.168.64.1 as default."
-  echo "  If web UI doesn't work, check:"
-  echo "  1. Vite is running: 'cd web && npm run dev'"
-  echo "  2. Vite is listening on 0.0.0.0 (check vite.config.ts has 'host: true')"
-  echo "  3. macOS firewall allows Node on port 5173"
-  HOST_IP="192.168.64.1"
+# Fallback: try to get from profile list if config doesn't work
+if [ -z "$MINIKUBE_DRIVER" ]; then
+  MINIKUBE_DRIVER=$(minikube profile list -o json 2>/dev/null | grep -o "\"Name\":\"$MINIKUBE_PROFILE\"[^}]*\"Driver\":\"[^\"]*\"" | grep -o '"Driver":"[^"]*"' | cut -d'"' -f4)
+fi
+
+echo "Detected minikube driver: ${MINIKUBE_DRIVER:-unknown}"
+
+# Determine HOST_IP based on driver
+if [ "$MINIKUBE_DRIVER" = "docker" ]; then
+  # Docker driver: use host.docker.internal (works reliably on macOS/Windows)
+  HOST_IP="host.docker.internal"
+  echo "Using host.docker.internal for Docker driver"
+elif [ -n "$MINIKUBE_DRIVER" ]; then
+  # Other known drivers (hyperkit, virtualbox, etc.): detect gateway IP
+  MINIKUBE_IP=$(minikube ip -p "$MINIKUBE_PROFILE" 2>/dev/null)
+  HOST_IP="${MINIKUBE_IP%.*}.1"
+  echo "Using gateway IP: $HOST_IP"
+else
+  # Fallback: default to host.docker.internal on macOS (most common setup)
+  if [ "$(uname)" = "Darwin" ]; then
+    HOST_IP="host.docker.internal"
+    echo "WARNING: Could not detect minikube driver. Defaulting to host.docker.internal for macOS."
+  else
+    # Linux: try to detect gateway
+    MINIKUBE_IP=$(minikube ip -p "$MINIKUBE_PROFILE" 2>/dev/null)
+    if [ -n "$MINIKUBE_IP" ]; then
+      HOST_IP="${MINIKUBE_IP%.*}.1"
+      echo "WARNING: Could not detect minikube driver. Using gateway IP: $HOST_IP"
+    else
+      HOST_IP="host.docker.internal"
+      echo "WARNING: Could not detect minikube driver or IP. Defaulting to host.docker.internal."
+    fi
+  fi
 fi
 
 # Create vite-relay deployment and service

@@ -6,7 +6,8 @@ Local Kubernetes cluster for development with full auth, database support, and h
 
 ```bash
 # 1. Create .env file with secrets (see "Configure Secrets" below)
-echo "ROCKETSHIP_GITHUB_CLIENT_SECRET=..." > .env
+echo "ROCKETSHIP_GITHUB_CLIENT_ID=..." > .env
+echo "ROCKETSHIP_GITHUB_CLIENT_SECRET=..." >> .env
 echo "ROCKETSHIP_EMAIL_FROM=..." >> .env
 echo "ROCKETSHIP_POSTMARK_SERVER_TOKEN=..." >> .env
 
@@ -46,39 +47,30 @@ Make code changes and watch them automatically rebuild and redeploy!
 Create a `.env` file in the repository root with the following secrets:
 
 ```bash
+ROCKETSHIP_GITHUB_CLIENT_ID=<github-oauth-client-id>
 ROCKETSHIP_GITHUB_CLIENT_SECRET=<github-oauth-client-secret>
 ROCKETSHIP_EMAIL_FROM=<email-sender-address>
 ROCKETSHIP_POSTMARK_SERVER_TOKEN=<postmark-api-token>
 ```
 
-**Option A: Extract from production cluster** (requires kubectl access to `do-nyc1-rs-test-project`):
+**GitHub OAuth App Setup (Required):**
 
-```bash
-kubectl config use-context do-nyc1-rs-test-project
-kubectl get secret rocketship-github-oauth -n rocketship -o jsonpath='{.data.ROCKETSHIP_GITHUB_CLIENT_SECRET}' | base64 -d
-kubectl get secret rocketship-postmark-secret -n rocketship -o jsonpath='{.data.ROCKETSHIP_EMAIL_FROM}' | base64 -d
-kubectl get secret rocketship-postmark-secret -n rocketship -o jsonpath='{.data.ROCKETSHIP_POSTMARK_SERVER_TOKEN}' | base64 -d
-kubectl config use-context rocketship
-```
+Each developer needs their own GitHub OAuth App for local development:
 
-**Option B: Get from team member** (if you don't have cluster access):
+1. Go to [GitHub Settings → Developer settings → OAuth Apps](https://github.com/settings/developers)
+2. Click **New OAuth App**
+3. Fill in:
+   - **Application name**: `Rocketship Local Dev` (or any name)
+   - **Homepage URL**: `http://auth.minikube.local`
+   - **Authorization callback URL**: `http://auth.minikube.local/callback`
+4. Click **Register application**
+5. **IMPORTANT**: Enable Device Flow - scroll down and check **"Enable Device Flow"**
+6. Copy the **Client ID** to your `.env` as `ROCKETSHIP_GITHUB_CLIENT_ID`
+7. Click **Generate a new client secret** and copy it to your `.env` as `ROCKETSHIP_GITHUB_CLIENT_SECRET`
 
-Ask a team member with cluster access to share their `.env` file or provide the three required values.
+**Email Configuration:**
 
-**GitHub OAuth App Setup:**
-
-The `ROCKETSHIP_GITHUB_CLIENT_SECRET` corresponds to a GitHub OAuth App with these settings:
-
-- **Client ID**: `Ov23li2GoXfR7bC7fR0y` (configured in `charts/rocketship/values-minikube-local.yaml`)
-- **Authorization callback URL**: `http://auth.minikube.local/callback`
-
-If you need to create your own OAuth app for testing:
-
-1. Go to GitHub Settings → Developer settings → OAuth Apps → New OAuth App
-2. Set **Homepage URL**: `http://auth.minikube.local`
-3. Set **Authorization callback URL**: `http://auth.minikube.local/callback`
-4. Copy the Client Secret to your `.env` file
-5. Update `charts/rocketship/values-minikube-local.yaml` with your Client ID
+For email testing, you can get Postmark credentials from a team member or use your own Postmark account.
 
 **GitHub App Setup (Repository Access):**
 
@@ -287,7 +279,7 @@ eval "$(minikube -p rocketship docker-env)"
 
 **Pods not ready**: Wait 2-3 minutes for Temporal and Postgres to initialize.
 
-**Controlplane fails**: Check `.env` has valid `ROCKETSHIP_GITHUB_CLIENT_SECRET` and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`.
+**Controlplane fails**: Check `.env` has valid `ROCKETSHIP_GITHUB_CLIENT_ID`, `ROCKETSHIP_GITHUB_CLIENT_SECRET`, and `ROCKETSHIP_POSTMARK_SERVER_TOKEN`. Ensure "Device Flow" is enabled in your GitHub OAuth App settings.
 
 **Skaffold not watching files**: Ensure you're in the repository root when running `skaffold dev`.
 

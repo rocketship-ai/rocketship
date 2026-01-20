@@ -51,7 +51,7 @@ func (s *Server) handleProfile(w http.ResponseWriter, r *http.Request, principal
 	}
 	orgRole := "member"
 	if isAdmin {
-		orgRole = "admin"
+		orgRole = "owner"
 	}
 
 	// Get GitHub App installation status
