@@ -35,7 +35,7 @@
 
 Paste the [ROCKETSHIP_QUICKSTART.md](https://raw.githubusercontent.com/rocketship-ai/rocketship/main/ROCKETSHIP_QUICKSTART.md) file into your coding agent's context window, so that it understands how to build and run tests.
 
-Once it has that context, you can:
+Once it has that context you can:
 
 - Ask it to propose `.rocketship/*.yaml` tests for your critical flows (login, signup, checkout, etc.).
 - Have it update the matching Rocketship test whenever it edits those flows, and run `rocketship run -ad .rocketship` before committing or opening a PR.
