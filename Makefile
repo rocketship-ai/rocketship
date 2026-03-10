@@ -1,17 +1,26 @@
-.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck helm-lint helm-template-check go-lint workflow-check setup-local start-local delete-local
+.PHONY: proto lint test build compose-up install clean prepare-embed dev-setup docs docs-serve docs-deps docs-clean install-workflowcheck helm-lint helm-template-check go-lint workflow-check setup-local start-local delete-local help
+
+.DEFAULT_GOAL := help
+
+## help: Print this help message
+help:
+	@echo "Usage: make <target>"
+	@echo ""
+	@sed -n 's/^## //p' $(MAKEFILE_LIST) | column -t -s ':' 2>/dev/null || sed -n 's/^## //p' $(MAKEFILE_LIST)
+	@echo ""
 
 prepare-embed:
 	@mkdir -p internal/embedded/bin
 	@touch internal/embedded/bin/.gitkeep
 
-# Build the embedded binaries
+## build-binaries: Build the embedded engine/worker/controlplane binaries
 build-binaries: prepare-embed
 	@echo "Building embedded binaries..."
 	@go build -o internal/embedded/bin/worker cmd/worker/main.go
 	@go build -o internal/embedded/bin/engine cmd/engine/main.go
 	@go build -o internal/embedded/bin/controlplane cmd/controlplane/main.go
 
-# Build the CLI with embedded binaries
+## build: Build the CLI with embedded binaries
 build: build-binaries
 	@echo "Building CLI..."
 	go vet ./...
@@ -23,7 +32,7 @@ install-workflowcheck:
 		go install go.temporal.io/sdk/contrib/tools/workflowcheck@latest; \
 	fi
 
-# Run linting
+## lint: Run all linters (Go, Python, Helm, workflow-check)
 lint: build-binaries install-workflowcheck lint-python go-lint workflow-check helm-lint
 
 # Run Python linting
@@ -86,7 +95,7 @@ build-mcp:
 		echo "No mcp-server directory found"; \
 	fi
 
-# Run tests
+## test: Run all tests (Go, Python, Helm template checks)
 test: build-binaries test-go test-python helm-template-check
 
 helm-lint:
@@ -143,7 +152,7 @@ test-python:
 # 		echo "No mcp-server directory found, skipping TypeScript tests"; \
 # 	fi
 
-# Generate protobuf code
+## proto: Regenerate protobuf Go code from proto/engine.proto
 proto:
 	@echo "Generating protobuf code..."
 	protoc \
@@ -152,13 +161,13 @@ proto:
 	  --go-grpc_out=paths=source_relative:internal/api/generated \
 	  proto/engine.proto
 
-# Install the CLI to $GOPATH/bin or $HOME/go/bin
+## install: Build and install the CLI to $GOPATH/bin
 install: build
 	@echo "Installing CLI..."
 	@rm -f $(shell which rocketship 2>/dev/null)
 	go install ./cmd/rocketship
 
-# Set up development environment
+## dev-setup: Set up development environment (hooks + initial build)
 dev-setup: prepare-embed
 	@echo "Setting up development environment..."
 	@if [ ! -f .git/hooks/pre-commit ]; then \
@@ -168,13 +177,15 @@ dev-setup: prepare-embed
 	@$(MAKE) build-binaries
 	@echo "Development environment setup complete!"
 
-# Clean build artifacts
+## clean: Remove build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf bin/
 	rm -rf internal/embedded/bin/
 
-# Generate and serve documentation
+## docs-serve: Build and serve documentation locally
+## docs: Build documentation
+## docs-clean: Clean documentation build artifacts
 docs-deps:
 	@echo "Setting up documentation environment..."
 	@python3 -m venv docs/.venv
@@ -202,17 +213,17 @@ docs-clean:
 # Local Development (Minikube)
 # =============================================================================
 
-# Set up local minikube development environment
+## setup-local: Set up local minikube development environment
 setup-local:
 	@echo "Setting up local development environment..."
 	@scripts/setup-local-dev.sh
 
-# Start local development environment (minikube tunnel + vite + skaffold)
+## start-local: Start local dev environment (tunnel + vite + skaffold)
 start-local:
 	@echo "Starting local development environment..."
 	@scripts/start-dev.sh
 
-# Delete local development environment
+## delete-local: Delete local minikube development environment
 delete-local:
 	@echo "Deleting local development environment..."
 	@scripts/delete-local-dev.sh
