@@ -9,9 +9,13 @@ mcp-server/npm-debug.log*
 mcp-server/yarn-debug.log*
 mcp-server/yarn-error.log*
 
-# python
+# macOS
 .DS_Store
 **/.DS_Store
+
+# Python virtual environments
+__pycache__/
+*.pyc
 
 # documentation build artifacts
 docs/site/
